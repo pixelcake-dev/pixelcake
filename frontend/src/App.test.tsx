@@ -80,6 +80,39 @@ describe('App', () => {
     expect(screen.getByText('Visual Network Designer')).toBeInTheDocument();
   });
 
+  it('does not show it on an empty canvas of a project that has other canvases', () => {
+    const second = useProjectStore.getState().addCanvas('Piano 2');
+
+    render(<App />);
+
+    // two canvases, both empty: the project is not a blank start any more
+    expect(screen.queryByText('Visual Network Designer')).toBeNull();
+
+    act(() => {
+      useProjectStore.getState().switchCanvas(second);
+    });
+    expect(screen.queryByText('Visual Network Designer')).toBeNull();
+
+    // back to a single empty canvas: it is a blank start again
+    act(() => {
+      useProjectStore.getState().deleteCanvas(second);
+    });
+    expect(screen.getByText('Visual Network Designer')).toBeInTheDocument();
+  });
+
+  it('leaves the theme alone at start-up, whatever the system prefers', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+    );
+    useUIStore.getState().setDarkMode(false);
+
+    render(<App />);
+
+    expect(useUIStore.getState().darkMode).toBe(false);
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
+  });
+
   it('does not show it when the user chose not to see it again', () => {
     localStorage.setItem('pixelcake-hide-welcome', 'true');
 

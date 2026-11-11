@@ -78,12 +78,22 @@ interface UIStore {
   dismissWelcomeScreen: (neverShowAgain: boolean) => void;
 }
 
+function systemPrefersDark(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
+}
+
 export const useUIStore = create<UIStore>()(
   persist(
     (set) => ({
       // Initial State
       isAuthenticated: false,
-      darkMode: false,
+      // Until the user picks one, the theme follows the system. A saved
+      // choice replaces this value when the store is read from storage
+      darkMode: systemPrefersDark(),
       theme: 'pixelcake',
       activeSidebarPanel: null,
       modals: {
@@ -297,6 +307,12 @@ export const useUIStore = create<UIStore>()(
         // Apply theme on rehydration
         if (state?.theme) {
           document.body.setAttribute('data-theme', state.theme);
+        }
+        // Dark mode is a class on <html>: put the page in line with the
+        // state once, here. Toggling at start-up instead (as an earlier
+        // version did) flips the saved choice at every reload
+        if (state) {
+          document.documentElement.classList.toggle('dark', state.darkMode);
         }
       },
     }

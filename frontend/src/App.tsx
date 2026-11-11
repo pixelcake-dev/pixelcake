@@ -30,17 +30,7 @@ function App() {
   const isAuthenticated = useUIStore((state) => state.isAuthenticated);
   const theme = useUIStore((state) => state.theme);
   const darkMode = useUIStore((state) => state.darkMode);
-  const toggleDarkMode = useUIStore((state) => state.toggleDarkMode);
   const setShowWelcomeScreen = useUIStore((state) => state.setShowWelcomeScreen);
-
-  useEffect(() => {
-    // Initialize dark mode from system preference (only on mount)
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (prefersDark) {
-      toggleDarkMode();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
 
   useEffect(() => {
     // Apply theme to body element whenever it changes
