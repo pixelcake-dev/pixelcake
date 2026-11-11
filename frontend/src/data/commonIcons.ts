@@ -301,7 +301,7 @@ export const COMMON_NETWORK_ICONS: IconOption[] = [
     keywords: ['power', 'plug', 'electricity'],
   },
   {
-    name: 'mdi:rack',
+    name: 'mdi:file-cabinet',
     label: 'Server Rack',
     category: 'Infrastructure',
     keywords: ['rack', 'cabinet'],

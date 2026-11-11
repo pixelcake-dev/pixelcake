@@ -174,7 +174,7 @@ const ExplorerPanel = () => {
                 className={`explorer-canvas-card ${isActive ? 'active' : ''}`}
                 aria-current={isActive ? 'true' : undefined}
               >
-                <Icon icon="fluent:document-24-regular" width={16} style={{ flexShrink: 0 }} />
+                <Icon icon="lucide:file" width={16} style={{ flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0, fontSize: '0.9em' }}>
                   {isRenaming ? (
                     <InlineEdit
