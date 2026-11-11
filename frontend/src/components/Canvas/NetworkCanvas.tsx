@@ -28,6 +28,7 @@ import ParticleEdge from './ParticleEdge';
 import PacketAnimation from './PacketAnimation';
 import WelcomeScreen from '@/components/WelcomeScreen';
 import { useNetworkStore } from '@/store/networkStore';
+import { useProjectStore } from '@/store/projectStore';
 import { useUIStore } from '@/store/uiStore';
 import type { NetworkDevice as NetworkDeviceType } from '@/types/network';
 
@@ -67,6 +68,7 @@ const NetworkCanvas = () => {
   const particleAnimationEnabled = useUIStore((state) => state.particleAnimationEnabled);
   const showWelcomeScreen = useUIStore((state) => state.showWelcomeScreen);
   const canvasRevision = useNetworkStore((state) => state.canvasRevision);
+  const canvasCount = useProjectStore((state) => state.canvases.length);
 
   const reactFlowInstance = useReactFlow();
 
@@ -368,8 +370,9 @@ const NetworkCanvas = () => {
     // Keep currentDragId for validation in handleSelectionChange
   }, []);
 
-  // The welcome screen only ever shows on an empty canvas
-  const shouldShowWelcome = showWelcomeScreen && devices.length === 0;
+  // The welcome screen only shows on an empty project: one canvas with
+  // nothing on it. An empty canvas added to a project is just an empty canvas
+  const shouldShowWelcome = showWelcomeScreen && devices.length === 0 && canvasCount === 1;
 
   return (
     <div className="relative w-full h-full">
