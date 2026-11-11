@@ -8,11 +8,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Mock } from 'vitest';
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { toast } from 'sonner';
+import { _api as iconApi } from '@iconify/react';
 import { useNetworkStore } from '@/store/networkStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useUIStore } from '@/store/uiStore';
 import { serializeProject } from '@/utils/projectFile';
 import { createNewProject } from '@/utils/projectFileAccess';
+import { createSampleTopology } from '@/utils/sampleTopology';
 import App from './App';
 
 vi.mock('sonner', () => ({
@@ -70,6 +72,27 @@ describe('App', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
     for (const shown of allToasts()) {
       expect(shown).not.toHaveBeenCalled();
+    }
+  });
+
+  it('draws its icons from the bundle, without asking the icon API', async () => {
+    // The icon library keeps its own reference to fetch: this replaces it
+    const iconFetch = vi.fn(() => Promise.reject(new Error('no icon API in tests')));
+    const originalFetch = iconApi.getFetch();
+    iconApi.setFetch(iconFetch as unknown as typeof fetch);
+    const sample = createSampleTopology();
+    useNetworkStore.getState().loadTopology(sample.devices, sample.connections);
+
+    try {
+      render(<App />);
+      // the library asks for missing icons a moment after they are drawn
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      });
+
+      expect(iconFetch).not.toHaveBeenCalled();
+    } finally {
+      if (originalFetch) iconApi.setFetch(originalFetch);
     }
   });
 
