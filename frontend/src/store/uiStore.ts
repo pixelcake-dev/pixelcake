@@ -24,8 +24,6 @@ interface UIStore {
     bulkAddDevice: boolean;
     codeTerminal: boolean;
     newProject: boolean;
-    openProject: boolean;
-    saveAsProject: boolean;
     importExport: boolean;
   };
   addDeviceType: DeviceType | null;
@@ -99,8 +97,6 @@ export const useUIStore = create<UIStore>()(
         bulkAddDevice: false,
         codeTerminal: false,
         newProject: false,
-        openProject: false,
-        saveAsProject: false,
         importExport: false,
       },
       addDeviceType: null,

@@ -1,22 +1,23 @@
 /**
  * Store-level tests for interface bindings: every path that creates a link
  * attaches it to a concrete interface (port or NIC), data saved before
- * bindings existed is migrated on load without saving by itself, and a link
- * never keeps pointing at an interface that was removed.
+ * bindings existed is migrated on load without counting as an edit, and a
+ * link never keeps pointing at an interface that was removed.
  *
- * Isolation: same pattern as networkStore.sync.test.ts — the store is a module
- * singleton with a module-level debounce, so each test re-imports it.
+ * Isolation: the store is a module singleton that reads localStorage when it
+ * is created, so each test re-imports it.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Mock } from 'vitest';
-import type { NetworkConnection, NetworkDevice, NetworkInterfaceCard, Port } from '@/types';
+import type {
+  CanvasData,
+  NetworkConnection,
+  NetworkDevice,
+  NetworkInterfaceCard,
+  Port,
+} from '@/types';
 import { boundInterface, isEndBound } from '@/engine';
-
-vi.mock('@/api', () => ({
-  getCanvas: vi.fn(),
-  updateCanvas: vi.fn(),
-}));
 
 vi.mock('sonner', () => ({
   toast: {
@@ -79,13 +80,10 @@ function saved(id: string, device: NewDevice): NetworkDevice {
 
 async function freshStore() {
   vi.resetModules();
-  const api = await import('@/api');
   const { toast } = await import('sonner');
   const { useNetworkStore } = await import('./networkStore');
   return {
     store: useNetworkStore,
-    updateCanvas: api.updateCanvas as Mock,
-    getCanvas: api.getCanvas as Mock,
     // every kind of toast the store could raise
     toasts: [toast.success, toast.error, toast.warning, toast.info] as Mock[],
   };
@@ -441,54 +439,48 @@ describe('networkStore interface bindings', () => {
       { id: 'conn-1', source: 'dev-0', target: 'dev-2', type: 'access' },
     ];
 
-    it('loadFromBackend binds an old canvas in memory without saving or toasting', async () => {
-      const { store, getCanvas, updateCanvas, toasts } = await freshStore();
-      getCanvas.mockResolvedValue({
-        id: 'canvas-1',
-        name: 'Old canvas',
-        devices: oldDevices,
-        connections: oldConnections,
-        settings: { viewport: { x: 0, y: 0, zoom: 1 }, deviceCounter: 3, connectionCounter: 2 },
-      });
+    /** A canvas as a project kept it before links carried bindings */
+    const oldCanvas: CanvasData = {
+      devices: oldDevices,
+      connections: oldConnections,
+      viewport: { x: 0, y: 0, zoom: 1 },
+      deviceCounter: 3,
+      connectionCounter: 2,
+    };
 
-      await store.getState().loadFromBackend('proj-1', 'canvas-1');
+    it('replaceCanvas (canvas switch, opened file) binds an old canvas in memory without marking it changed or toasting', async () => {
+      const { store, toasts } = await freshStore();
+
+      store.getState().replaceCanvas('canvas-1', oldCanvas);
 
       const state = store.getState();
       expect(state.connections).toMatchObject([
         { id: 'conn-0', sourceNic: 'nic-1', targetPort: 1 },
         { id: 'conn-1', sourcePort: 2, targetNic: 'nic-1', type: 'access' },
       ]);
+      // Putting a canvas on screen is not an edit of the project
       expect(state.hasUnsavedChanges).toBe(false);
 
       await vi.advanceTimersByTimeAsync(10_000);
-      expect(updateCanvas).not.toHaveBeenCalled();
       expect(store.getState().hasUnsavedChanges).toBe(false);
       expectNoToast(toasts);
     });
 
-    it('the bindings reach the backend with the next real edit', async () => {
-      const { store, getCanvas, updateCanvas } = await freshStore();
-      updateCanvas.mockResolvedValue({});
-      getCanvas.mockResolvedValue({
-        id: 'canvas-1',
-        name: 'Old canvas',
-        devices: oldDevices,
-        connections: oldConnections,
-        settings: { viewport: { x: 0, y: 0, zoom: 1 }, deviceCounter: 3, connectionCounter: 2 },
-      });
-      await store.getState().loadFromBackend('proj-1', 'canvas-1');
+    it('the bindings are in what gets saved after the next real edit', async () => {
+      const { store } = await freshStore();
+      store.getState().replaceCanvas('canvas-1', oldCanvas);
 
       store.getState().updateDevice('dev-1', { label: 'PC-Renamed' });
-      await vi.advanceTimersByTimeAsync(2000);
 
-      expect(updateCanvas).toHaveBeenCalledTimes(1);
-      expect(updateCanvas.mock.calls[0][2].connections).toMatchObject([
+      expect(store.getState().hasUnsavedChanges).toBe(true);
+      // The snapshot is what the project keeps and writes to its file
+      expect(store.getState().getCanvasSnapshot().connections).toMatchObject([
         { id: 'conn-0', sourceNic: 'nic-1', targetPort: 1 },
         { id: 'conn-1', sourcePort: 2, targetNic: 'nic-1' },
       ]);
     });
 
-    it('rehydrating old localStorage data binds the links without triggering a save', async () => {
+    it('rehydrating old localStorage data binds the links without marking it changed or writing it back', async () => {
       const persisted = {
         state: {
           devices: oldDevices,
@@ -510,11 +502,12 @@ describe('networkStore interface bindings', () => {
       const raw = JSON.stringify(persisted);
       localStorage.setItem('pixelcake-network-v2', raw);
 
-      const { store, updateCanvas, toasts } = await freshStore();
-      updateCanvas.mockResolvedValue({});
+      const { store, toasts } = await freshStore();
 
       const state = store.getState();
-      expect(state.currentCanvasId).toBe('canvas-1'); // rehydrated, autosave would be armed
+      // what the removed server sync had persisted is left behind
+      expect(state).not.toHaveProperty('currentProjectId');
+      expect(state).not.toHaveProperty('currentCanvasId');
       expect(state.connections).toMatchObject([
         { id: 'conn-0', sourceNic: 'nic-1', targetPort: 1 },
         { id: 'conn-1', sourcePort: 2, targetNic: 'nic-1', type: 'access' },
@@ -522,7 +515,6 @@ describe('networkStore interface bindings', () => {
       expect(state.hasUnsavedChanges).toBe(false);
 
       await vi.advanceTimersByTimeAsync(10_000);
-      expect(updateCanvas).not.toHaveBeenCalled();
       expect(store.getState().hasUnsavedChanges).toBe(false);
       expectNoToast(toasts);
       // nothing was written back: the migration alone does not persist
@@ -580,7 +572,7 @@ describe('networkStore interface bindings', () => {
       expect(store.getState().devices[0].ip).toBe('10.0.0.5');
     });
 
-    it('rehydration fixes a stale mirror without saving or marking the canvas dirty', async () => {
+    it('rehydration fixes a stale mirror without marking the project changed', async () => {
       localStorage.setItem(
         'pixelcake-network-v2',
         JSON.stringify({
@@ -597,12 +589,11 @@ describe('networkStore interface bindings', () => {
         })
       );
 
-      const { store, updateCanvas } = await freshStore();
+      const { store } = await freshStore();
       await vi.advanceTimersByTimeAsync(5000);
 
       expect(store.getState().devices[0].ip).toBe('10.0.0.5');
       expect(store.getState().hasUnsavedChanges).toBe(false);
-      expect(updateCanvas).not.toHaveBeenCalled();
     });
   });
 });

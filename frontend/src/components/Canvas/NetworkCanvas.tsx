@@ -29,7 +29,6 @@ import PacketAnimation from './PacketAnimation';
 import WelcomeScreen from '@/components/WelcomeScreen';
 import { useNetworkStore } from '@/store/networkStore';
 import { useUIStore } from '@/store/uiStore';
-import { useProjectStore } from '@/store/projectStore';
 import type { NetworkDevice as NetworkDeviceType } from '@/types/network';
 
 // Define node and edge types outside component to prevent re-renders
@@ -67,7 +66,7 @@ const NetworkCanvas = () => {
   const magnifiedConnectionTypes = useUIStore((state) => state.magnifiedConnectionTypes);
   const particleAnimationEnabled = useUIStore((state) => state.particleAnimationEnabled);
   const showWelcomeScreen = useUIStore((state) => state.showWelcomeScreen);
-  const currentProject = useProjectStore((state) => state.currentProject);
+  const canvasRevision = useNetworkStore((state) => state.canvasRevision);
 
   const reactFlowInstance = useReactFlow();
 
@@ -245,6 +244,16 @@ const NetworkCanvas = () => {
     }
   }, [shouldFitView, reactFlowInstance]);
 
+  // A different canvas came on screen (canvas switch, project opened or
+  // created): show it where it was left. `defaultViewport` only covers the
+  // first mount.
+  const appliedCanvasRevision = useRef(canvasRevision);
+  useEffect(() => {
+    if (appliedCanvasRevision.current === canvasRevision) return;
+    appliedCanvasRevision.current = canvasRevision;
+    reactFlowInstance.setViewport(useNetworkStore.getState().viewport);
+  }, [canvasRevision, reactFlowInstance]);
+
   // Handle node position changes (drag)
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -359,8 +368,8 @@ const NetworkCanvas = () => {
     // Keep currentDragId for validation in handleSelectionChange
   }, []);
 
-  // Determina se mostrare la welcome screen
-  const shouldShowWelcome = showWelcomeScreen && devices.length === 0 && !currentProject;
+  // The welcome screen only ever shows on an empty canvas
+  const shouldShowWelcome = showWelcomeScreen && devices.length === 0;
 
   return (
     <div className="relative w-full h-full">

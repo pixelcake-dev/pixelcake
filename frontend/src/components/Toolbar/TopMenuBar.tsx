@@ -1,7 +1,12 @@
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
-import { useProjectStore } from '@/store/projectStore';
 import { useTemplateStore } from '@/store/templateStore';
+import {
+  openProject,
+  requestNewProject,
+  saveProject,
+  saveProjectAs,
+} from '@/utils/projectFileAccess';
 import { Moon, Sun, ArrowDown, ArrowRight, Network, Building2, Sparkles, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import PixelCakeIcon from '@/assets/PixelCakeIcon.svg';
@@ -18,7 +23,6 @@ const TopMenuBar = () => {
   const resetMagnification = useUIStore((state) => state.resetMagnification);
   const particleAnimationEnabled = useUIStore((state) => state.particleAnimationEnabled);
   const toggleParticleAnimation = useUIStore((state) => state.toggleParticleAnimation);
-  const clearAllDevices = useNetworkStore((state) => state.clearAllDevices);
   const applyAutoLayout = useNetworkStore((state) => state.applyAutoLayout);
   const autoConnectDevices = useNetworkStore((state) => state.autoConnectDevices);
   const triggerFitView = useNetworkStore((state) => state.triggerFitView);
@@ -26,68 +30,16 @@ const TopMenuBar = () => {
   const clipboard = useNetworkStore((state) => state.clipboard);
   const copySelection = useNetworkStore((state) => state.copySelection);
   const paste = useNetworkStore((state) => state.paste);
-  const saveToBackend = useNetworkStore((state) => state.saveToBackend);
   const connectionTemplates = useTemplateStore((state) => state.connectionTemplates);
 
-  const currentProject = useProjectStore((state) => state.currentProject);
-
-  const handleNuovoProgetto = () => {
-    openModal('newProject');
-  };
-
-  const handleApriProgetto = () => {
-    openModal('openProject');
-  };
-
-  const handleSalva = async () => {
-    if (!currentProject) {
-      alert('Nessun progetto aperto');
-      return;
-    }
-    try {
-      await saveToBackend();
-      console.log('[Menu] Progetto salvato');
-    } catch (error) {
-      console.error('[Menu] Errore durante il salvataggio:', error);
-      alert('Errore durante il salvataggio');
-    }
-  };
-
-  const handleSalvaConNome = () => {
-    if (!currentProject) {
-      alert('Nessun progetto aperto');
-      return;
-    }
-    openModal('saveAsProject');
-  };
-
-  // File → Nuovo: start an empty, local drawing
-  const handleNewProject = async () => {
-    const network = useNetworkStore.getState();
-
-    if (currentProject) {
-      // The board on screen belongs to a saved project. Emptying it here
-      // would autosave the empty board over the saved one, so the project
-      // is closed first and left intact.
-      const question =
-        `Chiudere il progetto "${currentProject.name}" e iniziare un disegno vuoto?\n` +
-        'Il progetto resta salvato.';
-      if (!confirm(question)) return;
-
-      const saved = await network.saveBeforeSwitch();
-      if (!saved) return; // the failed save has already been reported
-
-      network.clearCurrentCanvas();
-      useProjectStore.getState().closeProject();
-      clearAllDevices();
-      return;
-    }
-
-    if (network.devices.length === 0) return;
-    if (confirm('Svuotare la tela?\nIl disegno non è salvato in un progetto e andrà perso.')) {
-      clearAllDevices();
-    }
-  };
+  // File menu. Each entry is a thin call into utils/projectFileAccess, which
+  // asks before unsaved changes are lost and reports the outcome with a toast.
+  // The pickers must be reached straight from the click: nothing is awaited
+  // before them.
+  const handleNewProject = () => requestNewProject();
+  const handleOpen = () => void openProject();
+  const handleSave = () => void saveProject();
+  const handleSaveAs = () => void saveProjectAs();
 
   const handleAutoLayout = (algorithm: 'hierarchical' | 'subnet-grouped', direction: 'TB' | 'LR') => {
     const deviceCount = useNetworkStore.getState().devices.length;
@@ -108,13 +60,13 @@ const TopMenuBar = () => {
   };
 
   // Help → Mostra Welcome Screen. The welcome screen only exists on an empty
-  // canvas with no project open; asking to see it must never empty a drawing.
+  // canvas; asking to see it must never empty a drawing.
   const handleShowWelcome = () => {
     const hasDrawing = useNetworkStore.getState().devices.length > 0;
-    if (hasDrawing || currentProject) {
+    if (hasDrawing) {
       toast.info(
-        'La schermata di benvenuto compare solo su una tela vuota, senza progetto aperto. ' +
-          'Il disegno non è stato toccato. Per rivederla usa File → Nuovo.'
+        'La schermata di benvenuto compare solo su un canvas vuoto. ' +
+          'Il disegno non è stato toccato. Per rivederla passa a un canvas vuoto o creane uno nuovo.'
       );
       return;
     }
@@ -122,11 +74,6 @@ const TopMenuBar = () => {
     // Reset the "non mostrare più" preference, then show it
     localStorage.removeItem('pixelcake-hide-welcome');
     setShowWelcomeScreen(true);
-  };
-
-  const handleDocumentation = () => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-    window.open(`${apiUrl}/docs`, '_blank');
   };
 
   const handleFitView = () => {
@@ -172,14 +119,11 @@ const TopMenuBar = () => {
         <span>File</span>
         <div className="dropdown-content">
           <ul>
-            <li onClick={handleNuovoProgetto}>Nuovo Progetto</li>
-            <li onClick={handleApriProgetto}>Apri Progetto...</li>
+            <li onClick={handleNewProject}>Nuovo progetto…</li>
+            <li onClick={handleOpen}>Apri…</li>
             <hr />
-            <li onClick={handleNewProject}>Nuovo</li>
-            <li className="disabled">Apri...</li>
-            <hr />
-            <li onClick={handleSalva}>Salva</li>
-            <li onClick={handleSalvaConNome}>Salva con nome...</li>
+            <li onClick={handleSave}>Salva</li>
+            <li onClick={handleSaveAs}>Salva con nome…</li>
             <hr />
             <li className="disabled">Esporta come PNG</li>
           </ul>
@@ -363,7 +307,6 @@ const TopMenuBar = () => {
           <ul>
             <li onClick={handleShowWelcome}>Mostra Welcome Screen</li>
             <li onClick={() => openModal('help')}>Note Programma</li>
-            <li onClick={handleDocumentation}>Documentazione API</li>
           </ul>
         </div>
       </div>

@@ -9,6 +9,7 @@ import { Icon } from '@iconify/react';
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
+import { openProject, requestNewProject } from '@/utils/projectFileAccess';
 import PixelCakeLogo from '@/assets/PixelCakeLogo.svg';
 import { GITHUB_REPO, GITHUB_ISSUES } from '@/constants/links';
 
@@ -26,13 +27,19 @@ const WelcomeScreen = () => {
   }, []); // Esegui al mount del componente
 
   const handleNewProject = () => {
-    dismissWelcomeScreen(neverShowAgain);
-    openModal('newProject');
+    if (requestNewProject()) {
+      dismissWelcomeScreen(neverShowAgain);
+    }
   };
 
-  const handleOpenProject = () => {
-    dismissWelcomeScreen(neverShowAgain);
-    openModal('openProject');
+  const handleOpenProject = async () => {
+    // The file picker opens straight from the click. The welcome screen goes
+    // away only once a project has really been opened: cancelling the picker
+    // leaves everything as it was
+    const outcome = await openProject();
+    if (outcome === 'opened') {
+      dismissWelcomeScreen(neverShowAgain);
+    }
   };
 
   const handleLoadSample = () => {

@@ -5,16 +5,15 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { toast } from 'sonner';
 import type {
+  CanvasData,
   NetworkDevice,
   NetworkConnection,
   GlobalNetworkSettings,
 } from '@/types';
 import { applyHierarchicalLayout, applySubnetGroupedLayout, autoConnectDevices } from '@/utils/autoLayout';
-import { getCanvas, updateCanvas } from '@/api';
-import { debounce } from '@/utils/debounce';
 import { cleanupConnections } from '@/utils/cleanupConnections';
+import { safeJSONStorage } from '@/utils/safeStorage';
 import { bindConnection, mirrorPrimaryNic, normalizeBindings, sanitizeBindings } from '@/engine';
 
 export { cleanupConnections };
@@ -45,14 +44,19 @@ interface NetworkStore {
   isConnecting: boolean;
   connectionStart: { deviceId: string; handleId: string | null } | null;
 
-  // Backend sync state (canvas identity + dirty flag are persisted so a page
-  // refresh can restore the session; isSyncing/lastSyncError are runtime only)
-  currentProjectId: string | null;
-  currentCanvasId: string | null;
+  // Which canvas of the project this data is. An opaque tag for this store
+  // (the project store owns the list of canvases), persisted next to the data
+  // so the two can never be paired wrongly after a reload. null: data written
+  // before projects kept their canvases in the browser.
+  canvasId: string | null;
+
+  // True when the project changed since it was last saved to / opened from a
+  // file (persisted)
   hasUnsavedChanges: boolean;
-  isSyncing: boolean;
-  lastSyncError: string | null;
-  autoSaveEnabled: boolean;
+
+  // Bumped every time the canvas is replaced as a whole, so the view can
+  // apply the viewport that came with it (not persisted)
+  canvasRevision: number;
 
   // Actions - Devices
   addDevice: (device: Omit<NetworkDevice, 'id'>) => void;
@@ -95,30 +99,43 @@ interface NetworkStore {
   clearAllDevices: () => void;
   loadTopology: (devices: NetworkDevice[], connections: NetworkConnection[]) => void;
 
-  // Actions - Backend Sync
-  setCurrentCanvas: (projectId: string, canvasId: string) => void;
-  clearCurrentCanvas: () => void;
-  loadFromBackend: (projectId: string, canvasId: string) => Promise<void>;
-  saveToBackend: (options?: { silent?: boolean }) => Promise<boolean>;
-  saveBeforeSwitch: () => Promise<boolean>;
-  cancelPendingSave: () => void;
-  setAutoSave: (enabled: boolean) => void;
-  clearSyncError: () => void;
+  // Actions - Whole canvas (used by the project store)
+  /** The canvas on screen, as it is stored in a project */
+  getCanvasSnapshot: () => CanvasData;
+  /**
+   * Replace the canvas on screen with another one. Not an edit: the changed
+   * flag is left as it is. `settings` also replaces the project-wide network
+   * settings (opening or creating a project).
+   */
+  replaceCanvas: (canvasId: string, canvas: CanvasData, settings?: GlobalNetworkSettings) => void;
 
-  // Internal helpers
-  _triggerAutoSave: () => void;
+  // Actions - Changed flag
+  /** Record an edit of the project (called by every mutation) */
+  markChanged: () => void;
+  /** Position in the stream of edits, to hand back to markSaved */
+  getChangeToken: () => number;
+  /**
+   * The project now matches a file. With a token, the flag is cleared only
+   * if no edit landed after the token was taken (a save that was being
+   * written does not contain it).
+   */
+  markSaved: (changeToken?: number) => void;
 }
 
-/**
- * Debounced auto-save function
- * Delays backend save by 2 seconds after last change
- */
-let debouncedSave: (() => void) & { cancel: () => void; flush: () => void };
+/** What is written to localStorage */
+type PersistedNetworkState = Pick<
+  NetworkStore,
+  | 'devices'
+  | 'connections'
+  | 'globalNetworkSettings'
+  | 'viewport'
+  | 'deviceCounter'
+  | 'connectionCounter'
+  | 'canvasId'
+  | 'hasUnsavedChanges'
+>;
 
-/**
- * Counts local mutations. saveToBackend compares it before and after its
- * PUT to know whether something changed while the request was in flight.
- */
+/** Counts edits; see getChangeToken / markSaved */
 let changeSeq = 0;
 
 export const useNetworkStore = create<NetworkStore>()(
@@ -143,28 +160,25 @@ export const useNetworkStore = create<NetworkStore>()(
       connectionCounter: 0,
       isConnecting: false,
       connectionStart: null,
-      // Backend sync initial state
-      currentProjectId: null,
-      currentCanvasId: null,
+      canvasId: null,
       hasUnsavedChanges: false,
-      isSyncing: false,
-      lastSyncError: null,
-      autoSaveEnabled: true,
+      canvasRevision: 0,
 
-      // Helper: Trigger auto-save (debounced)
-      // This is called after any data modification
-      _triggerAutoSave: () => {
+      // Changed flag
+      markChanged: () => {
         changeSeq++;
-        set({ hasUnsavedChanges: true });
-        if (!debouncedSave) {
-          debouncedSave = debounce(() => {
-            const state = get();
-            if (state.autoSaveEnabled && state.currentProjectId && state.currentCanvasId) {
-              state.saveToBackend({ silent: true });
-            }
-          }, 2000); // 2 second delay
+        if (!get().hasUnsavedChanges) {
+          set({ hasUnsavedChanges: true });
         }
-        debouncedSave();
+      },
+
+      getChangeToken: () => changeSeq,
+
+      markSaved: (changeToken) => {
+        if (changeToken !== undefined && changeToken !== changeSeq) return;
+        if (get().hasUnsavedChanges) {
+          set({ hasUnsavedChanges: false });
+        }
       },
 
       // Device Actions
@@ -177,7 +191,7 @@ export const useNetworkStore = create<NetworkStore>()(
             deviceCounter: state.deviceCounter + 1,
           };
         });
-        get()._triggerAutoSave();
+        get().markChanged();
       },
 
       updateDevice: (id, updates) => {
@@ -194,7 +208,7 @@ export const useNetworkStore = create<NetworkStore>()(
           }
           return { devices };
         });
-        get()._triggerAutoSave();
+        get().markChanged();
       },
 
       removeDevice: (id) => {
@@ -203,7 +217,7 @@ export const useNetworkStore = create<NetworkStore>()(
           connections: state.connections.filter((conn) => conn.source !== id && conn.target !== id),
           selectedDeviceId: state.selectedDeviceId === id ? null : state.selectedDeviceId,
         }));
-        get()._triggerAutoSave();
+        get().markChanged();
       },
 
       getDevice: (id) => {
@@ -302,7 +316,7 @@ export const useNetworkStore = create<NetworkStore>()(
           connectionCounter: state.connectionCounter + pastedConnections.length,
           // Note: Don't update selectedDeviceIds here to avoid loop with onSelectionChange
         }));
-        get()._triggerAutoSave();
+        get().markChanged();
       },
 
       // Connection Actions
@@ -332,7 +346,7 @@ export const useNetworkStore = create<NetworkStore>()(
             connectionCounter: counter + 1,
           };
         });
-        get()._triggerAutoSave();
+        get().markChanged();
       },
 
       updateConnection: (id, updates) => {
@@ -341,14 +355,14 @@ export const useNetworkStore = create<NetworkStore>()(
             conn.id === id ? { ...conn, ...updates } : conn
           ),
         }));
-        get()._triggerAutoSave();
+        get().markChanged();
       },
 
       removeConnection: (id) => {
         set((state) => ({
           connections: state.connections.filter((conn) => conn.id !== id),
         }));
-        get()._triggerAutoSave();
+        get().markChanged();
       },
 
       getConnection: (id) => {
@@ -400,7 +414,7 @@ export const useNetworkStore = create<NetworkStore>()(
         set((state) => ({
           globalNetworkSettings: { ...state.globalNetworkSettings, ...settings },
         }));
-        get()._triggerAutoSave();
+        get().markChanged();
       },
 
       findNextAvailableIP: () => {
@@ -423,8 +437,8 @@ export const useNetworkStore = create<NetworkStore>()(
 
       // Viewport Actions
       setViewport: (viewport) => {
+        // Where the user is looking is remembered, but it is not an edit
         set({ viewport });
-        get()._triggerAutoSave();
       },
 
       triggerFitView: () => {
@@ -449,7 +463,7 @@ export const useNetworkStore = create<NetworkStore>()(
           devices: layoutResult.devices,
           connections: layoutResult.connections,
         });
-        get()._triggerAutoSave();
+        get().markChanged();
       },
 
       autoConnectDevices: () => {
@@ -471,7 +485,7 @@ export const useNetworkStore = create<NetworkStore>()(
           connections: [...connections, ...boundConnections],
           connectionCounter: connectionCounter + newConnections.length,
         });
-        get()._triggerAutoSave();
+        get().markChanged();
       },
 
       // Utility Actions
@@ -483,7 +497,7 @@ export const useNetworkStore = create<NetworkStore>()(
           deviceCounter: 0,
           connectionCounter: 0,
         });
-        get()._triggerAutoSave();
+        get().markChanged();
       },
 
       loadTopology: (devices, connections) => {
@@ -518,146 +532,72 @@ export const useNetworkStore = create<NetworkStore>()(
             connectionCounter: connCounter,
           };
         });
+        get().markChanged();
       },
 
-      // Backend Sync Actions
-      setCurrentCanvas: (projectId, canvasId) => {
-        set({
-          currentProjectId: projectId,
-          currentCanvasId: canvasId,
-        });
+      // Whole canvas
+      getCanvasSnapshot: () => {
+        const { devices, connections, viewport, deviceCounter, connectionCounter } = get();
+        return { devices, connections, viewport, deviceCounter, connectionCounter };
       },
 
-      clearCurrentCanvas: () => {
-        // Disarm any pending autosave so it can't fire against a canvas
-        // that no longer exists (e.g. right after deleting the active one)
-        debouncedSave?.cancel();
-        set({
-          currentProjectId: null,
-          currentCanvasId: null,
-        });
-      },
-
-      cancelPendingSave: () => {
-        debouncedSave?.cancel();
-      },
-
-      saveBeforeSwitch: async () => {
-        // Disarm the debounced timer, then save synchronously: a stale timer
-        // firing mid-switch would write against whatever canvas is current
-        // at fire time (cross-canvas contamination)
-        debouncedSave?.cancel();
-        return get().saveToBackend({ silent: true });
-      },
-
-      loadFromBackend: async (projectId, canvasId) => {
-        // A timer armed on the previous canvas must never fire during/after
-        // the wholesale state overwrite below
-        debouncedSave?.cancel();
-        set({ isSyncing: true, lastSyncError: null });
-
-        try {
-          const canvas = await getCanvas(projectId, canvasId);
-
-          // Canvases saved before interface bindings are bound here, in
-          // memory only: the state stays clean (no dirty flag, no autosave)
-          // and the bindings reach the backend with the next real edit
-          const loadedDevices = (canvas.devices || []).map(mirrorPrimaryNic);
-          const loadedConnections = normalizeBindings(loadedDevices, canvas.connections || []);
-
-          set({
-            currentProjectId: projectId,
-            currentCanvasId: canvasId,
-            devices: loadedDevices,
-            connections: loadedConnections,
-            viewport: canvas.settings?.viewport || { x: 0, y: 0, zoom: 1 },
-            deviceCounter: canvas.settings?.deviceCounter || 0,
-            connectionCounter: canvas.settings?.connectionCounter || 0,
-            hasUnsavedChanges: false,
-            isSyncing: false,
-          });
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to load canvas';
-          set({
-            isSyncing: false,
-            lastSyncError: errorMessage,
-          });
-          console.error('[NetworkStore] Failed to load from backend:', error);
-          throw error;
-        }
-      },
-
-      saveToBackend: async (options) => {
-        const state = get();
-
-        // No canvas bound (welcome screen / local-only mode): nothing to
-        // save, which is not a failure — callers awaiting a save-before-
-        // switch must not be blocked by it
-        if (!state.currentProjectId || !state.currentCanvasId) {
-          console.warn('[NetworkStore] No current canvas set, skipping backend save');
-          return true;
-        }
-
-        set({ isSyncing: true, lastSyncError: null });
-        const seqAtStart = changeSeq;
-
-        try {
-          await updateCanvas(state.currentProjectId, state.currentCanvasId, {
-            devices: state.devices,
-            connections: state.connections,
-            settings: {
-              viewport: state.viewport,
-              deviceCounter: state.deviceCounter,
-              connectionCounter: state.connectionCounter,
-            },
-          });
-
-          // An edit made while the PUT was in flight is not in the payload
-          // just sent: the store must stay dirty until the next save
-          set({ isSyncing: false, hasUnsavedChanges: changeSeq !== seqAtStart });
-          if (!options?.silent) {
-            toast.success('Canvas salvato con successo');
-          }
-          return true;
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to save canvas';
-          set({
-            isSyncing: false,
-            lastSyncError: errorMessage,
-          });
-          toast.error(`Errore durante il salvataggio: ${errorMessage}`);
-          console.error('[NetworkStore] Failed to save to backend:', error);
-          return false;
-        }
-      },
-
-      setAutoSave: (enabled) => {
-        set({ autoSaveEnabled: enabled });
-      },
-
-      clearSyncError: () => {
-        set({ lastSyncError: null });
+      replaceCanvas: (canvasId, canvas, settings) => {
+        // Same repairs as on rehydration: a canvas stored before interface
+        // bindings (or with a stale address mirror) is brought in line in
+        // memory, without counting as an edit
+        const devices = canvas.devices.map(mirrorPrimaryNic);
+        set((state) => ({
+          canvasId,
+          devices,
+          connections: normalizeBindings(devices, canvas.connections),
+          viewport: canvas.viewport,
+          deviceCounter: canvas.deviceCounter,
+          connectionCounter: canvas.connectionCounter,
+          globalNetworkSettings: settings ?? state.globalNetworkSettings,
+          selectedDeviceId: null,
+          selectedDeviceIds: [],
+          hoveredDeviceId: null,
+          isConnecting: false,
+          connectionStart: null,
+          canvasRevision: state.canvasRevision + 1,
+        }));
+        document.body.classList.remove('is-connecting');
       },
     }),
     {
       name: 'pixelcake-network-v2',
-      partialize: (state) => ({
+      storage: safeJSONStorage<PersistedNetworkState>(),
+      partialize: (state): PersistedNetworkState => ({
         devices: state.devices,
         connections: state.connections,
         globalNetworkSettings: state.globalNetworkSettings,
         viewport: state.viewport,
         deviceCounter: state.deviceCounter,
         connectionCounter: state.connectionCounter,
-        // Canvas identity + dirty flag survive a refresh so the session can
-        // be restored (and orphaned edits pushed) instead of silently lost
-        currentProjectId: state.currentProjectId,
-        currentCanvasId: state.currentCanvasId,
+        canvasId: state.canvasId,
         hasUnsavedChanges: state.hasUnsavedChanges,
       }),
+      // Only the fields this version knows are taken from storage: what an
+      // older version wrote next to them (currentProjectId, currentCanvasId
+      // of the removed server sync) is left behind
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<PersistedNetworkState>;
+        return {
+          ...current,
+          devices: saved.devices ?? current.devices,
+          connections: saved.connections ?? current.connections,
+          globalNetworkSettings: saved.globalNetworkSettings ?? current.globalNetworkSettings,
+          viewport: saved.viewport ?? current.viewport,
+          deviceCounter: saved.deviceCounter ?? current.deviceCounter,
+          connectionCounter: saved.connectionCounter ?? current.connectionCounter,
+          canvasId: saved.canvasId ?? current.canvasId,
+          hasUnsavedChanges: saved.hasUnsavedChanges ?? current.hasUnsavedChanges,
+        };
+      },
       onRehydrateStorage: () => (state) => {
         // Device-level addressing follows the primary NIC (data saved before
         // this rule may carry a stale mirror). Plain assignment, like the
-        // binding migration below, so it neither persists nor autosaves
+        // binding migration below, so it neither persists nor counts as an edit
         if (state) {
           state.devices = state.devices.map(mirrorPrimaryNic);
         }
@@ -668,8 +608,8 @@ export const useNetworkStore = create<NetworkStore>()(
 
           // Update state with cleaned connections and correct counter.
           // Links persisted before interface bindings are bound here too; the
-          // plain assignment (no set) keeps this migration from persisting,
-          // marking the canvas dirty or autosaving on its own
+          // plain assignment (no set) keeps this migration from persisting
+          // or marking the project as changed on its own
           state.connections = normalizeBindings(state.devices, cleanedConnections);
           state.connectionCounter = Math.max(state.connectionCounter, maxCounter);
 

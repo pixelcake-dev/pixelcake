@@ -5,17 +5,8 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { toast } from 'sonner';
 import type { DeviceTemplate, ConnectionTemplate } from '@/types/network';
-import {
-  listDeviceTemplates,
-  createDeviceTemplate,
-  listConnectionTemplates,
-  createConnectionTemplate,
-  syncTemplates,
-} from '@/api';
-// Planned imports for individual template CRUD with DB ID mapping (see TODO in updateTemplate):
-// import { updateDeviceTemplate, deleteDeviceTemplate, updateConnectionTemplate, deleteConnectionTemplate } from '@/api';
+import { safeJSONStorage } from '@/utils/safeStorage';
 
 interface TemplateStore {
   // Device Templates State
@@ -24,31 +15,31 @@ interface TemplateStore {
   // Connection Templates State
   connectionTemplates: ConnectionTemplate[];
 
-  // Backend Sync State
-  isSyncing: boolean;
-  lastSyncError: string | null;
-  isInitialized: boolean;
-
   // Device Template Actions
-  addTemplate: (template: Omit<DeviceTemplate, 'id'>) => Promise<void>;
-  updateTemplate: (id: string, updates: Partial<DeviceTemplate>) => Promise<void>;
-  deleteTemplate: (id: string) => Promise<void>;
+  addTemplate: (template: Omit<DeviceTemplate, 'id'>) => void;
+  updateTemplate: (id: string, updates: Partial<DeviceTemplate>) => void;
+  deleteTemplate: (id: string) => void;
   getTemplate: (id: string) => DeviceTemplate | undefined;
   loadDefaultTemplates: () => void;
 
   // Connection Template Actions
-  addConnectionTemplate: (template: Omit<ConnectionTemplate, 'id'>) => Promise<void>;
-  updateConnectionTemplate: (id: string, updates: Partial<ConnectionTemplate>) => Promise<void>;
-  deleteConnectionTemplate: (id: string) => Promise<void>;
+  addConnectionTemplate: (template: Omit<ConnectionTemplate, 'id'>) => void;
+  updateConnectionTemplate: (id: string, updates: Partial<ConnectionTemplate>) => void;
+  deleteConnectionTemplate: (id: string) => void;
   getConnectionTemplate: (id: string) => ConnectionTemplate | undefined;
   getConnectionTemplateByType: (type: string) => ConnectionTemplate | undefined;
   loadDefaultConnectionTemplates: () => void;
 
-  // Backend Sync Actions
-  loadFromBackend: () => Promise<void>;
-  saveToBackend: () => Promise<void>;
-  syncCustomTemplates: () => Promise<void>;
+  /**
+   * Add the templates that came with a project file and are not here yet.
+   * Templates already present (same id; for connections also same type) are
+   * never overwritten.
+   */
+  addMissingTemplates: (devices: DeviceTemplate[], connections: ConnectionTemplate[]) => void;
 }
+
+/** What is written to localStorage */
+type PersistedTemplateState = Pick<TemplateStore, 'templates' | 'connectionTemplates'>;
 
 // Default generic templates
 const DEFAULT_TEMPLATES: DeviceTemplate[] = [
@@ -372,73 +363,29 @@ export const useTemplateStore = create<TemplateStore>()(
       // Initial State
       templates: DEFAULT_TEMPLATES,
       connectionTemplates: DEFAULT_CONNECTION_TEMPLATES,
-      isSyncing: false,
-      lastSyncError: null,
-      isInitialized: false,
 
       // Device Template Actions
-      addTemplate: async (template) => {
+      addTemplate: (template) => {
         const newTemplate: DeviceTemplate = {
           ...template,
           id: `tpl-${Date.now()}`,
         };
 
-        // Add locally first (optimistic update)
         set((state) => ({ templates: [...state.templates, newTemplate] }));
-
-        // Sync to backend if custom template
-        if (newTemplate.isCustom) {
-          try {
-            set({ isSyncing: true, lastSyncError: null });
-            await createDeviceTemplate({ template: newTemplate });
-            set({ isSyncing: false });
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to create device template';
-            set({ lastSyncError: errorMessage, isSyncing: false });
-            toast.error(`Errore creazione template: ${errorMessage}`);
-            console.error('[TemplateStore] Failed to create device template:', error);
-            // Keep local changes even if backend sync fails
-          }
-        }
       },
 
-      updateTemplate: async (id, updates) => {
-        const template = get().templates.find((t) => t.id === id);
-        if (!template) return;
-
-        // Update locally first (optimistic update)
+      updateTemplate: (id, updates) => {
         set((state) => ({
           templates: state.templates.map((t) =>
             t.id === id ? { ...t, ...updates } : t
           ),
         }));
-
-        // Sync to backend if custom template
-        if (template.isCustom) {
-          try {
-            set({ isSyncing: true, lastSyncError: null });
-            // TODO: Map template.id to DB record ID, then call:
-            // const updatedTemplate = { ...template, ...updates };
-            // await updateDeviceTemplate(dbId, updatedTemplate);
-            // For now, skip backend update (will be synced on next load via bulk sync)
-            set({ isSyncing: false });
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to update device template';
-            set({ lastSyncError: errorMessage, isSyncing: false });
-            toast.error(`Errore aggiornamento template: ${errorMessage}`);
-            console.error('[TemplateStore] Failed to update device template:', error);
-          }
-        }
       },
 
-      deleteTemplate: async (id) => {
-        // Delete locally
+      deleteTemplate: (id) => {
         set((state) => ({
           templates: state.templates.filter((t) => t.id !== id),
         }));
-
-        // Backend sync will happen via syncCustomTemplates() or saveToBackend()
-        // Note: Individual delete not implemented - use bulk sync instead
       },
 
       getTemplate: (id) => {
@@ -450,55 +397,29 @@ export const useTemplateStore = create<TemplateStore>()(
       },
 
       // Connection Template Actions
-      addConnectionTemplate: async (template) => {
+      addConnectionTemplate: (template) => {
         const newTemplate: ConnectionTemplate = {
           ...template,
           id: `conn-${Date.now()}`,
         };
 
-        // Add locally first (optimistic update)
         set((state) => ({
           connectionTemplates: [...state.connectionTemplates, newTemplate],
         }));
-
-        // Sync to backend if custom template
-        if (newTemplate.isCustom) {
-          try {
-            set({ isSyncing: true, lastSyncError: null });
-            await createConnectionTemplate({ template: newTemplate });
-            set({ isSyncing: false });
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to create connection template';
-            set({ lastSyncError: errorMessage, isSyncing: false });
-            toast.error(`Errore creazione template connessione: ${errorMessage}`);
-            console.error('[TemplateStore] Failed to create connection template:', error);
-          }
-        }
       },
 
-      updateConnectionTemplate: async (id, updates) => {
-        const template = get().connectionTemplates.find((t) => t.id === id);
-        if (!template) return;
-
-        // Update locally first (optimistic update)
+      updateConnectionTemplate: (id, updates) => {
         set((state) => ({
           connectionTemplates: state.connectionTemplates.map((t) =>
             t.id === id ? { ...t, ...updates } : t
           ),
         }));
-
-        // Backend sync will happen via syncCustomTemplates() or saveToBackend()
-        // Note: Individual update uses bulk sync instead
       },
 
-      deleteConnectionTemplate: async (id) => {
-        // Delete locally
+      deleteConnectionTemplate: (id) => {
         set((state) => ({
           connectionTemplates: state.connectionTemplates.filter((t) => t.id !== id),
         }));
-
-        // Backend sync will happen via syncCustomTemplates() or saveToBackend()
-        // Note: Individual delete not implemented - use bulk sync instead
       },
 
       getConnectionTemplate: (id) => {
@@ -513,73 +434,40 @@ export const useTemplateStore = create<TemplateStore>()(
         set({ connectionTemplates: DEFAULT_CONNECTION_TEMPLATES });
       },
 
-      // Backend Sync Actions
-      loadFromBackend: async () => {
-        try {
-          set({ isSyncing: true, lastSyncError: null });
+      addMissingTemplates: (devices, connections) => {
+        const { templates, connectionTemplates } = get();
 
-          // Fetch all templates from backend (global + custom)
-          const [deviceTemplatesResponse, connectionTemplatesResponse] = await Promise.all([
-            listDeviceTemplates(),
-            listConnectionTemplates(),
-          ]);
-
-          // Convert API responses to frontend format
-          const deviceTemplates = deviceTemplatesResponse.map((res) => res.template);
-          const connectionTemplates = connectionTemplatesResponse.map((res) => res.template);
-
-          // Update state
-          set({
-            templates: deviceTemplates,
-            connectionTemplates,
-            isInitialized: true,
-            isSyncing: false,
-          });
-
-          toast.success(`Templates caricati dal backend: ${deviceTemplates.length} dispositivi, ${connectionTemplates.length} connessioni`);
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to load templates';
-          set({ lastSyncError: errorMessage, isSyncing: false });
-          toast.error(`Errore caricamento templates: ${errorMessage}`);
-          console.error('[TemplateStore] Failed to load templates from backend:', error);
-          // Fall back to LocalStorage cached data (already loaded by persist middleware)
+        const knownIds = new Set(templates.map((t) => t.id));
+        const newDevices: DeviceTemplate[] = [];
+        for (const template of devices) {
+          if (knownIds.has(template.id)) continue;
+          knownIds.add(template.id);
+          newDevices.push(template);
         }
-      },
 
-      saveToBackend: async () => {
-        // Alias for syncCustomTemplates
-        await get().syncCustomTemplates();
-      },
-
-      syncCustomTemplates: async () => {
-        try {
-          set({ isSyncing: true, lastSyncError: null });
-
-          // Get only custom templates
-          const customDeviceTemplates = get().templates.filter((t) => t.isCustom);
-          const customConnectionTemplates = get().connectionTemplates.filter((t) => t.isCustom);
-
-          // Sync to backend (upsert)
-          await syncTemplates({
-            deviceTemplates: customDeviceTemplates,
-            connectionTemplates: customConnectionTemplates,
-          });
-
-          set({ isSyncing: false });
-
-          toast.success(`Templates sincronizzati: ${customDeviceTemplates.length} dispositivi, ${customConnectionTemplates.length} connessioni`);
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to sync templates';
-          set({ lastSyncError: errorMessage, isSyncing: false });
-          toast.error(`Errore sincronizzazione templates: ${errorMessage}`);
-          console.error('[TemplateStore] Failed to sync templates to backend:', error);
-          throw error;
+        // A connection template is looked up by `type`: a second one with a
+        // type already present would never be used
+        const knownConnectionIds = new Set(connectionTemplates.map((t) => t.id));
+        const knownTypes = new Set(connectionTemplates.map((t) => t.type));
+        const newConnections: ConnectionTemplate[] = [];
+        for (const template of connections) {
+          if (knownConnectionIds.has(template.id) || knownTypes.has(template.type)) continue;
+          knownConnectionIds.add(template.id);
+          knownTypes.add(template.type);
+          newConnections.push(template);
         }
+
+        if (newDevices.length === 0 && newConnections.length === 0) return;
+        set({
+          templates: [...templates, ...newDevices],
+          connectionTemplates: [...connectionTemplates, ...newConnections],
+        });
       },
     }),
     {
       name: 'pixelcake-templates-v8', // LocalStorage key (v8: added 11 new device types + MPLS connection)
-      partialize: (state) => ({
+      storage: safeJSONStorage<PersistedTemplateState>(),
+      partialize: (state): PersistedTemplateState => ({
         templates: state.templates,
         connectionTemplates: state.connectionTemplates,
       }),

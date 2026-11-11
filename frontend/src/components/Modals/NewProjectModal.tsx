@@ -1,32 +1,28 @@
 /**
  * New Project Modal
- * Form to create a new project with default settings
+ * Form to create a new project with default settings.
+ * The project is created in the browser and replaces the open one; whoever
+ * opens this modal has already asked about unsaved changes
+ * (requestNewProject in utils/projectFileAccess).
  */
 
 import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { FormContainer, FormFieldset } from '@/components/ui/FormContainer';
 import { useUIStore } from '@/store/uiStore';
-import { useProjectStore } from '@/store/projectStore';
-import { useNetworkStore } from '@/store/networkStore';
-import { friendlyApiError } from '@/api';
+import { createNewProject } from '@/utils/projectFileAccess';
 
 const NewProjectModal = () => {
   const isOpen = useUIStore((state) => state.modals.newProject);
   const closeModal = useUIStore((state) => state.closeModal);
-  const createNewProject = useProjectStore((state) => state.createNewProject);
-  const loadFromBackend = useNetworkStore((state) => state.loadFromBackend);
-  const saveBeforeSwitch = useNetworkStore((state) => state.saveBeforeSwitch);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [ipClass, setIpClass] = useState('192.168.1.0');
   const [subnet, setSubnet] = useState('255.255.255.0');
   const [gateway, setGateway] = useState('192.168.1.1');
-  const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Reset form when modal opens
@@ -41,55 +37,18 @@ const NewProjectModal = () => {
     }
   }, [isOpen]);
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!name.trim()) {
       setError('Il nome del progetto è obbligatorio');
       return;
     }
 
-    setIsCreating(true);
-    setError(null);
-
-    // Save the currently open canvas before replacing it with the new project
-    const saved = await saveBeforeSwitch();
-    if (
-      !saved &&
-      !confirm(
-        'Salvataggio del canvas corrente fallito. Creare comunque il nuovo progetto? Le modifiche non salvate andranno perse.'
-      )
-    ) {
-      setIsCreating(false);
-      return;
-    }
-
-    try {
-      // Create project (backend auto-creates default "Main Canvas")
-      const project = await createNewProject({
-        name: name.trim(),
-        description: description.trim() || undefined,
-        global_settings: {
-          ipClass,
-          subnet,
-          gateway,
-        },
-      });
-
-      // Load the default canvas into networkStore
-      const defaultCanvas = project.canvases[0];
-      if (defaultCanvas) {
-        await loadFromBackend(project.id, defaultCanvas.id);
-      }
-
-      // Close modal and show success
-      closeModal('newProject');
-      toast.success(`Progetto "${project.name}" creato con successo`);
-    } catch (err) {
-      const errorMessage = friendlyApiError(err, 'Errore durante la creazione');
-      setError(errorMessage);
-      console.error('[NewProject] Failed to create:', err);
-    } finally {
-      setIsCreating(false);
-    }
+    createNewProject({
+      name,
+      description,
+      settings: { ipClass, subnet, gateway },
+    });
+    closeModal('newProject');
   };
 
   const handleCancel = () => {
@@ -105,11 +64,11 @@ const NewProjectModal = () => {
       minHeight="550px"
       footer={
         <div className="modal-actions px-6 pb-6 pt-4">
-          <Button variant="secondary" onClick={handleCancel} disabled={isCreating}>
+          <Button variant="secondary" onClick={handleCancel}>
             Annulla
           </Button>
-          <Button variant="primary" onClick={handleCreate} disabled={isCreating}>
-            {isCreating ? 'Creazione...' : 'Crea Progetto'}
+          <Button variant="primary" onClick={handleCreate}>
+            Crea Progetto
           </Button>
         </div>
       }

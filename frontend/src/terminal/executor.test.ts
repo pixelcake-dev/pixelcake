@@ -15,11 +15,6 @@ import { useNetworkStore } from '@/store/networkStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
 import type { NetworkDevice } from '@/types';
 
-vi.mock('@/api', () => ({
-  getCanvas: vi.fn(),
-  updateCanvas: vi.fn(),
-}));
-
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
 }));
@@ -78,7 +73,6 @@ describe('terminal executor — interfaces', () => {
     store.clearAllDevices();
     const sample = createSampleTopology();
     store.loadTopology(sample.devices, sample.connections);
-    store.cancelPendingSave();
   });
 
   // ---------- connect ----------

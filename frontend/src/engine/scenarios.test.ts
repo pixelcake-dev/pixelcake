@@ -22,11 +22,6 @@ import { generateYaml } from '@/utils/exportYaml';
 import { parseYamlTopology } from '@/utils/importYaml';
 import { useNetworkStore } from '@/store/networkStore';
 
-vi.mock('@/api', () => ({
-  getCanvas: vi.fn(),
-  updateCanvas: vi.fn(),
-}));
-
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
 }));
@@ -336,7 +331,6 @@ describe('9. data saved before interfaces could be bound or addressed', () => {
   beforeEach(() => {
     localStorage.clear();
     useNetworkStore.getState().clearAllDevices();
-    useNetworkStore.getState().cancelPendingSave();
   });
 
   it('the fixture really is unbound and unaddressed', () => {

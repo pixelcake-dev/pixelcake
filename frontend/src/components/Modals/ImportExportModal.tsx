@@ -29,7 +29,7 @@ const ImportExportModal = () => {
   const addDevice = useNetworkStore((state) => state.addDevice);
   const addConnection = useNetworkStore((state) => state.addConnection);
   const clearAllDevices = useNetworkStore((state) => state.clearAllDevices);
-  const currentProject = useProjectStore((state) => state.currentProject);
+  const currentProjectName = useProjectStore((state) => state.name);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('export');
   const [exportFormat, setExportFormat] = useState<ExportFormat>('terraform');
@@ -40,7 +40,7 @@ const ImportExportModal = () => {
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const projectName = currentProject?.name || 'pixelcake-topology';
+  const projectName = currentProjectName || 'pixelcake-topology';
 
   const handleClose = () => {
     closeModal('importExport');

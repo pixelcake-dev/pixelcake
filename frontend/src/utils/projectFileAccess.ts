@@ -1,0 +1,313 @@
+/**
+ * Saving the project to a file and opening one.
+ *
+ * Where the browser has the File System Access API the file is written in
+ * place and remembered for the session; elsewhere saving downloads the file
+ * and opening goes through a file input. The API is looked up at every call,
+ * never at import.
+ *
+ * This is the layer the menus, the explorer, the welcome screen and Ctrl+S
+ * call: it talks to the user (pickers, confirmation, toasts) and leaves the
+ * project itself to the stores.
+ */
+
+import { toast } from 'sonner';
+import { useNetworkStore } from '@/store/networkStore';
+import { useProjectStore, type NewProjectInput } from '@/store/projectStore';
+import { useUIStore } from '@/store/uiStore';
+import { parseProjectFile, projectFileName, serializeProject } from './projectFile';
+
+// ---------- File System Access API: only what is used here ----------
+// (showSaveFilePicker / showOpenFilePicker are not in TypeScript's DOM lib)
+
+interface WritableFileStream {
+  write(data: string): Promise<void>;
+  close(): Promise<void>;
+}
+
+interface ProjectFileHandle {
+  readonly name: string;
+  getFile(): Promise<File>;
+  createWritable(): Promise<WritableFileStream>;
+}
+
+interface FilePickerType {
+  description: string;
+  accept: Record<string, string[]>;
+}
+
+interface FilePickerHost {
+  showSaveFilePicker?: (options?: {
+    suggestedName?: string;
+    types?: FilePickerType[];
+  }) => Promise<ProjectFileHandle>;
+  showOpenFilePicker?: (options?: {
+    multiple?: boolean;
+    types?: FilePickerType[];
+  }) => Promise<ProjectFileHandle[]>;
+}
+
+const FILE_TYPES: FilePickerType[] = [
+  { description: 'Progetto PixelCake', accept: { 'application/json': ['.json'] } },
+];
+
+function pickerHost(): Window & FilePickerHost {
+  return window;
+}
+
+// ---------- module state (this session only, never persisted) ----------
+
+/** The file the project was last saved to / opened from: "Salva" writes it in place */
+let currentHandle: ProjectFileHandle | null = null;
+
+/** A native picker is open: a second one would be refused by the browser */
+let pickerOpen = false;
+
+/** A file input waiting for the user's choice (fallback path) */
+let pendingInput: { settle: (file: File | null) => void } | null = null;
+
+export type SaveOutcome = 'saved' | 'downloaded' | 'cancelled' | 'failed';
+export type OpenOutcome = 'opened' | 'cancelled' | 'failed';
+
+// ---------- helpers ----------
+
+/** The user closed a picker without choosing: not an error */
+function isAbort(error: unknown): boolean {
+  return (
+    typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError'
+  );
+}
+
+function reasonOf(error: unknown): string | undefined {
+  return error instanceof Error && error.message ? error.message : undefined;
+}
+
+/** The project as file text, with the edit position it corresponds to */
+function snapshotProject(): { text: string; changeToken: number } {
+  const changeToken = useNetworkStore.getState().getChangeToken();
+  const text = serializeProject(useProjectStore.getState().buildProjectFile());
+  return { text, changeToken };
+}
+
+function downloadText(text: string, fileName: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function readText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.onerror = () => reject(reader.error ?? new Error('read failed'));
+    reader.readAsText(file);
+  });
+}
+
+/** Fallback for browsers without showOpenFilePicker: a hidden file input */
+function pickFileWithInput(): Promise<File | null> {
+  // A chooser dismissed without any event (older browsers) is dropped here
+  pendingInput?.settle(null);
+
+  return new Promise(resolve => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.style.display = 'none';
+
+    const pending = {
+      settle: (file: File | null) => {
+        if (pendingInput === pending) pendingInput = null;
+        input.remove();
+        resolve(file);
+      },
+    };
+    input.addEventListener('change', () => pending.settle(input.files?.[0] ?? null));
+    input.addEventListener('cancel', () => pending.settle(null));
+
+    pendingInput = pending;
+    document.body.appendChild(input);
+    input.click();
+  });
+}
+
+/** Ask the user for a project file; null when they chose none */
+async function pickFile(): Promise<{ file: File; handle: ProjectFileHandle | null } | null> {
+  const host = pickerHost();
+  if (typeof host.showOpenFilePicker !== 'function') {
+    const file = await pickFileWithInput();
+    return file ? { file, handle: null } : null;
+  }
+
+  if (pickerOpen) return null;
+  pickerOpen = true;
+  try {
+    const [handle] = await host.showOpenFilePicker({ multiple: false, types: FILE_TYPES });
+    return { file: await handle.getFile(), handle };
+  } finally {
+    pickerOpen = false;
+  }
+}
+
+async function save(askWhere: boolean): Promise<SaveOutcome> {
+  const host = pickerHost();
+  const fileName = projectFileName(useProjectStore.getState().name);
+
+  // No File System Access API: the file is downloaded
+  if (typeof host.showSaveFilePicker !== 'function') {
+    const { text, changeToken } = snapshotProject();
+    downloadText(text, fileName);
+    useNetworkStore.getState().markSaved(changeToken);
+    toast.success(`Progetto scaricato come ${fileName}`);
+    return 'downloaded';
+  }
+
+  let handle = askWhere ? null : currentHandle;
+  if (!handle) {
+    if (pickerOpen) return 'cancelled';
+    pickerOpen = true;
+    try {
+      handle = await host.showSaveFilePicker({ suggestedName: fileName, types: FILE_TYPES });
+    } catch (error) {
+      if (isAbort(error)) return 'cancelled';
+      console.error('[ProjectFile] Save picker failed:', error);
+      toast.error('Impossibile scegliere dove salvare il file', { description: reasonOf(error) });
+      return 'failed';
+    } finally {
+      pickerOpen = false;
+    }
+  }
+
+  // Taken once the picker is closed, so it holds the project as it is now
+  const { text, changeToken } = snapshotProject();
+  try {
+    const writable = await handle.createWritable();
+    await writable.write(text);
+    await writable.close();
+  } catch (error) {
+    if (isAbort(error)) return 'cancelled';
+    console.error('[ProjectFile] Write failed:', error);
+    // Do not keep writing to a file that refuses: next time ask where to save
+    if (handle === currentHandle) currentHandle = null;
+    toast.error(`Impossibile salvare su "${handle.name}"`, {
+      description: 'Usa File → Salva con nome… per scegliere un altro file.',
+    });
+    return 'failed';
+  }
+
+  currentHandle = handle;
+  // An edit made while the file was being written is not in it: the token
+  // keeps the project marked as changed in that case
+  useNetworkStore.getState().markSaved(changeToken);
+  toast.success('Progetto salvato su file', { description: handle.name });
+  return 'saved';
+}
+
+// ---------- public API ----------
+
+/**
+ * True when the open project can be replaced: it has no changes waiting to
+ * be saved to a file, or the user accepts to lose them.
+ */
+export function confirmDiscardChanges(): boolean {
+  if (!useNetworkStore.getState().hasUnsavedChanges) return true;
+  return window.confirm(
+    'Il progetto ha modifiche non ancora salvate su file.\nContinuare senza salvare?'
+  );
+}
+
+/** File → Salva, Ctrl+S: write to the file of this session, or ask where */
+export function saveProject(): Promise<SaveOutcome> {
+  return save(false);
+}
+
+/** File → Salva con nome…: always ask where */
+export function saveProjectAs(): Promise<SaveOutcome> {
+  return save(true);
+}
+
+/**
+ * File → Apri…: replace the open project with the one in a file.
+ *
+ * The picker opens first and the confirmation for unsaved changes comes once
+ * a valid file has been chosen, right before anything is replaced: browsers
+ * only show a file picker within a few seconds of the click, and a question
+ * left open longer than that would make the picker fail.
+ */
+export async function openProject(): Promise<OpenOutcome> {
+  let picked: { file: File; handle: ProjectFileHandle | null } | null;
+  let text: string;
+  try {
+    picked = await pickFile();
+    if (!picked) return 'cancelled';
+    text = await readText(picked.file);
+  } catch (error) {
+    if (isAbort(error)) return 'cancelled';
+    console.error('[ProjectFile] Open failed:', error);
+    toast.error('Impossibile leggere il file', { description: reasonOf(error) });
+    return 'failed';
+  }
+
+  const result = parseProjectFile(text);
+  if (!result.ok) {
+    toast.error(`Impossibile aprire "${picked.file.name}"`, { description: result.error });
+    return 'failed';
+  }
+
+  if (!confirmDiscardChanges()) return 'cancelled';
+
+  useProjectStore.getState().loadProject(result.project);
+  currentHandle = picked.handle;
+  useUIStore.getState().setShowWelcomeScreen(false);
+
+  const { project, warnings } = result;
+  if (warnings.length === 0) {
+    toast.success(`Progetto "${project.name}" aperto`);
+  } else {
+    toast.warning(`Progetto "${project.name}" aperto con alcune correzioni`, {
+      description: warnings.join('\n'),
+      descriptionClassName: 'whitespace-pre-line',
+      duration: 12000,
+    });
+  }
+  return 'opened';
+}
+
+/**
+ * File → Nuovo progetto…: ask before losing unsaved changes, then show the
+ * form. False when the user chose to keep the open project.
+ */
+export function requestNewProject(): boolean {
+  if (!confirmDiscardChanges()) return false;
+  useUIStore.getState().openModal('newProject');
+  return true;
+}
+
+/** Replace the open project with a new, empty one (the form of NewProjectModal) */
+export function createNewProject(input: NewProjectInput): void {
+  useProjectStore.getState().createProject(input);
+  // The new project has no file yet: "Salva" must ask where
+  currentHandle = null;
+  useUIStore.getState().setShowWelcomeScreen(false);
+  toast.success(`Progetto "${useProjectStore.getState().name}" creato`);
+}
+
+/** Ctrl+S (Cmd+S) anywhere in the app saves the project; returns the cleanup */
+export function registerSaveShortcut(): () => void {
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
+    if (event.key.toLowerCase() !== 's') return;
+    // Never the browser's own "save page as"
+    event.preventDefault();
+    if (event.repeat) return;
+    void saveProject();
+  };
+  window.addEventListener('keydown', onKeyDown);
+  return () => window.removeEventListener('keydown', onKeyDown);
+}

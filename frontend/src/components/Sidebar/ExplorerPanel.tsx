@@ -1,238 +1,241 @@
 /**
  * Explorer Panel
- * VS Code-style project and canvas explorer
+ * VS Code-style explorer of the open project: its name and description, its
+ * canvases (switch, add, rename, delete) and the file actions. Everything is
+ * local and immediate; the project reaches the disk only through "Salva su file".
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Icon } from '@iconify/react';
-import { toast } from 'sonner';
-import { useUIStore } from '@/store/uiStore';
+import { InlineEdit } from '@/components/ui/InlineEdit';
 import { useProjectStore } from '@/store/projectStore';
 import { useNetworkStore } from '@/store/networkStore';
+import { openProject, saveProject } from '@/utils/projectFileAccess';
+
+/** What is being edited in place, if anything */
+type Editing =
+  | { kind: 'projectName' }
+  | { kind: 'projectDescription' }
+  | { kind: 'canvas'; canvasId: string }
+  | null;
+
+function deviceCountLabel(count: number): string {
+  return count === 1 ? '1 dispositivo' : `${count} dispositivi`;
+}
 
 const ExplorerPanel = () => {
-  const openModal = useUIStore((state) => state.openModal);
+  const projectName = useProjectStore(state => state.name);
+  const projectDescription = useProjectStore(state => state.description);
+  const canvases = useProjectStore(state => state.canvases);
+  const activeCanvasId = useProjectStore(state => state.activeCanvasId);
+  const renameProject = useProjectStore(state => state.renameProject);
+  const setDescription = useProjectStore(state => state.setDescription);
+  const addCanvas = useProjectStore(state => state.addCanvas);
+  const renameCanvas = useProjectStore(state => state.renameCanvas);
+  const deleteCanvas = useProjectStore(state => state.deleteCanvas);
+  const switchCanvas = useProjectStore(state => state.switchCanvas);
 
-  const currentProject = useProjectStore((state) => state.currentProject);
-  const loadProject = useProjectStore((state) => state.loadProject);
-  const createNewCanvas = useProjectStore((state) => state.createNewCanvas);
-  const deleteCanvasById = useProjectStore((state) => state.deleteCanvasById);
+  // The entry of the active canvas in `canvases` is only refreshed when it is
+  // committed: its live content is in the network store
+  const liveDeviceCount = useNetworkStore(state => state.devices.length);
+  const hasUnsavedChanges = useNetworkStore(state => state.hasUnsavedChanges);
 
-  const currentCanvasId = useNetworkStore((state) => state.currentCanvasId);
-  const loadFromBackend = useNetworkStore((state) => state.loadFromBackend);
-  const saveToBackend = useNetworkStore((state) => state.saveToBackend);
-  const saveBeforeSwitch = useNetworkStore((state) => state.saveBeforeSwitch);
-  const cancelPendingSave = useNetworkStore((state) => state.cancelPendingSave);
-  const clearCurrentCanvas = useNetworkStore((state) => state.clearCurrentCanvas);
-  const setCurrentCanvas = useNetworkStore((state) => state.setCurrentCanvas);
-  const isSyncing = useNetworkStore((state) => state.isSyncing);
-
-  const [isCreatingCanvas, setIsCreatingCanvas] = useState(false);
+  const [editing, setEditing] = useState<Editing>(null);
   const [newCanvasName, setNewCanvasName] = useState('');
   const [showNewCanvasInput, setShowNewCanvasInput] = useState(false);
 
-  // Load project on mount if we have a current canvas
-  useEffect(() => {
-    if (currentProject) {
-      loadProject(currentProject.id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject?.id, loadProject]);
+  const stopEditing = () => setEditing(null);
 
-  const handleSwitchCanvas = async (canvasId: string) => {
-    if (!currentProject || canvasId === currentCanvasId) return;
-
-    try {
-      // Save current canvas first (also disarms the pending autosave timer)
-      const saved = await saveBeforeSwitch();
-      if (
-        !saved &&
-        !confirm(
-          'Salvataggio del canvas corrente fallito. Cambiare canvas comunque? Le modifiche non salvate andranno perse.'
-        )
-      ) {
-        return;
-      }
-
-      // Load new canvas
-      await loadFromBackend(currentProject.id, canvasId);
-    } catch (error) {
-      console.error('[Explorer] Failed to switch canvas:', error);
-      toast.error('Errore durante il cambio canvas');
-    }
+  const handleCreateCanvas = () => {
+    if (!newCanvasName.trim()) return;
+    addCanvas(newCanvasName);
+    setNewCanvasName('');
+    setShowNewCanvasInput(false);
   };
 
-  const handleCreateCanvas = async () => {
-    if (!currentProject || !newCanvasName.trim()) return;
-
-    setIsCreatingCanvas(true);
-    try {
-      await createNewCanvas(currentProject.id, {
-        name: newCanvasName.trim(),
-        order: currentProject.canvases.length,
-      });
-
-      setNewCanvasName('');
-      setShowNewCanvasInput(false);
-    } catch (error) {
-      console.error('[Explorer] Failed to create canvas:', error);
-      toast.error('Errore durante la creazione del canvas');
-    } finally {
-      setIsCreatingCanvas(false);
-    }
+  const handleDeleteCanvas = (canvasId: string, canvasName: string, deviceCount: number) => {
+    const question =
+      `Eliminare il canvas "${canvasName}"?` +
+      (deviceCount > 0
+        ? `\nContiene ${deviceCountLabel(deviceCount)}: il suo contenuto andrà perso.`
+        : '');
+    if (!confirm(question)) return;
+    deleteCanvas(canvasId);
   };
-
-  const handleDeleteCanvas = async (canvasId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    if (!currentProject) return;
-
-    // Prevent deleting the last canvas
-    if (currentProject.canvases.length <= 1) {
-      toast.warning('Impossibile eliminare l\'ultimo canvas del progetto');
-      return;
-    }
-
-    if (!confirm('Sei sicuro di voler eliminare questo canvas?')) return;
-
-    const deletingActive = canvasId === currentCanvasId;
-    const projectId = currentProject.id;
-
-    // Disarm the pending autosave; if the active canvas is going away,
-    // unbind it so nothing can save to a deleted canvas mid-flow
-    if (deletingActive) {
-      clearCurrentCanvas();
-    } else {
-      cancelPendingSave();
-    }
-
-    try {
-      await deleteCanvasById(projectId, canvasId);
-
-      // If we deleted the active canvas, switch to first available
-      // (read the refreshed project — the captured one is stale after delete)
-      if (deletingActive) {
-        const freshProject = useProjectStore.getState().currentProject;
-        const nextCanvas = freshProject?.canvases.find((c) => c.id !== canvasId);
-        if (nextCanvas) {
-          await loadFromBackend(projectId, nextCanvas.id);
-        }
-      }
-    } catch (error) {
-      if (deletingActive) {
-        // Delete failed: the canvas still exists, restore the binding
-        setCurrentCanvas(projectId, canvasId);
-      }
-      console.error('[Explorer] Failed to delete canvas:', error);
-      toast.error('Errore durante l\'eliminazione del canvas');
-    }
-  };
-
-  // No project loaded
-  if (!currentProject) {
-    return (
-      <div className="sidebar-panel-section explorer-empty-state">
-        <Icon icon="lucide:folder-x" width={48} className="explorer-empty-state-icon" />
-        <div className="explorer-empty-state-text">
-          Nessun progetto aperto
-        </div>
-        <button
-          onClick={() => openModal('newProject')}
-          className="explorer-button explorer-button-accent"
-          style={{ marginBottom: '8px' }}
-        >
-          <Icon icon="lucide:plus" width={16} />
-          Nuovo Progetto
-        </button>
-        <button
-          onClick={() => openModal('openProject')}
-          className="explorer-button"
-        >
-          <Icon icon="lucide:folder-open" width={16} />
-          Apri Progetto
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="sidebar-panel-section" style={{ padding: '0' }}>
       {/* Project Info */}
       <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-          <Icon icon="lucide:folder" width={18} style={{ color: 'var(--accent-color)' }} />
-          <div style={{ fontWeight: 600, fontSize: '0.95em' }}>
-            {currentProject.name}
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+          <Icon
+            icon="lucide:folder"
+            width={18}
+            style={{ color: 'var(--accent-color)', flexShrink: 0 }}
+          />
+          {editing?.kind === 'projectName' ? (
+            <InlineEdit
+              className="explorer-inline-input"
+              value={projectName}
+              label="Nome del progetto"
+              onCommit={value => {
+                renameProject(value);
+                stopEditing();
+              }}
+              onCancel={stopEditing}
+            />
+          ) : (
+            <>
+              <div
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  fontWeight: 600,
+                  fontSize: '0.95em',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                title={projectName}
+                onDoubleClick={() => setEditing({ kind: 'projectName' })}
+              >
+                {projectName}
+              </div>
+              <button
+                className="explorer-icon-button"
+                title="Rinomina progetto"
+                aria-label="Rinomina progetto"
+                onClick={() => setEditing({ kind: 'projectName' })}
+              >
+                <Icon icon="lucide:pencil" width={14} />
+              </button>
+            </>
+          )}
         </div>
-        {currentProject.description && (
-          <div style={{ fontSize: '0.8em', color: 'var(--text-color-light)', marginLeft: '26px' }}>
-            {currentProject.description}
+
+        <div style={{ marginLeft: '26px', fontSize: '0.8em', color: 'var(--text-color-light)' }}>
+          {editing?.kind === 'projectDescription' ? (
+            <InlineEdit
+              className="explorer-inline-input"
+              value={projectDescription}
+              label="Descrizione del progetto"
+              placeholder="Descrizione..."
+              onCommit={value => {
+                setDescription(value);
+                stopEditing();
+              }}
+              onCancel={stopEditing}
+            />
+          ) : (
+            <button
+              className="explorer-description"
+              title="Modifica descrizione"
+              onClick={() => setEditing({ kind: 'projectDescription' })}
+            >
+              {projectDescription || 'Aggiungi una descrizione…'}
+            </button>
+          )}
+        </div>
+
+        {hasUnsavedChanges && (
+          <div className="explorer-unsaved-hint" style={{ marginLeft: '26px', marginTop: '8px' }}>
+            <span className="explorer-unsaved-dot" aria-hidden="true" />
+            Modifiche non salvate su file
           </div>
         )}
       </div>
 
       {/* Canvases List */}
       <div style={{ padding: '12px' }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '8px',
-          paddingLeft: '4px',
-        }}>
-          <div style={{ fontSize: '0.75em', fontWeight: 600, color: 'var(--text-color-light)', letterSpacing: '0.5px' }}>
-            CANVASES
-          </div>
-          {isSyncing && (
-            <Icon icon="eos-icons:loading" width={14} style={{ color: 'var(--accent-color)' }} />
-          )}
+        <div
+          style={{
+            fontSize: '0.75em',
+            fontWeight: 600,
+            color: 'var(--text-color-light)',
+            letterSpacing: '0.5px',
+            marginBottom: '8px',
+            paddingLeft: '4px',
+          }}
+        >
+          CANVASES
         </div>
 
         {/* Canvas Items */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {currentProject.canvases.map((canvas) => (
-            <div
-              key={canvas.id}
-              onClick={() => handleSwitchCanvas(canvas.id)}
-              className={`explorer-canvas-card ${canvas.id === currentCanvasId ? 'active' : ''}`}
-            >
-              <Icon icon="fluent:document-24-regular" width={16} style={{ flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0, fontSize: '0.9em' }}>
-                <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {canvas.name}
+          {canvases.map(canvas => {
+            const isActive = canvas.id === activeCanvasId;
+            const deviceCount = isActive ? liveDeviceCount : canvas.devices.length;
+            const isRenaming = editing?.kind === 'canvas' && editing.canvasId === canvas.id;
+
+            return (
+              <div
+                key={canvas.id}
+                onClick={() => switchCanvas(canvas.id)}
+                className={`explorer-canvas-card ${isActive ? 'active' : ''}`}
+                aria-current={isActive ? 'true' : undefined}
+              >
+                <Icon icon="fluent:document-24-regular" width={16} style={{ flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0, fontSize: '0.9em' }}>
+                  {isRenaming ? (
+                    <InlineEdit
+                      className="explorer-inline-input"
+                      value={canvas.name}
+                      label={`Nome del canvas ${canvas.name}`}
+                      onCommit={value => {
+                        renameCanvas(canvas.id, value);
+                        stopEditing();
+                      }}
+                      onCancel={stopEditing}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        fontWeight: 500,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                      title={canvas.name}
+                      onDoubleClick={() => setEditing({ kind: 'canvas', canvasId: canvas.id })}
+                    >
+                      {canvas.name}
+                    </div>
+                  )}
+                  <div
+                    style={{ fontSize: '0.8em', opacity: isActive ? 0.9 : 0.6, marginTop: '2px' }}
+                  >
+                    {deviceCountLabel(deviceCount)}
+                  </div>
                 </div>
-                <div style={{
-                  fontSize: '0.8em',
-                  opacity: canvas.id === currentCanvasId ? 0.9 : 0.6,
-                  marginTop: '2px',
-                }}>
-                  {canvas.devices_count} devices
-                </div>
+                {!isRenaming && (
+                  <button
+                    className="explorer-icon-button"
+                    title="Rinomina canvas"
+                    aria-label={`Rinomina canvas ${canvas.name}`}
+                    onClick={e => {
+                      e.stopPropagation();
+                      setEditing({ kind: 'canvas', canvasId: canvas.id });
+                    }}
+                  >
+                    <Icon icon="lucide:pencil" width={14} />
+                  </button>
+                )}
+                {canvases.length > 1 && !isRenaming && (
+                  <button
+                    className="explorer-icon-button"
+                    title="Elimina canvas"
+                    aria-label={`Elimina canvas ${canvas.name}`}
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleDeleteCanvas(canvas.id, canvas.name, deviceCount);
+                    }}
+                  >
+                    <Icon icon="lucide:trash-2" width={14} />
+                  </button>
+                )}
               </div>
-              {currentProject.canvases.length > 1 && (
-                <button
-                  onClick={(e) => handleDeleteCanvas(canvas.id, e)}
-                  style={{
-                    padding: '4px',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    opacity: 0.6,
-                    color: canvas.id === currentCanvasId ? 'white' : 'var(--text-color)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '0.6';
-                  }}
-                >
-                  <Icon icon="lucide:trash-2" width={14} />
-                </button>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Add Canvas Button / Input */}
@@ -241,10 +244,11 @@ const ExplorerPanel = () => {
             <input
               type="text"
               value={newCanvasName}
-              onChange={(e) => setNewCanvasName(e.target.value)}
+              onChange={e => setNewCanvasName(e.target.value)}
               placeholder="Nome canvas..."
+              aria-label="Nome del nuovo canvas"
               autoFocus
-              onKeyDown={(e) => {
+              onKeyDown={e => {
                 if (e.key === 'Enter') handleCreateCanvas();
                 if (e.key === 'Escape') {
                   setShowNewCanvasInput(false);
@@ -253,6 +257,7 @@ const ExplorerPanel = () => {
               }}
               style={{
                 flex: 1,
+                minWidth: 0,
                 padding: '6px 8px',
                 background: 'var(--bg-component)',
                 border: '1px solid var(--border-color)',
@@ -264,7 +269,9 @@ const ExplorerPanel = () => {
             />
             <button
               onClick={handleCreateCanvas}
-              disabled={!newCanvasName.trim() || isCreatingCanvas}
+              disabled={!newCanvasName.trim()}
+              title="Crea canvas"
+              aria-label="Crea canvas"
               style={{
                 padding: '6px 10px',
                 background: 'var(--accent-color)',
@@ -282,6 +289,8 @@ const ExplorerPanel = () => {
                 setShowNewCanvasInput(false);
                 setNewCanvasName('');
               }}
+              title="Annulla"
+              aria-label="Annulla nuovo canvas"
               style={{
                 padding: '6px 10px',
                 background: 'var(--bg-component)',
@@ -307,23 +316,19 @@ const ExplorerPanel = () => {
         )}
       </div>
 
-      {/* Quick Actions */}
+      {/* File Actions */}
       <div style={{ padding: '12px', borderTop: '1px solid var(--border-color)' }}>
         <button
-          onClick={() => saveToBackend()}
-          disabled={isSyncing}
+          onClick={() => void saveProject()}
           className="explorer-button"
           style={{ marginBottom: '8px' }}
         >
           <Icon icon="lucide:save" width={14} />
-          {isSyncing ? 'Salvataggio...' : 'Salva Progetto'}
+          Salva su file
         </button>
-        <button
-          onClick={() => openModal('openProject')}
-          className="explorer-button"
-        >
+        <button onClick={() => void openProject()} className="explorer-button">
           <Icon icon="lucide:folder-open" width={14} />
-          Cambia Progetto
+          Apri file…
         </button>
       </div>
     </div>

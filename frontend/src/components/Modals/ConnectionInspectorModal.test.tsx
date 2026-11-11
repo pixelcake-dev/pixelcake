@@ -13,11 +13,6 @@ import { createSampleTopology } from '@/utils/sampleTopology';
 import type { NetworkConnection, NetworkDevice } from '@/types';
 import ConnectionInspectorModal from './ConnectionInspectorModal';
 
-vi.mock('@/api', () => ({
-  getCanvas: vi.fn(),
-  updateCanvas: vi.fn(),
-}));
-
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
 }));
@@ -66,7 +61,6 @@ describe('ConnectionInspectorModal — interfaces', () => {
     store.clearAllDevices();
     const sample = createSampleTopology();
     store.loadTopology(sample.devices, sample.connections);
-    store.cancelPendingSave();
     useUIStore.getState().closeModal('connectionInspector');
     useUIStore.getState().setInspectorConnection(null);
   });

@@ -4,11 +4,9 @@
 
 import { useEffect } from 'react';
 import { ReactFlowProvider } from 'reactflow';
-import { Toaster, toast } from 'sonner';
+import { Toaster } from 'sonner';
 import { useUIStore } from '@/store/uiStore';
-import { useTemplateStore } from '@/store/templateStore';
-import { useProjectStore } from '@/store/projectStore';
-import { restoreSession, registerUnloadFlush } from '@/utils/restoreSession';
+import { registerSaveShortcut } from '@/utils/projectFileAccess';
 import LoginPage from '@/components/LoginPage';
 import TopMenuBar from '@/components/Toolbar/TopMenuBar';
 import SidebarContainer from '@/components/Sidebar/SidebarContainer';
@@ -25,8 +23,6 @@ import HelpModal from '@/components/Modals/HelpModal';
 import SettingsModal from '@/components/Modals/SettingsModal';
 import TerminalModal from '@/components/Modals/TerminalModal';
 import NewProjectModal from '@/components/Modals/NewProjectModal';
-import OpenProjectModal from '@/components/Modals/OpenProjectModal';
-import SaveAsModal from '@/components/Modals/SaveAsModal';
 import ImportExportModal from '@/components/Modals/ImportExportModal';
 import 'reactflow/dist/style.css';
 
@@ -36,7 +32,6 @@ function App() {
   const darkMode = useUIStore((state) => state.darkMode);
   const toggleDarkMode = useUIStore((state) => state.toggleDarkMode);
   const setShowWelcomeScreen = useUIStore((state) => state.setShowWelcomeScreen);
-  const currentProject = useProjectStore((state) => state.currentProject);
 
   useEffect(() => {
     // Initialize dark mode from system preference (only on mount)
@@ -53,63 +48,17 @@ function App() {
   }, [theme]);
 
   useEffect(() => {
-    // Load templates from backend on app start
-    const loadTemplates = async () => {
-      const templateStore = useTemplateStore.getState();
-      if (!templateStore.isInitialized) {
-        try {
-          await templateStore.loadFromBackend();
-        } catch (error) {
-          console.warn('[App] Failed to load templates from backend, using defaults:', error);
-        }
-      }
-    };
-    loadTemplates();
-  }, []);
-
-  useEffect(() => {
-    // Restore the previously open project/canvas after a refresh and flush
-    // unsaved changes when the tab closes (both internally StrictMode-guarded)
-    registerUnloadFlush();
-    restoreSession();
-  }, []);
-
-  useEffect(() => {
-    // Check backend health on app start
-    const checkBackendHealth = async () => {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      try {
-        const response = await fetch(`${apiUrl}/api/health`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        if (response.ok) {
-          toast.success('Backend connesso correttamente');
-        } else {
-          toast.warning('Backend online ma non risponde correttamente');
-        }
-      } catch (error) {
-        toast.warning('Backend offline - lavorando in modalità locale', {
-          description: 'Le modifiche non verranno salvate nel database',
-        });
-        console.warn('[App] Backend health check failed:', error);
-      }
-    };
-    checkBackendHealth();
-  }, []);
-
-  useEffect(() => {
-    // Controlla se mostrare la welcome screen
+    // Welcome screen at start-up, unless the user chose not to see it again
+    // (the canvas only shows it while it is empty)
     const hideWelcome = localStorage.getItem('pixelcake-hide-welcome') === 'true';
+    setShowWelcomeScreen(!hideWelcome);
+  }, [setShowWelcomeScreen]);
 
-    if (!currentProject && !hideWelcome) {
-      // Nessun progetto caricato e l'utente non ha scelto di nascondere la welcome screen
-      setShowWelcomeScreen(true);
-    } else {
-      // Progetto caricato o utente ha scelto di nascondere la welcome screen
-      setShowWelcomeScreen(false);
-    }
-  }, [currentProject, setShowWelcomeScreen]);
+  useEffect(() => {
+    // Ctrl+S saves the project to a file, anywhere in the app
+    if (!isAuthenticated) return;
+    return registerSaveShortcut();
+  }, [isAuthenticated]);
 
   // Show login page if not authenticated
   if (!isAuthenticated) {
@@ -158,8 +107,6 @@ function App() {
         <SettingsModal />
         <TerminalModal />
         <NewProjectModal />
-        <OpenProjectModal />
-        <SaveAsModal />
         <ImportExportModal />
       </div>
     </ReactFlowProvider>

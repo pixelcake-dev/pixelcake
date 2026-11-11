@@ -1959,44 +1959,72 @@ legend {
   color: white;
 }
 
-/* Project Card */
-.project-card {
-  padding: 16px;
-  margin-bottom: 8px;
-  border-radius: 8px;
-  cursor: pointer;
+/* Small icon-only action (rename, delete) */
+.explorer-icon-button {
+  display: flex;
+  flex-shrink: 0;
+  padding: 4px;
   background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.explorer-icon-button:hover,
+.explorer-icon-button:focus-visible {
+  opacity: 1;
+}
+
+/* Text edited in place (project name, description, canvas name) */
+.explorer-inline-input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  padding: 3px 6px;
+  background: var(--bg-component);
+  border: 1px solid var(--accent-color);
+  border-radius: 4px;
   color: var(--text-color);
-  border: 1px solid var(--border-color);
-  transition: all 0.2s ease;
+  font-size: inherit;
+  outline: none;
 }
 
-.project-card:hover {
-  background: rgba(var(--accent-color-rgb), 0.1);
-  border-color: var(--accent-color);
+/* Project description: reads as text, clicks as a button */
+.explorer-description {
+  display: block;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: text;
+  color: inherit;
+  font-size: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
 }
 
-.project-card.selected {
+.explorer-description:hover {
+  color: var(--text-color);
+}
+
+/* "Modifiche non salvate su file" */
+.explorer-unsaved-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75em;
+  color: var(--text-color-light);
+}
+
+.explorer-unsaved-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
   background: var(--accent-color);
-  color: white;
-  border-color: var(--accent-color);
-}
-
-/* Empty State Container */
-.explorer-empty-state {
-  padding: 20px;
-  text-align: center;
-}
-
-.explorer-empty-state-icon {
-  color: var(--text-color-light);
-  margin: 0 auto 16px;
-}
-
-.explorer-empty-state-text {
-  color: var(--text-color-light);
-  margin-bottom: 20px;
-  font-size: 0.9em;
+  flex-shrink: 0;
 }
 
 /* ============================================ */
