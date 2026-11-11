@@ -18,6 +18,7 @@ pnpm test          # run the tests in watch mode
 pnpm type-check    # TypeScript only
 pnpm lint          # ESLint, zero warnings allowed
 pnpm format        # Prettier
+pnpm icons:bundle  # rebuild the bundled icon file (needs a network connection)
 ```
 
 ## Source layout
@@ -28,8 +29,8 @@ src/
   terminal/     command parser (pure) and executor (the only part that touches the stores)
   components/   Canvas, Sidebar, Toolbar, Modals, ui
   store/        Zustand stores, persisted in the browser's local storage
-  utils/        auto-layout, IP helpers, YAML and Terraform export, YAML import
-  api/          HTTP client for the optional backend
+  utils/        auto-layout, IP helpers, project files, YAML and Terraform export, YAML import
+  data/         icon list for the picker and the bundled icon data (generated)
   types/        shared TypeScript types
 ```
 
@@ -37,7 +38,7 @@ Imports use the `@/` alias for `src/`.
 
 ## Notes
 
-- **Backend address.** The app calls `http://localhost:8000` by default. Set `VITE_API_URL` to change it. With no backend, the app keeps working from local storage.
+- **No server.** Nothing is fetched at run time. A project lives in local storage and is saved to a `.pixelcake.json` file: see [docs/project-file.md](../docs/project-file.md).
 - **Tailwind stays on version 3.** If version 4 gets installed by mistake, run `pnpm add -D tailwindcss@3`.
 - **Type-only imports** must be written as `import { type Foo }`, because `verbatimModuleSyntax` is on.
-- **Icons** come from Iconify and are fetched at run time.
+- **Icons** are bundled in `src/data/bundledIcons.ts`. After using a new icon in the code run `pnpm icons:bundle`; a test fails if you forget.

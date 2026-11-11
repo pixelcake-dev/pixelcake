@@ -13,6 +13,7 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 - **Draw.** Devices, links, VLANs, ports and network cards on an interactive canvas. 20 device types and 5 link types are built in and can be customised. Auto-layout, multi-selection, copy and paste, and several boards per project.
 - **Test.** Ping, web, download and email flows are checked hop by hop and animated on the drawing. When a flow fails, the packet stops at the device that blocks it and the reason is shown.
 - **Type.** A built-in terminal with a small vendor-neutral command language: `ping`, `trace`, `show`, `set`, `connect`, `add vlan` and a few more. Commands that change the network edit the same drawing you see.
+- **Save.** A project, with all its boards, is kept in the browser while you work and saved as a single `.pixelcake.json` file that you can open again or pass on. There is no server and no account.
 - **Export.** The topology as YAML, which can be loaded back. A Terraform-style export exists only as a sketch.
 
 The interface is in Italian. The terminal language is English.
@@ -62,13 +63,11 @@ When the engine cannot verify something, it says so in a note instead of answeri
 - **No undo, no image export.** Both are in the menu, disabled.
 - **The YAML format is PixelCake's own.** Device names that look like numbers or booleans, and duplicate names, do not survive an export and import.
 - **The Terraform export cannot be applied.** It uses placeholder resource types and no provider. Reading existing Terraform state is not implemented.
-- **No authentication.** See the warning in [Run it](#run-it).
+- **No accounts, no sharing.** A project is a file on your disk. Two browser tabs open on the same project do not see each other's changes: the last one to write wins.
 
 ## Run it
 
-You need Node 22 with pnpm 10. The backend is optional and needs Python 3.10 or later.
-
-### Frontend only
+You need Node 22 with pnpm 10.
 
 ```bash
 cd frontend
@@ -76,42 +75,23 @@ pnpm install
 pnpm dev
 ```
 
-Open `http://localhost:5173`. Drawing, testing, the terminal and the exports all work. The drawing is kept in the browser. The app reports that the backend is unreachable; named projects need it.
+Open `http://localhost:5173`. Everything runs in the browser: there is nothing else to start.
 
-Device icons are fetched from the Iconify API while you use the app, so they need an internet connection.
+Your work is kept in the browser's storage, so it is still there after a reload. To keep it for good, or to move it to another computer, save the project to a file with **File → Salva** (Ctrl+S). In Chrome and Edge the file is written in place; in other browsers it is downloaded. The format is described in [docs/project-file.md](docs/project-file.md).
 
-### With the backend
-
-The backend is a small FastAPI service that stores projects, boards and templates in a SQLite file. The check and the terminal never go through it.
-
-```bash
-cd backend
-python -m venv venv
-venv\Scripts\activate          # Linux/macOS: source venv/bin/activate
-pip install -r requirements.txt
-copy .env.example .env         # Linux/macOS: cp .env.example .env
-alembic upgrade head
-python -m scripts.seed_templates
-python main.py
-```
-
-It listens on port 8000: API docs at `/docs`, the terminal reference at `/docs/terminal`, an admin panel at `/admin`.
-
-> **Warning.** The backend has no login: it uses one fixed user and the admin panel is open. For that reason it only listens on the machine it runs on (`127.0.0.1`). Do not expose it to a network or run it on a server.
-
-On Windows, once both parts are installed, `start.bat` starts them together and opens the browser.
+The app's icons are bundled with it. Only an icon name typed by hand in a custom device template is fetched from the Iconify API.
 
 ## Development
 
 ```bash
 cd frontend
-pnpm test:run      # 443 tests: engine, terminal, import/export, sync, screens
+pnpm test:run      # 629 tests: engine, terminal, project files, import/export, screens
 pnpm type-check
 pnpm lint
 pnpm build
 ```
 
-GitHub Actions runs the same four steps on every push. The backend has no automated tests.
+GitHub Actions runs the same four steps on every push.
 
 ```
 frontend/src/
@@ -119,16 +99,11 @@ frontend/src/
   terminal/     command parser and executor
   components/   canvas, panels, windows
   store/        application state (Zustand, persisted in the browser)
-  utils/        auto-layout, IP helpers, import and export
-  api/          client for the backend
-backend/
-  main.py       FastAPI app
-  app/          models, routers, admin panel
-  alembic/      database migrations
-docs/           terminal command reference
+  utils/        auto-layout, IP helpers, project files, import and export
+docs/           terminal command reference, project file format
 ```
 
-Built with React 19, TypeScript, Vite, React Flow, Zustand and Tailwind CSS. The backend uses FastAPI, SQLAlchemy and SQLite. More detail in [ARCHITECTURE.md](ARCHITECTURE.md).
+Built with React 19, TypeScript, Vite, React Flow, Zustand and Tailwind CSS. More detail in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Where it is going
 
@@ -139,15 +114,16 @@ Today the first two exist in a basic form and the third is only a sketch. The st
 ## What is next
 
 1. Undo and redo.
-2. Save and open a project as a file, so the app runs without the backend.
-3. Export the drawing as an image.
-4. Routing tables, ARP and per-port VLANs, so the check can follow a packet across more than one router.
+2. Export the drawing as an image.
+3. Routing tables, ARP and per-port VLANs, so the check can follow a packet across more than one router.
 
 ## License
 
 Copyright © 2025–2026 [@Phil-pje](https://github.com/Phil-pje).
 
 PixelCake is released under the GNU Affero General Public License v3.0. See [LICENSE](LICENSE).
+
+The bundled icons keep their own licences: Material Design Icons (Apache 2.0), Lucide (ISC), Carbon (Apache 2.0) and Solar (CC BY 4.0, by 480 Design), obtained through [Iconify](https://iconify.design).
 
 ## Contact
 

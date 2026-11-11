@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **The backend.** The FastAPI service, its database and admin panel, and the API client in the frontend are gone: the app runs entirely in the browser. Entries further down that mention the backend describe earlier versions.
+
 ### Added
+- **Project files**: a project, with all its canvases, is kept in the browser and saved as a single `.pixelcake.json` file (File → Salva, Ctrl+S, Salva con nome…, Apri…). In Chrome and Edge the file is written in place; elsewhere it is downloaded. Format reference in `docs/project-file.md`.
+- **Explorer**: rename the project and its canvases in place; a hint shows when there are changes not yet saved to a file.
+- **Bundled icons**: the icons the app uses are shipped with it instead of being fetched from the Iconify API (`pnpm icons:bundle`).
 - **BulkAddDeviceModal v2**: Table-based interface with configurable/standard device sections
   - ConfigurableDeviceRow: Dynamic rows for Switch/Router/Firewall with portCount dropdown
   - Dropdown for port selection (8/24/48 ports for switches, custom portOptions per template)
@@ -37,6 +43,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Two-part processing: configurable devices (with ports) + standard devices (with NICs)
 
 ### Fixed
+- The theme no longer flips between light and dark at every reload.
+- The welcome screen appears only on an empty project, not on every empty canvas.
+- The icon picker offered an icon that does not exist (`mdi:rack`).
 - **Bulk devices now include port configurations** for Switch/Router/Firewall
   - Each device created with `ports: Port[]` array matching portCount
   - Realistic defaults: VLAN assignments, PoE settings, NAT, security zones

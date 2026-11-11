@@ -8,8 +8,8 @@ verbs, optional prepositions, case-insensitive. Device names may be
 multi-word and are resolved fuzzily ("did you mean…?" on miss); an IP address
 is accepted anywhere a device is expected.
 
-This document is the **source of the v0.1 spec**. The rendered reference is
-served by the backend at `/docs/terminal`. The language is versioned
+This document is the **source of the v0.1 spec**. In the app, `help` in the
+terminal lists the same commands. The language is versioned
 independently of the app; until v1.0 canonical forms are stable but aliases
 and output formats may still be refined between minor versions.
 
@@ -107,7 +107,7 @@ into a silent success; it adds a note to the result instead:
 Aliases: `sh` → `show` · `ls`, `list` → `show devices` ·
 `ipconfig`, `ifconfig` → `show ip`.
 
-### Configuration (writes to the canvas, autosaved like any edit)
+### Configuration (writes to the canvas, like any edit)
 | Command | Meaning |
 |---|---|
 | `set ip [of] <device> [to] <ip>` | Also `set gateway …`, `set subnet …`, `set name …` |
@@ -174,8 +174,8 @@ pixelcake> connect SW-Office to "SW-Servers"
   (no free interface, or a firewall with security zones, where the port is
   the user's choice) skips per-port rules and says so in the trace notes.
 - Configuration commands go through the same store actions as graphical
-  edits, so they are autosaved (2s debounce to the backend) and consistent
-  with the Inspector.
+  edits, so they are kept like any other edit (in the browser at once, in
+  the project file at the next save) and are consistent with the Inspector.
 
 ## Language roadmap
 

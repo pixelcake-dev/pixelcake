@@ -4,37 +4,41 @@ Detailed technical reference for PixelCake. To install and run it, see [README.m
 
 ## State Management (Zustand Stores)
 
-All stores use Zustand with LocalStorage persistence.
+All stores use Zustand. There is no server: what must survive a reload is kept in the browser's localStorage, and a project is saved for good as a file (see [Projects and files](#projects-and-files)).
 
 ### networkStore (`frontend/src/store/networkStore.ts`)
-- Devices, connections, network settings
-- Canvas viewport state (x, y, zoom) - persisted and synced in real-time
-- Device/connection counters (persisted to avoid ID collisions)
+- The canvas on screen: devices, connections, viewport (x, y, zoom), device/connection counters
+- Project-wide network settings (`globalNetworkSettings`)
 - Connection mode state (isConnecting, connectionStart)
 - **Multi-selection state** (selectedDeviceIds, clipboard) - NOT persisted, resets on reload
 - **Copy/Paste functions** (copySelection, paste) - ID remapping + position offset (+50px)
 - Auto-layout triggers
-- **Backend sync state**: `currentProjectId`, `currentCanvasId`, `isSyncing`, `lastSyncError`, `autoSaveEnabled`
-- **Backend sync actions**: `loadFromBackend()`, `saveToBackend()`, `setCurrentCanvas()`, `setAutoSave()`
-- **Auto-Save**: All modification actions trigger debounced save after 2 seconds
+- `canvasId`: which canvas of the project this data is. Persisted next to the data, so the two stores cannot be paired wrongly after a reload
+- `hasUnsavedChanges`: true when the project changed since it was last saved to, or opened from, a file. Every edit sets it through `markChanged()`; moving the viewport does not. `getChangeToken()` / `markSaved(token)` keep it set when an edit lands while a file is being written
+- `getCanvasSnapshot()` / `replaceCanvas()`: used by projectStore to take the canvas off the screen and put another one on
+- LocalStorage key: `pixelcake-network-v2`
 
 ### projectStore (`frontend/src/store/projectStore.ts`)
-- **State**: projects list, currentProject, canvases list, loading/error states
-- **Actions**: loadProjects, loadProject, createNewProject, updateCurrentProject, deleteCurrentProject, loadCanvases, createNewCanvas, deleteCanvasById
+- The one project open in the browser: `name`, `description`, `canvases`, `activeCanvasId`. There is always a project
+- The entry of the active canvas is refreshed only when it is committed (canvas switch, building the file): read the whole project through `buildProjectFile()`
+- **Actions**: createProject, loadProject, renameProject, setDescription, addCanvas, renameCanvas, deleteCanvas (the last canvas cannot be deleted), switchCanvas
+- Depends on networkStore, never the other way round
+- LocalStorage key: `pixelcake-project-v1`
 
 ### simulationStore (`frontend/src/store/simulationStore.ts`)
 - Packet simulation state (isRunning, path, currentStep)
 - Flow model selection (ping, email, web, download)
 
 ### uiStore (`frontend/src/store/uiStore.ts`)
-- UI state, modal controls (including `newProject`, `openProject`, `saveAsProject`), context menus
-- Dark mode (persisted), magnification state, sidebar panel state
+- UI state, modal controls (including `newProject`), context menus
+- Dark mode (persisted; follows the system until the user chooses), magnification state, sidebar panel state
 
 ### templateStore (`frontend/src/store/templateStore.ts`)
 - Device and connection templates with auto-update
 - Custom device types with icons and Terraform fields
 - Connection types with line styles and colors
 - Template capabilities: supportsVLAN, supportsSTP, supportsPorts, supportsNICs
+- Custom templates travel inside the project file; opening a project adds the ones that are missing (`addMissingTemplates`)
 - LocalStorage key: `pixelcake-templates-v8`
 
 ### userStore (`frontend/src/store/userStore.ts`)
@@ -51,12 +55,12 @@ All stores use Zustand with LocalStorage persistence.
 
 ### WelcomeScreen (`frontend/src/components/WelcomeScreen.tsx`)
 - Excalidraw-style minimalist transparent overlay on canvas (NOT popup)
-- Shows when no project is loaded
+- Shows on an empty project: a single canvas with nothing on it
 - "Build piece by piece" workflow (3 steps), Quick Start actions, GitHub links
 - "Non mostrare più" checkbox → localStorage (`pixelcake-hide-welcome`)
-- Actions: Nuovo Progetto, Apri Progetto, Carica Sample Topology
+- Actions: Nuovo Progetto (form), Apri Progetto (file picker), Carica Sample Topology
 - Auto-dismiss on any action, manual "Mostra Welcome Screen" from Help menu
-- State: `useUIStore.showWelcomeScreen` + `useProjectStore.currentProject`
+- State: `useUIStore.showWelcomeScreen`, the number of devices on screen and the number of canvases
 
 ### Modals (Enterprise Style)
 - **InspectorModal** - Device configuration: 2-column layout, tabs (General + Terraform + Ports + NICs), VLAN/STP fields
@@ -68,10 +72,9 @@ All stores use Zustand with LocalStorage persistence.
   - Auto-generation: Ports and NICs with realistic defaults (VLAN, PoE, NAT, MAC)
   - Search filtering + custom scrollbar (react-custom-scrollbars-2, autoHeightMax: 500px)
 
-### Project Management Modals
-- **NewProjectModal** - sm (448px), minHeight 550px, fullWidth inputs, `.modal-error-box`
-- **OpenProjectModal** - md (672px), minHeight "80vh", maxHeight "calc(98vh - 40px)", autoHeightMax 1200, `.project-card` CSS
-- **SaveAsModal** - sm (448px), minHeight 550px, `.modal-info-box`
+### Project Modal
+- **NewProjectModal** - sm (448px), minHeight 550px, fullWidth inputs, `.modal-error-box`. Creates a local project: name, description, network settings
+- Opening and saving a project have no modal: they go through the file picker (`frontend/src/utils/projectFileAccess.ts`)
 
 ### UI Components
 - **TabContainer** - Reusable tab system for modals
@@ -82,22 +85,20 @@ All stores use Zustand with LocalStorage persistence.
 - **Input/Select** - Compact form controls (`py-1.5`, accent color on focus)
 
 ### Explorer Panel (`frontend/src/components/Sidebar/ExplorerPanel.tsx`)
-- VS Code-style interface for project/canvas navigation
-- Project section, canvases list (click to switch, inline creation, delete protection)
-- Quick actions: manual save, "Cambia Progetto"
-- Empty state: "Nuovo Progetto" and "Apri Progetto" buttons
+- Project name and description, editable in place (`components/ui/InlineEdit.tsx`); a hint shows when there are changes not yet saved to a file
+- Canvases list: click to switch, create and rename in place, delete (not the last one), device count
+- Buttons: "Salva su file", "Apri file…"
 
-### Top Menu Bar (`frontend/src/components/TopMenuBar.tsx`)
-- File Menu: Nuovo Progetto, Apri Progetto, Salva, Salva con nome
-- Help Menu: Mostra Welcome Screen, Note Programma, Documentazione API
+### Top Menu Bar (`frontend/src/components/Toolbar/TopMenuBar.tsx`)
+- File Menu: Nuovo progetto…, Apri…, Salva (Ctrl+S), Salva con nome…
+- Help Menu: Mostra Welcome Screen, Note Programma
 
 ## Reusable CSS Classes (`frontend/src/index.css`)
 
 | Category | Classes |
 |----------|---------|
 | Modal messages | `.modal-error-box`, `.modal-info-box` |
-| Explorer | `.explorer-button`, `.explorer-button-accent`, `.explorer-button-dashed`, `.explorer-canvas-card`, `.explorer-empty-state` |
-| Project cards | `.project-card`, `.project-card.selected` |
+| Explorer | `.explorer-button`, `.explorer-button-accent`, `.explorer-button-dashed`, `.explorer-canvas-card` |
 | NIC list | `.nic-list`, `.nic-card`, `.nic-card-selected` |
 
 ## Key Algorithms
@@ -135,7 +136,7 @@ terminal.
 - Special cases: Database replication links, inter-building WAN backbone
 - Proximity-based: connects to closest parent device within same building
 
-### Connection Cleanup (`frontend/src/store/networkStore.ts`)
+### Connection Cleanup (`frontend/src/utils/cleanupConnections.ts`)
 - Duplicate detection on localStorage load
 - Counter rebuild from existing connections
 - Real-time duplicate ID prevention
@@ -246,79 +247,36 @@ ip: string, subnet: string, gateway: string, mac?: string, description?: string
 | backbone | Thick solid | Critical infrastructure |
 | MPLS (conn-mpls) | Dashed green (`12 6`) | WAN connections |
 
-## Backend Architecture
+## Projects and files
 
-### Database Layer
-- `backend/app/database.py` - Async engine (aiosqlite/asyncpg)
-- SQLite dev (`pixelcake.db`), PostgreSQL prod (via `DATABASE_URL`)
-- Async session: `AsyncSessionLocal`
+PixelCake has no server. A project lives in the browser while you work and is saved as a file.
 
-### Database Models (`backend/app/models/`)
-1. **User** - Accounts and authentication
-2. **Project** - Network design projects (metadata)
-3. **Canvas** - Network diagrams (devices, connections as JSONB)
-4. **ProjectVersion** - Version history
-5. **DeviceTemplate** - Device type templates
-6. **ConnectionTemplate** - Connection type templates
-7. **UserPreferences** - User settings
+### In the browser
+- `pixelcake-network-v2`: the canvas on screen (networkStore)
+- `pixelcake-project-v1`: project name, description and every canvas (projectStore)
+- `pixelcake-templates-v8`: device and connection templates
+- `pixelcake-ui-v1`: theme
+- Every change is written at once: closing the tab loses nothing
+- A write that fails (storage full) does not crash the app: `utils/safeStorage.ts` shows one message asking to save the project to a file
+- Two tabs open on the same project do not see each other: the last one to write wins. The canvas id kept next to the canvas data prevents one canvas from being shown as another, not the loss of the other tab's edits
 
-### API Endpoints
+### On disk (`.pixelcake.json`)
+- Format reference: [docs/project-file.md](docs/project-file.md)
+- `utils/projectFile.ts` (pure): `serializeProject()`, `parseProjectFile()`. The parser never throws: it returns the project with the list of repairs it made, or a message for the user
+- `utils/projectFileAccess.ts`: save, save as, open, new project, Ctrl+S. With the File System Access API (Chrome, Edge) the file is written in place and remembered for the session; elsewhere saving downloads the file and opening uses a file input. The API is looked up at every call, never at import
 
-**System & Admin:**
-- `GET /` - Root health check
-- `GET /api/health` - API health
-- `GET /api/admin/health` - System metrics (JSON)
-- `GET /dashboard` - Health dashboard (HTML)
-- `GET /admin` - SQLAdmin panel
-
-**Projects (5):**
-- `GET /api/projects` - List all (with canvas count)
-- `POST /api/projects` - Create (auto-creates default canvas)
-- `GET /api/projects/{id}` - Get with canvases list
-- `PUT /api/projects/{id}` - Update metadata
-- `DELETE /api/projects/{id}` - Delete (cascade)
-
-**Canvases (5):**
-- `GET /api/projects/{id}/canvases` - List all in project
-- `POST /api/projects/{id}/canvases` - Create new
-- `GET /api/projects/{id}/canvases/{cid}` - Get with topology
-- `PUT /api/projects/{id}/canvases/{cid}` - Update data
-- `DELETE /api/projects/{id}/canvases/{cid}` - Delete (min 1 protected)
-
-**Templates (9):**
-- `GET/POST /api/templates/devices` - List/create device templates
-- `PUT/DELETE /api/templates/devices/{id}` - Update/delete (user-owned)
-- `GET/POST /api/templates/connections` - List/create connection templates
-- `PUT/DELETE /api/templates/connections/{id}` - Update/delete
-- `POST /api/templates/sync` - Bulk sync (migration helper)
-
-### Admin Panel (`backend/app/admin/`)
-- SQLAdmin with 7 model views
-- Health monitoring: `check_database()`, `check_api()`, `get_db_stats()`, `get_db_size()`, `get_pg_metrics()`
-- Dashboard: Auto-refresh 30s, Tabler CSS
-
-### Migrations
-- Alembic: `alembic revision --autogenerate -m "desc"`, `alembic upgrade head`
-
-## Backend-Frontend Integration
-
-### API Layer (`frontend/src/api/`)
-- **HTTP Client** (`client.ts`): Generic fetch wrapper, `HTTPError` class, configurable base URL
-- **Projects API** (`projects.ts`): 5 functions
-- **Canvases API** (`canvases.ts`): 5 functions
-- **Templates API** (`templates.ts`): 9 functions
-- **Debounce** (`utils/debounce.ts`): Generic with cancel, 2s for auto-save
-
-### Data Flow
+### Data flow
 ```
-Frontend → Backend: User Action → Store → Debounced Save (2s) → API → Database
-Backend → Frontend: API Request → Query → JSON Response → Store → UI Refresh
+Edit           -> networkStore -> localStorage (at once), hasUnsavedChanges = true
+Switch canvas  -> projectStore commits the canvas on screen, then loads the other one
+Save           -> projectStore.buildProjectFile() -> serializeProject() -> file, hasUnsavedChanges = false
+Open           -> file -> parseProjectFile() -> projectStore.loadProject() -> networkStore.replaceCanvas()
 ```
 
-### Storage Strategy
-- **LocalStorage**: Cache for offline access and fast initial load
-- **Backend Database**: Source of truth
-- **Sync Model**: Auto-save (2s debounce)
+### Icons
+- The icons used in the code are shipped with the app: `scripts/bundle-icons.mjs` (`pnpm icons:bundle`) collects them into `src/data/bundledIcons.ts`, registered at start-up by `utils/bundledIcons.ts`
+- A test fails when an icon used in the source is missing from the bundle
+- An icon name typed by hand in a custom template, if it is not in the bundle, is fetched from the Iconify API
 
 ## Known Issues & Solutions (Historical)
 
@@ -349,28 +307,4 @@ Backend → Frontend: API Request → Query → JSON Response → Store → UI R
 
 ## Roadmap
 
-### Phase 1: Export/Import IaC (High Priority) ⏳
-- **POST /api/export** - FlowMap → Terraform `.tf` / YAML
-- **POST /api/import** - `.tfstate` → FlowMap
-- Frontend: Export/Import modals with preview and validation
-
-### Phase 2: Authentication (Medium Priority) ⏳
-- JWT auth (register, login, refresh, logout)
-- Protected routes, token management
-- Remove hardcoded user ID
-
-### Phase 3: LocalStorage Migration (Medium Priority) ⏳
-- Detect existing data, prompt migration
-- Offline mode with fallback + sync
-- Backup export/restore
-
-### Phase 4: Performance & UX (In Progress) ⏳
-- **Done**: Toast notifications, Welcome screen, Z-index fixes
-- **TODO**: Memoize nodeTypes/edgeTypes, lazy loading modals, virtualization, loading skeletons, undo/redo
-
-### Phase 5: Advanced Features (Future) 💡
-- Server-side simulation (OSPF, BGP)
-- Version history & real-time collaboration (WebSocket)
-- Template marketplace
-- Export PNG/SVG/PDF, Ansible playbooks
-- PWA & offline mode
+See "What is next" in [README.md](./README.md).

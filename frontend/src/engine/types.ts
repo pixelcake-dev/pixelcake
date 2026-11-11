@@ -4,9 +4,9 @@
  * The engine is a PURE TypeScript module: no React, no Zustand, no side
  * effects. It interprets the topology data the canvas already captures
  * (IP/subnet/gateway, VLANs, port state, security zones) and produces
- * verdicts with human-readable reasons. It is designed to be movable
- * server-side (backend/app/services + /api/simulate) unchanged, and its
- * inputs map 1:1 to the future Terraform export.
+ * verdicts with human-readable reasons. Nothing in it depends on the
+ * browser, so it can run anywhere unchanged, and its inputs map 1:1 to the
+ * future Terraform export.
  */
 
 import type { NetworkDevice, NetworkConnection } from '@/types';
