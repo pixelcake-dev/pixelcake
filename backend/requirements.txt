@@ -1,0 +1,89 @@
+# ============================================================================
+# Pixelcake Backend Dependencies
+# Python 3.10+
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Web Framework
+# ----------------------------------------------------------------------------
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+python-multipart>=0.0.12
+
+# ----------------------------------------------------------------------------
+# Database - SQLAlchemy Async
+# ----------------------------------------------------------------------------
+sqlalchemy>=2.0.25
+alembic>=1.13.0
+
+# PostgreSQL drivers
+asyncpg>=0.29.0          # PostgreSQL async driver (production)
+psycopg2-binary>=2.9.9   # PostgreSQL sync driver (for Alembic migrations)
+
+# SQLite driver
+aiosqlite>=0.20.0        # SQLite async driver (development)
+
+# ----------------------------------------------------------------------------
+# Admin Panel
+# ----------------------------------------------------------------------------
+sqladmin>=0.16.0         # Auto-generated admin panel for SQLAlchemy models
+
+# ----------------------------------------------------------------------------
+# Data Validation
+# ----------------------------------------------------------------------------
+pydantic>=2.10.0
+pydantic-settings>=2.6.0
+
+# ----------------------------------------------------------------------------
+# Template Engine
+# ----------------------------------------------------------------------------
+jinja2>=3.1.4
+
+# ----------------------------------------------------------------------------
+# Environment & Configuration
+# ----------------------------------------------------------------------------
+python-dotenv>=1.0.1
+
+# ----------------------------------------------------------------------------
+# Development Tools
+# ----------------------------------------------------------------------------
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+
+# Code Quality
+black>=23.12.0           # Code formatter
+flake8>=7.0.0           # Linter
+mypy>=1.8.0             # Type checker
+
+# ----------------------------------------------------------------------------
+# Production Tools (optional)
+# ----------------------------------------------------------------------------
+# gunicorn>=21.2.0        # Production WSGI server (alternative to uvicorn)
+# redis>=5.0.1            # Redis client (for caching, future)
+# celery>=5.3.4           # Task queue (for async jobs, future)
+
+# ----------------------------------------------------------------------------
+# Version Pinning (recommended for production)
+# ----------------------------------------------------------------------------
+# Per produzione, usa versioni fixed invece di >=
+# Esempio:
+# fastapi==0.115.0
+# sqlalchemy==2.0.25
+# etc.
+
+# ----------------------------------------------------------------------------
+# Notes
+# ----------------------------------------------------------------------------
+# Install all dependencies:
+#   pip install -r requirements.txt
+#
+# Install with development dependencies:
+#   pip install -r requirements.txt
+#
+# Freeze current versions:
+#   pip freeze > requirements-lock.txt
+#
+# Update all packages:
+#   pip install --upgrade -r requirements.txt

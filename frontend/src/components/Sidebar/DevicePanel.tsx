@@ -1,0 +1,187 @@
+import { useState, useMemo } from 'react';
+import { Icon } from '@iconify/react';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { useUIStore } from '@/store/uiStore';
+import { useTemplateStore } from '@/store/templateStore';
+import { useNetworkStore } from '@/store/networkStore';
+import { createSampleTopology } from '@/utils/sampleTopology';
+import { Plug, Package } from 'lucide-react';
+import type { DeviceType } from '@/types/network';
+
+// Helper function for device descriptions
+const getDeviceDescription = (type: DeviceType): string => {
+  const descriptions: Record<DeviceType, string> = {
+    PC: 'Dispositivo endpoint per utenti',
+    Switch: 'Aggregatore di rete locale',
+    Router: 'Gateway e routing tra reti',
+    Server: 'Server applicativo o dati',
+    Firewall: 'Protezione e sicurezza di rete',
+    AccessPoint: 'Punto di accesso WiFi',
+    LoadBalancer: 'Bilanciatore di carico',
+    Database: 'Database server',
+    Cloud: 'Servizio cloud o virtuale',
+  };
+  return descriptions[type] || 'Dispositivo di rete';
+};
+
+const DevicePanel = () => {
+  const openModal = useUIStore((state) => state.openModal);
+  const setAddDeviceType = useUIStore((state) => state.setAddDeviceType);
+
+  const templates = useTemplateStore((state) => state.templates);
+  const genericTemplates = templates.filter((t) => !t.isCustom);
+
+  const devices = useNetworkStore((state) => state.devices);
+  const loadTopology = useNetworkStore((state) => state.loadTopology);
+  const clearAllDevices = useNetworkStore((state) => state.clearAllDevices);
+
+  const [activeTab, setActiveTab] = useState<'devices' | 'templates'>('devices');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Convert templates to device options
+  const availableDevices = useMemo(
+    () =>
+      genericTemplates.map((template) => ({
+        id: template.id, // Template ID for specific lookup
+        type: template.type,
+        name: template.name,
+        description: getDeviceDescription(template.type),
+        icon: template.icon,
+        color: template.color,
+      })),
+    [genericTemplates]
+  );
+
+  // Filter devices based on search query
+  const filteredDevices = useMemo(() => {
+    if (!searchQuery.trim()) return availableDevices;
+
+    const query = searchQuery.toLowerCase();
+    return availableDevices.filter(
+      (device) =>
+        device.name.toLowerCase().includes(query) ||
+        device.description.toLowerCase().includes(query) ||
+        device.type.toLowerCase().includes(query)
+    );
+  }, [searchQuery, availableDevices]);
+
+  const handleDeviceSelect = (deviceType: DeviceType, templateId: string) => {
+    setAddDeviceType(deviceType, templateId);
+    openModal('addDevice'); // Open device modal
+    setSearchQuery(''); // Reset search for next time
+  };
+
+  const handleLoadSample = () => {
+    const shouldLoad =
+      devices.length === 0 ||
+      confirm(
+        'Vuoi caricare la topologia di esempio? Il canvas attuale verrà pulito.'
+      );
+
+    if (shouldLoad) {
+      clearAllDevices();
+      const topology = createSampleTopology();
+      loadTopology(topology.devices, topology.connections);
+    }
+  };
+
+  return (
+    <div className="sidebar-panel-section">
+      <h4 className="sidebar-section-title">AGGIUNGI</h4>
+
+      {/* Tab Header */}
+      <div className="flex gap-2 mb-3">
+        <button
+          className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'devices'
+              ? 'bg-[var(--accent-color)] text-white'
+              : 'bg-[var(--bg-color-secondary)] text-[var(--text-color-light)] hover:bg-[var(--bg-color-hover)]'
+          }`}
+          onClick={() => setActiveTab('devices')}
+        >
+          Dispositivi
+        </button>
+        <button
+          className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'templates'
+              ? 'bg-[var(--accent-color)] text-white'
+              : 'bg-[var(--bg-color-secondary)] text-[var(--text-color-light)] hover:bg-[var(--bg-color-hover)]'
+          }`}
+          onClick={() => setActiveTab('templates')}
+        >
+          Topologie
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'devices' ? (
+        <>
+          {/* Search Bar */}
+          <div className="mb-3">
+            <SearchInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Cerca dispositivo..."
+              autoFocus={true}
+              inputWidth="100%"
+              size="md"
+            />
+          </div>
+
+          {/* Bulk Add Button */}
+          <div className="mb-3">
+            <button
+              className="sidebar-panel-item w-full"
+              onClick={() => openModal('bulkAddDevice')}
+            >
+              <Package size={20} style={{ color: '#8b5cf6', flexShrink: 0 }} />
+              <span>Aggiungi in Blocco</span>
+            </button>
+          </div>
+
+          {/* Device List */}
+          <div className="device-list">
+            {filteredDevices.length > 0 ? (
+              filteredDevices.map((device) => (
+                <button
+                  key={device.id}
+                  className="device-list-item"
+                  onClick={() => handleDeviceSelect(device.type, device.id)}
+                >
+                  <div className="device-list-icon">
+                    <Icon
+                      icon={device.icon}
+                      width={28}
+                      height={28}
+                      style={{ color: device.color }}
+                    />
+                  </div>
+                  <div className="device-list-info">
+                    <div className="device-list-name">{device.name}</div>
+                    <div className="device-list-description">{device.description}</div>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="text-center text-[var(--text-color-light)] py-4">
+                Nessun dispositivo trovato per "{searchQuery}"
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Templates Tab */}
+          <div className="space-y-2">
+            <button className="sidebar-panel-item" onClick={handleLoadSample}>
+              <Plug size={20} style={{ color: '#f59e0b', flexShrink: 0 }} />
+              <span>Aggiungi Topologia Esempio</span>
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default DevicePanel;

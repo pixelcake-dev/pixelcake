@@ -1,0 +1,28 @@
+/**
+ * Italian UI labels for interfaces and the links attached to them.
+ * (The engine's own labels are English: they go into terminal and trace
+ * messages. Everything the modals show goes through here.)
+ */
+
+import type { DeviceInterface, InterfaceLink } from '@/engine';
+
+/** Name of an interface inside a sentence: "porta 8" / "eth0" */
+export function interfaceShortLabel(iface: DeviceInterface): string {
+  return iface.kind === 'port' ? `porta ${iface.port.id}` : iface.label;
+}
+
+/** Entry of an interface picker: "Porta 3 — Uplink" / "eth0 (192.168.10.11)" */
+export function interfaceOptionLabel(iface: DeviceInterface): string {
+  const address = iface.ip ? ` (${iface.ip})` : '';
+  if (iface.kind === 'port') {
+    const name = iface.port.name ? ` — ${iface.port.name}` : '';
+    return `Porta ${iface.port.id}${name}${address}`;
+  }
+  return `${iface.label}${address}`;
+}
+
+/** What an interface is linked to: "SW-Office (porta 8)", or "SW-Office" when the far end is not assigned */
+export function linkPeerLabel(link: InterfaceLink): string {
+  const peer = link.peer?.label ?? 'dispositivo sconosciuto';
+  return link.peerInterface ? `${peer} (${interfaceShortLabel(link.peerInterface)})` : peer;
+}

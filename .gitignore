@@ -1,0 +1,31 @@
+# Node / frontend
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.log
+
+# Python / backend
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment
+.env
+.env.local
+
+# Databases & backups (never track live dev data)
+*.db
+*.db.backup*
+*.backup
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# Local notes
+artifacts/

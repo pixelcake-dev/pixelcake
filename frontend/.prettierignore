@@ -1,0 +1,11 @@
+# Dependencies
+node_modules
+dist
+build
+
+# Generated files
+coverage
+.vite
+
+# Logs
+*.log
