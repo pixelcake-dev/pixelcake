@@ -9,6 +9,11 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: true,
+    // Whole screens are rendered in jsdom, many files at a time: on a busy
+    // machine a test that takes 300 ms alone can take seconds. A slow test is
+    // not a failed test, so the limits are well above the default 5 s
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
   },
   resolve: {
     alias: {

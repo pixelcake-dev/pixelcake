@@ -111,8 +111,8 @@ describe('InspectorModal — Rotte', () => {
     openTab('Rotte');
     expect(screen.getByText('Nessuna rotta statica.')).toBeInTheDocument();
     expect(routingTableRows()).toEqual([
-      ['192.168.10.0/24', '—', 'port 1', 'collegata'],
-      ['192.168.20.0/24', '—', 'port 2', 'collegata'],
+      ['192.168.10.0/24', '—', 'porta 1', 'collegata'],
+      ['192.168.20.0/24', '—', 'porta 2', 'collegata'],
     ]);
   });
 
@@ -124,7 +124,7 @@ describe('InspectorModal — Rotte', () => {
     type('Prossimo salto della rotta 1', '192.168.20.10');
     type('Nota della rotta 1', 'filiale');
 
-    expect(routingTableRows()).toContainEqual(['192.168.30.0/24', '192.168.20.10', 'port 2', 'statica']);
+    expect(routingTableRows()).toContainEqual(['192.168.30.0/24', '192.168.20.10', 'porta 2', 'statica']);
     expect(screen.getByRole('button', { name: 'Rotte (1)' })).toBeInTheDocument();
 
     save();
@@ -137,7 +137,7 @@ describe('InspectorModal — Rotte', () => {
     openInspector('Router-1');
     type('Gateway (rotta predefinita)', '192.168.20.254');
     openTab('Rotte');
-    expect(routingTableRows()).toContainEqual(['default', '192.168.20.254', 'port 2', 'predefinita (gateway)']);
+    expect(routingTableRows()).toContainEqual(['default', '192.168.20.254', 'porta 2', 'predefinita (gateway)']);
   });
 
   it('flags in the table a next hop the device cannot reach', () => {

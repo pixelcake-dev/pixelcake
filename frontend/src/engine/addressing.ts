@@ -226,7 +226,8 @@ function interfaceFor(interfaces: L3Interface[], ip: string): L3Interface | unde
  *
  * `routes` (static routes) are read on any device that has them; entries
  * whose destination or next hop is not valid are left out, as a real device
- * would refuse them.
+ * would refuse them, and so is a route (or a gateway) that points at one of
+ * the device's own addresses.
  */
 export function routingTable(device: NetworkDevice): RouteEntry[] {
   const interfaces = l3Interfaces(device);
@@ -237,9 +238,12 @@ export function routingTable(device: NetworkDevice): RouteEntry[] {
     entries.push({ network: entry.network, kind: 'connected', out: entry });
   }
 
+  // A route through one of the device's own addresses leads nowhere
+  const own = ownedAddresses(device);
+
   for (const route of device.routes ?? []) {
     const network = parseNetwork(route.destination);
-    if (!network || !isValidIP(route.nextHop)) continue;
+    if (!network || !isValidIP(route.nextHop) || own.includes(route.nextHop)) continue;
     entries.push({
       network,
       kind: network.prefix === 0 ? 'default' : 'static',
@@ -258,7 +262,11 @@ export function routingTable(device: NetworkDevice): RouteEntry[] {
     for (const entry of perInterface) {
       entries.push({ network: defaultNetwork, kind: 'default', nextHop: entry.gateway, out: entry });
     }
-  } else if (device.gateway && !usable.some(entry => entry.iface?.kind === 'nic')) {
+  } else if (
+    device.gateway &&
+    !own.includes(device.gateway) &&
+    !usable.some(entry => entry.iface?.kind === 'nic')
+  ) {
     entries.push({
       network: defaultNetwork,
       kind: 'default',

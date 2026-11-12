@@ -172,10 +172,15 @@ export function mirrorPrimaryNic(device: NetworkDevice): NetworkDevice {
   return { ...device, ip: primary.ip, subnet, gateway };
 }
 
+/** True when a device of this type routes between subnets (router or firewall) */
+export function isL3Type(deviceType: string): boolean {
+  const type = deviceType.toLowerCase();
+  return type.includes('router') || type.includes('firewall');
+}
+
 /** True when the device can route between subnets (router or firewall) */
 export function isL3Capable(device: NetworkDevice): boolean {
-  const type = device.type.toLowerCase();
-  return type.includes('router') || type.includes('firewall');
+  return isL3Type(device.type);
 }
 
 /** True when the device behaves like an L2 switch */

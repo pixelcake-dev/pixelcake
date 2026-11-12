@@ -7,6 +7,7 @@ import type {
   NetworkInterfaceCard,
 } from '@/types/network';
 import { generateMacAddress } from './ipHelpers';
+import { isL3Type } from '@/engine';
 
 /**
  * Configurable Device Row (from BulkAddDeviceModal)
@@ -196,7 +197,9 @@ export const bulkAddDevices = (
         label: deviceName,
         ip,
         subnet: globalSettings.subnet,
-        gateway: globalSettings.gateway,
+        // On a router or firewall the gateway is its default route: left
+        // empty, it is for whoever configures the device to choose
+        gateway: isL3Type(row.templateType) ? '' : globalSettings.gateway,
         position,
         portCount: row.portCount,
         ports,

@@ -268,6 +268,17 @@ describe('routingTable and lookupRoute', () => {
     expect(describeTable(broken).map(row => row[1])).toEqual(['connected', 'connected']);
   });
 
+  it('ignores a gateway or a route that points at one of its own addresses', () => {
+    // a route through yourself leads nowhere: "no route" is the honest answer
+    const selfish = {
+      ...router,
+      gateway: '192.168.10.1',
+      routes: [route('192.168.30.0/24', '10.0.0.1')],
+    };
+    expect(describeTable(selfish).map(row => row[1])).toEqual(['connected', 'connected']);
+    expect(lookupRoute(routingTable(selfish), '192.168.30.5')).toBeUndefined();
+  });
+
   it('gives an end device one default route per NIC that has a gateway', () => {
     const server = device({
       id: 'srv',

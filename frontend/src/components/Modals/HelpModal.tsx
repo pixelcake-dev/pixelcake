@@ -52,8 +52,8 @@ const GuideTab = () => (
       <Step title="Aggiungi i dispositivi">
         Nella barra a sinistra apri «Aggiungi Dispositivo» (il pulsante +) e scegli un tipo
         dall&apos;elenco: controlla il nome e conferma, l&apos;indirizzo IP viene proposto in
-        automatico. Il dispositivo finisce in un punto a caso del canvas: se non lo vedi, usa Vista
-        → Adatta alla finestra. «Aggiungi in Blocco» ne crea molti in una volta. Nella scheda
+        automatico. Il dispositivo compare al centro della parte di canvas che stai guardando.
+        «Aggiungi in Blocco» ne crea molti in una volta. Nella scheda
         «Topologie» dello stesso pannello c&apos;è una rete di esempio già pronta, che prende il
         posto di quanto è sul canvas.
       </Step>

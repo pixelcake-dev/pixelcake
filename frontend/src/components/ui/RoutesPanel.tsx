@@ -22,6 +22,13 @@ function nextRouteId(routes: StaticRoute[]): string {
 
 
 
+/** `porta 2` / `eth0`: the interface a route leaves from, as the rest of the interface names it */
+function interfaceName(entry: RouteEntry): string {
+  const iface = entry.out?.iface;
+  if (!iface) return '—';
+  return iface.kind === 'port' ? `porta ${iface.port.id}` : iface.label;
+}
+
 const KIND_LABELS: Record<RouteEntry['kind'], string> = {
   connected: 'collegata',
   static: 'statica',
@@ -199,9 +206,7 @@ const RoutesPanel: React.FC<RoutesPanelProps> = ({ device, routes, onChange }) =
                   >
                     <td className="py-1 pr-3">{formatNetwork(entry.network)}</td>
                     <td className="py-1 pr-3">{entry.nextHop ?? '—'}</td>
-                    <td className="py-1 pr-3">
-                      {unreachable ? '?' : (entry.out?.iface?.label ?? '—')}
-                    </td>
+                    <td className="py-1 pr-3">{unreachable ? '?' : interfaceName(entry)}</td>
                     <td className="py-1 font-sans">
                       {KIND_LABELS[entry.kind]}
                       {entry.kind === 'default' && !entry.route ? ' (gateway)' : ''}

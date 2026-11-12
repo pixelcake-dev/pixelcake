@@ -9,6 +9,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { findNextAvailableIP, generateMacAddress } from '@/utils/ipHelpers';
+import { isL3Type } from '@/engine';
 import type { DeviceType, Port, NetworkInterfaceCard } from '@/types/network';
 
 const AddDeviceModal = () => {
@@ -79,9 +80,18 @@ const AddDeviceModal = () => {
       return;
     }
 
-    // Random position on canvas with wider distribution
-    const randomX = Math.floor(Math.random() * 1800) + 100;
-    const randomY = Math.floor(Math.random() * 1200) + 100;
+    // The new device appears where the user is looking: around the centre of
+    // the visible part of the canvas, a little off it so that devices added
+    // one after the other do not land exactly on top of each other
+    const { viewport } = useNetworkStore.getState();
+    const zoom = viewport.zoom || 1;
+    const jitter = () => Math.round((Math.random() - 0.5) * 160);
+    const centerX = Math.round((window.innerWidth / 2 - viewport.x) / zoom) - 40 + jitter();
+    const centerY = Math.round((window.innerHeight / 2 - viewport.y) / zoom) - 40 + jitter();
+
+    // A router or firewall does not take the gateway of the end devices: its
+    // gateway is its default route, set later by whoever configures it
+    const routesTraffic = isL3Type(addDeviceType);
 
     // Initialize ports array if device supports ports
     const template = addDeviceTemplateId
@@ -92,7 +102,7 @@ const AddDeviceModal = () => {
           id: i + 1,
           enabled: true,
           speed: 'auto',
-          portType: 'access',
+          portType: routesTraffic ? 'lan' : 'access',
         }))
       : undefined;
 
@@ -102,10 +112,10 @@ const AddDeviceModal = () => {
       label: name,
       ip,
       subnet: globalSettings.subnet,
-      gateway: globalSettings.gateway,
+      gateway: routesTraffic ? '' : globalSettings.gateway,
       vendor: addDeviceType !== 'PC' ? vendor : undefined,
       location: addDeviceType !== 'PC' ? position : undefined,
-      position: { x: randomX, y: randomY },
+      position: { x: centerX, y: centerY },
       portCount: portCount,
       ports: ports,
       // The IP typed in this form is the address of the first NIC
@@ -249,12 +259,14 @@ const AddDeviceModal = () => {
                   readOnly
                 />
 
-                <Input
-                  label="Gateway"
-                  value={globalSettings.gateway}
-                  size="sm"
-                  readOnly
-                />
+                {isL3Type(addDeviceType) ? (
+                  <p className="text-xs text-[var(--text-color-light)] mt-1">
+                    Gli indirizzi delle porte, le rotte e la rotta predefinita si impostano dopo,
+                    nella scheda del dispositivo.
+                  </p>
+                ) : (
+                  <Input label="Gateway" value={globalSettings.gateway} size="sm" readOnly />
+                )}
               </>
             )}
           </FormContainer>

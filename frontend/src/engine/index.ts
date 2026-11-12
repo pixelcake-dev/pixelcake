@@ -14,6 +14,7 @@ export {
   primaryGateway,
   mirrorPrimaryNic,
   isL3Capable,
+  isL3Type,
   isSwitchLike,
   isInternetLike,
   forwardingRole,
