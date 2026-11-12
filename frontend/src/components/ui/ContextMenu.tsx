@@ -72,7 +72,6 @@ const ContextMenu = () => {
     >
       <ul>
         <li onClick={handleDetails}>Dettagli (Modifica)</li>
-        <li className="disabled">Configurazione...</li>
         <li onClick={handleConsole}>Console</li>
         <hr />
         <li className="danger" onClick={handleDelete}>

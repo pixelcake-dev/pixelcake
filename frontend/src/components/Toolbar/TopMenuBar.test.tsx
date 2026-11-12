@@ -6,6 +6,9 @@
  *   must never touch the drawing, whatever is on the other canvases.
  * - File → "Nuovo progetto…" and "Apri…" replace the whole project: with
  *   changes not yet saved to a file they must ask first.
+ * - No entry is in a menu only to be looked at: the ones that never did
+ *   anything are gone, and what is left answers with a toast, never with a
+ *   native alert.
  *
  * These tests click the real menu entries against the real stores; only the
  * browser's file pickers and the toasts are faked.
@@ -13,7 +16,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Mock } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { toast } from 'sonner';
 import type { NetworkDevice } from '@/types';
 import { useNetworkStore } from '@/store/networkStore';
@@ -98,7 +101,8 @@ describe('TopMenuBar', () => {
     createNewProject({ name: 'Sede HQ' });
     useUIStore.setState(state => ({
       showWelcomeScreen: false,
-      modals: { ...state.modals, newProject: false },
+      helpTab: 'guide',
+      modals: { ...state.modals, newProject: false, help: false },
     }));
     vi.clearAllMocks();
   });
@@ -115,11 +119,112 @@ describe('TopMenuBar', () => {
       for (const entry of ['Nuovo progetto…', 'Apri…', 'Salva', 'Salva con nome…']) {
         expect(screen.getByText(entry)).not.toHaveClass('disabled');
       }
-      expect(screen.getByText('Esporta come PNG')).toHaveClass('disabled');
       for (const removed of ['Nuovo', 'Nuovo Progetto', 'Apri...', 'Apri Progetto...']) {
         expect(screen.queryByText(removed)).toBeNull();
       }
       expect(screen.queryByText('Documentazione API')).toBeNull();
+    });
+  });
+
+  describe('entries that never did anything', () => {
+    /** The entries of the menu under a title of the bar, in order */
+    function entriesOf(menuTitle: string): string[] {
+      const menu = screen.getByText(menuTitle, { selector: '.menu-item > span' }).parentElement!;
+      // the first list is the menu itself; lists further down are its submenus
+      const list = menu.querySelector('.dropdown-content > ul')!;
+      return Array.from(list.children)
+        .filter(child => child.tagName === 'LI')
+        .map(li => li.firstChild?.textContent?.trim() ?? '');
+    }
+
+    it('are not in the menus any more', () => {
+      render(<TopMenuBar />);
+
+      for (const removed of [
+        'Esporta come PNG',
+        'Annulla',
+        'Ripristina',
+        'Taglia',
+        'Note Programma',
+      ]) {
+        expect(screen.queryByText(removed)).toBeNull();
+      }
+      expect(entriesOf('File')).toEqual(['Nuovo progetto…', 'Apri…', 'Salva', 'Salva con nome…']);
+      expect(entriesOf('Modifica')).toEqual(['Copia', 'Incolla']);
+      expect(entriesOf('Help')).toEqual([
+        'Guida',
+        'Comandi del terminale',
+        'Mostra Welcome Screen',
+        'Informazioni',
+      ]);
+    });
+
+    it('leave no separator at the edge of a menu or next to another one', () => {
+      const { container } = render(<TopMenuBar />);
+
+      const lists = Array.from(container.querySelectorAll('ul'));
+      expect(lists.length).toBeGreaterThan(3);
+      for (const list of lists) {
+        const tags = Array.from(list.children).map(child => child.tagName);
+        expect(tags[0]).not.toBe('HR');
+        expect(tags[tags.length - 1]).not.toBe('HR');
+        expect(tags.join(' ')).not.toContain('HR HR');
+      }
+    });
+
+    it('Copia and Incolla are the only entries that can be off, and only while they cannot work', () => {
+      drawTwoDevices();
+      const { container } = render(<TopMenuBar />);
+      const disabled = () =>
+        Array.from(container.querySelectorAll('li.disabled')).map(li => li.textContent);
+
+      // nothing selected, nothing copied
+      expect(disabled()).toEqual(['Copia', 'Incolla']);
+      click('Copia');
+      expect(useNetworkStore.getState().clipboard).toBeNull();
+
+      act(() => useNetworkStore.getState().selectMultipleDevices(['dev-0']));
+      expect(disabled()).toEqual(['Incolla']);
+
+      click('Copia');
+      expect(disabled()).toEqual([]);
+
+      click('Incolla');
+      expect(labels()).toEqual(['PC-1', 'PC-2', 'PC-1']);
+    });
+  });
+
+  describe('entries with nothing to work on', () => {
+    it('say so with a toast, never with a native alert', () => {
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+      render(<TopMenuBar />);
+
+      // an empty canvas: nothing to fit, to lay out or to connect
+      click('Adatta alla finestra');
+      click('Hierarchical Verticale');
+      click('Auto-Connect Rete');
+
+      expect(toastInfoMock).toHaveBeenCalledTimes(3);
+      for (const [message] of toastInfoMock.mock.calls) {
+        expect(message).toMatch(/dispositiv/);
+      }
+      expect(alertSpy).not.toHaveBeenCalled();
+      expect(useNetworkStore.getState().hasUnsavedChanges).toBe(false);
+    });
+  });
+
+  describe('Help menu', () => {
+    it.each([
+      ['Guida', 'guide'],
+      ['Comandi del terminale', 'commands'],
+      ['Informazioni', 'about'],
+    ])('"%s" opens the guide on the "%s" tab', (entry, tab) => {
+      render(<TopMenuBar />);
+
+      click(entry);
+
+      expect(useUIStore.getState().modals.help).toBe(true);
+      expect(useUIStore.getState().helpTab).toBe(tab);
     });
   });
 

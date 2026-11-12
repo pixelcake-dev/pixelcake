@@ -60,7 +60,7 @@ When the engine cannot verify something, it says so in a note instead of answeri
 - **It only checks the first router.** With more than one router on the path, routing between them is assumed and the result says so.
 - **Firewall rules are a fixed table of zones.** You cannot write your own rules yet.
 - **Some settings are stored but not evaluated:** STP, NAT and per-port VLANs.
-- **No undo, no image export.** Both are in the menu, disabled.
+- **No undo, no image export.** Neither exists yet.
 - **The YAML format is PixelCake's own.** Device names that look like numbers or booleans, and duplicate names, do not survive an export and import.
 - **The Terraform export cannot be applied.** It uses placeholder resource types and no provider. Reading existing Terraform state is not implemented.
 - **No accounts, no sharing.** A project is a file on your disk. Two browser tabs open on the same project do not see each other's changes: the last one to write wins.
@@ -85,7 +85,7 @@ The app's icons are bundled with it. Only an icon name typed by hand in a custom
 
 ```bash
 cd frontend
-pnpm test:run      # 630 tests: engine, terminal, project files, import/export, screens
+pnpm test:run      # 690 tests: engine, terminal, project files, import/export, screens
 pnpm type-check
 pnpm lint
 pnpm build

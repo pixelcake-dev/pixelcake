@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -74,7 +75,7 @@ const AddDeviceModal = () => {
 
   const handleSave = () => {
     if (!addDeviceType || !name.trim() || !ip.trim()) {
-      alert('Nome e IP sono obbligatori');
+      toast.error('Nome e IP sono obbligatori');
       return;
     }
 

@@ -63,7 +63,6 @@ const ConnectionContextMenu = () => {
     >
       <ul>
         <li onClick={handleEdit}>Modifica Connessione</li>
-        <li className="disabled">Evidenzia Percorso</li>
         <hr />
         <li className="danger" onClick={handleDelete}>
           Elimina Connessione

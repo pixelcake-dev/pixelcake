@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import { Minus, Plus, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { Scrollbars } from 'react-custom-scrollbars-2';
 import { Modal } from '@/components/ui/Modal';
 import { SearchInput } from '@/components/ui/SearchInput';
@@ -156,7 +157,7 @@ const BulkAddDeviceModal = () => {
 
   const handleAddDevices = () => {
     if (totalCount === 0) {
-      alert('Seleziona almeno un dispositivo da aggiungere.');
+      toast.info('Seleziona almeno un dispositivo da aggiungere.');
       return;
     }
 
@@ -171,8 +172,7 @@ const BulkAddDeviceModal = () => {
 
     closeModal('bulkAddDevice');
 
-    // Show success message
-    alert(`${added} dispositivi aggiunti con successo!`);
+    toast.success(added === 1 ? '1 dispositivo aggiunto' : `${added} dispositivi aggiunti`);
   };
 
   const handleClose = () => {

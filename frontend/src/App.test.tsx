@@ -51,13 +51,30 @@ describe('App', () => {
     fetchSpy = vi.fn(() => Promise.reject(new Error('there is no server')));
     vi.stubGlobal('fetch', fetchSpy);
     createNewProject({ name: 'Sede Milano' });
-    useUIStore.setState({ isAuthenticated: true, showWelcomeScreen: false });
+    useUIStore.setState(state => ({
+      showWelcomeScreen: false,
+      helpTab: 'guide',
+      modals: { ...state.modals, help: false },
+    }));
     vi.clearAllMocks();
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it('opens straight on the designer: there is no login step', () => {
+    render(<App />);
+
+    // the designer itself is on screen: menu bar, sidebar and canvas
+    expect(screen.getByText('File')).toBeInTheDocument();
+    expect(screen.getByTitle('Explorer')).toBeInTheDocument();
+    expect(document.querySelector('.react-flow')).not.toBeNull();
+    // and nothing stands in front of it asking to sign in
+    expect(screen.queryByRole('button', { name: /accedi|login|entra/i })).toBeNull();
+    expect(useUIStore.getState()).not.toHaveProperty('isAuthenticated');
+    expect(useUIStore.getState()).not.toHaveProperty('login');
   });
 
   it('starts without calling any server and without complaining about one', async () => {
@@ -375,11 +392,11 @@ describe('App', () => {
     });
   });
 
-  it('the save shortcut belongs to the app, not to the login page', () => {
-    useUIStore.setState({ isAuthenticated: false });
+  it('the save shortcut is gone once the app is closed', () => {
     const picker = vi.fn();
     vi.stubGlobal('showSaveFilePicker', picker);
-    render(<App />);
+    const { unmount } = render(<App />);
+    unmount();
 
     const event = new KeyboardEvent('keydown', {
       key: 's',
@@ -391,5 +408,41 @@ describe('App', () => {
 
     expect(event.defaultPrevented).toBe(false);
     expect(picker).not.toHaveBeenCalled();
+  });
+
+  // ---------- the guide ----------
+
+  describe('guide', () => {
+    const selectedTab = () => screen.getByRole('tab', { selected: true }).textContent;
+
+    it('the welcome screen\'s "Documentation" link opens it on "Come si usa"', () => {
+      // even if it was last left on another tab
+      useUIStore.setState({ helpTab: 'about' });
+      render(<App />);
+
+      fireEvent.click(screen.getByText('Documentation'));
+
+      expect(screen.getByRole('heading', { name: 'Guida' })).toBeInTheDocument();
+      expect(selectedTab()).toBe('Come si usa');
+      expect(screen.getByText(/PixelCake è un prototipo/)).toBeInTheDocument();
+    });
+
+    it('each entry of the Help menu opens it on its own tab', () => {
+      render(<App />);
+      const menuEntry = (label: string) => screen.getByText(label, { selector: 'li' });
+      const close = () => fireEvent.click(screen.getByRole('button', { name: 'Chiudi la guida' }));
+
+      fireEvent.click(menuEntry('Comandi del terminale'));
+      expect(selectedTab()).toBe('Comandi del terminale');
+      close();
+      expect(screen.queryByRole('heading', { name: 'Guida' })).toBeNull();
+
+      fireEvent.click(menuEntry('Informazioni'));
+      expect(selectedTab()).toBe('Informazioni');
+      close();
+
+      fireEvent.click(menuEntry('Guida'));
+      expect(selectedTab()).toBe('Come si usa');
+    });
   });
 });
