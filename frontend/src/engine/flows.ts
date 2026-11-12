@@ -7,7 +7,8 @@
  *
  *  - ping:     request src→dst, then reply dst→src (asymmetric configs surface)
  *  - web:      HTTP request src→dst, HTTP response dst→src
- *  - download: download request src→dst, download data dst→src
+ *  - download: download request src→dst, download data dst→src (a download
+ *              is web traffic to a firewall)
  *  - email:    src→relay, relay→dst — the relay depends on the email mode:
  *              'internal' uses the nearest mail server, 'cloud' uses the
  *              nearest internet exit (Internet/Cloud/WAN/ISP device), and
@@ -16,7 +17,7 @@
  * Pure and deterministic: no React, no Zustand, no side effects.
  */
 
-import type { EmailMode, FlowModelType, NetworkDevice } from '@/types';
+import type { EmailMode, FlowModelType, NetworkDevice, ServiceName } from '@/types';
 import type { Topology, TraceResult, Verdict } from './types';
 import { buildAdjacency } from './topology';
 import { traceRoute } from './trace';
@@ -99,6 +100,10 @@ interface LegPlan {
   fromId: string;
   toId: string;
   purpose: string;
+  /** What the leg is to a firewall */
+  service: ServiceName;
+  /** Address to aim at, when not the primary address of the device */
+  targetIp?: string;
   /**
    * This leg answers the previous one (ping reply, HTTP response). It is only
    * evaluated when that leg succeeded, so firewalls treat it as the return
@@ -121,10 +126,18 @@ function evaluateLegs(plans: LegPlan[], topo: Topology, planNotes: string[]): Fl
   const animationPath: string[] = [];
   const notes: string[] = [...planNotes];
 
+  let previous: TraceResult | undefined;
   for (const plan of plans) {
+    // A reply goes back to the address the request came from, and leaves
+    // from the address the request was sent to
+    const reply = plan.returnTraffic ? previous : undefined;
     const trace = traceRoute(plan.fromId, plan.toId, topo, {
       returnTraffic: plan.returnTraffic,
+      service: plan.service,
+      targetIp: reply ? reply.sourceIp : plan.targetIp,
+      sourceIp: reply?.targetIp,
     });
+    previous = trace;
     legs.push({ fromId: plan.fromId, toId: plan.toId, purpose: plan.purpose, trace });
 
     for (const hop of trace.hops) {
@@ -223,14 +236,14 @@ function planEmailViaRelay(
   // Special cases: an endpoint already is the relay → single leg.
   if (target && kind.isRelay(target)) {
     return evaluateLegs(
-      [{ fromId: sourceId, toId: targetId, purpose: kind.submitPurpose }],
+      [{ fromId: sourceId, toId: targetId, purpose: kind.submitPurpose, service: 'email' }],
       topo,
       note ? [note(target)] : []
     );
   }
   if (source && kind.isRelay(source)) {
     return evaluateLegs(
-      [{ fromId: sourceId, toId: targetId, purpose: kind.deliveryPurpose }],
+      [{ fromId: sourceId, toId: targetId, purpose: kind.deliveryPurpose, service: 'email' }],
       topo,
       note ? [note(source)] : []
     );
@@ -242,8 +255,8 @@ function planEmailViaRelay(
   const chosen = nearestByHops(relays, sourceId, topo);
   return evaluateLegs(
     [
-      { fromId: sourceId, toId: chosen.id, purpose: kind.submitPurpose },
-      { fromId: chosen.id, toId: targetId, purpose: kind.deliveryPurpose },
+      { fromId: sourceId, toId: chosen.id, purpose: kind.submitPurpose, service: 'email' },
+      { fromId: chosen.id, toId: targetId, purpose: kind.deliveryPurpose, service: 'email' },
     ],
     topo,
     note ? [note(chosen)] : []
@@ -289,7 +302,8 @@ function planRequestResponse(
   targetId: string,
   topo: Topology,
   requestPurpose: string,
-  responsePurpose: string
+  responsePurpose: string,
+  targetIp: string | undefined
 ): FlowResult {
   const target = topo.devices.find(d => d.id === targetId);
   const planNotes: string[] = [];
@@ -298,8 +312,14 @@ function planRequestResponse(
   }
   return evaluateLegs(
     [
-      { fromId: sourceId, toId: targetId, purpose: requestPurpose },
-      { fromId: targetId, toId: sourceId, purpose: responsePurpose, returnTraffic: true },
+      { fromId: sourceId, toId: targetId, purpose: requestPurpose, service: 'web', targetIp },
+      {
+        fromId: targetId,
+        toId: sourceId,
+        purpose: responsePurpose,
+        service: 'web',
+        returnTraffic: true,
+      },
     ],
     topo,
     planNotes
@@ -311,13 +331,15 @@ function planRequestResponse(
  * Endpoint validation (missing device, missing/invalid IP) is delegated to
  * traceRoute and propagates through the first leg.
  * `options.emailMode` selects the email relay strategy (default 'auto').
+ * `options.targetIp` aims a ping, web or download request at one address of
+ * the target instead of its primary one (an email goes through its relay).
  */
 export function planAndEvaluateFlow(
   model: FlowModelType,
   sourceId: string,
   targetId: string,
   topo: Topology,
-  options?: { emailMode?: EmailMode }
+  options?: { emailMode?: EmailMode; targetIp?: string }
 ): FlowResult {
   if (sourceId === targetId) {
     return flowError('source and target are the same device');
@@ -327,16 +349,42 @@ export function planAndEvaluateFlow(
     case 'ping':
       return evaluateLegs(
         [
-          { fromId: sourceId, toId: targetId, purpose: 'request' },
-          { fromId: targetId, toId: sourceId, purpose: 'reply', returnTraffic: true },
+          {
+            fromId: sourceId,
+            toId: targetId,
+            purpose: 'request',
+            service: 'ping',
+            targetIp: options?.targetIp,
+          },
+          {
+            fromId: targetId,
+            toId: sourceId,
+            purpose: 'reply',
+            service: 'ping',
+            returnTraffic: true,
+          },
         ],
         topo,
         []
       );
     case 'web':
-      return planRequestResponse(sourceId, targetId, topo, 'HTTP request', 'HTTP response');
+      return planRequestResponse(
+        sourceId,
+        targetId,
+        topo,
+        'HTTP request',
+        'HTTP response',
+        options?.targetIp
+      );
     case 'download':
-      return planRequestResponse(sourceId, targetId, topo, 'download request', 'download data');
+      return planRequestResponse(
+        sourceId,
+        targetId,
+        topo,
+        'download request',
+        'download data',
+        options?.targetIp
+      );
     case 'email':
       return planEmail(sourceId, targetId, topo, options?.emailMode ?? 'auto');
   }

@@ -9,6 +9,7 @@
 
 import type { NetworkDevice, NetworkConnection } from '@/types';
 import type { Topology, ResolvedEndpoint } from './types';
+import { listInterfaces } from './interfaces';
 
 /** One neighbor reachable from a device, with the connection that links them */
 export interface AdjacencyEntry {
@@ -45,7 +46,7 @@ function normalize(value: string): string {
 /**
  * Resolve a terminal argument against the topology.
  * Match order: exact device id → label (case-insensitive, trimmed,
- * multi-word supported) → device.ip → any enabled NIC ip.
+ * multi-word supported) → device.ip → the address of any enabled port or NIC.
  */
 export function resolveEndpoint(query: string, topo: Topology): ResolvedEndpoint | undefined {
   const q = normalize(query);
@@ -69,10 +70,10 @@ export function resolveEndpoint(query: string, topo: Topology): ResolvedEndpoint
     if (device.ip && device.ip === q) return { device, ip: device.ip };
   }
 
-  // 4. Any enabled NIC IP
+  // 4. The address of any enabled port or NIC
   for (const device of topo.devices) {
-    const nic = device.nics?.find(n => n.enabled && n.ip === q);
-    if (nic) return { device, ip: nic.ip };
+    const iface = listInterfaces(device).find(candidate => candidate.enabled && candidate.ip === q);
+    if (iface) return { device, ip: iface.ip };
   }
 
   return undefined;
@@ -180,4 +181,37 @@ export function isL3Capable(device: NetworkDevice): boolean {
 /** True when the device behaves like an L2 switch */
 export function isSwitchLike(device: NetworkDevice): boolean {
   return device.type.toLowerCase().includes('switch');
+}
+
+/** Lowercase type and template id, the fields device kinds are told apart by */
+function kindText(device: NetworkDevice): string {
+  return `${device.type} ${device.templateId ?? ''}`.toLowerCase();
+}
+
+/** True when the device stands for the outside world (an Internet or Cloud symbol) */
+export function isInternetLike(device: NetworkDevice): boolean {
+  const text = kindText(device);
+  return text.includes('cloud') || text.includes('internet');
+}
+
+/**
+ * What a device does with traffic that is not addressed to it:
+ *
+ *  - router:      forwards between networks by its routing table (router,
+ *                 firewall)
+ *  - bridge:      forwards inside one network, VLAN by VLAN (switch, access
+ *                 point, any other device built with ports)
+ *  - passthrough: not simulated, assumed to let traffic through (the
+ *                 Internet/Cloud symbol, a load balancer)
+ *  - host:        nothing: an end device never carries traffic for others
+ */
+export type ForwardingRole = 'router' | 'bridge' | 'passthrough' | 'host';
+
+export function forwardingRole(device: NetworkDevice): ForwardingRole {
+  if (isL3Capable(device)) return 'router';
+  const text = kindText(device);
+  if (isSwitchLike(device) || /access\s?point|bridge|hub/.test(text)) return 'bridge';
+  if (isInternetLike(device) || /load\s?balancer/.test(text)) return 'passthrough';
+  if ((device.ports ?? []).length > 0) return 'bridge';
+  return 'host';
 }

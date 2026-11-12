@@ -3,8 +3,8 @@
  *
  * The engine is a PURE TypeScript module: no React, no Zustand, no side
  * effects. It interprets the topology data the canvas already captures
- * (IP/subnet/gateway, VLANs, port state, security zones) and produces
- * verdicts with human-readable reasons. Nothing in it depends on the
+ * (addresses, routes, VLANs, port state, firewall rules and zones) and
+ * produces verdicts with human-readable reasons. Nothing in it depends on the
  * browser, so it can run anywhere unchanged, and its inputs map 1:1 to the
  * future Terraform export.
  */
@@ -39,6 +39,10 @@ export interface TraceResult {
   failureReason?: string;
   /** Non-fatal observations (e.g. "firewall has no zone config: allowed") */
   notes: string[];
+  /** Address the packet was sent from (set once both endpoints are valid) */
+  sourceIp?: string;
+  /** Address the packet was sent to (set once both endpoints are valid) */
+  targetIp?: string;
 }
 
 export interface PingResult extends TraceResult {

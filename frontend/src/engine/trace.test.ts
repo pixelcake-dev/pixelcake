@@ -191,7 +191,11 @@ describe('traceRoute L3 routing', () => {
     );
     const result = traceRoute('pc1', 'pc2', t);
     expect(result.verdict).toBe('success');
-    expect(result.hops[1].note).toContain('routed between subnets');
+    // Router-1 has no addressed port: it lets the packet through unverified
+    expect(result.hops[1].note).toBe('routing assumed');
+    expect(result.notes).toContain(
+      'Router-1 has no interface addresses: gateway and routing not verified'
+    );
   });
 
   it('blocks cross-subnet traffic at the source when no gateway is configured', () => {
@@ -432,7 +436,7 @@ describe('traceRoute gateway verification', () => {
     const result = traceRoute('pc1', 'pc2', routedTopo({}));
     expect(result.verdict).toBe('success');
     expect(result.notes).toEqual([]);
-    expect(result.hops[1].note).toBe('routed between subnets');
+    expect(result.hops[1].note).toBe('routed: 192.168.20.0/24 is on port 2');
   });
 
   it('blocks at the source when the gateway is not the address of that port', () => {
@@ -496,7 +500,9 @@ describe('traceRoute gateway verification', () => {
       routedTopo({ pc1Gateway: '192.168.10.254', routerPorts: [port(1), port(2)] })
     );
     expect(result.verdict).toBe('success');
-    expect(result.notes).toEqual(['Router-1 has no interface addresses: gateway not verified']);
+    expect(result.notes).toEqual([
+      'Router-1 has no interface addresses: gateway and routing not verified',
+    ]);
   });
 
   it('cannot verify, and says so, when the link is not bound on the router side', () => {
@@ -541,9 +547,19 @@ describe('traceRoute gateway verification', () => {
 
 // ---------- more than one router ----------
 
-describe('traceRoute with several routers on the path', () => {
-  /** PC-1 — R1 — R2 — PC-2, three subnets, everything bound and addressed */
-  function twoRouters(pc1Gateway = '192.168.10.1'): Topology {
+describe('traceRoute across several routers', () => {
+  /**
+   * PC-1 — R1 — R2 — PC-2 (and PC-3 on a port of R2 that has no address):
+   * 192.168.10.0/24 | 10.0.0.0/24 | 192.168.30.0/24, everything bound.
+   */
+  function twoRouters(
+    options: {
+      pc1Gateway?: string;
+      r1?: Partial<NetworkDevice>;
+      r2?: Partial<NetworkDevice>;
+    } = {}
+  ): Topology {
+    const { pc1Gateway = '192.168.10.1', r1 = {}, r2 = {} } = options;
     return topo(
       [
         device({
@@ -558,13 +574,15 @@ describe('traceRoute with several routers on the path', () => {
           type: 'Router',
           ip: '192.168.10.1',
           ports: [port(1, { ip: '192.168.10.1' }), port(2, { ip: '10.0.0.1' })],
+          ...r1,
         }),
         device({
           id: 'r2',
           label: 'R2',
           type: 'Router',
           ip: '192.168.30.1',
-          ports: [port(1, { ip: '10.0.0.2' }), port(2, { ip: '192.168.30.1' })],
+          ports: [port(1, { ip: '10.0.0.2' }), port(2, { ip: '192.168.30.1' }), port(3)],
+          ...r2,
         }),
         device({
           id: 'pc2',
@@ -572,38 +590,157 @@ describe('traceRoute with several routers on the path', () => {
           ip: '192.168.30.11',
           nics: [nic({ ip: '192.168.30.11', gateway: '192.168.30.1' })],
         }),
+        device({
+          id: 'pc3',
+          label: 'PC-3',
+          ip: '192.168.99.11',
+          nics: [nic({ ip: '192.168.99.11', gateway: '192.168.99.1' })],
+        }),
       ],
       [
         link('pc1', 'r1', { sourceNic: 'nic-1', targetPort: 1 }),
         link('r1', 'r2', { sourcePort: 2, targetPort: 1 }),
         link('r2', 'pc2', { sourcePort: 2, targetNic: 'nic-1' }),
+        link('r2', 'pc3', { sourcePort: 3, targetNic: 'nic-1' }),
       ]
     );
   }
 
-  it('verifies the first router and notes that routing between routers is assumed', () => {
+  const toServers = { id: 'route-1', destination: '192.168.30.0/24', nextHop: '10.0.0.2' };
+  const toOffices = { id: 'route-1', destination: '192.168.10.0/24', nextHop: '10.0.0.1' };
+
+  it('stops at the first router when it has no route to the destination', () => {
     const result = traceRoute('pc1', 'pc2', twoRouters());
+    expect(result.verdict).toBe('blocked');
+    expect(result.failureReason).toBe('R1 has no route to 192.168.30.11');
+    expect(result.hops.map(h => [h.deviceId, h.status])).toEqual([
+      ['pc1', 'forwarded'],
+      ['r1', 'blocked'],
+    ]);
+  });
+
+  it('follows a static route to the next router, and every router says how it routed', () => {
+    const result = traceRoute('pc1', 'pc2', twoRouters({ r1: { routes: [toServers] } }));
     expect(result.verdict).toBe('success');
-    expect(result.notes).toEqual(['routing between routers is not simulated: assumed']);
+    expect(result.notes).toEqual([]);
     expect(result.hops.map(h => [h.deviceId, h.note])).toEqual([
       ['pc1', undefined],
-      ['r1', 'routed between subnets'],
-      ['r2', 'routed between subnets'],
+      ['r1', 'routed: 192.168.30.0/24 via 10.0.0.2 (port 2)'],
+      ['r2', 'routed: 192.168.30.0/24 is on port 2'],
       ['pc2', undefined],
     ]);
   });
 
-  it('checks the gateway against the FIRST router only', () => {
-    const result = traceRoute('pc1', 'pc2', twoRouters('192.168.10.99'));
+  it('the way back needs a route of its own', () => {
+    const oneWay = twoRouters({ r1: { routes: [toServers] } });
+    const back = traceRoute('pc2', 'pc1', oneWay);
+    expect(back.verdict).toBe('blocked');
+    expect(back.failureReason).toBe('R2 has no route to 192.168.10.11');
+
+    const bothWays = twoRouters({ r1: { routes: [toServers] }, r2: { routes: [toOffices] } });
+    expect(traceRoute('pc2', 'pc1', bothWays).verdict).toBe('success');
+  });
+
+  it("uses the router's gateway as its default route", () => {
+    const result = traceRoute('pc1', 'pc2', twoRouters({ r1: { gateway: '10.0.0.2' } }));
+    expect(result.verdict).toBe('success');
+    expect(result.hops[1].note).toBe('routed: default route via 10.0.0.2 (port 2)');
+  });
+
+  it('prefers the most specific route to the default one', () => {
+    // The default points at an address nobody has; the /24 route is the one used
+    const result = traceRoute(
+      'pc1',
+      'pc2',
+      twoRouters({ r1: { gateway: '10.0.0.99', routes: [toServers] } })
+    );
+    expect(result.verdict).toBe('success');
+    expect(result.hops[1].note).toBe('routed: 192.168.30.0/24 via 10.0.0.2 (port 2)');
+  });
+
+  it('accepts "default" as the destination of a static route', () => {
+    const viaDefault = { id: 'route-1', destination: 'default', nextHop: '10.0.0.2' };
+    const result = traceRoute('pc1', 'pc2', twoRouters({ r1: { routes: [viaDefault] } }));
+    expect(result.verdict).toBe('success');
+    expect(result.hops[1].note).toBe('routed: default route via 10.0.0.2 (port 2)');
+  });
+
+  it('blocks when the next hop of a route is on none of the router networks', () => {
+    const lost = { id: 'route-1', destination: '192.168.30.0/24', nextHop: '172.16.0.1' };
+    const result = traceRoute('pc1', 'pc2', twoRouters({ r1: { routes: [lost] } }));
+    expect(result.verdict).toBe('blocked');
+    expect(result.failureReason).toBe(
+      'R1 cannot use the route 192.168.30.0/24 via 172.16.0.1: that address is on none of its networks'
+    );
+    expect(result.hops[result.hops.length - 1]).toMatchObject({ deviceId: 'r1', status: 'blocked' });
+  });
+
+  it('blocks when nobody has the next hop address, naming who is there instead', () => {
+    const wrong = { id: 'route-1', destination: '192.168.30.0/24', nextHop: '10.0.0.9' };
+    const result = traceRoute('pc1', 'pc2', twoRouters({ r1: { routes: [wrong] } }));
+    expect(result.verdict).toBe('blocked');
+    expect(result.failureReason).toBe(
+      'R1 routes 192.168.30.0/24 via 10.0.0.9, but R2 port 1 on its network is 10.0.0.2'
+    );
+    expect(result.hops[result.hops.length - 1]).toMatchObject({ deviceId: 'r1', status: 'blocked' });
+  });
+
+  it('ignores a route that is not written as a network and an address', () => {
+    const broken = [
+      { id: 'route-1', destination: 'servers', nextHop: '10.0.0.2' },
+      { id: 'route-2', destination: '192.168.30.0/24', nextHop: 'R2' },
+    ];
+    const result = traceRoute('pc1', 'pc2', twoRouters({ r1: { routes: broken } }));
+    expect(result.failureReason).toBe('R1 has no route to 192.168.30.11');
+  });
+
+  it('detects a routing loop instead of going round forever', () => {
+    // PC-3 hangs off a port of R2 that has no address: R2 sends 192.168.99.0/24
+    // back to R1, whose default route points at R2 again
+    const loop = twoRouters({
+      r1: { gateway: '10.0.0.2' },
+      r2: { routes: [{ id: 'route-1', destination: '192.168.99.0/24', nextHop: '10.0.0.1' }] },
+    });
+    const result = traceRoute('pc1', 'pc3', loop);
+    expect(result.verdict).toBe('blocked');
+    expect(result.failureReason).toBe('routing loop: the packet comes back to R1');
+    expect(result.hops.map(h => [h.deviceId, h.status])).toEqual([
+      ['pc1', 'forwarded'],
+      ['r1', 'forwarded'],
+      ['r2', 'forwarded'],
+      ['r1', 'blocked'],
+    ]);
+  });
+
+  it('checks the gateway of the source against the first router', () => {
+    const result = traceRoute(
+      'pc1',
+      'pc2',
+      twoRouters({ pc1Gateway: '192.168.10.99', r1: { routes: [toServers] } })
+    );
     expect(result.verdict).toBe('blocked');
     expect(result.failureReason).toBe(
       'PC-1 uses gateway 192.168.10.99, but R1 port 1 on its network is 192.168.10.1'
     );
   });
 
-  it('adds no routing note with a single router', () => {
-    const result = traceRoute('pc1', 'pc2', routedTopo({}));
-    expect(result.notes).not.toContain('routing between routers is not simulated: assumed');
+  it('reports the addresses the packet used', () => {
+    const result = traceRoute('pc1', 'pc2', twoRouters({ r1: { routes: [toServers] } }));
+    expect(result.sourceIp).toBe('192.168.10.11');
+    expect(result.targetIp).toBe('192.168.30.11');
+  });
+
+  it('aims at one address of the target when asked to', () => {
+    const routed = twoRouters({ r1: { routes: [toServers] }, r2: { routes: [toOffices] } });
+    // R2 by name is its primary address 192.168.30.1; 10.0.0.2 is its other side
+    const far = traceRoute('pc1', 'r2', routed);
+    expect(far.targetIp).toBe('192.168.30.1');
+    expect(far.verdict).toBe('success');
+
+    const near = traceRoute('pc1', 'r2', twoRouters(), { targetIp: '10.0.0.2' });
+    expect(near.targetIp).toBe('10.0.0.2');
+    expect(near.verdict).toBe('success'); // R1 is attached to 10.0.0.0/24: no route needed
+    expect(near.hops.map(h => h.deviceId)).toEqual(['pc1', 'r1', 'r2']);
   });
 });
 

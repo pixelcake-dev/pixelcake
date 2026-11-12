@@ -137,7 +137,7 @@ function describeScenarios(title: string, load: () => Topology) {
       for (const leg of out.legs) {
         const routerHop = leg.trace.hops.find(h => h.label === 'Router-1');
         expect(routerHop?.status).toBe('forwarded');
-        expect(routerHop?.note).toContain('routed between subnets');
+        expect(routerHop?.note).toMatch(/^routed: 192\.168\.(10|20)\.0\/24 is on port [12]$/);
       }
       expect(out.notes.filter(n => n.includes('no port binding'))).toEqual([]);
       // one router, addressed and bound end to end: no assumption left to note
@@ -341,7 +341,7 @@ describe('9. data saved before interfaces could be bound or addressed', () => {
     expect(old.devices.flatMap(d => d.ports ?? []).some(p => p.ip !== undefined)).toBe(false);
   });
 
-  it('still loads, gets every link bound and pings across the router with a "gateway not verified" note', () => {
+  it('still loads, gets every link bound and pings across the router with a "not verified" note', () => {
     const old = oldFormatSample();
 
     useNetworkStore.getState().loadTopology(old.devices, old.connections);
@@ -371,8 +371,8 @@ describe('9. data saved before interfaces could be bound or addressed', () => {
     expect(result.verdict).toBe('success');
     expect(hopLabels(result, 0)).toEqual(REQUEST_PATH);
     expect(result.notes).toEqual([
-      'request: Router-1 has no interface addresses: gateway not verified',
-      'reply: Router-1 has no interface addresses: gateway not verified',
+      'request: Router-1 has no interface addresses: gateway and routing not verified',
+      'reply: Router-1 has no interface addresses: gateway and routing not verified',
     ]);
     expect(result.notes.some(n => n.includes('no port binding'))).toBe(false);
   });
@@ -388,7 +388,7 @@ describe('9. data saved before interfaces could be bound or addressed', () => {
     const unverified = ping(wrong, 'PC-1', 'Web-01');
     expect(unverified.verdict).toBe('success');
     expect(unverified.notes).toContain(
-      'request: Router-1 has no interface addresses: gateway not verified'
+      'request: Router-1 has no interface addresses: gateway and routing not verified'
     );
 
     const missing = editNic(loaded, 'PC-1', 'eth0', { gateway: '' });

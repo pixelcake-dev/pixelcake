@@ -51,6 +51,39 @@ export interface Port {
 }
 
 /**
+ * Static route of a router or firewall: traffic for `destination` is handed
+ * to `nextHop`, an address on one of the device's own networks.
+ */
+export interface StaticRoute {
+  id: string;              // Route ID (route-1, route-2...)
+  destination: string;     // Network in CIDR form ("192.168.30.0/24"; "0.0.0.0/0" is the default route)
+  nextHop: string;         // IP address of the next router
+  description?: string;    // Notes/comments
+}
+
+/**
+ * What a flow is, as far as a firewall can tell:
+ * ping (ICMP echo), web (HTTP/HTTPS), email (SMTP).
+ */
+export type ServiceName = 'ping' | 'web' | 'email';
+
+/**
+ * Firewall rule. Rules are read top to bottom and the first one that matches
+ * decides. `source` and `destination` are `any`, a security zone
+ * (`trust` | `untrust` | `dmz`), an IP address or a network in CIDR form.
+ * When no rule matches, the zone policy of the firewall decides.
+ */
+export interface FirewallRule {
+  id: string;              // Rule ID (rule-1, rule-2...)
+  action: 'allow' | 'deny';
+  service: ServiceName | 'any';
+  source: string;
+  destination: string;
+  enabled?: boolean;       // A disabled rule is skipped (default: enabled)
+  description?: string;    // Notes/comments
+}
+
+/**
  * Network Device
  * Represents a single device in the network topology
  */
@@ -78,6 +111,11 @@ export interface NetworkDevice {
   ports?: Port[]; // Per-port configuration
   // Network Interface Cards (PC, Server, Database, Cloud, etc.)
   nics?: NetworkInterfaceCard[]; // Network interfaces (replaces single ip/subnet/gateway)
+  // Routing (Router, Firewall): static routes on top of the networks the
+  // ports are attached to. `gateway` above is the device's default route.
+  routes?: StaticRoute[];
+  // Filtering (Firewall): ordered rules, first match decides
+  firewallRules?: FirewallRule[];
 }
 
 /**
