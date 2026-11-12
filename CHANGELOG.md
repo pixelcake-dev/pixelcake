@@ -12,8 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The login page.** It asked for nothing and checked nothing: the app now opens straight on the designer. The particle library it used (`@tsparticles/*`) is no longer a dependency.
 - **Interface entries that did nothing**: "Esporta come PNG", "Annulla", "Ripristina" and "Taglia" in the menus, "Preferiti" and "Account" in the sidebar, "Configurazione..." and "Evidenzia Percorso" in the right-click menus.
 - **Settings that changed nothing**: the "Utente" tab (a profile that was stored and never used) and the language, date format and unit preferences.
+- **More that did nothing**: the Inspector tab announcing Terraform fields, the terminal's Minimize and Maximize dots, two Terraform fields on custom templates, a click-to-connect mode and two windows nothing opened.
 
 ### Added
+- **Routing.** Every device forwards by its routing table: the networks its addressed ports or network cards are in, the static routes written on a router or firewall (Inspector → Rotte, or `add route … via …`), and its default gateway. A packet is followed across any number of routers; "no route", an unreachable next hop and a routing loop are reported as such. The way back is checked with its own routes.
+- **Firewall rules.** Ordered rules on a firewall (Inspector → Regole, or `add rule allow|deny <service> from … to …`): the first that matches decides, by service (ping, web, email), source and destination (any, a zone, an address, a network). The zone policy applies when no rule matches.
+- **VLANs port by port.** A switch port is an access port in one VLAN or a trunk carrying several (`interface <n> access|trunk …`). Once a switch has a VLAN on a port, the ports nobody touched are in VLAN 1.
+- **Terminal, NCL v0.2**: `show routes`, `show rules`, `add/remove route`, `add/remove rule`, `interface <id> ip|gateway|access|trunk|default|zone`, `browse`, `mail`, `download`, `trace … as <service>`. An address typed as a target is the address aimed at. `set ip` now works on devices with network cards. Reference in `docs/terminal-commands.md`.
+- **Routes and rules in files**: both travel in the project file and in the YAML export and come back in the same order.
 - **Project files**: a project, with all its canvases, is kept in the browser and saved as a single `.pixelcake.json` file (File → Salva, Ctrl+S, Salva con nome…, Apri…). In Chrome and Edge the file is written in place; elsewhere it is downloaded. Format reference in `docs/project-file.md`.
 - **Explorer**: rename the project and its canvases in place; a hint shows when there are changes not yet saved to a file.
 - **Bundled icons**: the icons the app uses are shipped with it instead of being fetched from the Iconify API (`pnpm icons:bundle`).
@@ -37,6 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Subtle 2px track line matching BulkAddDeviceModal design
 
 ### Changed
+- **The engine follows the shortest way that works**, not the shortest on the drawing: a port that is down is gone round when there is another way. End devices no longer carry traffic for others, and a router with addressed ports no longer passes traffic between two devices addressed in one network.
+- **A router with more than one hop to go is checked**, no longer assumed. A router whose ports have no address still lets traffic through, with a note, so drawings made before this change give the answers they gave.
+- **New routers and firewalls start without a gateway**: on a router the gateway is its default route. New devices appear in the middle of the visible canvas.
+- **Inspector**: labels in Italian; a firewall port can be in no zone; the settings the engine does not simulate (NAT, IPS, STP) say so.
 - **Help**: the outdated release notes are replaced by a guide in three tabs: how to use the app, the terminal commands (the same table the terminal prints with `help`) and information about the app. The Help menu opens it on each tab.
 - **Shortcut list** (Impostazioni → Avanzate): it now lists only what the canvas really does. Panning is with the right mouse button, multi-selection with Ctrl+click; the Ctrl+L line described a shortcut that never existed.
 - **Import/Export**: YAML is the default export format. The Terraform export is labelled as a draft and says that it cannot be applied.
@@ -50,6 +60,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Two-part processing: configurable devices (with ports) + standard devices (with NICs)
 
 ### Fixed
+- Ctrl+V while typing in a field pasted a copy of the selected devices on the canvas; Ctrl+C took over copying text. The canvas shortcuts now leave text alone.
+- A link removed with the Delete key disappeared from the drawing but stayed in the network.
+- Saving any field of a firewall port put the port in the `trust` zone.
+- Custom device templates could be created but not placed.
+- A failed trace could name a port on a side branch instead of the one on the way to the destination.
 - The theme no longer flips between light and dark at every reload.
 - The welcome screen appears only on an empty project, not on every empty canvas.
 - The icon picker offered an icon that does not exist (`mdi:rack`).

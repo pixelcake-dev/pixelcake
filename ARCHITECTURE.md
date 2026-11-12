@@ -9,7 +9,6 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 ### networkStore (`frontend/src/store/networkStore.ts`)
 - The canvas on screen: devices, connections, viewport (x, y, zoom), device/connection counters
 - Project-wide network settings (`globalNetworkSettings`)
-- Connection mode state (isConnecting, connectionStart)
 - **Multi-selection state** (selectedDeviceIds, clipboard) - NOT persisted, resets on reload
 - **Copy/Paste functions** (copySelection, paste) - ID remapping + position offset (+50px)
 - Auto-layout triggers
@@ -30,24 +29,21 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 - Flow model selection (ping, email, web, download)
 
 ### uiStore (`frontend/src/store/uiStore.ts`)
-- UI state, modal controls (including `newProject`), context menus
+- UI state, modal controls (including `newProject`), context menus, the tab the guide opens on (`helpTab`, `openHelp(tab)`)
 - Dark mode (persisted; follows the system until the user chooses), magnification state, sidebar panel state
 
 ### templateStore (`frontend/src/store/templateStore.ts`)
 - Device and connection templates with auto-update
-- Custom device types with icons and Terraform fields
+- Custom device types with their icon and colour; they are placed from the device panel like the built-in ones
 - Connection types with line styles and colors
 - Template capabilities: supportsVLAN, supportsSTP, supportsPorts, supportsNICs
 - Custom templates travel inside the project file; opening a project adds the ones that are missing (`addMissingTemplates`)
 - LocalStorage key: `pixelcake-templates-v8`
 
-### userStore (`frontend/src/store/userStore.ts`)
-- User preferences and settings
-
 ## Core Components
 
 ### Canvas
-- **NetworkCanvas** (`frontend/src/components/Canvas/NetworkCanvas.tsx`) - React Flow wrapper with real-time viewport sync
+- **NetworkCanvas** (`frontend/src/components/Canvas/NetworkCanvas.tsx`) - React Flow wrapper with real-time viewport sync. Delete removes the selected devices and links from the network; Ctrl+C / Ctrl+V act on the drawing only while the user is not typing and has no text selected
 - **NetworkDevice** (`frontend/src/components/Canvas/NetworkDevice.tsx`) - Custom node component
 - **CustomEdge** (`frontend/src/components/Canvas/CustomEdge.tsx`) - Custom edge with connection type styling
 - **ParticleEdge** (`frontend/src/components/Canvas/ParticleEdge.tsx`) - Particle flow animation wrapper with CSS offset-path
@@ -56,14 +52,15 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 ### WelcomeScreen (`frontend/src/components/WelcomeScreen.tsx`)
 - Excalidraw-style minimalist transparent overlay on canvas (NOT popup)
 - Shows on an empty project: a single canvas with nothing on it
-- "Build piece by piece" workflow (3 steps), Quick Start actions, GitHub links
+- What the app is for in three steps (draw, configure, ask), the ways to start, links
 - "Non mostrare più" checkbox → localStorage (`pixelcake-hide-welcome`)
-- Actions: Nuovo Progetto (form), Apri Progetto (file picker), Carica Sample Topology
-- Auto-dismiss on any action, manual "Mostra Welcome Screen" from Help menu
+- Actions: Nuovo Progetto (form), Apri Progetto (file picker), Carica la rete di esempio
+- Auto-dismiss on any action, manual "Mostra la schermata di benvenuto" from the Aiuto menu
 - State: `useUIStore.showWelcomeScreen`, the number of devices on screen and the number of canvases
 
 ### Modals (Enterprise Style)
-- **InspectorModal** - Device configuration: 2-column layout, tabs (General + Terraform + Ports + NICs), VLAN/STP fields
+- **InspectorModal** - Device configuration in tabs: Generale, Porte (switch, router, firewall) or Schede di rete (end devices), Rotte (router, firewall: `ui/RoutesPanel`, with the routing table the engine would read from the form), Regole (firewall: `ui/FirewallRulesPanel`, ordered rules). Routes and rules are validated on save (`utils/networkConfigValidation.ts`)
+- **HelpModal** - The guide, in three tabs: how to use the app, the terminal commands (rendered from `COMMAND_REFERENCE`, the table the terminal's `help` prints), information
 - **ConnectionInspectorModal** - Connection properties editor
 - **SettingsModal** - App settings with tabbed interface
 - **BulkAddDeviceModal** - Bulk device creation with table-based interface
@@ -91,7 +88,8 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 
 ### Top Menu Bar (`frontend/src/components/Toolbar/TopMenuBar.tsx`)
 - File Menu: Nuovo progetto…, Apri…, Salva (Ctrl+S), Salva con nome…
-- Help Menu: Mostra Welcome Screen, Note Programma
+- Aiuto Menu: Guida, Comandi del terminale, Mostra la schermata di benvenuto, Informazioni
+- No entry is there to announce a feature: an entry that cannot act (nothing selected to copy) is disabled only for as long as that is true
 
 ## Reusable CSS Classes (`frontend/src/index.css`)
 
@@ -104,24 +102,68 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 ## Key Algorithms
 
 ### Network Engine (`frontend/src/engine/`)
-Pure, deterministic reachability check: shortest path (BFS) evaluated hop by hop
-(interface state, VLAN continuity, subnet/gateway, firewall zones) plus the flow
-models (ping, web, download, email). Used by both the simulation panel and the
-terminal.
+Pure and deterministic: no React, no Zustand, no side effects; the same network
+always gives the same answer. It follows one packet the way the network would
+carry it, and it is used by the simulation panel and by the terminal alike.
 
+The walk (`trace.ts`) alternates two steps until the destination answers or
+something drops the packet:
+
+1. **a layer 3 decision** at the device holding the packet: routing table
+   lookup, then the firewall;
+2. **a layer 2 delivery** to the address that decision chose (the destination
+   itself, or a next hop), across switches.
+
+Modules:
+
+- `addressing.ts` — IPv4 arithmetic; the addressed interfaces of a device
+  (`l3Interfaces`: ports and NICs with an IP, or the device-level address when
+  none has one); the routing table (`routingTable`: connected networks, static
+  routes, default gateway) and its lookup, longest prefix first.
+- `firewall.ts` — `evaluateFirewall`: ordered rules (first match decides), then
+  the zone policy, with the reply to an allowed flow always passing. A rule
+  naming a zone is skipped, with a note, when the link is not on a port.
+- `vlan.ts` — how a switch port treats frames (`portVlanMode`: access or
+  trunk). A switch is VLAN-aware once one of its ports has a VLAN; the others
+  are then access ports in VLAN 1.
+- `l2.ts` — the delivery step: a breadth-first search, in connection order,
+  for the device that answers for an address, crossing bridges VLAN by VLAN,
+  routers and firewalls without interface addresses (transparent; a firewall
+  still applies its policy) and devices that are not simulated (Internet
+  symbol, load balancer). The shortest way that works is the one taken. When
+  nobody answers, `explain` picks the most useful reason: what happened on the
+  cables of the way to the device that should have answered.
+- `trace.ts` — the walk itself, loop detection, and the notes: whatever is not
+  verified (a link end not on a port, a router without interface addresses,
+  the Internet symbol, NAT) is reported as a note, never as a silent success.
+- `flows.ts` — request/reply plans per flow model (ping, web, download, email)
+  and the service each leg is to a firewall. A reply leg is the return traffic
+  of an allowed flow, sent back to the address the request came from.
 - `interfaces.ts` — every link end is attached to one interface of its device
   (a port or a NIC). Owns the binding rules: first free interface on creation,
   migration of old unbound data on load (`normalizeBindings`), cleanup when a
   port/NIC is removed. A firewall with security zones is never bound
   automatically: the user picks the port, and with it the zone.
-- `trace.ts` — the hop-by-hop walk. Across subnets the source's gateway must be
-  the address of the router port the packet arrives on. Anything not verified
-  (unbound link, router without port addresses, routing between routers) is
-  reported as a note, never as a silent success.
-- `flows.ts` — request/reply plans. A reply leg is the return traffic of an
-  allowed flow, so firewalls let it through.
-- `topology.ts` — `mirrorPrimaryNic`: on a device with NICs the device-level
-  ip/subnet/gateway are a mirror of the first NIC, kept in step by the store.
+- `topology.ts` — what a device does with traffic that is not for it
+  (`forwardingRole`: router, bridge, passthrough, host); name and address
+  resolution for the terminal; `mirrorPrimaryNic`: on a device with NICs the
+  device-level ip/subnet/gateway are a mirror of the first NIC, kept in step
+  by the store.
+
+Tolerance for old data is a design rule, not an accident: a router whose ports
+carry no address still lets traffic through (with a note), so a drawing made
+before routing existed gives the answers it gave.
+
+### Terminal (`frontend/src/terminal/`)
+- `parser.ts` — pure: one input line → a `Command` (`types.ts`). Device names
+  are returned as typed; a command that cannot be parsed comes back as
+  `unknown` with the form it should have had.
+- `executor.ts` — the only terminal layer that touches the stores: it resolves
+  names, calls the engine and the same store actions the canvas uses, and
+  returns lines to print. `COMMAND_REFERENCE` is the table behind `help` and
+  behind the guide.
+- The language is specified in `docs/terminal-commands.md`; a test parses every
+  example of that document.
 
 ### Auto-Layout (`frontend/src/utils/autoLayout.ts`)
 - **Hierarchical layout** using dagre (top-down hierarchy)
@@ -156,6 +198,7 @@ terminal.
 
 ### Bulk Device Helpers (`frontend/src/utils/bulkDeviceHelpers.ts`)
 - `generateDefaultPorts(portCount, deviceType)` - Switch: trunk+access+PoE, Router: WAN+LAN+NAT, Firewall: security zones
+- A new router or firewall gets no gateway (on a router the gateway is its default route); switches and end devices get the one of the project
 - `generateDefaultNIC(ip, subnet, gateway)` - Auto MAC, eth0, auto speed
 - Sequential naming: `${type}-${existingCount}`
 - Grid positioning: `generateGridPositions()` with random offsets (-25/+25px)
@@ -179,6 +222,8 @@ interface FlowMap {
 - `stp?: { enabled, mode, priority }` - STP configuration
 - `portCount?, ports?: Port[]` - Network ports (Switch/Router/Firewall)
 - `nics?: NetworkInterfaceCard[]` - NICs for end devices
+- `routes?: StaticRoute[]` - Static routes (Router/Firewall): `{ id, destination, nextHop, description? }`, destination in CIDR form. `gateway` is the default route
+- `firewallRules?: FirewallRule[]` - Ordered rules (Firewall): `{ id, action: 'allow'|'deny', service: 'any'|'ping'|'web'|'email', source, destination, enabled?, description? }`; source and destination are `any`, a zone, an address or a network
 
 ### Port
 ```

@@ -54,8 +54,8 @@ const GuideTab = () => (
         dall&apos;elenco: controlla il nome e conferma, l&apos;indirizzo IP viene proposto in
         automatico. Il dispositivo compare al centro della parte di canvas che stai guardando.
         «Aggiungi in Blocco» ne crea molti in una volta. Nella scheda
-        «Topologie» dello stesso pannello c&apos;è una rete di esempio già pronta, che prende il
-        posto di quanto è sul canvas.
+        «Topologie» dello stesso pannello ci sono due reti di esempio già pronte, una semplice e
+        una con VLAN, DMZ e firewall: caricarne una prende il posto di quanto è sul canvas.
       </Step>
 
       <Step title="Spostali e selezionali">

@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { parse } from './parser';
 import type { Command } from './types';
+import languageReference from '../../../docs/terminal-commands.md?raw';
 
 function expectKind<K extends Command['kind']>(input: string, kind: K) {
   const cmd = parse(input);
@@ -388,5 +389,21 @@ describe('parse — interface settings', () => {
     expect(hint).toContain('up|down');
     expect(hint).toContain('access <vlan>');
     expect(hint).toContain('zone trust|untrust|dmz|none');
+  });
+});
+
+describe('docs/terminal-commands.md', () => {
+  // every command typed at a prompt in the examples of the reference
+  const typed = languageReference
+    .split('\n')
+    .map(line => /^(?:pixelcake|[\w-]+)> (.+)$/.exec(line.trim())?.[1])
+    .filter((command): command is string => command !== undefined);
+
+  it('has examples to check', () => {
+    expect(typed.length).toBeGreaterThan(25);
+  });
+
+  it.each(typed)('the example "%s" is a command the parser accepts', command => {
+    expect(parse(command).kind).not.toBe('unknown');
   });
 });

@@ -10,9 +10,10 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 
 ## What it does
 
-- **Draw.** Devices, links, VLANs, ports and network cards on an interactive canvas. 20 device types and 5 link types are built in and can be customised. Auto-layout, multi-selection, copy and paste, and several boards per project.
-- **Test.** Ping, web, download and email flows are checked hop by hop and animated on the drawing. When a flow fails, the packet stops at the device that blocks it and the reason is shown.
-- **Type.** A built-in terminal with a small vendor-neutral command language: `ping`, `trace`, `show`, `set`, `connect`, `add vlan` and a few more. Commands that change the network edit the same drawing you see.
+- **Draw.** Devices, links, ports and network cards on an interactive canvas. 20 device types and 5 link types are built in and can be customised. Auto-layout, multi-selection, copy and paste, and several boards per project.
+- **Configure.** Addresses on every router port and network card, static routes, VLANs port by port (access and trunk), firewall zones and ordered rules.
+- **Test.** Ping, web, download and email flows are followed hop by hop and animated on the drawing. When a flow fails, the packet stops at the device that drops it and the reason names the port, the route or the rule.
+- **Type.** A built-in terminal with a small vendor-neutral command language: `ping`, `trace`, `browse`, `show routes`, `add route`, `add rule`, `interface 3 access 10` and more. Commands that change the network edit the same drawing you see.
 - **Save.** A project, with all its boards, is kept in the browser while you work and saved as a single `.pixelcake.json` file that you can open again or pass on. There is no server and no account.
 - **Export.** The topology as YAML, which can be loaded back. A Terraform-style export exists only as a sketch.
 
@@ -36,30 +37,55 @@ Ping failed (blocked): request: PC-1 uses gateway 192.168.10.254, but Router-1 p
   dropped at: PC-1
 ```
 
+Routing, VLANs and firewall rules are configured the same way, and every answer says which device decided what:
+
+```text
+pixelcake> add route 192.168.30.0/24 via 10.0.0.2 on Router-1
+Router-1: route to 192.168.30.0/24 via 10.0.0.2 added
+
+pixelcake> trace Branch-PC from PC-1
+Tracing route to Branch-PC (192.168.30.11) from PC-1:
+  1  ○ PC-1 (PC)
+  2  ○ SW-Office (Switch)
+  3  ○ Router-1 (Router)  — routed: 192.168.30.0/24 via 10.0.0.2 (port 3)
+  4  ○ Router-2 (Router)  — routed: 192.168.30.0/24 is on port 2
+  5  ● Branch-PC (PC)
+Trace complete: destination reached.
+
+pixelcake> add rule allow web from untrust to Web-01 on FW-1
+FW-1: rule 1 added — allow web from untrust to 192.168.20.10
+  Web-01 → 192.168.20.10
+
+pixelcake> ping Web-01 from Ext
+Pinging Web-01 (192.168.20.10) from Ext...
+Ping failed (blocked): request: firewall FW-1: no rule matches, zone policy untrust → trust denied
+  dropped at: FW-1
+```
+
 The full command reference is in [docs/terminal-commands.md](docs/terminal-commands.md).
 
-### What the check looks at
+### How a packet is followed
 
-The engine walks the shortest path between two devices and applies these rules in order:
+The engine carries a packet the way the network would. At every device that handles it:
 
-1. Both endpoints exist and have a valid IPv4 address.
-2. A physical path exists.
-3. No disabled port or network card at either end of a link on the way.
-4. VLAN membership on the switches crossed.
-5. Across subnets: a router or firewall is on the path, and the source's gateway is the address of the router port the packet arrives on.
-6. Firewall security zones. A new flow from a less trusted zone is denied; the reply to an allowed flow passes.
+1. **Routing.** The device looks the destination up in its routing table: a network one of its interfaces is in, a static route, or its default gateway. The most specific entry wins. No entry, no way: "no route", "no default gateway".
+2. **Filtering.** A firewall in transit applies its rules top to bottom; the first that matches decides. When none matches, the zone policy does: a new flow towards a more trusted zone is denied. The reply to an allowed flow passes.
+3. **Delivery.** The packet goes to the next address across switches, VLAN by VLAN: a switch port is an access port in one VLAN or a trunk carrying several, and once a switch has a VLAN on any port the ports nobody touched are in VLAN 1, as on real hardware. The shortest way that works is taken, so a port that is down is gone round when the drawing offers another way.
 
-Every link is attached to a port or a network card at both ends, chosen automatically when you draw it and editable afterwards. Router and firewall ports carry their own addresses.
+A routing loop, an address used twice, a next hop nobody has, a trunk towards a device that expects no tag: each stops the packet with its own explanation.
 
-When the engine cannot verify something, it says so in a note instead of answering "it works". The engine is plain TypeScript with no UI dependencies, in [frontend/src/engine](frontend/src/engine). The same network always gives the same answer.
+Every link is attached to a port or a network card at both ends, chosen automatically when you draw it and editable afterwards.
+
+When the engine cannot verify something, it says so in a note instead of answering "it works": a router whose ports have no address (it still lets traffic through, so drawings made before routing existed keep working), the Internet symbol, NAT. The engine is plain TypeScript with no UI dependencies, in [frontend/src/engine](frontend/src/engine). The same network always gives the same answer.
 
 ## What it does not do
 
-- **It is not a packet-level simulator.** There is no ARP, MAC learning, routing table, spanning tree, NAT or ACL. Ping times are synthetic.
-- **It only tries the shortest path.** If that path is blocked, it does not look for another one.
-- **It only checks the first router.** With more than one router on the path, routing between them is assumed and the result says so.
-- **Firewall rules are a fixed table of zones.** You cannot write your own rules yet.
-- **Some settings are stored but not evaluated:** STP, NAT and per-port VLANs.
+- **It is not a packet-level simulator.** There is no ARP, MAC learning, DHCP, DNS or dynamic routing. Ping times are derived from the number of hops.
+- **Routes are static.** A router knows the networks it is attached to and the routes you wrote. Router sub-interfaces are not modelled: routing between VLANs needs a router port in each.
+- **Firewall rules know three services**: ping, web and email. There are no port numbers, and traffic addressed to the firewall itself is not filtered.
+- **Spanning tree is not simulated.** A drawing with redundant links is walked without loops, but no port is blocked.
+- **NAT is not applied.** It can be ticked on a router port, and a trace that crosses that port says addresses were not translated.
+- **The Internet symbol is a stand-in.** It is assumed to carry traffic, with a note.
 - **No undo, no image export.** Neither exists yet.
 - **The YAML format is PixelCake's own.** Device names that look like numbers or booleans, and duplicate names, do not survive an export and import.
 - **The Terraform export cannot be applied.** It uses placeholder resource types and no provider. Reading existing Terraform state is not implemented.
@@ -85,7 +111,7 @@ The app's icons are bundled with it. Only an icon name typed by hand in a custom
 
 ```bash
 cd frontend
-pnpm test:run      # 690 tests: engine, terminal, project files, import/export, screens
+pnpm test:run      # 999 tests: engine, terminal, project files, import/export, screens
 pnpm type-check
 pnpm lint
 pnpm build
@@ -95,7 +121,7 @@ GitHub Actions runs the same four steps on every push.
 
 ```
 frontend/src/
-  engine/       reachability check and flow models (pure TypeScript)
+  engine/       routing, VLANs, firewall and flow models (pure TypeScript)
   terminal/     command parser and executor
   components/   canvas, panels, windows
   store/        application state (Zustand, persisted in the browser)
@@ -113,9 +139,10 @@ Today the first two exist in a basic form and the third is only a sketch. The st
 
 ## What is next
 
-1. Undo and redo.
+1. A presentation mode: the drawing without the editing tools, to explain a network to someone, with "what stops working if this goes down".
 2. Export the drawing as an image.
-3. Routing tables, ARP and per-port VLANs, so the check can follow a packet across more than one router.
+3. Undo and redo.
+4. In the engine: NAT, DHCP and DNS, then spanning tree.
 
 ## License
 

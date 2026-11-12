@@ -143,6 +143,8 @@ item never takes the id of an existing one.
 | `portCount` | integer | Optional. Number of ports (switches, routers, firewalls). |
 | `ports` | array | Optional. Per-port configuration, see below. |
 | `nics` | array | Optional. Network interface cards (end devices), see below. |
+| `routes` | array | Optional. Static routes of a router or firewall, see below. The device's `gateway` is its default route. |
+| `firewallRules` | array | Optional. Rules of a firewall, in the order they are read: the first that matches decides. See below. |
 
 Port:
 
@@ -152,14 +154,14 @@ Port:
 | `name` | string | Optional. |
 | `enabled` | boolean | Administrative state. |
 | `speed` | `10M`, `100M`, `1G`, `2.5G`, `10G`, `auto` | Optional. |
-| `vlan` | integer \| integer[] | Optional. One VLAN for an access port, a list for a trunk. |
-| `portType` | `access`, `trunk`, `wan`, `lan`, `dmz` | Optional. |
+| `vlan` | integer \| integer[] | Optional (switches). One VLAN for an access port, a list for a trunk. A trunk without a list carries every VLAN. Once any port of a switch has a VLAN, its ports without one are access ports in VLAN 1. |
+| `portType` | `access`, `trunk`, `wan`, `lan`, `dmz` | Optional. `access` / `trunk` say how a switch port treats VLANs; the others are descriptive. |
 | `poe` | boolean | Optional. |
 | `description` | string | Optional. |
 | `ip`, `subnet` | string | Optional. Layer 3 address of the port (routers, firewalls). |
-| `nat` | boolean | Optional (routers). |
-| `securityZone` | `trust`, `untrust`, `dmz` | Optional (firewalls). |
-| `ips` | boolean | Optional (firewalls). |
+| `nat` | boolean | Optional (routers). Kept as documentation: addresses are not translated. |
+| `securityZone` | `trust`, `untrust`, `dmz` | Optional (firewalls). The zone the firewall policy and rules refer to. |
+| `ips` | boolean | Optional (firewalls). Kept as documentation. |
 
 NIC:
 
@@ -171,6 +173,31 @@ NIC:
 | `speed` | `10M`, `100M`, `1G`, `2.5G`, `10G`, `auto` | Link speed. |
 | `ip`, `subnet`, `gateway` | string | Address of the interface. |
 | `mac`, `description` | string | Optional. |
+
+Route:
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `id` | string | Unique within the device, e.g. `route-1`. |
+| `destination` | string | Network in CIDR form, e.g. `192.168.30.0/24`. `0.0.0.0/0` is a default route. |
+| `nextHop` | string | Address the traffic is handed to. It must be on a network one of the device's ports is in, or the route cannot be used. |
+| `description` | string | Optional. |
+
+Firewall rule:
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `id` | string | Unique within the device, e.g. `rule-1`. |
+| `action` | `allow`, `deny` | What the rule does with the traffic it matches. |
+| `service` | `any`, `ping`, `web`, `email` | The traffic it applies to. |
+| `source`, `destination` | string | `any`, a zone (`trust`, `untrust`, `dmz`), an address or a network in CIDR form. |
+| `enabled` | boolean | Optional. `false` switches the rule off; a rule is on when the field is missing. |
+| `description` | string | Optional. |
+
+Rules are read in the order of the array. When none matches, the zones of
+the two ports decide: traffic towards a more trusted zone is denied
+(`untrust` → `trust`, `untrust` → `dmz`, `dmz` → `trust`), the rest is
+allowed.
 
 ### Connection
 
@@ -241,6 +268,7 @@ Everything else is repaired, and each repair is reported to the user:
 | `viewport` missing or not usable | `{ "x": 0, "y": 0, "zoom": 1 }`. |
 | A device that is not an object, has no `id` or `type`, or repeats an `id` | Dropped. |
 | A device without `label`, `ip`, `subnet`, `gateway` or `position`, or with invalid entries in `ports` / `nics` | Completed: `label` becomes the id, addresses become empty, `position` becomes `0, 0`, invalid interface entries are dropped. |
+| A route without `id`, `destination` or `nextHop`; a rule without `id`, with an `action` other than `allow` / `deny`, an unknown `service`, or no `source` / `destination` | Dropped: the other routes and rules keep their order. |
 | A connection that is not an object or has no `id`, `source` or `target` | Dropped. |
 | Connections sharing an `id` | The first one is kept. |
 | A connection whose `source` or `target` is not a device of the canvas | Dropped. |

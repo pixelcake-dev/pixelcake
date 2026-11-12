@@ -277,6 +277,30 @@ describe('VLANs across two switches', () => {
     expect(result.hops[result.hops.length - 1]).toMatchObject({ deviceId: 'swa', status: 'blocked' });
   });
 
+  it('names the port on the way to the destination, not a neighbour that is in another VLAN', () => {
+    // PC-3 sits on SW-A in VLAN 20, cabled before the uplink: its port also
+    // refuses VLAN 10, but it has nothing to do with reaching PC-2
+    const base = twoSwitches({ 1: access10 }, { 1: access10, 8: trunk(10) });
+    const swa = base.devices.find(d => d.id === 'swa');
+    const t = topo(
+      [
+        ...base.devices.map(d =>
+          d.id === 'swa' ? { ...d, ports: [...(swa?.ports ?? []), port(2, { vlan: 20 })] } : d
+        ),
+        host('pc3', '192.168.1.13', '', { label: 'PC-3' }),
+      ],
+      [
+        base.connections[0],
+        link('pc3', 'swa', { sourceNic: 'nic-1', targetPort: 2 }),
+        ...base.connections.slice(1),
+      ]
+    );
+    const result = traceRoute('pc1', 'pc2', t);
+    expect(result.failureReason).toBe(
+      'VLAN 10 does not leave through port 8 on SW-A: it is in the default VLAN 1'
+    );
+  });
+
   it('a trunk that does not list the VLAN stops it', () => {
     const result = traceRoute(
       'pc1',

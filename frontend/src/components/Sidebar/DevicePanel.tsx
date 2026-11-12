@@ -5,6 +5,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
+import { createPerimeterSample } from '@/utils/samplePerimeter';
 import { Plug, Package } from 'lucide-react';
 import type { DeviceType } from '@/types/network';
 
@@ -74,16 +75,15 @@ const DevicePanel = () => {
     setSearchQuery(''); // Reset search for next time
   };
 
-  const handleLoadSample = () => {
+  // A sample network takes the place of what is on the canvas: ask first
+  const handleLoadSample = (create: typeof createSampleTopology) => {
     const shouldLoad =
       devices.length === 0 ||
-      confirm(
-        'Vuoi caricare la topologia di esempio? Il canvas attuale verrà pulito.'
-      );
+      confirm('Caricare la rete di esempio? Prende il posto di quello che c\'è sul canvas.');
 
     if (shouldLoad) {
       clearAllDevices();
-      const topology = createSampleTopology();
+      const topology = create();
       loadTopology(topology.devices, topology.connections);
     }
   };
@@ -176,9 +176,32 @@ const DevicePanel = () => {
         <>
           {/* Templates Tab */}
           <div className="space-y-2">
-            <button className="sidebar-panel-item" onClick={handleLoadSample}>
+            <p className="text-xs text-[var(--text-color-light)] mb-1">
+              Reti di esempio già configurate. Caricarne una sostituisce il canvas aperto.
+            </p>
+            <button
+              className="sidebar-panel-item"
+              onClick={() => handleLoadSample(createSampleTopology)}
+            >
               <Plug size={20} style={{ color: '#f59e0b', flexShrink: 0 }} />
-              <span>Aggiungi Topologia Esempio</span>
+              <span>
+                Ufficio: due reti e un router
+                <span className="block text-xs text-[var(--text-color-light)]">
+                  Per cominciare: ping, web, email
+                </span>
+              </span>
+            </button>
+            <button
+              className="sidebar-panel-item"
+              onClick={() => handleLoadSample(createPerimeterSample)}
+            >
+              <Plug size={20} style={{ color: '#f59e0b', flexShrink: 0 }} />
+              <span>
+                Sede: VLAN, DMZ e firewall
+                <span className="block text-xs text-[var(--text-color-light)]">
+                  Due VLAN, rotte, zone e una regola che pubblica un sito
+                </span>
+              </span>
             </button>
           </div>
         </>
