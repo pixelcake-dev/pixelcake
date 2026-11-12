@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Scrollbars } from 'react-custom-scrollbars-2';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
@@ -122,7 +123,7 @@ const InspectorModal = () => {
 
   const handleRemoveNic = (nicId: string) => {
     if (nics.length <= 1) {
-      alert('Impossibile rimuovere l\'ultima scheda di rete');
+      toast.error('Impossibile rimuovere l\'ultima scheda di rete');
       return;
     }
     setNics(nics.filter((nic) => nic.id !== nicId));
@@ -133,7 +134,7 @@ const InspectorModal = () => {
 
   const handleSave = () => {
     if (!inspectorDevice || !name.trim() || !ip.trim()) {
-      alert('Nome e IP sono obbligatori');
+      toast.error('Nome e IP sono obbligatori');
       return;
     }
 

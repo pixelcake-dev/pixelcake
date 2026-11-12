@@ -3,24 +3,32 @@ import { X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { useUIStore } from '@/store/uiStore';
 import Logo from '@/components/ui/Logo';
-import UserSettingsTab from './UserSettingsTab';
 import NetworkSettingsTab from './NetworkSettingsTab';
 import AppearanceSettingsTab from './AppearanceSettingsTab';
 import TemplatesSettingsTab from './TemplatesSettingsTab';
 import AdvancedSettingsTab from './AdvancedSettingsTab';
 
-type SettingsTab = 'user' | 'network' | 'appearance' | 'templates' | 'advanced';
+type SettingsTab = 'network' | 'appearance' | 'templates' | 'advanced';
+
+const TABS: Array<{ id: SettingsTab; label: string }> = [
+  { id: 'network', label: 'Rete' },
+  { id: 'appearance', label: 'Aspetto' },
+  { id: 'templates', label: 'Template' },
+  { id: 'advanced', label: 'Avanzate' },
+];
+
+const FIRST_TAB: SettingsTab = 'network';
 
 const SettingsModal = () => {
   const isOpen = useUIStore((state) => state.modals.settings);
   const closeModal = useUIStore((state) => state.closeModal);
 
-  const [activeTab, setActiveTab] = useState<SettingsTab>('user');
+  const [activeTab, setActiveTab] = useState<SettingsTab>(FIRST_TAB);
 
   const handleClose = () => {
     closeModal('settings');
     // Reset to first tab on close
-    setActiveTab('user');
+    setActiveTab(FIRST_TAB);
   };
 
   if (!isOpen) return null;
@@ -52,36 +60,15 @@ const SettingsModal = () => {
 
           {/* Tabs */}
           <div className="settings-tabs px-6 pt-2 pb-3 border-b border-[var(--border-color)]">
-            <button
-              className={`settings-tab ${activeTab === 'user' ? 'active' : ''}`}
-              onClick={() => setActiveTab('user')}
-            >
-              Utente
-            </button>
-            <button
-              className={`settings-tab ${activeTab === 'network' ? 'active' : ''}`}
-              onClick={() => setActiveTab('network')}
-            >
-              Rete
-            </button>
-            <button
-              className={`settings-tab ${activeTab === 'appearance' ? 'active' : ''}`}
-              onClick={() => setActiveTab('appearance')}
-            >
-              Aspetto
-            </button>
-            <button
-              className={`settings-tab ${activeTab === 'templates' ? 'active' : ''}`}
-              onClick={() => setActiveTab('templates')}
-            >
-              Template
-            </button>
-            <button
-              className={`settings-tab ${activeTab === 'advanced' ? 'active' : ''}`}
-              onClick={() => setActiveTab('advanced')}
-            >
-              Avanzate
-            </button>
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                className={`settings-tab ${activeTab === tab.id ? 'active' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </>
       }
@@ -98,8 +85,6 @@ const SettingsModal = () => {
     >
       {/* Tab Content */}
       <div className="settings-content">
-        {activeTab === 'user' && <UserSettingsTab />}
-
         {activeTab === 'network' && <NetworkSettingsTab />}
 
         {activeTab === 'appearance' && <AppearanceSettingsTab />}

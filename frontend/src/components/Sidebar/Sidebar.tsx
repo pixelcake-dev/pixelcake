@@ -1,7 +1,5 @@
-import { useUIStore } from '@/store/uiStore';
-import { Zap, Plus, Star, Files, User, Settings, Terminal, ArrowUpDown } from 'lucide-react';
-
-type SidebarSection = 'simulation' | 'devices' | 'favorites' | 'explorer' | null;
+import { useUIStore, type SidebarPanelId } from '@/store/uiStore';
+import { Zap, Plus, Files, Settings, Terminal, ArrowUpDown } from 'lucide-react';
 
 const Sidebar = () => {
   const activeSidebarPanel = useUIStore((state) => state.activeSidebarPanel);
@@ -10,7 +8,7 @@ const Sidebar = () => {
   const closeModal = useUIStore((state) => state.closeModal);
   const isSettingsOpen = useUIStore((state) => state.modals.settings);
 
-  const handleSectionClick = (section: SidebarSection) => {
+  const handleSectionClick = (section: SidebarPanelId) => {
     // Toggle: if same section clicked, close it
     if (activeSidebarPanel === section) {
       setActiveSidebarPanel(null);
@@ -51,16 +49,6 @@ const Sidebar = () => {
           <Plus size={28} style={{ color: '#3b82f6' }} />
         </button>
 
-        {/* Favorites */}
-        <button
-          className={`sidebar-icon ${activeSidebarPanel === 'favorites' ? 'active' : ''}`}
-          title="Preferiti"
-          onClick={() => handleSectionClick('favorites')}
-          disabled
-        >
-          <Star size={28} style={{ color: '#9ca3af' }} />
-        </button>
-
         {/* Console */}
         <button
           className="sidebar-icon"
@@ -82,13 +70,6 @@ const Sidebar = () => {
 
       {/* Footer Section */}
       <div className="sidebar-footer">
-        <button
-          className="sidebar-icon"
-          title="Account (Coming Soon)"
-          disabled
-        >
-          <User size={28} />
-        </button>
         <button
           className="sidebar-icon"
           title="Impostazioni"

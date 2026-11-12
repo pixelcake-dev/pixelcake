@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
@@ -29,7 +30,7 @@ const NetworkSettingsTab = () => {
 
   const handleSave = () => {
     if (!ipClass.trim() || !subnet.trim() || !gateway.trim()) {
-      alert('Tutti i campi sono obbligatori');
+      toast.error('Tutti i campi sono obbligatori');
       return;
     }
 
@@ -40,7 +41,7 @@ const NetworkSettingsTab = () => {
       emailMode,
     });
 
-    alert('Impostazioni di rete globali salvate.');
+    toast.success('Impostazioni di rete salvate');
   };
 
   return (

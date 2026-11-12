@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - **The backend.** The FastAPI service, its database and admin panel, and the API client in the frontend are gone: the app runs entirely in the browser. Entries further down that mention the backend describe earlier versions.
+- **The login page.** It asked for nothing and checked nothing: the app now opens straight on the designer. The particle library it used (`@tsparticles/*`) is no longer a dependency.
+- **Interface entries that did nothing**: "Esporta come PNG", "Annulla", "Ripristina" and "Taglia" in the menus, "Preferiti" and "Account" in the sidebar, "Configurazione..." and "Evidenzia Percorso" in the right-click menus.
+- **Settings that changed nothing**: the "Utente" tab (a profile that was stored and never used) and the language, date format and unit preferences.
 
 ### Added
 - **Project files**: a project, with all its canvases, is kept in the browser and saved as a single `.pixelcake.json` file (File → Salva, Ctrl+S, Salva con nome…, Apri…). In Chrome and Edge the file is written in place; elsewhere it is downloaded. Format reference in `docs/project-file.md`.
@@ -34,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Subtle 2px track line matching BulkAddDeviceModal design
 
 ### Changed
+- **Help**: the outdated release notes are replaced by a guide in three tabs: how to use the app, the terminal commands (the same table the terminal prints with `help`) and information about the app. The Help menu opens it on each tab.
+- **Shortcut list** (Impostazioni → Avanzate): it now lists only what the canvas really does. Panning is with the right mouse button, multi-selection with Ctrl+click; the Ctrl+L line described a shortcut that never existed.
+- **Import/Export**: YAML is the default export format. The Terraform export is labelled as a draft and says that it cannot be applied.
+- **Messages**: native `alert()` boxes are replaced by toasts.
 - **BulkAddDeviceModal**: Complete refactoring from compact form to table-based UI
   - Separated configurable devices (Switch/Router/Firewall) from standard devices (PC/Server/Database)
   - File size: 254 lines → 715 lines (+461 lines)

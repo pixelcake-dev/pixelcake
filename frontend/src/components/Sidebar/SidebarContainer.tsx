@@ -26,16 +26,6 @@ const SidebarContainer = () => {
         </SidebarPanel>
       )}
 
-      {activeSidebarPanel === 'favorites' && (
-        <SidebarPanel isOpen={true} title="Preferiti">
-          <div className="sidebar-panel-section">
-            <p className="text-[var(--text-color-light)] text-center py-8">
-              Aggiungi dispositivi ai preferiti per accesso rapido.
-            </p>
-          </div>
-        </SidebarPanel>
-      )}
-
       {activeSidebarPanel === 'explorer' && (
         <SidebarPanel isOpen={true} title="Explorer">
           <ExplorerPanel />

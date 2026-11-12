@@ -1,6 +1,7 @@
 /**
  * Import/Export Modal
- * Export topology as Terraform HCL or YAML, import from YAML files
+ * Export the topology as YAML (which can be imported back) or as a Terraform
+ * HCL draft (a sketch that cannot be applied), import from YAML files
  */
 
 import { useState, useRef, useCallback } from 'react';
@@ -32,7 +33,7 @@ const ImportExportModal = () => {
   const currentProjectName = useProjectStore((state) => state.name);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('export');
-  const [exportFormat, setExportFormat] = useState<ExportFormat>('terraform');
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('yaml');
   const [importMode, setImportMode] = useState<ImportMode>('replace');
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importFileName, setImportFileName] = useState<string>('');
@@ -339,8 +340,14 @@ const ExportTab = ({ format, onFormatChange, content, deviceCount, connectionCou
     {/* Format selector + Stats */}
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <label style={{ fontSize: '0.85em', color: 'var(--text-color-light)' }}>Formato:</label>
+        <label
+          htmlFor="export-format"
+          style={{ fontSize: '0.85em', color: 'var(--text-color-light)' }}
+        >
+          Formato:
+        </label>
         <select
+          id="export-format"
           value={format}
           onChange={(e) => onFormatChange(e.target.value as ExportFormat)}
           style={{
@@ -352,8 +359,8 @@ const ExportTab = ({ format, onFormatChange, content, deviceCount, connectionCou
             fontSize: '0.85em',
           }}
         >
-          <option value="terraform">Terraform HCL (.tf)</option>
           <option value="yaml">YAML (.yaml)</option>
+          <option value="terraform">Terraform HCL (bozza)</option>
         </select>
       </div>
       <div style={{ display: 'flex', gap: '16px', fontSize: '0.8em', color: 'var(--text-color-light)' }}>
@@ -361,6 +368,15 @@ const ExportTab = ({ format, onFormatChange, content, deviceCount, connectionCou
         <span>{connectionCount} connessioni</span>
       </div>
     </div>
+
+    {/* The Terraform export is a sketch: say so before anyone tries to apply it */}
+    {format === 'terraform' && (
+      <div className="modal-info-box" role="note">
+        <strong>È una bozza: non si può applicare con Terraform.</strong> I tipi di risorsa sono
+        segnaposto e non è indicato alcun provider. Per salvare la topologia e poterla ricaricare
+        usa il formato YAML.
+      </div>
+    )}
 
     {/* Preview */}
     {deviceCount === 0 ? (

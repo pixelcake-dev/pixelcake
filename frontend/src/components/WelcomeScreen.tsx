@@ -15,7 +15,7 @@ import { GITHUB_REPO, GITHUB_ISSUES } from '@/constants/links';
 
 const WelcomeScreen = () => {
   const dismissWelcomeScreen = useUIStore((state) => state.dismissWelcomeScreen);
-  const openModal = useUIStore((state) => state.openModal);
+  const openHelp = useUIStore((state) => state.openHelp);
   const [neverShowAgain, setNeverShowAgain] = useState(false);
 
   useEffect(() => {
@@ -53,7 +53,7 @@ const WelcomeScreen = () => {
 
   const handleDocumentation = (e: React.MouseEvent) => {
     e.preventDefault();
-    openModal('help');
+    openHelp('guide');
   };
 
   return (

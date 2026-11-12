@@ -7,7 +7,6 @@ import { ReactFlowProvider } from 'reactflow';
 import { Toaster } from 'sonner';
 import { useUIStore } from '@/store/uiStore';
 import { registerSaveShortcut } from '@/utils/projectFileAccess';
-import LoginPage from '@/components/LoginPage';
 import TopMenuBar from '@/components/Toolbar/TopMenuBar';
 import SidebarContainer from '@/components/Sidebar/SidebarContainer';
 import NetworkCanvas from '@/components/Canvas/NetworkCanvas';
@@ -27,7 +26,6 @@ import ImportExportModal from '@/components/Modals/ImportExportModal';
 import 'reactflow/dist/style.css';
 
 function App() {
-  const isAuthenticated = useUIStore((state) => state.isAuthenticated);
   const theme = useUIStore((state) => state.theme);
   const darkMode = useUIStore((state) => state.darkMode);
   const setShowWelcomeScreen = useUIStore((state) => state.setShowWelcomeScreen);
@@ -46,16 +44,9 @@ function App() {
 
   useEffect(() => {
     // Ctrl+S saves the project to a file, anywhere in the app
-    if (!isAuthenticated) return;
     return registerSaveShortcut();
-  }, [isAuthenticated]);
+  }, []);
 
-  // Show login page if not authenticated
-  if (!isAuthenticated) {
-    return <LoginPage />;
-  }
-
-  // Show main app if authenticated
   return (
     <ReactFlowProvider>
       {/* Toast Notifications */}

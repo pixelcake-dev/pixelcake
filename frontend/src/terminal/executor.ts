@@ -486,7 +486,7 @@ function runPort(action: 'enable' | 'disable', portId: number, deviceQuery: stri
 
 /* ── help ─────────────────────────────────────────────────────────────── */
 
-const HELP: Array<[string, string]> = [
+export const COMMAND_REFERENCE: Array<[string, string]> = [
   ['ping <target> [from <device>]', 'test reachability (VLAN/subnet/firewall aware)'],
   ['trace <target> [from <device>]', 'hop-by-hop path evaluation with verdicts'],
   ['show devices | vlans | connections', 'topology overview'],
@@ -503,7 +503,7 @@ const HELP: Array<[string, string]> = [
 
 function runHelp(topic?: string): TerminalLine[] {
   if (topic) {
-    const match = HELP.filter(([syntax]) => syntax.toLowerCase().includes(topic.toLowerCase()));
+    const match = COMMAND_REFERENCE.filter(([syntax]) => syntax.toLowerCase().includes(topic.toLowerCase()));
     if (match.length > 0) {
       return match.map(([syntax, desc]) => line(`${syntax.padEnd(50)} ${desc}`));
     }
@@ -511,7 +511,7 @@ function runHelp(topic?: string): TerminalLine[] {
   }
   return [
     heading('PixelCake terminal — NCL v0.1 (Network Command Language, vendor-neutral)'),
-    ...HELP.map(([syntax, desc]) => line(`  ${syntax.padEnd(50)} ${desc}`)),
+    ...COMMAND_REFERENCE.map(([syntax, desc]) => line(`  ${syntax.padEnd(50)} ${desc}`)),
     muted('  device names are case-insensitive and may be multi-word; IPs work anywhere a device is expected'),
   ];
 }

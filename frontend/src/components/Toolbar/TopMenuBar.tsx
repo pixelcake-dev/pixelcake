@@ -14,7 +14,7 @@ import PixelCakeIcon from '@/assets/PixelCakeIcon.svg';
 const TopMenuBar = () => {
   const darkMode = useUIStore((state) => state.darkMode);
   const toggleDarkMode = useUIStore((state) => state.toggleDarkMode);
-  const openModal = useUIStore((state) => state.openModal);
+  const openHelp = useUIStore((state) => state.openHelp);
   const setShowWelcomeScreen = useUIStore((state) => state.setShowWelcomeScreen);
   const magnifiedDeviceTypes = useUIStore((state) => state.magnifiedDeviceTypes);
   const magnifiedConnectionTypes = useUIStore((state) => state.magnifiedConnectionTypes);
@@ -44,7 +44,7 @@ const TopMenuBar = () => {
   const handleAutoLayout = (algorithm: 'hierarchical' | 'subnet-grouped', direction: 'TB' | 'LR') => {
     const deviceCount = useNetworkStore.getState().devices.length;
     if (deviceCount === 0) {
-      alert('Nessun dispositivo presente. Aggiungi dispositivi prima di applicare l\'auto-layout.');
+      toast.info('Nessun dispositivo sul canvas: non c\'è nulla da disporre.');
       return;
     }
     applyAutoLayout(algorithm, direction);
@@ -53,7 +53,7 @@ const TopMenuBar = () => {
   const handleAutoConnect = () => {
     const deviceCount = useNetworkStore.getState().devices.length;
     if (deviceCount < 2) {
-      alert('Servono almeno 2 dispositivi per creare connessioni automatiche.');
+      toast.info('Servono almeno due dispositivi per collegarli automaticamente.');
       return;
     }
     autoConnectDevices();
@@ -79,7 +79,7 @@ const TopMenuBar = () => {
   const handleFitView = () => {
     const deviceCount = useNetworkStore.getState().devices.length;
     if (deviceCount === 0) {
-      alert('Nessun dispositivo presente. Impossibile adattare la vista.');
+      toast.info('Nessun dispositivo sul canvas: non c\'è nulla da inquadrare.');
       return;
     }
     triggerFitView();
@@ -87,7 +87,7 @@ const TopMenuBar = () => {
 
   const handleCopy = () => {
     if (selectedDeviceIds.length === 0) {
-      alert('Seleziona almeno un dispositivo (Ctrl+Click) prima di copiare.');
+      toast.info('Seleziona almeno un dispositivo prima di copiare.');
       return;
     }
     copySelection();
@@ -95,7 +95,7 @@ const TopMenuBar = () => {
 
   const handlePaste = () => {
     if (!clipboard || clipboard.devices.length === 0) {
-      alert('Nessun elemento negli appunti. Copia prima alcuni dispositivi.');
+      toast.info('Non c\'è nulla da incollare: copia prima uno o più dispositivi.');
       return;
     }
     paste();
@@ -124,21 +124,15 @@ const TopMenuBar = () => {
             <hr />
             <li onClick={handleSave}>Salva</li>
             <li onClick={handleSaveAs}>Salva con nome…</li>
-            <hr />
-            <li className="disabled">Esporta come PNG</li>
           </ul>
         </div>
       </div>
 
-      {/* Modifica Menu */}
+      {/* Modifica Menu: both entries are enabled only when they can do something */}
       <div className="menu-item">
         <span>Modifica</span>
         <div className="dropdown-content">
           <ul>
-            <li className="disabled">Annulla</li>
-            <li className="disabled">Ripristina</li>
-            <hr />
-            <li className="disabled">Taglia</li>
             <li
               onClick={selectedDeviceIds.length === 0 ? undefined : handleCopy}
               className={selectedDeviceIds.length === 0 ? 'disabled' : ''}
@@ -305,8 +299,10 @@ const TopMenuBar = () => {
         <span>Help</span>
         <div className="dropdown-content">
           <ul>
+            <li onClick={() => openHelp('guide')}>Guida</li>
+            <li onClick={() => openHelp('commands')}>Comandi del terminale</li>
             <li onClick={handleShowWelcome}>Mostra Welcome Screen</li>
-            <li onClick={() => openModal('help')}>Note Programma</li>
+            <li onClick={() => openHelp('about')}>Informazioni</li>
           </ul>
         </div>
       </div>

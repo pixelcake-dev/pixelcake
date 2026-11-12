@@ -7,12 +7,17 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { NetworkDevice, NetworkConnection, DeviceType } from '@/types';
 
+/** The panels the sidebar can show next to its icons */
+export type SidebarPanelId = 'simulation' | 'devices' | 'explorer';
+
+/** The tabs of the guide (HelpModal) */
+export type HelpTab = 'guide' | 'commands' | 'about';
+
 interface UIStore {
   // State
-  isAuthenticated: boolean;
   darkMode: boolean;
   theme: 'pixelcake' | 'modern-tech';
-  activeSidebarPanel: 'simulation' | 'devices' | 'favorites' | 'explorer' | null;
+  activeSidebarPanel: SidebarPanelId | null;
   modals: {
     addDevice: boolean;
     devicePicker: boolean;
@@ -38,6 +43,9 @@ interface UIStore {
   // (not persisted; consumed once by TerminalModal on open, then cleared)
   terminalContextDevice: string | null;
 
+  // Guide: the tab it shows (not persisted; set by whoever opens it)
+  helpTab: HelpTab;
+
   // Magnification State
   magnifiedDeviceTypes: string[];
   magnifiedConnectionTypes: string[];
@@ -49,13 +57,15 @@ interface UIStore {
   showWelcomeScreen: boolean;
 
   // Actions
-  login: () => void;
   toggleDarkMode: () => void;
   setDarkMode: (isDark: boolean) => void;
   setTheme: (theme: 'pixelcake' | 'modern-tech') => void;
-  setActiveSidebarPanel: (panel: 'simulation' | 'devices' | 'favorites' | 'explorer' | null) => void;
+  setActiveSidebarPanel: (panel: SidebarPanelId | null) => void;
   openModal: (modalName: keyof UIStore['modals']) => void;
   closeModal: (modalName: keyof UIStore['modals']) => void;
+  /** Open the guide on a tab ("Come si usa" when none is given) */
+  openHelp: (tab?: HelpTab) => void;
+  setHelpTab: (tab: HelpTab) => void;
   setAddDeviceType: (type: DeviceType, templateId?: string) => void;
   setInspectorDevice: (device: NetworkDevice | null) => void;
   setInspectorConnection: (connection: NetworkConnection | null) => void;
@@ -90,7 +100,6 @@ export const useUIStore = create<UIStore>()(
   persist(
     (set) => ({
       // Initial State
-      isAuthenticated: false,
       // Until the user picks one, the theme follows the system. A saved
       // choice replaces this value when the store is read from storage
       darkMode: systemPrefersDark(),
@@ -117,6 +126,7 @@ export const useUIStore = create<UIStore>()(
       contextMenuConnection: null,
       contextMenuPosition: null,
       terminalContextDevice: null,
+      helpTab: 'guide',
 
       // Magnification State
       magnifiedDeviceTypes: [],
@@ -129,10 +139,6 @@ export const useUIStore = create<UIStore>()(
       showWelcomeScreen: true,
 
       // Actions
-      login: () => {
-        set({ isAuthenticated: true });
-      },
-
       toggleDarkMode: () => {
         set((state) => {
           const newMode = !state.darkMode;
@@ -173,6 +179,17 @@ export const useUIStore = create<UIStore>()(
         set((state) => ({
           modals: { ...state.modals, [modalName]: false },
         }));
+      },
+
+      openHelp: (tab = 'guide') => {
+        set((state) => ({
+          helpTab: tab,
+          modals: { ...state.modals, help: true },
+        }));
+      },
+
+      setHelpTab: (tab) => {
+        set({ helpTab: tab });
       },
 
       setAddDeviceType: (type, templateId) => {
