@@ -6,6 +6,7 @@ import { useTemplateStore } from '@/store/templateStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
 import { createPerimeterSample } from '@/utils/samplePerimeter';
+import { createRedundancySample } from '@/utils/sampleRedundancy';
 import { Plug, Package } from 'lucide-react';
 import type { DeviceType } from '@/types/network';
 
@@ -200,6 +201,18 @@ const DevicePanel = () => {
                 Sede: VLAN, DMZ e firewall
                 <span className="block text-xs text-[var(--text-color-light)]">
                   Due VLAN, rotte, zone e una regola che pubblica un sito
+                </span>
+              </span>
+            </button>
+            <button
+              className="sidebar-panel-item"
+              onClick={() => handleLoadSample(createRedundancySample)}
+            >
+              <Plug size={20} style={{ color: '#f59e0b', flexShrink: 0 }} />
+              <span>
+                Due sedi: linea principale e di riserva
+                <span className="block text-xs text-[var(--text-color-light)]">
+                  Per provare i guasti: quasi ogni cavo ha un&apos;altra strada
                 </span>
               </span>
             </button>

@@ -27,10 +27,28 @@ afterEach(() => {
 });
 
 describe('DevicePanel — sample networks', () => {
-  it('offers the simple office and the site with VLANs, DMZ and firewall', () => {
+  it('offers the simple office, the site with VLANs, DMZ and firewall, and the two sites with a backup line', () => {
     openSamples();
     expect(screen.getByRole('button', { name: /Ufficio: due reti e un router/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Sede: VLAN, DMZ e firewall/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Due sedi: linea principale e di riserva/ })
+    ).toBeInTheDocument();
+  });
+
+  it('loads the two sites: every device, every cable, each cable on its port', () => {
+    openSamples();
+
+    fireEvent.click(screen.getByRole('button', { name: /Due sedi: linea principale e di riserva/ }));
+
+    expect(labels()).toHaveLength(12);
+    expect(labels()).toContain('R-Riserva');
+    const { connections } = useNetworkStore.getState();
+    expect(connections).toHaveLength(13);
+    for (const connection of connections) {
+      expect(connection.sourcePort ?? connection.sourceNic, connection.id).toBeDefined();
+      expect(connection.targetPort ?? connection.targetNic, connection.id).toBeDefined();
+    }
   });
 
   it('loads each one on an empty canvas without asking', () => {
