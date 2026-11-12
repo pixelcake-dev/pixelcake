@@ -472,9 +472,14 @@ describe('parse — interface up/down (canonical NCL form)', () => {
     expect(expectKind('interface 3', 'unknown').suggestion).toContain('up|down');
   });
 
-  it('rejects a non-integer interface number with a hint', () => {
-    const cmd = expectKind('interface three up on Switch-0', 'unknown');
-    expect(cmd.suggestion).toContain('number');
+  it('takes a word in place of the number for the name of a network card', () => {
+    // whether the device has such an interface is for the executor to say
+    expect(parse('interface three up on Switch-0')).toEqual({
+      kind: 'interface-set',
+      iface: 'three',
+      setting: { what: 'state', up: true },
+      device: 'Switch-0',
+    });
   });
 
   it('rejects a bare interface with the usage hint', () => {

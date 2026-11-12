@@ -2,8 +2,8 @@
  * Terminal Executor
  * Bridges parser → engine → stores. This is the ONLY terminal layer allowed
  * to touch Zustand; parser and engine stay pure. Configuration commands go
- * through the same store actions as canvas edits, so they are autosaved and
- * undo-consistent with graphical editing.
+ * through the same store actions as canvas edits, so they are saved with the
+ * drawing like any graphical edit.
  */
 
 import { useNetworkStore } from '@/store/networkStore';
@@ -12,17 +12,42 @@ import {
   suggestEndpoint,
   buildAdjacency,
   primaryIp,
+  primaryAddress,
+  ownedAddresses,
   traceRoute,
   planAndEvaluateFlow,
   boundInterface,
   interfaceLinks,
   listInterfaces,
+  routingTable,
+  hasInterfaceAddresses,
+  formatNetwork,
+  canonicalNetwork,
+  parseNetwork,
+  networkContains,
+  prefixToMask,
+  isL3Capable,
+  isSwitchLike,
+  isVlanAware,
+  portVlanMode,
+  describePortVlan,
+  describeRule,
+  isValidRuleEndpoint,
+  DEFAULT_MASK,
 } from '@/engine';
-import type { Topology, TraceResult, InterfaceLink } from '@/engine';
+import type { Topology, TraceResult, InterfaceLink, DeviceInterface, FlowResult } from '@/engine';
 import { isValidIP } from '@/utils/ipHelpers';
 import { parse } from './parser';
-import type { Command, TerminalLine, ShowTarget } from './types';
-import type { NetworkDevice, FlowModelType } from '@/types';
+import type { Command, InterfaceSetting, TerminalLine, ShowTarget } from './types';
+import type {
+  FirewallRule,
+  FlowModelType,
+  NetworkDevice,
+  NetworkInterfaceCard,
+  Port,
+  ServiceName,
+  StaticRoute,
+} from '@/types';
 
 export interface TerminalContext {
   /** Label of the device entered via `use <device>`, or null at global scope */
@@ -83,6 +108,29 @@ function contextDevice(context: TerminalContext, topo: Topology): NetworkDevice 
   return resolveEndpoint(context.deviceLabel, topo)?.device;
 }
 
+/**
+ * The device a configuration command acts on: the one named in the command,
+ * else the `use` context. `usage` completes "specify a device: …".
+ */
+function targetDevice(
+  deviceQuery: string | undefined,
+  context: TerminalContext,
+  usage: string
+): { device: NetworkDevice; topo: Topology } | { errorLines: TerminalLine[] } {
+  const topo = snapshot();
+  const query = deviceQuery ?? context.deviceLabel ?? undefined;
+  if (!query) return { errorLines: [err(`specify a device: "${usage}"`)] };
+  const res = resolveOrError(query, topo);
+  if ('errorLines' in res) return res;
+  return { device: res.device, topo };
+}
+
+/** An address typed where a device is expected is the address to aim at */
+function typedAddress(query: string): string | undefined {
+  const value = query.trim();
+  return isValidIP(value) ? value : undefined;
+}
+
 /* ── diagnostics rendering ────────────────────────────────────────────── */
 
 /** Format one trace hop as a terminal line */
@@ -93,40 +141,63 @@ function hopLine(hop: TraceResult['hops'][number], index: number): TerminalLine 
   return line(` ${String(index + 1).padStart(2)}  ${icon} ${hop.label} (${hop.deviceType})${note}`, tone);
 }
 
+/** Source and target of a diagnostic, resolved, or the lines saying why not */
+function resolveEnds(
+  verb: string,
+  target: string,
+  from: string | undefined,
+  context: TerminalContext
+):
+  | { topo: Topology; source: NetworkDevice; destination: NetworkDevice; targetIp?: string }
+  | { errorLines: TerminalLine[] } {
+  const topo = snapshot();
+  const sourceQuery = from ?? context.deviceLabel ?? undefined;
+  if (!sourceQuery) {
+    return {
+      errorLines: [
+        err(`specify a source: "${verb} ${target} from <device>" — or enter a device context with "use <device>"`),
+      ],
+    };
+  }
+  const src = resolveOrError(sourceQuery, topo);
+  if ('errorLines' in src) return src;
+  const dst = resolveOrError(target, topo);
+  if ('errorLines' in dst) return dst;
+  return { topo, source: src.device, destination: dst.device, targetIp: typedAddress(target) };
+}
+
+/** The lines that close a failed flow: where it was dropped */
+function droppedAt(flow: FlowResult): TerminalLine[] {
+  const blocked = flow.legs.flatMap((l) => l.trace.hops).find((h) => h.status === 'blocked');
+  return blocked ? [muted(`  dropped at: ${blocked.label}`)] : [];
+}
+
 function runDiagnostic(
   kind: 'ping' | 'trace',
   target: string,
   from: string | undefined,
-  context: TerminalContext
+  context: TerminalContext,
+  service?: ServiceName
 ): { lines: TerminalLine[]; liveTrace?: LiveTrace } {
-  const topo = snapshot();
+  const ends = resolveEnds(kind, target, from, context);
+  if ('errorLines' in ends) return { lines: ends.errorLines };
+  const { topo, source, destination, targetIp } = ends;
+  const shownIp = targetIp ?? primaryAddress(destination);
   const lines: TerminalLine[] = [];
-
-  const sourceQuery = from ?? context.deviceLabel ?? undefined;
-  if (!sourceQuery) {
-    return {
-      lines: [err(`specify a source: "${kind} ${target} from <device>" — or enter a device context with "use <device>"`)],
-    };
-  }
-  const src = resolveOrError(sourceQuery, topo);
-  if ('errorLines' in src) return { lines: src.errorLines };
-  const dst = resolveOrError(target, topo);
-  if ('errorLines' in dst) return { lines: dst.errorLines };
 
   if (kind === 'ping') {
     // Echo semantics: both directions evaluated, round trip animated
-    const flow = planAndEvaluateFlow('ping', src.device.id, dst.device.id, topo);
-    lines.push(muted(`Pinging ${dst.device.label} (${primaryIp(dst.device) || 'no ip'}) from ${src.device.label}...`));
+    const flow = planAndEvaluateFlow('ping', source.id, destination.id, topo, { targetIp });
+    lines.push(muted(`Pinging ${destination.label} (${shownIp || 'no ip'}) from ${source.label}...`));
 
     const finalLines: TerminalLine[] = [];
     if (flow.verdict === 'success') {
       const requestHops = flow.legs[0]?.trace.hops.length ?? 1;
       const rttMs = 1 + 2 * Math.max(0, requestHops - 2);
-      finalLines.push(ok(`Reply from ${primaryIp(dst.device)}: hops=${requestHops} time=${rttMs}ms`));
+      finalLines.push(ok(`Reply from ${shownIp}: hops=${requestHops} time=${rttMs}ms`));
     } else {
       finalLines.push(err(`Ping failed (${flow.verdict}): ${flow.failureReason ?? 'unknown reason'}`));
-      const blocked = flow.legs.flatMap((l) => l.trace.hops).find((h) => h.status === 'blocked');
-      if (blocked) finalLines.push(muted(`  dropped at: ${blocked.label}`));
+      finalLines.push(...droppedAt(flow));
     }
     for (const note of flow.notes) finalLines.push(muted(`  note: ${note}`));
 
@@ -140,8 +211,11 @@ function runDiagnostic(
   }
 
   // trace: one-way, hop lines revealed as the packet travels
-  const result = traceRoute(src.device.id, dst.device.id, topo);
-  lines.push(muted(`Tracing route to ${dst.device.label} (${primaryIp(dst.device) || 'no ip'}) from ${src.device.label}:`));
+  const result = traceRoute(source.id, destination.id, topo, { service, targetIp });
+  const asService = service ? ` as ${service}` : '';
+  lines.push(
+    muted(`Tracing route to ${destination.label} (${shownIp || 'no ip'}) from ${source.label}${asService}:`)
+  );
 
   const hopLines = result.hops.map((hop, i) => hopLine(hop, i));
   const finalLines: TerminalLine[] = result.notes.map((note) => muted(`  note: ${note}`));
@@ -153,9 +227,62 @@ function runDiagnostic(
 
   const animationPath = result.hops.map((h) => h.deviceId);
   if (animationPath.length >= 2) {
-    return { lines, liveTrace: { animationPath, flowModel: 'ping', hopLines, finalLines } };
+    // A web or email trace travels in the colour of its flow
+    const flowModel: FlowModelType = service === 'web' || service === 'email' ? service : 'ping';
+    return { lines, liveTrace: { animationPath, flowModel, hopLines, finalLines } };
   }
   return { lines: [...lines, ...hopLines, ...finalLines] };
+}
+
+const FLOW_WORDS: Record<'web' | 'email' | 'download', { verb: string; doing: string; done: string; name: string }> = {
+  web: { verb: 'browse', doing: 'Browsing', done: 'Page received from', name: 'Browse' },
+  email: { verb: 'mail', doing: 'Mailing', done: 'Mail delivered to', name: 'Mail' },
+  download: { verb: 'download', doing: 'Downloading from', done: 'Download complete from', name: 'Download' },
+};
+
+/** `browse|mail|download`: a whole exchange, one line per leg */
+function runFlow(
+  model: 'web' | 'email' | 'download',
+  target: string,
+  from: string | undefined,
+  context: TerminalContext
+): { lines: TerminalLine[]; liveTrace?: LiveTrace } {
+  const words = FLOW_WORDS[model];
+  const ends = resolveEnds(words.verb, target, from, context);
+  if ('errorLines' in ends) return { lines: ends.errorLines };
+  const { topo, source, destination, targetIp } = ends;
+  const shownIp = targetIp ?? primaryAddress(destination);
+
+  const emailMode = useNetworkStore.getState().globalNetworkSettings.emailMode ?? 'auto';
+  const flow = planAndEvaluateFlow(model, source.id, destination.id, topo, {
+    emailMode,
+    targetIp: model === 'email' ? undefined : targetIp,
+  });
+  const lines = [muted(`${words.doing} ${destination.label} (${shownIp || 'no ip'}) from ${source.label}...`)];
+
+  const label = (id: string) => topo.devices.find((d) => d.id === id)?.label ?? id;
+  const finalLines: TerminalLine[] = flow.legs.map((leg) => {
+    const passed = leg.trace.verdict === 'success';
+    return line(
+      `  ${passed ? '✓' : '✗'} ${leg.purpose}: ${label(leg.fromId)} → ${label(leg.toId)}`,
+      passed ? 'normal' : 'error'
+    );
+  });
+  if (flow.verdict === 'success') {
+    finalLines.push(ok(`${words.done} ${destination.label}`));
+  } else {
+    finalLines.push(err(`${words.name} failed (${flow.verdict}): ${flow.failureReason ?? 'unknown reason'}`));
+    finalLines.push(...droppedAt(flow));
+  }
+  for (const note of flow.notes) finalLines.push(muted(`  note: ${note}`));
+
+  if (flow.animationPath.length >= 2) {
+    return {
+      lines,
+      liveTrace: { animationPath: flow.animationPath, flowModel: model, hopLines: [], finalLines },
+    };
+  }
+  return { lines: [...lines, ...finalLines] };
 }
 
 /* ── show commands ────────────────────────────────────────────────────── */
@@ -170,18 +297,55 @@ function showDevices(topo: Topology): TerminalLine[] {
   return lines;
 }
 
+/**
+ * `show vlans`: every VLAN with where it lives — the ports of the switches
+ * that apply VLANs port by port, and the devices that carry it in their own
+ * list.
+ */
 function showVlans(topo: Topology): TerminalLine[] {
   const membership = new Map<number, string[]>();
+  const add = (vlan: number, where: string) => {
+    membership.set(vlan, [...(membership.get(vlan) ?? []), where]);
+  };
+  const footnotes: string[] = [];
+
   for (const d of topo.devices) {
-    for (const v of d.vlan ?? []) {
-      membership.set(v, [...(membership.get(v) ?? []), d.label]);
+    if (isVlanAware(d)) {
+      // vlan → its access ports and the trunks that list it
+      const access = new Map<number, number[]>();
+      const trunks = new Map<number, number[]>();
+      for (const p of d.ports ?? []) {
+        const mode = portVlanMode(p);
+        if (mode.kind === 'access') {
+          access.set(mode.vlan, [...(access.get(mode.vlan) ?? []), p.id]);
+        } else if (mode.vlans.length === 0) {
+          footnotes.push(`${d.label} port ${p.id} is a trunk for every VLAN`);
+        } else {
+          for (const vlan of mode.vlans) trunks.set(vlan, [...(trunks.get(vlan) ?? []), p.id]);
+        }
+      }
+      for (const vlan of new Set([...access.keys(), ...trunks.keys()])) {
+        const parts: string[] = [];
+        const accessPorts = access.get(vlan);
+        const trunkPorts = trunks.get(vlan);
+        if (accessPorts) parts.push(`port${accessPorts.length > 1 ? 's' : ''} ${accessPorts.join(',')}`);
+        if (trunkPorts) parts.push(`trunk ${trunkPorts.join(',')}`);
+        add(vlan, `${d.label} (${parts.join('; ')})`);
+      }
+    }
+    for (const vlan of d.vlan ?? []) {
+      if (!(membership.get(vlan) ?? []).some((where) => where.startsWith(`${d.label} (`))) {
+        add(vlan, d.label);
+      }
     }
   }
+
   if (membership.size === 0) return [muted('no VLANs configured (all traffic untagged)')];
   const lines = [heading(`${'VLAN'.padEnd(6)} MEMBERS`)];
   for (const [id, members] of [...membership.entries()].sort((a, b) => a[0] - b[0])) {
     lines.push(line(`${String(id).padEnd(6)} ${members.join(', ')}`));
   }
+  for (const note of footnotes) lines.push(muted(`  ${note}`));
   return lines;
 }
 
@@ -225,7 +389,9 @@ function showConfig(d: NetworkDevice): TerminalLine[] {
   lines.push(line(`  gateway:  ${d.gateway || '-'}`));
   if (d.location) lines.push(line(`  location: ${d.location}`));
   lines.push(line(`  vlans:    ${d.vlan && d.vlan.length > 0 ? d.vlan.join(', ') : 'none (untagged)'}`));
-  if (d.stp?.enabled) lines.push(line(`  stp:      ${d.stp.mode ?? 'STP'} priority ${d.stp.priority ?? 32768}`));
+  if (d.stp?.enabled) {
+    lines.push(line(`  stp:      ${d.stp.mode ?? 'STP'} priority ${d.stp.priority ?? 32768} (not simulated)`));
+  }
   if (d.ports && d.ports.length > 0) {
     const enabled = d.ports.filter((p) => p.enabled).length;
     lines.push(line(`  ports:    ${enabled}/${d.ports.length} enabled — "show ports ${d.label}" for detail`));
@@ -233,7 +399,23 @@ function showConfig(d: NetworkDevice): TerminalLine[] {
   for (const nic of d.nics ?? []) {
     lines.push(line(`  nic ${nic.name}: ${nic.ip || '-'} / ${nic.subnet || '-'} gw ${nic.gateway || '-'} ${nic.enabled ? '' : '(disabled)'}`));
   }
+  if (d.routes && d.routes.length > 0) {
+    lines.push(line(`  routes:   ${d.routes.length} static — "show routes ${d.label}" for the whole table`));
+  }
+  if (d.firewallRules && d.firewallRules.length > 0) {
+    lines.push(line(`  rules:    ${d.firewallRules.length} — "show rules ${d.label}" for detail`));
+  }
   return lines;
+}
+
+/** The VLAN cell of a port: its own, or the default one on a VLAN-aware switch */
+function portVlanText(d: NetworkDevice, p: Port): string {
+  if (p.vlan !== undefined && !(Array.isArray(p.vlan) && p.vlan.length === 0)) {
+    return Array.isArray(p.vlan) ? p.vlan.join(',') : String(p.vlan);
+  }
+  const mode = portVlanMode(p);
+  if (mode.kind === 'trunk') return 'all';
+  return isVlanAware(d) ? String(mode.vlan) : '-';
 }
 
 function showPorts(topo: Topology, d: NetworkDevice): TerminalLine[] {
@@ -247,10 +429,9 @@ function showPorts(topo: Topology, d: NetworkDevice): TerminalLine[] {
   for (const iface of listInterfaces(d)) {
     if (iface.kind !== 'port') continue;
     const p = iface.port;
-    const vlan = p.vlan === undefined ? '-' : Array.isArray(p.vlan) ? p.vlan.join(',') : String(p.vlan);
     lines.push(
       line(
-        `${String(p.id).padEnd(6)} ${(p.enabled ? 'up' : 'down').padEnd(10)} ${(p.portType ?? '-').padEnd(8)} ${vlan.padEnd(10)} ${(p.securityZone ?? '-').padEnd(8)} ${(iface.ip || '-').padEnd(16)} ${linkText(links.get(iface.key))}`,
+        `${String(p.id).padEnd(6)} ${(p.enabled ? 'up' : 'down').padEnd(10)} ${(p.portType ?? '-').padEnd(8)} ${portVlanText(d, p).padEnd(10)} ${(p.securityZone ?? '-').padEnd(8)} ${(iface.ip || '-').padEnd(16)} ${linkText(links.get(iface.key))}`,
         p.enabled ? 'normal' : 'muted'
       )
     );
@@ -279,11 +460,10 @@ function showInterfaces(topo: Topology, d: NetworkDevice): TerminalLine[] {
     const link = linkText(links.get(iface.key));
     if (iface.kind === 'port') {
       const p = iface.port;
-      const vlan = p.vlan === undefined ? '-' : Array.isArray(p.vlan) ? p.vlan.join(',') : String(p.vlan);
       const modeZone = p.portType ?? p.securityZone ?? '-';
       lines.push(
         line(
-          `${String(p.id).padEnd(10)} ${'port'.padEnd(6)} ${state} ${ip} ${vlan.padEnd(10)} ${modeZone.padEnd(10)} ${link}`,
+          `${String(p.id).padEnd(10)} ${'port'.padEnd(6)} ${state} ${ip} ${portVlanText(d, p).padEnd(10)} ${modeZone.padEnd(10)} ${link}`,
           iface.enabled ? 'normal' : 'muted'
         )
       );
@@ -339,6 +519,64 @@ function showNeighbors(topo: Topology, d: NetworkDevice): TerminalLine[] {
   return lines;
 }
 
+/** `show routes <device>` — the routing table exactly as the engine reads it */
+function showRoutes(d: NetworkDevice): TerminalLine[] {
+  const lines = [heading(`ROUTES of ${d.label}`)];
+  if (isL3Capable(d) && !hasInterfaceAddresses(d)) {
+    lines.push(muted(`  ${d.label} has no interface addresses: it lets traffic through, its routes are not used`));
+    lines.push(muted(`  give a port its address with: interface <n> ip <address>/<prefix> on ${d.label}`));
+  }
+
+  const table = routingTable(d);
+  if (table.length === 0) {
+    lines.push(muted('  no routes: the device has no address'));
+  } else {
+    lines.push(heading(`${'DESTINATION'.padEnd(20)} ${'VIA'.padEnd(16)} ${'OUT'.padEnd(8)} KIND`));
+  }
+  for (const entry of table) {
+    const out = entry.out ? (entry.out.iface?.label ?? '-') : '?';
+    const kind = entry.kind === 'default' && !entry.route ? 'default (gateway)' : entry.kind;
+    const row = `${formatNetwork(entry.network).padEnd(20)} ${(entry.nextHop ?? '-').padEnd(16)} ${out.padEnd(8)} ${kind}`;
+    if (!entry.out) {
+      lines.push(err(`${row}  ✗ next hop on none of its networks`));
+    } else if (!entry.out.enabled) {
+      lines.push(muted(`${row}  (interface down)`));
+    } else {
+      lines.push(line(row));
+    }
+  }
+  // Routes the engine refuses: say so instead of hiding them
+  for (const route of d.routes ?? []) {
+    if (!parseNetwork(route.destination) || !isValidIP(route.nextHop)) {
+      lines.push(err(`  ✗ "${route.destination} via ${route.nextHop}" is not a network and an address: ignored`));
+    }
+  }
+  return lines;
+}
+
+const ZONE_POLICY =
+  'zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed';
+
+/** `show rules <device>` — the rules in order, then what decides when none matches */
+function showRules(d: NetworkDevice): TerminalLine[] {
+  const rules = d.firewallRules ?? [];
+  const isFirewall = d.type.toLowerCase().includes('firewall');
+  if (!isFirewall && rules.length === 0) {
+    return [muted(`${d.label} is not a firewall and has no rules: it filters nothing`)];
+  }
+  const lines = [heading(`RULES of ${d.label} (the first that matches decides)`)];
+  if (rules.length === 0) lines.push(muted('  no rules'));
+  rules.forEach((rule, index) => {
+    const row =
+      `  ${String(index + 1).padStart(2)}  ${rule.action.padEnd(5)} ${rule.service.padEnd(6)} ` +
+      `from ${rule.source.padEnd(18)} to ${rule.destination}`;
+    lines.push(rule.enabled === false ? muted(`${row}  (disabled)`) : line(row));
+  });
+  lines.push(muted(`  then the ${ZONE_POLICY}`));
+  lines.push(muted('  the reply to an allowed flow always passes'));
+  return lines;
+}
+
 function runShow(what: ShowTarget, deviceQuery: string | undefined, context: TerminalContext): TerminalLine[] {
   const topo = snapshot();
   if (what === 'devices') return showDevices(topo);
@@ -360,18 +598,23 @@ function runShow(what: ShowTarget, deviceQuery: string | undefined, context: Ter
   if (what === 'ports') return showPorts(topo, device);
   if (what === 'interfaces') return showInterfaces(topo, device);
   if (what === 'ip') return showIp(device);
+  if (what === 'routes') return showRoutes(device);
+  if (what === 'rules') return showRules(device);
   return showNeighbors(topo, device);
 }
 
 /* ── configuration commands ───────────────────────────────────────────── */
 
+/** "  warning: 10.0.0.1 is also the address of R2" when another device has it */
+function duplicateAddressWarning(ip: string, device: NetworkDevice, topo: Topology): TerminalLine[] {
+  const other = topo.devices.find((d) => d.id !== device.id && ownedAddresses(d).includes(ip));
+  return other ? [muted(`  warning: ${ip} is also the address of ${other.label}`)] : [];
+}
+
 function runSet(property: 'ip' | 'gateway' | 'subnet' | 'name', deviceQuery: string | undefined, value: string, context: TerminalContext): TerminalLine[] {
-  const topo = snapshot();
-  const query = deviceQuery ?? context.deviceLabel ?? undefined;
-  if (!query) return [err(`specify a device: "set ${property} of <device> to <value>"`)];
-  const res = resolveOrError(query, topo);
-  if ('errorLines' in res) return res.errorLines;
-  const device = res.device;
+  const found = targetDevice(deviceQuery, context, `set ${property} of <device> to <value>`);
+  if ('errorLines' in found) return found.errorLines;
+  const { device, topo } = found;
 
   if (property === 'name') {
     useNetworkStore.getState().updateDevice(device.id, { label: value });
@@ -381,34 +624,35 @@ function runSet(property: 'ip' | 'gateway' | 'subnet' | 'name', deviceQuery: str
   if ((property === 'ip' || property === 'gateway') && !isValidIP(value)) {
     return [err(`"${value}" is not a valid IPv4 address`)];
   }
-  if (property === 'ip' && device.nics && device.nics.length > 0) {
-    return [
-      err(`${device.label} uses NICs — the device-level IP is read-only`),
-      muted('  edit the NIC in the Inspector instead (per-NIC terminal config coming later)'),
-    ];
-  }
 
-  // A device with NICs is addressed through them: the engine reads the NIC a
-  // link is bound to, and the device-level field is only its mirror. Write
-  // the primary NIC (the one the Inspector shows as the device addressing)
-  // too, otherwise the change would not reach the simulation.
+  // A device with NICs is addressed through them: the engine reads the NIC,
+  // and the device-level field is only its mirror. Write the primary NIC (the
+  // one the Inspector shows as the device addressing), otherwise the change
+  // would not reach the simulation.
   const updates: Partial<NetworkDevice> = { [property]: value };
-  if (device.nics && device.nics.length > 0) {
+  const primaryNic = device.nics?.[0];
+  if (device.nics && primaryNic) {
     updates.nics = device.nics.map((nic, index) =>
       index === 0 ? { ...nic, [property]: value } : nic
     );
   }
   useNetworkStore.getState().updateDevice(device.id, updates);
-  return [ok(`${device.label}: ${property} set to ${value}`)];
+  const lines = [ok(`${device.label}: ${property} set to ${value}`)];
+  if (property === 'ip') lines.push(...duplicateAddressWarning(value, device, topo));
+  if (property === 'gateway' && isL3Capable(device)) {
+    lines.push(muted(`  the gateway of a router is its default route — "show routes ${device.label}"`));
+  }
+  return lines;
 }
 
 function runVlan(action: 'add' | 'remove', vlanId: number, deviceQuery: string | undefined, context: TerminalContext): TerminalLine[] {
-  const topo = snapshot();
-  const query = deviceQuery ?? context.deviceLabel ?? undefined;
-  if (!query) return [err(`specify a device: "${action} vlan ${vlanId} ${action === 'add' ? 'to' : 'from'} <device>"`)];
-  const res = resolveOrError(query, topo);
-  if ('errorLines' in res) return res.errorLines;
-  const device = res.device;
+  const found = targetDevice(
+    deviceQuery,
+    context,
+    `${action} vlan ${vlanId} ${action === 'add' ? 'to' : 'from'} <device>`
+  );
+  if ('errorLines' in found) return found.errorLines;
+  const { device } = found;
   const current = device.vlan ?? [];
 
   if (action === 'add') {
@@ -466,12 +710,9 @@ function runConnect(action: 'connect' | 'disconnect', aQuery: string, bQuery: st
 }
 
 function runPort(action: 'enable' | 'disable', portId: number, deviceQuery: string | undefined, context: TerminalContext): TerminalLine[] {
-  const topo = snapshot();
-  const query = deviceQuery ?? context.deviceLabel ?? undefined;
-  if (!query) return [err(`specify a device: "${action} port ${portId} on <device>"`)];
-  const res = resolveOrError(query, topo);
-  if ('errorLines' in res) return res.errorLines;
-  const device = res.device;
+  const found = targetDevice(deviceQuery, context, `${action} port ${portId} on <device>`);
+  if ('errorLines' in found) return found.errorLines;
+  const { device } = found;
 
   if (!device.ports || device.ports.length === 0) return [err(`${device.label} has no configurable ports`)];
   const port = device.ports.find((p) => p.id === portId);
@@ -484,34 +725,398 @@ function runPort(action: 'enable' | 'disable', portId: number, deviceQuery: stri
   return [ok(`port ${portId} on ${device.label} is now ${enabled ? 'up' : 'down'}`)];
 }
 
+/* ── interfaces ───────────────────────────────────────────────────────── */
+
+/** The port (by number) or NIC (by name or id) the user means */
+function findInterface(device: NetworkDevice, id: string): DeviceInterface | undefined {
+  const interfaces = listInterfaces(device);
+  if (/^\d+$/.test(id)) {
+    const port = interfaces.find((i) => i.kind === 'port' && i.port.id === parseInt(id, 10));
+    if (port) return port;
+  }
+  const lower = id.toLowerCase();
+  return interfaces.find(
+    (i) => i.kind === 'nic' && (i.nic.name.toLowerCase() === lower || i.nic.id.toLowerCase() === lower)
+  );
+}
+
+/** "ports 1-8" / "eth0, eth1", for "no such interface" errors */
+function interfaceNames(device: NetworkDevice): string {
+  const parts: string[] = [];
+  const ports = device.ports ?? [];
+  if (ports.length > 0) parts.push(`ports ${ports[0].id}-${ports[ports.length - 1].id}`);
+  const nics = (device.nics ?? []).map((nic) => nic.name);
+  if (nics.length > 0) parts.push(nics.join(', '));
+  return parts.length > 0 ? parts.join(', ') : 'none';
+}
+
+/** Copy of `source` without the given keys */
+function without<T extends object>(source: T, ...keys: Array<keyof T>): T {
+  const copy = { ...source };
+  for (const key of keys) delete copy[key];
+  return copy;
+}
+
+function savePort(device: NetworkDevice, port: Port): void {
+  const ports = (device.ports ?? []).map((p) => (p.id === port.id ? port : p));
+  useNetworkStore.getState().updateDevice(device.id, { ports });
+}
+
+function saveNic(device: NetworkDevice, nic: NetworkInterfaceCard): void {
+  const nics = (device.nics ?? []).map((n) => (n.id === nic.id ? nic : n));
+  useNetworkStore.getState().updateDevice(device.id, { nics });
+}
+
+function runInterface(
+  ifaceId: string,
+  setting: InterfaceSetting,
+  deviceQuery: string | undefined,
+  context: TerminalContext
+): TerminalLine[] {
+  const found = targetDevice(deviceQuery, context, `interface ${ifaceId} … on <device>`);
+  if ('errorLines' in found) return found.errorLines;
+  const { device, topo } = found;
+
+  const iface = findInterface(device, ifaceId);
+  if (!iface) {
+    return [err(`${device.label} has no interface "${ifaceId}" (it has: ${interfaceNames(device)})`)];
+  }
+  const name = `${iface.kind === 'port' ? iface.label : `interface ${iface.label}`} on ${device.label}`;
+
+  switch (setting.what) {
+    case 'state': {
+      if (iface.enabled === setting.up) return [muted(`${name} is already ${setting.up ? 'up' : 'down'}`)];
+      if (iface.kind === 'port') savePort(device, { ...iface.port, enabled: setting.up });
+      else saveNic(device, { ...iface.nic, enabled: setting.up });
+      return [ok(`${name} is now ${setting.up ? 'up' : 'down'}`)];
+    }
+
+    case 'ip': {
+      if (iface.kind === 'port' && !isL3Capable(device)) {
+        return [
+          err(`${device.label} is a ${device.type}: its ports carry no address`),
+          muted(`  its own address is set with: set ip of ${device.label} to <address>`),
+        ];
+      }
+      if (setting.address === null) {
+        if (iface.kind === 'port') savePort(device, without(iface.port, 'ip', 'subnet'));
+        else saveNic(device, { ...iface.nic, ip: '' });
+        return [ok(`${name} has no address now`)];
+      }
+      if (!isValidIP(setting.address)) return [err(`"${setting.address}" is not a valid IPv4 address`)];
+      // The mask: the prefix typed, else the one already there, else /24
+      const subnet =
+        setting.prefix !== undefined ? prefixToMask(setting.prefix) : iface.subnet || DEFAULT_MASK;
+      if (iface.kind === 'port') savePort(device, { ...iface.port, ip: setting.address, subnet });
+      else saveNic(device, { ...iface.nic, ip: setting.address, subnet });
+      return [
+        ok(`${name}: ${setting.address} / ${subnet}`),
+        ...duplicateAddressWarning(setting.address, device, topo),
+      ];
+    }
+
+    case 'gateway': {
+      if (iface.kind === 'port') {
+        return [
+          err(`${name} is a port: ports have no gateway`),
+          muted(`  the default route of ${device.label} is: set gateway of ${device.label} to <address>`),
+        ];
+      }
+      if (setting.address === null) {
+        saveNic(device, { ...iface.nic, gateway: '' });
+        return [ok(`${name} has no gateway now`)];
+      }
+      if (!isValidIP(setting.address)) return [err(`"${setting.address}" is not a valid IPv4 address`)];
+      saveNic(device, { ...iface.nic, gateway: setting.address });
+      return [ok(`${name}: gateway ${setting.address}`)];
+    }
+
+    case 'access':
+    case 'trunk':
+    case 'no-vlan': {
+      if (iface.kind !== 'port' || !isSwitchLike(device)) {
+        return [err(`VLANs are set on the ports of a switch: ${device.label} is a ${device.type}`)];
+      }
+      const wasAware = isVlanAware(device);
+      let port: Port;
+      if (setting.what === 'access') {
+        port = { ...iface.port, portType: 'access', vlan: setting.vlan };
+      } else if (setting.what === 'trunk') {
+        port =
+          setting.vlans.length > 0
+            ? { ...iface.port, portType: 'trunk', vlan: setting.vlans }
+            : { ...without(iface.port, 'vlan'), portType: 'trunk' };
+      } else {
+        port = { ...without(iface.port, 'vlan'), portType: 'access' };
+      }
+      savePort(device, port);
+
+      const after = { ...device, ports: (device.ports ?? []).map((p) => (p.id === port.id ? port : p)) };
+      const lines = [
+        ok(
+          setting.what === 'no-vlan'
+            ? `${name} has no VLAN of its own now`
+            : `${name} is now ${describePortVlan(portVlanMode(port))}`
+        ),
+      ];
+      if (!wasAware && isVlanAware(after)) {
+        lines.push(muted(`  ${device.label} now applies VLANs port by port: the ports you did not set are in VLAN 1`));
+      } else if (wasAware && !isVlanAware(after)) {
+        lines.push(muted(`  no port of ${device.label} has a VLAN any more: it forwards everything as it comes`));
+      }
+      return lines;
+    }
+
+    case 'zone': {
+      if (iface.kind !== 'port' || !device.type.toLowerCase().includes('firewall')) {
+        return [err(`security zones are set on the ports of a firewall: ${device.label} is a ${device.type}`)];
+      }
+      if (setting.zone === null) {
+        savePort(device, without(iface.port, 'securityZone'));
+        return [ok(`${name} is in no security zone now`)];
+      }
+      savePort(device, { ...iface.port, securityZone: setting.zone });
+      return [ok(`${name} is now in zone ${setting.zone}`)];
+    }
+  }
+}
+
+/* ── routes ───────────────────────────────────────────────────────────── */
+
+/** Lowest `prefix-N` id not in use */
+function nextId(prefix: string, used: Array<{ id: string }>): string {
+  let n = 1;
+  while (used.some((entry) => entry.id === `${prefix}-${n}`)) n++;
+  return `${prefix}-${n}`;
+}
+
+
+
+function runRoute(
+  action: 'add' | 'remove',
+  destination: string,
+  nextHop: string | undefined,
+  deviceQuery: string | undefined,
+  context: TerminalContext
+): TerminalLine[] {
+  const usage =
+    action === 'add'
+      ? `add route ${destination} via ${nextHop ?? '<next hop>'} on <device>`
+      : `remove route ${destination} from <device>`;
+  const found = targetDevice(deviceQuery, context, usage);
+  if ('errorLines' in found) return found.errorLines;
+  const { device, topo } = found;
+
+  const network = parseNetwork(destination);
+  if (!network) {
+    return [err(`"${destination}" is not a network: write it as 192.168.30.0/24, or "default"`)];
+  }
+  const canonical = canonicalNetwork(network);
+  const routes = device.routes ?? [];
+  const same = (route: StaticRoute) => {
+    const parsed = parseNetwork(route.destination);
+    return parsed !== undefined && canonicalNetwork(parsed) === canonical;
+  };
+  const name = formatNetwork(network);
+
+  if (action === 'remove') {
+    if (!routes.some(same)) return [muted(`${device.label} has no route to ${name}`)];
+    const remaining = routes.filter((route) => !same(route));
+    useNetworkStore.getState().updateDevice(device.id, { routes: remaining.length > 0 ? remaining : undefined });
+    return [ok(`${device.label}: route to ${name} removed`)];
+  }
+
+  if (!isL3Capable(device)) {
+    return [
+      err(`${device.label} is a ${device.type}: routes belong on routers and firewalls`),
+      muted(`  an end device has one way out, its gateway: set gateway of ${device.label} to <address>`),
+    ];
+  }
+
+  // The next hop: an address, or a device with an address on one of this device's networks
+  let hop = nextHop ?? '';
+  const lines: TerminalLine[] = [];
+  if (!isValidIP(hop)) {
+    const named = resolveEndpoint(hop, topo)?.device;
+    const connected = routingTable(device).filter((entry) => entry.kind === 'connected');
+    const shared = named
+      ? ownedAddresses(named).find((ip) => isValidIP(ip) && connected.some((entry) => networkContains(entry.network, ip)))
+      : undefined;
+    if (!named) return [err(`"${hop}" is not an address, nor a device on the canvas`)];
+    if (!shared) {
+      return [err(`${named.label} has no address on a network of ${device.label}: give the next hop as an address`)];
+    }
+    lines.push(muted(`  ${named.label} → ${shared}`));
+    hop = shared;
+  }
+
+  const existing = routes.find(same);
+  const next = existing
+    ? routes.map((route) => (route === existing ? { ...route, destination: canonical, nextHop: hop } : route))
+    : [...routes, { id: nextId('route', routes), destination: canonical, nextHop: hop }];
+  useNetworkStore.getState().updateDevice(device.id, { routes: next });
+
+  lines.unshift(
+    ok(
+      existing
+        ? `${device.label}: route to ${name} now goes via ${hop} (was ${existing.nextHop})`
+        : `${device.label}: route to ${name} via ${hop} added`
+    )
+  );
+  if (!hasInterfaceAddresses(device)) {
+    lines.push(muted(`  ${device.label} has no interface addresses yet: its routes are not used until a port has one`));
+  } else if (!routingTable({ ...device, routes: next }).some((entry) => entry.route?.nextHop === hop && entry.out)) {
+    lines.push(muted(`  warning: ${hop} is on none of the networks of ${device.label}: the route cannot be used yet`));
+  }
+  return lines;
+}
+
+/* ── firewall rules ───────────────────────────────────────────────────── */
+
+/**
+ * One side of a rule as it will be stored: `any`, a zone, an address or a
+ * network as typed; a device name becomes its address.
+ */
+function ruleEndpoint(
+  text: string,
+  topo: Topology
+): { value: string; note?: string } | { error: string } {
+  if (isValidRuleEndpoint(text)) {
+    const value = text.trim().toLowerCase();
+    const network = parseNetwork(value);
+    // Networks are stored without host bits; a bare address stays an address
+    if (network && value.includes('/')) return { value: canonicalNetwork(network) };
+    return { value: value === 'default' ? 'any' : value };
+  }
+  const named = resolveEndpoint(text, topo)?.device;
+  const address = named ? primaryAddress(named) : '';
+  if (named && isValidIP(address)) return { value: address, note: `${named.label} → ${address}` };
+  if (named) return { error: `${named.label} has no address to write in a rule` };
+  return {
+    error: `"${text}" is not any, a zone (trust, untrust, dmz), an address, a network or a device`,
+  };
+}
+
+function runRuleAdd(
+  command: Extract<Command, { kind: 'rule-add' }>,
+  context: TerminalContext
+): TerminalLine[] {
+  const found = targetDevice(
+    command.device,
+    context,
+    `add rule ${command.action} ${command.service} from ${command.source} to ${command.destination} on <device>`
+  );
+  if ('errorLines' in found) return found.errorLines;
+  const { device, topo } = found;
+  if (!isL3Capable(device)) {
+    return [err(`${device.label} is a ${device.type}: rules belong on firewalls`)];
+  }
+
+  const source = ruleEndpoint(command.source, topo);
+  if ('error' in source) return [err(source.error)];
+  const destination = ruleEndpoint(command.destination, topo);
+  if ('error' in destination) return [err(destination.error)];
+
+  const rules = device.firewallRules ?? [];
+  const position = command.position ?? rules.length + 1;
+  if (position > rules.length + 1) {
+    return [
+      err(
+        rules.length === 0
+          ? `${device.label} has no rules yet: the first one goes at position 1`
+          : `${device.label} has ${rules.length} rule${rules.length === 1 ? '' : 's'}: the position must be 1-${rules.length + 1}`
+      ),
+    ];
+  }
+
+  const rule: FirewallRule = {
+    id: nextId('rule', rules),
+    action: command.action,
+    service: command.service,
+    source: source.value,
+    destination: destination.value,
+  };
+  const next = [...rules.slice(0, position - 1), rule, ...rules.slice(position - 1)];
+  useNetworkStore.getState().updateDevice(device.id, { firewallRules: next });
+
+  const lines = [ok(`${device.label}: rule ${position} added — ${describeRule(rule)}`)];
+  for (const side of [source, destination]) {
+    if (side.note) lines.push(muted(`  ${side.note}`));
+  }
+  // A rule that names a zone no port is in can never match
+  const zones = new Set((device.ports ?? []).map((p) => p.securityZone).filter(Boolean));
+  for (const value of [rule.source, rule.destination]) {
+    if ((value === 'trust' || value === 'untrust' || value === 'dmz') && !zones.has(value)) {
+      lines.push(muted(`  no port of ${device.label} is in zone ${value} yet: interface <n> zone ${value} on ${device.label}`));
+    }
+  }
+  return lines;
+}
+
+function runRuleRemove(position: number, deviceQuery: string | undefined, context: TerminalContext): TerminalLine[] {
+  const found = targetDevice(deviceQuery, context, `remove rule ${position} from <device>`);
+  if ('errorLines' in found) return found.errorLines;
+  const { device } = found;
+  const rules = device.firewallRules ?? [];
+  const rule = rules[position - 1];
+  if (!rule) {
+    return [
+      err(
+        rules.length === 0
+          ? `${device.label} has no rules`
+          : `${device.label} has no rule ${position} (it has ${rules.length})`
+      ),
+    ];
+  }
+  const remaining = rules.filter((entry) => entry !== rule);
+  useNetworkStore.getState().updateDevice(device.id, {
+    firewallRules: remaining.length > 0 ? remaining : undefined,
+  });
+  return [ok(`${device.label}: rule ${position} removed — ${describeRule(rule)}`)];
+}
+
 /* ── help ─────────────────────────────────────────────────────────────── */
 
-const HELP: Array<[string, string]> = [
-  ['ping <target> [from <device>]', 'test reachability (VLAN/subnet/firewall aware)'],
-  ['trace <target> [from <device>]', 'hop-by-hop path evaluation with verdicts'],
+/**
+ * The command reference: what `help` prints, and the list the in-app guide
+ * shows. One table, so the two can never disagree.
+ */
+export const COMMAND_REFERENCE: Array<[string, string]> = [
+  ['ping <target> [from <device>]', 'does it answer? request and reply'],
+  ['trace <target> [from <device>] [as web|email]', 'one way, hop by hop, with what each device did'],
+  ['browse | mail | download <target> [from <device>]', 'a whole web, email or download exchange'],
   ['show devices | vlans | connections', 'topology overview'],
   ['show interfaces [of] <device>', 'unified ports + NICs table (the standard view)'],
   ['show ip [of] <device>', 'compact addressing summary (also ipconfig/ifconfig)'],
+  ['show routes | rules [of] <device>', 'routing table, firewall rules'],
   ['show config | ports | neighbors <device>', 'device detail'],
   ['set ip|gateway|subnet|name of <device> to <value>', 'change device config'],
-  ['add vlan <id> to <device>', 'VLAN membership (remove vlan <id> from <device>)'],
-  ['connect <A> to <B>', 'create a link (disconnect <A> from <B>)'],
   ['interface <n> up|down on <device>', 'interface state (also enable|disable port <n>)'],
-  ['use <device> / exit', 'enter/leave device context (implies "from")'],
+  ['interface <n> ip <address>/<prefix> on <device>', 'address of a router/firewall port or network card'],
+  ['interface <n> access <vlan> | trunk <vlans>|all | default', 'VLAN of a switch port'],
+  ['interface <n> zone trust|untrust|dmz|none on <device>', 'security zone of a firewall port'],
+  ['add route <network>|default via <next hop> on <device>', 'static route (remove route <network> from <device>)'],
+  ['add rule allow|deny <service> from <src> to <dst> on <fw>', 'firewall rule (remove rule <n> from <fw>)'],
+  ['add vlan <id> to <device>', 'VLAN list of a device (remove vlan <id> from <device>)'],
+  ['connect <A> to <B>', 'create a link (disconnect <A> from <B>)'],
+  ['use <device> / exit', 'enter/leave device context (implies "from" and "on")'],
   ['clear, help [command]', 'screen and this reference'],
 ];
 
+/** Width of the syntax column */
+const SYNTAX_WIDTH = 58;
+
 function runHelp(topic?: string): TerminalLine[] {
   if (topic) {
-    const match = HELP.filter(([syntax]) => syntax.toLowerCase().includes(topic.toLowerCase()));
+    const match = COMMAND_REFERENCE.filter(([syntax]) => syntax.toLowerCase().includes(topic.toLowerCase()));
     if (match.length > 0) {
-      return match.map(([syntax, desc]) => line(`${syntax.padEnd(50)} ${desc}`));
+      return match.map(([syntax, desc]) => line(`${syntax.padEnd(SYNTAX_WIDTH)} ${desc}`));
     }
     return [err(`no help for "${topic}" — try "help" for the full list`)];
   }
   return [
-    heading('PixelCake terminal — NCL v0.1 (Network Command Language, vendor-neutral)'),
-    ...HELP.map(([syntax, desc]) => line(`  ${syntax.padEnd(50)} ${desc}`)),
+    heading('PixelCake terminal — NCL v0.2 (Network Command Language, vendor-neutral)'),
+    ...COMMAND_REFERENCE.map(([syntax, desc]) => line(`  ${syntax.padEnd(SYNTAX_WIDTH)} ${desc}`)),
     muted('  device names are case-insensitive and may be multi-word; IPs work anywhere a device is expected'),
   ];
 }
@@ -543,7 +1148,12 @@ export function executeCommand(rawInput: string, context: TerminalContext): Exec
     case 'ping':
       return { ...runDiagnostic('ping', command.target, command.from, context), context };
     case 'trace':
-      return { ...runDiagnostic('trace', command.target, command.from, context), context };
+      return {
+        ...runDiagnostic('trace', command.target, command.from, context, command.service),
+        context,
+      };
+    case 'flow':
+      return { ...runFlow(command.model, command.target, command.from, context), context };
     case 'show':
       return { lines: runShow(command.what, command.device, context), context };
     case 'set':
@@ -560,6 +1170,19 @@ export function executeCommand(rawInput: string, context: TerminalContext): Exec
       return { lines: runPort('enable', command.port, command.device, context), context };
     case 'port-disable':
       return { lines: runPort('disable', command.port, command.device, context), context };
+    case 'interface-set':
+      return { lines: runInterface(command.iface, command.setting, command.device, context), context };
+    case 'route-add':
+      return {
+        lines: runRoute('add', command.destination, command.nextHop, command.device, context),
+        context,
+      };
+    case 'route-remove':
+      return { lines: runRoute('remove', command.destination, undefined, command.device, context), context };
+    case 'rule-add':
+      return { lines: runRuleAdd(command, context), context };
+    case 'rule-remove':
+      return { lines: runRuleRemove(command.position, command.device, context), context };
     case 'unknown': {
       const lines = [err(`unknown command: "${command.input}"`)];
       if (command.suggestion) lines.push(muted(`  ${command.suggestion}`));

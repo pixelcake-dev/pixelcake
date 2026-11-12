@@ -13,7 +13,8 @@
  * topology (fuzzy matching, "did you mean") happens in the executor.
  */
 
-import type { Command, SetProperty, ShowTarget } from './types';
+import type { ServiceName } from '@/types';
+import type { Command, InterfaceSetting, SetProperty, ShowTarget, ZoneName } from './types';
 
 /** One lexical token: original text, lowercase form, and quoting flag. */
 interface Token {
@@ -32,6 +33,8 @@ const SHOW_TARGETS: readonly ShowTarget[] = [
   'ports',
   'neighbors',
   'ip',
+  'routes',
+  'rules',
 ];
 
 const SET_PROPERTIES: readonly SetProperty[] = ['ip', 'gateway', 'subnet', 'name'];
@@ -63,7 +66,28 @@ const KNOWN_VERBS: readonly string[] = [
   'ipconfig',
   'ifconfig',
   'interface',
+  'browse',
+  'mail',
+  'download',
+  'web',
+  'email',
+  'curl',
+  'wget',
 ];
+
+/** Names a service goes by: the three NCL names plus the instinctive ones */
+const SERVICES: Record<string, ServiceName> = {
+  ping: 'ping',
+  icmp: 'ping',
+  web: 'web',
+  http: 'web',
+  https: 'web',
+  email: 'email',
+  mail: 'email',
+  smtp: 'email',
+};
+
+const ZONES: readonly ZoneName[] = ['trust', 'untrust', 'dmz'];
 
 /** Articles dropped at the start of any device/target segment. */
 const ARTICLES: readonly string[] = ['the', 'a'];
@@ -77,7 +101,13 @@ const ARTICLES: readonly string[] = ['the', 'a'];
 const DEVICE_NOISE: readonly string[] = ['device', 'host'];
 
 const SHOW_USAGE =
-  'try: show devices | interfaces | ports | vlans | connections | config | neighbors | ip';
+  'try: show devices | interfaces | ports | vlans | connections | config | neighbors | ip | routes | rules';
+const ADD_USAGE =
+  'try: add vlan <id> [to] <device> | add route <network> via <next hop> [on <device>] | ' +
+  'add rule allow|deny <service> from <source> to <destination> [on <device>]';
+const REMOVE_USAGE =
+  'try: remove vlan <id> from <device> | remove route <network> [from <device>] | ' +
+  'remove rule <n> [from <device>]';
 const SET_USAGE = 'try: set ip|gateway|subnet|name [of] <device> [to] <value>';
 
 /** Split the input into tokens; double-quoted spans become single verbatim tokens. */
@@ -179,17 +209,55 @@ function unknown(input: string, suggestion?: string): Command {
   return suggestion !== undefined ? { kind: 'unknown', input, suggestion } : { kind: 'unknown', input };
 }
 
-/** `ping <target> [from <device>]` / `trace <target> [from <device>]` */
-function parsePingTrace(kind: 'ping' | 'trace', rest: Token[], raw: string): Command {
-  const usage = `try: ${kind} <target> [from <device>]`;
+/** `<target> [from <device>]`: the two arguments every diagnostic takes */
+function parseTargetFrom(rest: Token[]): { target: string; from?: string } | undefined {
   const fromIdx = findKeyword(rest, ['from']);
   const targetTokens = stripLeadingNoise(fromIdx === -1 ? rest : rest.slice(0, fromIdx), ['to']);
   const target = joinTokens(targetTokens);
-  if (!target) return unknown(raw, usage);
-  if (fromIdx === -1) return { kind, target };
+  if (!target) return undefined;
+  if (fromIdx === -1) return { target };
   const from = joinTokens(stripLeadingNoise(rest.slice(fromIdx + 1), []));
-  if (!from) return unknown(raw, usage);
-  return { kind, target, from };
+  if (!from) return undefined;
+  return { target, from };
+}
+
+/** `ping <target> [from <device>]` */
+function parsePing(rest: Token[], raw: string): Command {
+  const args = parseTargetFrom(rest);
+  return args ? { kind: 'ping', ...args } : unknown(raw, 'try: ping <target> [from <device>]');
+}
+
+/** `trace <target> [from <device>] [as ping|web|email]` */
+function parseTrace(rest: Token[], raw: string): Command {
+  const usage = 'try: trace <target> [from <device>] [as ping|web|email]';
+  let tokens = rest;
+  let service: ServiceName | undefined;
+
+  // `as <service>` closes the command: only the last two tokens can be it
+  const asToken = rest[rest.length - 2];
+  if (asToken !== undefined && !asToken.quoted && asToken.lower === 'as') {
+    const name = rest[rest.length - 1];
+    service = SERVICES[name.lower];
+    if (service === undefined) {
+      return unknown(raw, `unknown service "${name.text}" — ${usage}`);
+    }
+    tokens = rest.slice(0, -2);
+  }
+
+  const args = parseTargetFrom(tokens);
+  if (!args) return unknown(raw, usage);
+  return service !== undefined ? { kind: 'trace', ...args, service } : { kind: 'trace', ...args };
+}
+
+/** `browse|mail|download <target> [from <device>]`: a whole exchange, request and answer */
+function parseFlow(
+  model: 'web' | 'email' | 'download',
+  verb: string,
+  rest: Token[],
+  raw: string
+): Command {
+  const args = parseTargetFrom(rest);
+  return args ? { kind: 'flow', model, ...args } : unknown(raw, `try: ${verb} <target> [from <device>]`);
 }
 
 /** `show devices|interfaces|ports|vlans|connections|config|neighbors|ip [of] [device...]` */
@@ -269,26 +337,247 @@ function parsePort(kind: 'port-enable' | 'port-disable', rest: Token[], raw: str
   return device ? { kind, port, device } : { kind, port };
 }
 
+/** A VLAN id as typed, or undefined when it is not one (1-4094) */
+function vlanId(text: string): number | undefined {
+  if (!/^\d+$/.test(text)) return undefined;
+  const id = parseInt(text, 10);
+  return id >= 1 && id <= 4094 ? id : undefined;
+}
+
 /**
- * `interface <n> up|down [on] <device...>` — the CANONICAL NCL form for
- * interface state; maps onto the same port-enable/port-disable commands as
- * the accepted `enable|disable port <n> on <device>` variant.
+ * `interface <id> <setting> [on] <device...>` — the CANONICAL NCL form for
+ * everything that belongs to one interface. `<id>` is a port number or the
+ * name of a network card (eth0). Settings:
+ *
+ *   up | down                       state (a port number maps onto the same
+ *                                   port-enable/port-disable commands as the
+ *                                   accepted `enable|disable port <n>` variant)
+ *   ip <address>[/<prefix>] | none  address of a router/firewall port or NIC
+ *   gateway <address> | none        default gateway of a NIC
+ *   access <vlan>                   switch port: access port in one VLAN
+ *   trunk <vlan,vlan…> | all        switch port: trunk
+ *   default                         switch port: no VLAN of its own
+ *   zone trust|untrust|dmz|none     firewall port: security zone
  */
 function parseInterface(rest: Token[], raw: string): Command {
   const usage = 'try: interface <n> up|down [on] <device>';
+  const more =
+    'also: ip <address>[/<prefix>]|none, gateway <address>|none, access <vlan>, ' +
+    'trunk <vlans>|all, default, zone trust|untrust|dmz|none';
+  const idToken = rest[0];
+  if (idToken === undefined) return unknown(raw, `${usage} — ${more}`);
+  const iface = idToken.text;
+  const isNumber = /^\d+$/.test(iface);
+  const word = rest[1];
+  if (word === undefined || word.quoted) return unknown(raw, `missing up|down — ${usage} — ${more}`);
+
+  const deviceAfter = (count: number) => joinTokens(stripLeadingNoise(rest.slice(count), ['on', 'of']));
+  const withDevice = (setting: InterfaceSetting, count: number): Command => {
+    const device = deviceAfter(count);
+    return device
+      ? { kind: 'interface-set', iface, setting, device }
+      : { kind: 'interface-set', iface, setting };
+  };
+  const value = rest[2];
+  const isNone = (token: Token | undefined) =>
+    token !== undefined && !token.quoted && (token.lower === 'none' || token.lower === 'clear');
+
+  switch (word.lower) {
+    case 'up':
+    case 'down': {
+      const up = word.lower === 'up';
+      if (!isNumber) return withDevice({ what: 'state', up }, 2);
+      const port = parseInt(iface, 10);
+      const kind = up ? 'port-enable' : 'port-disable';
+      const device = deviceAfter(2);
+      return device ? { kind, port, device } : { kind, port };
+    }
+    case 'ip':
+    case 'address': {
+      const hint = 'try: interface <n> ip <address>[/<prefix>] [on] <device> — or "ip none" to clear it';
+      if (value === undefined) return unknown(raw, hint);
+      if (isNone(value)) return withDevice({ what: 'ip', address: null }, 3);
+      const [address, length, ...extra] = value.text.split('/');
+      if (extra.length > 0) return unknown(raw, hint);
+      if (length === undefined) return withDevice({ what: 'ip', address }, 3);
+      if (!/^\d{1,2}$/.test(length) || parseInt(length, 10) > 32) {
+        return unknown(raw, `"/${length}" is not a prefix length (0-32) — ${hint}`);
+      }
+      return withDevice({ what: 'ip', address, prefix: parseInt(length, 10) }, 3);
+    }
+    case 'gateway': {
+      if (value === undefined) {
+        return unknown(raw, 'try: interface <name> gateway <address> [on] <device> — or "gateway none"');
+      }
+      return withDevice({ what: 'gateway', address: isNone(value) ? null : value.text }, 3);
+    }
+    case 'access': {
+      const hint = 'try: interface <n> access <vlan> [on] <device>';
+      if (value === undefined) return unknown(raw, hint);
+      const vlan = vlanId(value.text);
+      if (vlan === undefined) {
+        return unknown(raw, `VLAN id must be a number from 1 to 4094, got "${value.text}" — ${hint}`);
+      }
+      return withDevice({ what: 'access', vlan }, 3);
+    }
+    case 'trunk': {
+      const hint = 'try: interface <n> trunk <vlan,vlan,…>|all [on] <device>';
+      if (value !== undefined && !value.quoted && value.lower === 'all') {
+        return withDevice({ what: 'trunk', vlans: [] }, 3);
+      }
+      // The list may be typed "10,20,30" or "10, 20, 30": take every token made of digits and commas
+      let count = 2;
+      const vlans: number[] = [];
+      while (count < rest.length && !rest[count].quoted && /^[\d,]+$/.test(rest[count].text)) {
+        for (const part of rest[count].text.split(',').filter(Boolean)) {
+          const vlan = vlanId(part);
+          if (vlan === undefined) {
+            return unknown(raw, `VLAN id must be a number from 1 to 4094, got "${part}" — ${hint}`);
+          }
+          if (!vlans.includes(vlan)) vlans.push(vlan);
+        }
+        count++;
+      }
+      // No list at all: a trunk for every VLAN
+      return withDevice({ what: 'trunk', vlans }, count);
+    }
+    case 'default':
+      return withDevice({ what: 'no-vlan' }, 2);
+    case 'zone': {
+      const hint = 'try: interface <n> zone trust|untrust|dmz|none [on] <device>';
+      if (value === undefined) return unknown(raw, hint);
+      if (isNone(value)) return withDevice({ what: 'zone', zone: null }, 3);
+      const zone = ZONES.find(z => z === value.lower);
+      if (zone === undefined) return unknown(raw, `unknown zone "${value.text}" — ${hint}`);
+      return withDevice({ what: 'zone', zone }, 3);
+    }
+    default:
+      return unknown(raw, `missing up|down — ${usage} — ${more}`);
+  }
+}
+
+/** `add route <network>|default via <next hop> [on <device...>]` */
+function parseRouteAdd(rest: Token[], raw: string): Command {
+  const usage = 'try: add route <network>|default via <next hop> [on <device>]';
+  const args = stripLeadingNoise(rest, ['to']);
+  const viaIdx = findKeyword(args, ['via']);
+  const hop = args[viaIdx + 1];
+  if (viaIdx !== 1 || hop === undefined) return unknown(raw, usage);
+  const destination = args[0].text;
+  const nextHop = hop.text;
+  const device = joinTokens(stripLeadingNoise(args.slice(viaIdx + 2), ['on', 'to', 'of']));
+  return device
+    ? { kind: 'route-add', destination, nextHop, device }
+    : { kind: 'route-add', destination, nextHop };
+}
+
+/** `remove route <network>|default [from|on <device...>]` */
+function parseRouteRemove(rest: Token[], raw: string): Command {
+  const args = stripLeadingNoise(rest, ['to']);
+  if (args.length === 0) return unknown(raw, 'try: remove route <network>|default [from <device>]');
+  const destination = args[0].text;
+  const device = joinTokens(stripLeadingNoise(args.slice(1), ['from', 'on', 'of']));
+  return device ? { kind: 'route-remove', destination, device } : { kind: 'route-remove', destination };
+}
+
+/**
+ * `add rule [<position>] allow|deny [<service>|any] from <source> to
+ * <destination> [on <device...>]` — the service may be left out (any).
+ */
+function parseRuleAdd(rest: Token[], raw: string): Command {
+  const usage =
+    'try: add rule [<position>] allow|deny <service>|any from <source> to <destination> [on <device>]';
+  let index = 0;
+  let position: number | undefined;
+  const first = rest[0];
+  if (first !== undefined && /^\d+$/.test(first.text)) {
+    position = parseInt(first.text, 10);
+    if (position < 1) return unknown(raw, `rule positions start at 1 — ${usage}`);
+    index = 1;
+  }
+
+  const actionToken = rest[index];
+  const actions: Record<string, 'allow' | 'deny'> = {
+    allow: 'allow',
+    permit: 'allow',
+    deny: 'deny',
+    block: 'deny',
+  };
+  const action = actionToken !== undefined && !actionToken.quoted ? actions[actionToken.lower] : undefined;
+  if (action === undefined) return unknown(raw, `a rule starts with allow or deny — ${usage}`);
+  index++;
+
+  // Optional service: straight to `from` means any
+  let service: ServiceName | 'any' = 'any';
+  const serviceToken = rest[index];
+  if (serviceToken !== undefined && (serviceToken.quoted || serviceToken.lower !== 'from')) {
+    if (serviceToken.lower === 'any' || serviceToken.lower === 'all') {
+      service = 'any';
+    } else {
+      const named = SERVICES[serviceToken.lower];
+      if (named === undefined) {
+        return unknown(raw, `unknown service "${serviceToken.text}" (ping, web, email or any) — ${usage}`);
+      }
+      service = named;
+    }
+    index++;
+  }
+
+  const tail = rest.slice(index);
+  if (tail.length === 0 || tail[0].quoted || tail[0].lower !== 'from') return unknown(raw, usage);
+  const toIdx = findKeyword(tail, ['to']);
+  if (toIdx === -1) return unknown(raw, usage);
+  const source = joinTokens(tail.slice(1, toIdx));
+
+  // The LAST `on` splits the destination from the device the rule goes on
+  const afterTo = tail.slice(toIdx + 1);
+  let onIdx = -1;
+  for (let i = afterTo.length - 1; i >= 0; i--) {
+    if (!afterTo[i].quoted && afterTo[i].lower === 'on') {
+      onIdx = i;
+      break;
+    }
+  }
+  const destination = joinTokens(onIdx === -1 ? afterTo : afterTo.slice(0, onIdx));
+  const device = onIdx === -1 ? '' : joinTokens(stripLeadingNoise(afterTo.slice(onIdx + 1), []));
+  if (!source || !destination || (onIdx !== -1 && !device)) return unknown(raw, usage);
+
+  const command: Extract<Command, { kind: 'rule-add' }> = {
+    kind: 'rule-add',
+    action,
+    service,
+    source,
+    destination,
+  };
+  if (position !== undefined) command.position = position;
+  if (device) command.device = device;
+  return command;
+}
+
+/** `remove rule <n> [from|on <device...>]` */
+function parseRuleRemove(rest: Token[], raw: string): Command {
+  const usage = 'try: remove rule <n> [from <device>]';
   const numberToken = rest[0];
   if (numberToken === undefined) return unknown(raw, usage);
-  if (!/^\d+$/.test(numberToken.text)) {
-    return unknown(raw, `interface number must be a number, got "${numberToken.text}" — ${usage}`);
+  if (!/^\d+$/.test(numberToken.text) || parseInt(numberToken.text, 10) < 1) {
+    return unknown(raw, `rule number must be a number, got "${numberToken.text}" — ${usage}`);
   }
-  const port = parseInt(numberToken.text, 10);
-  const direction = rest[1];
-  if (direction === undefined || direction.quoted || (direction.lower !== 'up' && direction.lower !== 'down')) {
-    return unknown(raw, `missing up|down — ${usage}`);
+  const position = parseInt(numberToken.text, 10);
+  const device = joinTokens(stripLeadingNoise(rest.slice(1), ['from', 'on', 'of']));
+  return device ? { kind: 'rule-remove', position, device } : { kind: 'rule-remove', position };
+}
+
+/** `add vlan|route|rule …` / `remove|delete vlan|route|rule …` */
+function parseAddRemove(action: 'add' | 'remove', rest: Token[], raw: string): Command {
+  const noun = rest[0] !== undefined && !rest[0].quoted ? rest[0].lower : '';
+  if (noun === 'route') {
+    return action === 'add' ? parseRouteAdd(rest.slice(1), raw) : parseRouteRemove(rest.slice(1), raw);
   }
-  const kind = direction.lower === 'up' ? 'port-enable' : 'port-disable';
-  const device = joinTokens(stripLeadingNoise(rest.slice(2), ['on', 'of']));
-  return device ? { kind, port, device } : { kind, port };
+  if (noun === 'rule') {
+    return action === 'add' ? parseRuleAdd(rest.slice(1), raw) : parseRuleRemove(rest.slice(1), raw);
+  }
+  if (noun === 'vlan') return parseVlan(action === 'add' ? 'vlan-add' : 'vlan-remove', rest, raw);
+  return unknown(raw, action === 'add' ? ADD_USAGE : REMOVE_USAGE);
 }
 
 /** `connect <A...> to <B...>` / `disconnect <A...> from|to <B...>` */
@@ -333,11 +622,21 @@ export function parse(input: string): Command {
 
   switch (verb) {
     case 'ping':
-      return parsePingTrace('ping', rest, raw);
+      return parsePing(rest, raw);
     case 'trace':
     case 'traceroute':
     case 'tracert':
-      return parsePingTrace('trace', rest, raw);
+      return parseTrace(rest, raw);
+    case 'browse':
+    case 'web':
+    case 'curl':
+      return parseFlow('web', 'browse', rest, raw);
+    case 'mail':
+    case 'email':
+      return parseFlow('email', 'mail', rest, raw);
+    case 'download':
+    case 'wget':
+      return parseFlow('download', 'download', rest, raw);
     case 'show':
     case 'sh':
       return parseShow(rest, raw);
@@ -354,10 +653,10 @@ export function parse(input: string): Command {
     case 'set':
       return parseSet(rest, raw);
     case 'add':
-      return parseVlan('vlan-add', rest, raw);
+      return parseAddRemove('add', rest, raw);
     case 'remove':
     case 'delete':
-      return parseVlan('vlan-remove', rest, raw);
+      return parseAddRemove('remove', rest, raw);
     case 'connect':
       return parseLink('connect', rest, raw);
     case 'disconnect':
