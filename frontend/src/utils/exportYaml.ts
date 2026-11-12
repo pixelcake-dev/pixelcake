@@ -4,7 +4,14 @@
  * Uses manual serialization — no external dependencies
  */
 
-import type { NetworkDevice, NetworkConnection, NetworkInterfaceCard, Port } from '@/types';
+import type {
+  FirewallRule,
+  NetworkDevice,
+  NetworkConnection,
+  NetworkInterfaceCard,
+  Port,
+  StaticRoute,
+} from '@/types';
 import { boundInterface } from '@/engine/interfaces';
 import type { ConnectionEnd } from '@/engine/interfaces';
 
@@ -65,6 +72,27 @@ function serializeNic(nic: NetworkInterfaceCard, level: number): string[] {
   return lines;
 }
 
+/** Serialize a static route to YAML lines */
+function serializeRoute(route: StaticRoute, level: number): string[] {
+  const lines: string[] = [];
+  lines.push(`${indent(level)}- destination: ${yamlValue(route.destination)}`);
+  lines.push(`${indent(level)}  via: ${yamlValue(route.nextHop)}`);
+  if (route.description) lines.push(`${indent(level)}  description: ${yamlValue(route.description)}`);
+  return lines;
+}
+
+/** Serialize a firewall rule to YAML lines (rules are written in order: the order is the policy) */
+function serializeRule(rule: FirewallRule, level: number): string[] {
+  const lines: string[] = [];
+  lines.push(`${indent(level)}- action: ${yamlValue(rule.action)}`);
+  lines.push(`${indent(level)}  service: ${yamlValue(rule.service)}`);
+  lines.push(`${indent(level)}  from: ${yamlValue(rule.source)}`);
+  lines.push(`${indent(level)}  to: ${yamlValue(rule.destination)}`);
+  if (rule.enabled === false) lines.push(`${indent(level)}  enabled: false`);
+  if (rule.description) lines.push(`${indent(level)}  description: ${yamlValue(rule.description)}`);
+  return lines;
+}
+
 /** Serialize a device to YAML lines */
 function serializeDevice(device: NetworkDevice, level: number): string[] {
   const lines: string[] = [];
@@ -105,6 +133,22 @@ function serializeDevice(device: NetworkDevice, level: number): string[] {
     lines.push(`${indent(level)}  nics:`);
     for (const nic of device.nics) {
       lines.push(...serializeNic(nic, level + 2));
+    }
+  }
+
+  // Static routes
+  if (device.routes && device.routes.length > 0) {
+    lines.push(`${indent(level)}  routes:`);
+    for (const route of device.routes) {
+      lines.push(...serializeRoute(route, level + 2));
+    }
+  }
+
+  // Firewall rules, first to last
+  if (device.firewallRules && device.firewallRules.length > 0) {
+    lines.push(`${indent(level)}  firewall_rules:`);
+    for (const rule of device.firewallRules) {
+      lines.push(...serializeRule(rule, level + 2));
     }
   }
 

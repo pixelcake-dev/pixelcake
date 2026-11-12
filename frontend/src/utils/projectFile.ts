@@ -117,7 +117,11 @@ const DEVICE_KEYS = [
   'portCount',
   'ports',
   'nics',
+  'routes',
+  'firewallRules',
 ];
+const ROUTE_KEYS = ['id', 'destination', 'nextHop', 'description'];
+const RULE_KEYS = ['id', 'action', 'service', 'source', 'destination', 'enabled', 'description'];
 const PORT_KEYS = [
   'id',
   'name',
@@ -243,6 +247,8 @@ const DEVICE_NESTED: Record<string, Reorder> = {
   stp: one(['enabled', 'mode', 'priority']),
   ports: each(PORT_KEYS),
   nics: each(NIC_KEYS),
+  routes: each(ROUTE_KEYS),
+  firewallRules: each(RULE_KEYS),
 };
 
 /**
@@ -328,6 +334,25 @@ function interfaceList(value: unknown, hasId: (id: unknown) => boolean): unknown
   return value.filter(entry => isRecord(entry) && hasId(entry.id));
 }
 
+/** A static route the engine can read: an id, a destination and a next hop, all text */
+function isRoute(value: unknown): boolean {
+  return (
+    isRecord(value) && isText(value.id) && isText(value.destination) && isText(value.nextHop)
+  );
+}
+
+/** A firewall rule the engine can read */
+function isRule(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    isText(value.id) &&
+    (value.action === 'allow' || value.action === 'deny') &&
+    ['any', 'ping', 'web', 'email'].includes(value.service as string) &&
+    isText(value.source) &&
+    isText(value.destination)
+  );
+}
+
 function parseDevices(list: unknown[], where: string, warnings: string[]): NetworkDevice[] {
   const devices: NetworkDevice[] = [];
   const seen = new Set<string>();
@@ -367,6 +392,19 @@ function parseDevices(list: unknown[], where: string, warnings: string[]): Netwo
       const kept = interfaceList(given, hasId);
       if (kept && kept.length === (given as unknown[]).length) continue;
       if (kept) device[key] = kept;
+      else delete device[key];
+      fixed = true;
+    }
+    // Routes and firewall rules: an entry the engine could not read is dropped
+    for (const [key, isComplete] of [
+      ['routes', isRoute],
+      ['firewallRules', isRule],
+    ] as const) {
+      const given = device[key];
+      if (given === undefined) continue;
+      const kept = Array.isArray(given) ? given.filter(isComplete) : [];
+      if (Array.isArray(given) && kept.length === given.length) continue;
+      if (kept.length > 0) device[key] = kept;
       else delete device[key];
       fixed = true;
     }

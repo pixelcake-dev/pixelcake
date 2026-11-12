@@ -4,7 +4,14 @@
  */
 
 import YAML from 'yaml';
-import type { NetworkDevice, NetworkConnection, Port, NetworkInterfaceCard } from '@/types';
+import type {
+  FirewallRule,
+  NetworkDevice,
+  NetworkConnection,
+  Port,
+  NetworkInterfaceCard,
+  StaticRoute,
+} from '@/types';
 import type { ConnectionBinding, ConnectionEnd } from '@/engine/interfaces';
 
 export interface ImportResult {
@@ -65,6 +72,54 @@ function parseNic(data: Record<string, unknown>, index: number): NetworkInterfac
     mac: typeof data.mac === 'string' ? data.mac : undefined,
     description: typeof data.description === 'string' ? data.description : undefined,
   };
+}
+
+/**
+ * Static routes of a device (`destination` + `via`). An entry without both is
+ * left out with a warning.
+ */
+function parseRoutes(list: unknown[], deviceName: string, warnings: string[]): StaticRoute[] {
+  const routes: StaticRoute[] = [];
+  list.forEach((raw, index) => {
+    const data = raw !== null && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+    // String(): YAML reads a bare number where an address was mistyped
+    const destination = data.destination === undefined ? '' : String(data.destination);
+    const nextHop = data.via === undefined ? '' : String(data.via);
+    if (!destination || !nextHop) {
+      warnings.push(`${deviceName}: rotta ${index + 1} senza destinazione o prossimo salto, ignorata`);
+      return;
+    }
+    const route: StaticRoute = { id: `route-${routes.length + 1}`, destination, nextHop };
+    if (typeof data.description === 'string') route.description = data.description;
+    routes.push(route);
+  });
+  return routes;
+}
+
+const RULE_SERVICES: readonly FirewallRule['service'][] = ['any', 'ping', 'web', 'email'];
+
+/**
+ * Firewall rules of a device, in file order. A rule that is not complete is
+ * left out with a warning: the order of the others is kept.
+ */
+function parseRules(list: unknown[], deviceName: string, warnings: string[]): FirewallRule[] {
+  const rules: FirewallRule[] = [];
+  list.forEach((raw, index) => {
+    const data = raw !== null && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+    const action = data.action;
+    const service = RULE_SERVICES.find((name) => name === (data.service ?? 'any'));
+    const source = data.from === undefined ? '' : String(data.from);
+    const destination = data.to === undefined ? '' : String(data.to);
+    if ((action !== 'allow' && action !== 'deny') || !service || !source || !destination) {
+      warnings.push(`${deviceName}: regola ${index + 1} incompleta o non valida, ignorata`);
+      return;
+    }
+    const rule: FirewallRule = { id: `rule-${rules.length + 1}`, action, service, source, destination };
+    if (data.enabled === false) rule.enabled = false;
+    if (typeof data.description === 'string') rule.description = data.description;
+    rules.push(rule);
+  });
+  return rules;
 }
 
 /**
@@ -240,6 +295,16 @@ export function parseYamlTopology(content: string): ImportResult {
       device.nics = d.nics
         .filter((n): n is Record<string, unknown> => n !== null && typeof n === 'object')
         .map((n, idx) => parseNic(n, idx));
+    }
+
+    // Static routes and firewall rules
+    if (Array.isArray(d.routes)) {
+      const routes = parseRoutes(d.routes, name, warnings);
+      if (routes.length > 0) device.routes = routes;
+    }
+    if (Array.isArray(d.firewall_rules)) {
+      const rules = parseRules(d.firewall_rules, name, warnings);
+      if (rules.length > 0) device.firewallRules = rules;
     }
 
     devices.push(device);
