@@ -25,8 +25,16 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 - LocalStorage key: `pixelcake-project-v1`
 
 ### simulationStore (`frontend/src/store/simulationStore.ts`)
-- Packet simulation state (isRunning, path, currentStep)
-- Flow model selection (ping, email, web, download)
+- The packet travelling on the canvas. Not persisted
+- `startSimulation(path, flowModel, links?)` starts a run and returns its `runId`; a new start replaces the run in progress. `path` is the devices to go through, `links` the cable of each stretch as the engine took it (two devices can be joined by more than one cable)
+- While it runs: `currentHop`, `activeDeviceId` (the device the packet is stopping on), `currentConnectionId` with its duration and direction
+- `speed` (0.5, 1, 2): set from the presentation bar
+
+### presentationStore (`frontend/src/store/presentationStore.ts`)
+- Presentation mode: `active`, the question (`sourceId`, `targetId`, `flow`), the simulated failures (`failedDevices`, `failedConnections`), the small menu open on the canvas, the way of the answer for the canvas to mark (`route`), whether the panel is open
+- **It never changes the drawing.** A failure is an id in this store, handed to the engine next to the topology. Nothing here is persisted; `exit()` forgets question and failures
+- `enter()` refuses an empty canvas and puts the building tools away (selection, context menu, running packet)
+- `utils/liveTopology.ts` builds the topology every question is asked of (canvas + failures while presenting): the simulation panel, the terminal and the presentation all read it there
 
 ### uiStore (`frontend/src/store/uiStore.ts`)
 - UI state, modal controls (including `newProject`), context menus, the tab the guide opens on (`helpTab`, `openHelp(tab)`)
@@ -47,7 +55,15 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 - **NetworkDevice** (`frontend/src/components/Canvas/NetworkDevice.tsx`) - Custom node component
 - **CustomEdge** (`frontend/src/components/Canvas/CustomEdge.tsx`) - Custom edge with connection type styling
 - **ParticleEdge** (`frontend/src/components/Canvas/ParticleEdge.tsx`) - Particle flow animation wrapper with CSS offset-path
-- **PacketAnimation** (`frontend/src/components/Canvas/PacketAnimation.tsx`) - Geometric handle calculation for animations
+- **PacketAnimation** (`frontend/src/components/Canvas/PacketAnimation.tsx`) - Moves the packet of a simulation cable by cable and keeps simulationStore up to date; CustomEdge draws it. One run at a time: a new start, a stop or an unmount cancels the run in progress. Timing and the choice of the cable are in `utils/packetTiming.ts`
+
+While presenting, NetworkCanvas makes the drawing read-only (nothing is selected, moved, joined, deleted or pasted; dragging pans), a click on a device or a cable opens the presentation menu, the drawing is fitted to the window, and the view saved with the drawing is not touched. NetworkDevice and CustomEdge mark the ends of the question, a broken device, a cut cable and the way of the answer.
+
+### Presentation (`frontend/src/components/Presentation/`)
+- **PresentationBar** - Takes the place of the menu bar: project and canvases, pace of the packet, terminal, full screen, exit (also Esc)
+- **PresentationPanel** - Question, answer, simulated failures with their effect on the rest of the network, and the way hop by hop. `usePresentationAnswer` works all of it out from the drawing, the question and the failures, marks the way on the canvas and sets the packet off at every change
+- **PresentationMenu** - The menu a click on a device or a cable opens: start here, arrive here, break, repair
+- `utils/presentation.ts` - Pure: the engine's answer turned into what is shown (Italian sentences, rows tied to the animation, exchanges grouped by device). The reasons and notes of the engine are shown as the engine wrote them
 
 ### WelcomeScreen (`frontend/src/components/WelcomeScreen.tsx`)
 - Excalidraw-style minimalist transparent overlay on canvas (NOT popup)
@@ -138,7 +154,19 @@ Modules:
   the Internet symbol, NAT) is reported as a note, never as a silent success.
 - `flows.ts` — request/reply plans per flow model (ping, web, download, email)
   and the service each leg is to a firewall. A reply leg is the return traffic
-  of an allowed flow, sent back to the address the request came from.
+  of an allowed flow, sent back to the address the request came from. The
+  result carries the devices to animate and the cable of each stretch
+  (`animationPath`, `animationLinks`).
+- `failures.ts` — "what if this breaks": a topology can carry `failures`
+  (devices that are down, cables that are cut). `l2.ts` finds nothing
+  travelling through them and goes round when the drawing offers another way;
+  `trace.ts` withdraws a route whose interface has no working cable left
+  (`deadInterfaces`) and takes the next one for that destination, with a note.
+  A network the device is attached to is not looked for elsewhere: the broken
+  link is the answer.
+- `impact.ts` — every exchange between two end devices evaluated with and
+  without the failures, and compared: broken, rerouted (other cables),
+  unchanged. Exchanges that did not work to begin with are not counted.
 - `interfaces.ts` — every link end is attached to one interface of its device
   (a port or a NIC). Owns the binding rules: first free interface on creation,
   migration of old unbound data on load (`normalizeBindings`), cleanup when a

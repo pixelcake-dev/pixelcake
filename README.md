@@ -14,10 +14,13 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 - **Configure.** Addresses on every router port and network card, static routes, VLANs port by port (access and trunk), firewall zones and ordered rules.
 - **Test.** Ping, web, download and email flows are followed hop by hop and animated on the drawing. When a flow fails, the packet stops at the device that drops it and the reason names the port, the route or the rule.
 - **Type.** A built-in terminal with a small vendor-neutral command language: `ping`, `trace`, `browse`, `show routes`, `add route`, `add rule`, `interface 3 access 10` and more. Commands that change the network edit the same drawing you see.
+- **Present.** A presentation mode puts the editing tools away. Click two devices to ask a question, watch the packet go, read the answer hop by hop. Then break something, a device or a cable, and see at once whether the traffic finds another way and which exchanges between end devices stop working. Nothing in the drawing changes.
 - **Save.** A project, with all its boards, is kept in the browser while you work and saved as a single `.pixelcake.json` file that you can open again or pass on. There is no server and no account.
 - **Export.** The topology as YAML, which can be loaded back. A Terraform-style export exists only as a sketch.
 
 The interface is in Italian. The terminal language is English.
+
+Three sample networks are bundled (Aggiungi → Topologie): a small office with two subnets and a router; a site with VLANs, a DMZ and a firewall; and two sites joined by a main line and a backup line, made for trying failures.
 
 ### The terminal
 
@@ -74,6 +77,19 @@ The engine carries a packet the way the network would. At every device that hand
 
 A routing loop, an address used twice, a next hop nobody has, a trunk towards a device that expects no tag: each stops the packet with its own explanation.
 
+### What happens if this breaks
+
+![Presentation mode on the sample with two sites: the main line between the two routers is cut, the ping from the branch still reaches the file server through the backup router, and the panel counts twelve exchanges that take another way and none that stop](docs/presentation.png)
+
+In presentation mode a click on a device or on a cable takes it as broken. The drawing is not edited: the failure is a list handed to the engine next to the network, and it is gone when the presentation ends. The question on screen is asked again at once.
+
+- A device that is down sends and takes nothing; a cable that is cut carries nothing. The reason of a failed answer names them: `SW-Core is down`, `link R-Sede–R-Filiale is down`.
+- Between switches the engine takes the shortest way that still works, so a ring or a second cable carries the traffic.
+- A router, or a host with two network cards, stops using a route when the interface it leaves by has no working cable left, and takes the next route for that destination: a backup route written after the main one. The answer says so in a note.
+- The panel then counts, over every pair of end devices: how many exchanges stop, how many take another way, how many do not notice. A click on one of them asks that question.
+
+The terminal sees the same failures while the presentation lasts, so a `ping` typed there agrees with the picture.
+
 Every link is attached to a port or a network card at both ends, chosen automatically when you draw it and editable afterwards.
 
 When the engine cannot verify something, it says so in a note instead of answering "it works": a router whose ports have no address (it still lets traffic through, so drawings made before routing existed keep working), the Internet symbol, NAT. The engine is plain TypeScript with no UI dependencies, in [frontend/src/engine](frontend/src/engine). The same network always gives the same answer.
@@ -82,6 +98,8 @@ When the engine cannot verify something, it says so in a note instead of answeri
 
 - **It is not a packet-level simulator.** There is no ARP, MAC learning, DHCP, DNS or dynamic routing. Ping times are derived from the number of hops.
 - **Routes are static.** A router knows the networks it is attached to and the routes you wrote. Router sub-interfaces are not modelled: routing between VLANs needs a router port in each.
+- **A backup route takes over only when the line is seen to be down.** That is, when the interface of the main route has no working cable left. A next hop that dies behind a switch is not noticed, as with a plain static route on real hardware, and the traffic is lost there. A host has one gateway per network card: there is no gateway redundancy protocol.
+- **Simulated failures are not saved.** They belong to the presentation and are gone when it ends.
 - **Firewall rules know three services**: ping, web and email. There are no port numbers, and traffic addressed to the firewall itself is not filtered.
 - **Spanning tree is not simulated.** A drawing with redundant links is walked without loops, but no port is blocked.
 - **NAT is not applied.** It can be ticked on a router port, and a trace that crosses that port says addresses were not translated.
@@ -111,7 +129,7 @@ The app's icons are bundled with it. Only an icon name typed by hand in a custom
 
 ```bash
 cd frontend
-pnpm test:run      # 999 tests: engine, terminal, project files, import/export, screens
+pnpm test:run      # 1252 tests: engine, terminal, project files, import/export, screens
 pnpm type-check
 pnpm lint
 pnpm build
@@ -121,7 +139,7 @@ GitHub Actions runs the same four steps on every push.
 
 ```
 frontend/src/
-  engine/       routing, VLANs, firewall and flow models (pure TypeScript)
+  engine/       routing, VLANs, firewall, flow models, failures (pure TypeScript)
   terminal/     command parser and executor
   components/   canvas, panels, windows
   store/        application state (Zustand, persisted in the browser)
@@ -139,10 +157,9 @@ Today the first two exist in a basic form and the third is only a sketch. The st
 
 ## What is next
 
-1. A presentation mode: the drawing without the editing tools, to explain a network to someone, with "what stops working if this goes down".
-2. Export the drawing as an image.
-3. Undo and redo.
-4. In the engine: NAT, DHCP and DNS, then spanning tree.
+1. Export the drawing as an image.
+2. Undo and redo.
+3. In the engine: NAT, DHCP and DNS, then spanning tree.
 
 ## License
 

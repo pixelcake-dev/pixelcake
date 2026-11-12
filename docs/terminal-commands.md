@@ -61,8 +61,8 @@ iface-setting ::= "up" | "down"
                 | "default"                            (* switch ports: no VLAN of its own *)
                 | "zone" ("trust" | "untrust" | "dmz" | "none")   (* firewall ports *)
 
-route-cmd     ::= "add" "route" network "via" next-hop [["on"] device]
-                | "remove" "route" network [("from" | "on") device]
+route-cmd     ::= "add" ["backup"] "route" network "via" next-hop [["on"] device]
+                | "remove" "route" network ["via" next-hop] [("from" | "on") device]
 network       ::= ipv4 "/" prefix | "default"
 next-hop      ::= ipv4 | device
 
@@ -130,6 +130,37 @@ Verdicts: `error` (an endpoint does not exist or has no usable address),
 `unreachable` (no cables join the two devices), `blocked` (dropped on the
 way: the reason names the device, the port, the route or the rule),
 `success`.
+
+#### Simulated failures
+
+In presentation mode a device or a cable can be taken as broken ("what
+happens if this goes down?"). The drawing is not changed, and the commands of
+the terminal see the same failures for as long as the presentation lasts.
+
+- A device that is down sends and takes nothing; a cable that is cut carries
+  nothing: `SW-Core is down`, `link R-Sede–R-Filiale is down`.
+- Delivery goes round them when the drawing offers another way (a ring of
+  switches, a second cable between two devices).
+- A route whose interface has no working cable left is withdrawn, as a device
+  does when it loses the carrier, and the next route for that destination is
+  taken. Write a backup route after the main one (in the Inspector: a second
+  row for the same network):
+
+  ```text
+  pixelcake> add route 192.168.2.0/24 via 10.0.0.2 on R-Sede
+  pixelcake> add backup route 192.168.2.0/24 via 10.0.1.2 on R-Sede
+  R-Sede: backup route to 192.168.2.0/24 via 10.0.1.2 added
+    used when the interface of the route via 10.0.0.2 has no working link
+  ```
+
+  The trace then carries the note `R-Sede: the route 192.168.2.0/24 via
+  10.0.0.2 is unusable (link R-Sede–R-Filiale is down), the route
+  192.168.2.0/24 via 10.0.1.2 is used instead`. The same holds for two
+  default routes, and for a host with a gateway on each of two network cards.
+- A network the device itself is attached to is not looked for elsewhere: the
+  broken link is the answer.
+- A next hop that dies behind a switch does not take the interface down: the
+  route stays and the traffic is lost there, as with a plain static route.
 
 #### VLANs
 
@@ -209,7 +240,8 @@ Aliases: `sh` → `show` · `ls`, `list` → `show devices` ·
 | `interface <n> default [on] <switch>` | The port has no VLAN of its own any more |
 | `interface <n> zone trust\|untrust\|dmz\|none [on] <firewall>` | Security zone of a firewall port |
 | `add route <network>\|default via <next hop> [on] <device>` | Static route on a router or firewall. The network is written `192.168.30.0/24`; the next hop is an address, or a device with an address on a network the two share. Adding a route to a network that has one replaces its next hop |
-| `remove route <network>\|default [from] <device>` | |
+| `add backup route <network>\|default via <next hop> [on] <device>` | A second route to a network that has one. It is used when the interface of the first has no working link (a port switched off, or a failure simulated in presentation mode). `show routes` marks it `backup` |
+| `remove route <network>\|default [via <next hop>] [from] <device>` | Without `via`, every route to that network; with it, the one through that next hop |
 | `add rule [<position>] allow\|deny [<service>\|any] from <source> to <destination> [on] <firewall>` | Firewall rule, added last or at the given position. Source and destination are `any`, a zone, an address, a network, or a device (stored as its address). No service means any |
 | `remove rule <n> [from] <firewall>` | |
 | `add vlan <id> [to] <device>` / `remove vlan <id> from <device>` | The VLAN list of a device (see *VLANs*) |
@@ -340,14 +372,18 @@ Ping failed (blocked): request: firewall FW-1: no rule matches, zone policy untr
 
 ARP and MAC tables, spanning tree (a drawing with redundant links is walked
 without loops, but no port is blocked), NAT, DHCP, DNS, dynamic routing,
-router sub-interfaces, TCP/UDP ports beyond the three services, link speed
-and ping times (the time printed is derived from the number of hops).
+gateway redundancy (a host has one gateway per network card), router
+sub-interfaces, TCP/UDP ports beyond the three services, link speed and ping
+times (the time printed is derived from the number of hops).
 
 ## Language roadmap
 
 The spec will grow with the engine's capabilities; every extension keeps the
 principles above (verb-first, optional prepositions, neutral vocabulary):
 
-- **Failure analysis** — what stops working when a link or a device goes down
+- **Failures from the terminal** — failures are simulated in presentation
+  mode today, and the terminal sees them; commands to break and repair a
+  device or a link, and to list what stops working, are not in the language
+  yet
 - **More services** — `ssh`, `dns`, and rules by port number
 - **NAT** — `translate`, evaluated by the diagnostics
