@@ -11,10 +11,24 @@
 
 import type { NetworkDevice, NetworkConnection } from '@/types';
 
+/**
+ * What is taken as broken for one evaluation ("what happens if this fails?").
+ * Nothing in the drawing changes: the devices and cables are still there,
+ * they just carry nothing. See ./failures.
+ */
+export interface Failures {
+  /** Ids of the devices that are down */
+  devices: string[];
+  /** Ids of the cables that are cut */
+  connections: string[];
+}
+
 /** Immutable snapshot of the topology the engine evaluates against */
 export interface Topology {
   devices: NetworkDevice[];
   connections: NetworkConnection[];
+  /** Simulated failures; absent when everything works */
+  failures?: Failures;
 }
 
 /** Outcome of a reachability evaluation */
@@ -29,6 +43,11 @@ export interface HopResult {
   status: 'forwarded' | 'delivered' | 'blocked';
   /** Short English note, e.g. "routed to subnet 10.0.2.0" or "VLAN 10 ok" */
   note?: string;
+  /**
+   * Id of the cable the packet reached this device by. Undefined on the first
+   * hop. Two devices can be joined by more than one cable: this says which.
+   */
+  viaConnectionId?: string;
 }
 
 export interface TraceResult {

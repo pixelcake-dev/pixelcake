@@ -3,6 +3,7 @@ import { device, nic, port, route } from '@/test/networkFixtures';
 import {
   formatNetwork,
   hasInterfaceAddresses,
+  isBackupRoute,
   ipToNumber,
   l3Interfaces,
   lookupRoute,
@@ -201,6 +202,64 @@ describe('primaryAddress and ownedAddresses', () => {
 
     const withLoopback = { ...router, ip: '172.16.0.1' };
     expect(ownedAddresses(withLoopback)).toEqual(['192.168.10.1', '10.0.0.1', '172.16.0.1']);
+  });
+});
+
+describe('isBackupRoute', () => {
+  const router = device({
+    id: 'r1',
+    type: 'Router',
+    gateway: '10.0.0.2',
+    ports: [
+      port(1, { ip: '192.168.10.1', subnet: '255.255.255.0' }),
+      port(2, { ip: '10.0.0.1', subnet: '255.255.255.252' }),
+      port(3, { ip: '10.0.1.1', subnet: '255.255.255.252' }),
+    ],
+    routes: [
+      route('192.168.30.0/24', '10.0.0.2'),
+      route('192.168.30.0/24', '10.0.1.2'),
+      route('192.168.40.0/24', '10.0.1.2'),
+      route('0.0.0.0/0', '10.0.1.2'),
+    ],
+  });
+  const table = routingTable(router);
+  const marked = table.map((entry, index) => [
+    formatNetwork(entry.network),
+    entry.nextHop ?? '-',
+    isBackupRoute(table, index),
+  ]);
+
+  it('marks the second route to a network, and the gateway behind a default route written by hand', () => {
+    expect(marked).toEqual([
+      ['10.0.0.0/30', '-', false],
+      ['10.0.1.0/30', '-', false],
+      ['192.168.10.0/24', '-', false],
+      ['192.168.30.0/24', '10.0.0.2', false],
+      ['192.168.30.0/24', '10.0.1.2', true],
+      ['192.168.40.0/24', '10.0.1.2', false],
+      ['default', '10.0.1.2', false],
+      ['default', '10.0.0.2', true],
+    ]);
+  });
+
+  it('never marks a connected network, nor a route to a network inside a connected one', () => {
+    const inside = device({
+      id: 'r2',
+      type: 'Router',
+      ports: [port(1, { ip: '10.0.0.1', subnet: '255.0.0.0' }), port(2, { ip: '172.16.0.1', subnet: '255.255.0.0' })],
+      routes: [route('10.0.0.0/8', '172.16.0.2')],
+    });
+    const rows = routingTable(inside);
+    expect(rows.map((entry, index) => [entry.kind, isBackupRoute(rows, index)])).toEqual([
+      ['connected', false],
+      ['connected', false],
+      ['static', false],
+    ]);
+  });
+
+  it('is false outside the table', () => {
+    expect(isBackupRoute(table, 99)).toBe(false);
+    expect(isBackupRoute([], 0)).toBe(false);
   });
 });
 

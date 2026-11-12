@@ -289,6 +289,26 @@ export function routingTable(device: NetworkDevice): RouteEntry[] {
 }
 
 /**
+ * True when the line at `index` leads, through a next hop, to a network an
+ * earlier line already leads to through another: it is a backup. The table
+ * keeps the order the routes were written in, and the first one is used for
+ * as long as its interface is up (see lookupRoute, and ./failures for a line
+ * that breaks).
+ */
+export function isBackupRoute(table: RouteEntry[], index: number): boolean {
+  const entry = table[index];
+  if (!entry || entry.kind === 'connected') return false;
+  return table
+    .slice(0, index)
+    .some(
+      earlier =>
+        earlier.kind !== 'connected' &&
+        earlier.network.address === entry.network.address &&
+        earlier.network.prefix === entry.network.prefix
+    );
+}
+
+/**
  * The entry of `table` that decides where `ip` goes: the first (most
  * specific) one whose network holds it. With `enabledOnly`, entries leaving
  * from a disabled interface are skipped, as a device does with a link that is

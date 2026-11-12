@@ -17,6 +17,13 @@
  * until the destination answers, something drops the packet, or the packet
  * comes back to a router it already crossed (routing loop).
  *
+ * Simulated failures (see ./failures) are part of the topology: a device that
+ * is down sends and takes nothing, a cable that is cut carries nothing. A
+ * route whose interface has no working cable left is withdrawn, as a device
+ * does when it loses the carrier, and the next route for that destination is
+ * taken — a backup route written after the main one. A network the device is
+ * attached to is not looked for elsewhere: the broken link is the answer.
+ *
  * Verdicts: 'error' (an endpoint does not exist or has no usable address),
  * 'unreachable' (no cables join the two devices), 'blocked' (dropped on the
  * way, with the reason and the device), 'success'.
@@ -42,6 +49,7 @@ import {
 import type { L3Interface, RouteEntry } from './addressing';
 import { evaluateFirewall } from './firewall';
 import type { Packet } from './firewall';
+import { deadInterfaces, isDeviceDown } from './failures';
 import { forwardAssumed, physicallyConnected, resolveOnLink } from './l2';
 import type { L2Request, L2Result } from './l2';
 
@@ -73,8 +81,8 @@ export interface TraceOptions {
 
 /** What a device decides to do with a packet */
 type Decision =
-  | { kind: 'direct'; out: L3Interface; entry: RouteEntry }
-  | { kind: 'via'; out: L3Interface; nextHop: string; entry: RouteEntry }
+  | { kind: 'direct'; out: L3Interface; entry: RouteEntry; detour?: string }
+  | { kind: 'via'; out: L3Interface; nextHop: string; entry: RouteEntry; detour?: string }
   | { kind: 'assumed'; note: string }
   | { kind: 'blocked'; reason: string };
 
@@ -83,10 +91,41 @@ function outLabel(out: L3Interface): string {
   return out.iface ? out.iface.label : '';
 }
 
-function decide(device: NetworkDevice, destinationIp: string): Decision {
+/** `the default route via 10.0.0.2` / `the route 192.168.30.0/24 via 10.0.0.2` */
+function routeName(entry: RouteEntry): string {
+  return entry.network.prefix === 0
+    ? `the default route via ${entry.nextHop}`
+    : `the route ${formatNetwork(entry.network)} via ${entry.nextHop}`;
+}
+
+/** The key of the interface a route leaves by, when it leaves by one */
+function exitKey(entry: RouteEntry): string | undefined {
+  return entry.out?.iface?.key;
+}
+
+function decide(device: NetworkDevice, destinationIp: string, topo: Topology): Decision {
   const table = routingTable(device);
   const role = forwardingRole(device);
-  const entry = lookupRoute(table, destinationIp, { enabledOnly: true });
+  let entry = lookupRoute(table, destinationIp, { enabledOnly: true });
+  let detour: string | undefined;
+
+  // A route that leaves by an interface with no working cable left is
+  // withdrawn: the next one for this destination takes over. With none, the
+  // route stays and layer 2 says what is broken on its way
+  const dead = deadInterfaces(device, topo);
+  const deadReason = (candidate: RouteEntry) => dead.get(exitKey(candidate) ?? '');
+  if (entry && entry.kind !== 'connected' && deadReason(entry) !== undefined) {
+    const alive = table.filter(
+      candidate => candidate.kind === 'connected' || deadReason(candidate) === undefined
+    );
+    const backup = lookupRoute(alive, destinationIp, { enabledOnly: true });
+    if (backup && backup.nextHop !== undefined) {
+      detour =
+        `${device.label}: ${routeName(entry)} is unusable (${deadReason(entry)}), ` +
+        `${routeName(backup)} is used instead`;
+      entry = backup;
+    }
+  }
 
   if (!entry) {
     // The only way there leaves from an interface that is down
@@ -99,7 +138,9 @@ function decide(device: NetworkDevice, destinationIp: string): Decision {
     }
   }
 
-  if (entry?.kind === 'connected' && entry.out) return { kind: 'direct', out: entry.out, entry };
+  if (entry?.kind === 'connected' && entry.out) {
+    return { kind: 'direct', out: entry.out, entry, detour };
+  }
 
   if (role === 'router' && !hasInterfaceAddresses(device)) {
     return {
@@ -130,7 +171,7 @@ function decide(device: NetworkDevice, destinationIp: string): Decision {
       reason: `${device.label} cannot use ${what}: that address is on none of its networks`,
     };
   }
-  return { kind: 'via', out: entry.out, nextHop: entry.nextHop, entry };
+  return { kind: 'via', out: entry.out, nextHop: entry.nextHop, entry, detour };
 }
 
 /** What a router's hop says about the way it sent the packet */
@@ -157,8 +198,21 @@ function describeUse(device: NetworkDevice, decision: Decision): string {
   return `${device.label} routes ${formatNetwork(decision.entry.network)} via ${decision.nextHop}`;
 }
 
-function makeHop(device: NetworkDevice, status: HopResult['status'], note?: string): HopResult {
-  return { deviceId: device.id, label: device.label, deviceType: device.type, status, note };
+function makeHop(
+  device: NetworkDevice,
+  status: HopResult['status'],
+  note?: string,
+  viaConnectionId?: string
+): HopResult {
+  const hop: HopResult = {
+    deviceId: device.id,
+    label: device.label,
+    deviceType: device.type,
+    status,
+    note,
+  };
+  if (viaConnectionId !== undefined) hop.viaConnectionId = viaConnectionId;
+  return hop;
 }
 
 function joined(notes: string[]): string | undefined {
@@ -223,6 +277,19 @@ export function traceRoute(
   const hops: HopResult[] = [];
   let sourceIp = options.sourceIp ?? primaryAddress(source);
 
+  // 3. A device that is down (simulated failure) sends nothing
+  if (isDeviceDown(topo, sourceId)) {
+    const reason = `${source.label} is down`;
+    return {
+      verdict: 'blocked',
+      hops: [makeHop(source, 'blocked', reason)],
+      failureReason: reason,
+      notes,
+      sourceIp,
+      targetIp,
+    };
+  }
+
   if (sourceId === targetId) {
     // Pinging itself: trivially delivered
     return { verdict: 'success', hops: [makeHop(source, 'delivered')], notes, sourceIp, targetIp };
@@ -236,8 +303,19 @@ export function traceRoute(
       if (!notes.includes(note)) notes.push(note);
     }
   };
-  const blocked = (device: NetworkDevice, reason: string): TraceResult => {
-    hops.push(makeHop(device, 'blocked', reason));
+  let current = source;
+  let arrival: DeviceInterface | undefined;
+  /** Id of the cable `current` was reached by */
+  let arrivalLink: string | undefined;
+  const crossed = new Set<string>();
+
+  /** The packet is dropped at `device`, reached by the cable `via` */
+  const blocked = (
+    device: NetworkDevice,
+    reason: string,
+    via: string | undefined = arrivalLink
+  ): TraceResult => {
+    hops.push(makeHop(device, 'blocked', reason, via));
     return { verdict: 'blocked', hops, failureReason: reason, notes, sourceIp, targetIp };
   };
   /** Record what an L2 step went through; returns the failure, if any */
@@ -248,26 +326,24 @@ export function traceRoute(
   ): TraceResult | undefined => {
     addNotes(result.notes);
     if (result.ok) {
-      hops.push(makeHop(device, 'forwarded', joined(hopNotes)));
-      for (const hop of result.transit) hops.push(makeHop(hop.device, 'forwarded', joined(hop.notes)));
+      hops.push(makeHop(device, 'forwarded', joined(hopNotes), arrivalLink));
+      for (const hop of result.transit) {
+        hops.push(makeHop(hop.device, 'forwarded', joined(hop.notes), hop.link?.id));
+      }
       return undefined;
     }
     if (result.path.length === 0) return blocked(device, result.reason);
-    hops.push(makeHop(device, 'forwarded', joined(hopNotes)));
+    hops.push(makeHop(device, 'forwarded', joined(hopNotes), arrivalLink));
     const dropAt = result.path[result.path.length - 1];
     for (const hop of result.path.slice(0, -1)) {
-      hops.push(makeHop(hop.device, 'forwarded', joined(hop.notes)));
+      hops.push(makeHop(hop.device, 'forwarded', joined(hop.notes), hop.link?.id));
     }
-    return blocked(dropAt.device, result.reason);
+    return blocked(dropAt.device, result.reason, dropAt.link?.id);
   };
-
-  let current = source;
-  let arrival: DeviceInterface | undefined;
-  const crossed = new Set<string>();
 
   for (let step = 0; step <= MAX_ROUTED_HOPS; step++) {
     if (current.id === target.id) {
-      hops.push(makeHop(current, 'delivered'));
+      hops.push(makeHop(current, 'delivered', undefined, arrivalLink));
       return { verdict: 'success', hops, notes, sourceIp, targetIp };
     }
     if (crossed.has(current.id) || step === MAX_ROUTED_HOPS) {
@@ -276,8 +352,9 @@ export function traceRoute(
     crossed.add(current.id);
 
     const isSource = step === 0;
-    const decision = decide(current, targetIp);
+    const decision = decide(current, targetIp, topo);
     if (decision.kind === 'blocked') return blocked(current, decision.reason);
+    if (decision.kind !== 'assumed' && decision.detour) addNotes([decision.detour]);
 
     if (isSource && options.sourceIp === undefined && decision.kind !== 'assumed') {
       sourceIp = decision.out.ip;
@@ -361,6 +438,7 @@ export function traceRoute(
 
     current = result.device;
     arrival = result.arrival;
+    arrivalLink = result.link?.id;
   }
 
   return blocked(current, `routing loop: the packet comes back to ${current.label}`);

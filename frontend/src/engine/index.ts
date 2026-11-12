@@ -34,6 +34,7 @@ export {
   ownedAddresses,
   hasInterfaceAddresses,
   routingTable,
+  isBackupRoute,
   lookupRoute,
 } from './addressing';
 export type { Network, L3Interface, RouteEntry, RouteKind } from './addressing';
@@ -75,8 +76,34 @@ export type { TraceOptions } from './trace';
 export { planAndEvaluateFlow } from './flows';
 export type { FlowLeg, FlowResult } from './flows';
 
+export {
+  hasFailures,
+  withFailures,
+  isDeviceDown,
+  isLinkCut,
+  linkDownReason,
+  deadInterfaces,
+} from './failures';
+
+export {
+  flowKey,
+  impactEndpoints,
+  evaluateAllFlows,
+  compareFlows,
+  assessImpact,
+  sameWay,
+} from './impact';
+export type {
+  ImpactOptions,
+  ImpactReport,
+  ImpactedFlow,
+  EvaluatedFlow,
+  FlowTable,
+} from './impact';
+
 export type {
   Topology,
+  Failures,
   Verdict,
   HopResult,
   TraceResult,

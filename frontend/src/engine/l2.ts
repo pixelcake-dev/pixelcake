@@ -16,7 +16,9 @@
  *
  * The search is breadth first, in connection order: the shortest way that
  * works is the one taken, so a cable or port that is down is routed around
- * when the drawing offers another way. Spanning tree is not simulated.
+ * when the drawing offers another way. Spanning tree is not simulated. The
+ * same goes for simulated failures (see ./failures): a cable that is cut and
+ * a device that is down carry nothing.
  *
  * Whatever cannot be verified is accepted with a note instead of failing
  * silently or passing silently: a link end not attached to a port, a router
@@ -34,6 +36,7 @@ import { buildAdjacency, forwardingRole, isInternetLike } from './topology';
 import { hasInterfaceAddresses, ownedAddresses } from './addressing';
 import { evaluateFirewall } from './firewall';
 import type { Packet } from './firewall';
+import { isDeviceDown, isLinkCut, linkDownReason } from './failures';
 import { DEFAULT_VLAN, describePortVlan, isVlanAware, portVlanMode, trunkCarries } from './vlan';
 
 /** A frame travelling on a cable */
@@ -87,6 +90,8 @@ interface Drop {
 export interface L2Hop {
   device: NetworkDevice;
   notes: string[];
+  /** Cable the frame reached the device by */
+  link?: NetworkConnection;
 }
 
 /** Who is sending, for the wording of failures */
@@ -123,6 +128,8 @@ export interface L2Success {
   ok: true;
   /** Device that takes the frame */
   device: NetworkDevice;
+  /** Cable the frame reached it by */
+  link?: NetworkConnection;
   /** Its interface on the cable the frame arrived by (undefined: end not attached) */
   arrival?: DeviceInterface;
   /** Interface of the sender the frame left by (undefined: end not attached) */
@@ -407,10 +414,18 @@ function walk(request: L2Request): WalkOutcome {
       const next = devicesById.get(neighborId);
       if (!next) continue;
 
-      // ── leaving `device` ────────────────────────────────────────────────
-      const near = boundInterface(connection, device);
       const drop = (at: Node, reason: string) =>
         outcome.drops.push({ node: at, reason, link: connection });
+
+      // ── simulated failures: a cut cable, a device that is down ──────────
+      const broken = linkDownReason(topo, connection, device, next);
+      if (broken !== undefined) {
+        drop(node, broken);
+        continue;
+      }
+
+      // ── leaving `device` ────────────────────────────────────────────────
+      const near = boundInterface(connection, device);
       if (near && !near.enabled) {
         drop(node, `${interfaceOn(near, device)} is disabled`);
         continue;
@@ -570,7 +585,11 @@ function describePath(node: Node): { hops: L2Hop[]; notes: string[] } {
     // What the previous device decided on this way out belongs to its hop
     if (i > 1) hops[hops.length - 1].notes.push(...current.exitNotes);
     notes.push(...current.exitNotes, ...current.notes);
-    hops.push({ device: current.device, notes: [...current.tags, ...current.notes] });
+    hops.push({
+      device: current.device,
+      notes: [...current.tags, ...current.notes],
+      link: current.link,
+    });
   }
   return { hops, notes };
 }
@@ -581,6 +600,7 @@ function success(node: Node, match: L2Success['match'], leadNotes: string[] = []
   return {
     ok: true,
     device: node.device,
+    link: node.link,
     arrival: node.arrival,
     departure: path[1]?.departure,
     transit: hops.slice(0, -1),
@@ -790,7 +810,9 @@ export function forwardAssumed(request: L2Request): L2Result {
   if (outcome.found) return success(outcome.found, 'address');
 
   if (outcome.routers.length > 0) {
-    const distances = hopDistances(request.topo, request.target.id);
+    // "Closest" over what works: a router cut off from the destination by a
+    // simulated failure is not the one the packet is handed to
+    const distances = hopDistances(request.topo, request.target.id, { workingOnly: true });
     let chosen = outcome.routers[0];
     for (const router of outcome.routers.slice(1)) {
       const best = distances.get(chosen.device.id) ?? Infinity;
@@ -801,16 +823,30 @@ export function forwardAssumed(request: L2Request): L2Result {
   return explain({ ...request, purpose: 'deliver' }, outcome);
 }
 
-/** Hop distances from `originId` to every device reachable on the drawing */
-function hopDistances(topo: Topology, originId: string): Map<string, number> {
+/**
+ * Hop distances from `originId` to every device reachable on the drawing.
+ * With `workingOnly`, cables that are cut and devices that are down (see
+ * ./failures) are not crossed.
+ */
+function hopDistances(
+  topo: Topology,
+  originId: string,
+  options: { workingOnly?: boolean } = {}
+): Map<string, number> {
   const adjacency = buildAdjacency(topo);
   const distances = new Map<string, number>([[originId, 0]]);
   const queue = [originId];
   for (let head = 0; head < queue.length; head++) {
     const currentId = queue[head];
     const distance = distances.get(currentId) ?? 0;
-    for (const { neighborId } of adjacency.get(currentId) ?? []) {
+    for (const { neighborId, connection } of adjacency.get(currentId) ?? []) {
       if (distances.has(neighborId)) continue;
+      if (
+        options.workingOnly &&
+        (isLinkCut(topo, connection.id) || isDeviceDown(topo, neighborId))
+      ) {
+        continue;
+      }
       distances.set(neighborId, distance + 1);
       queue.push(neighborId);
     }

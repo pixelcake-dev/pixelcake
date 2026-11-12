@@ -43,6 +43,13 @@ export interface FlowResult {
    * A failing leg contributes its hops up to the block.
    */
   animationPath: string[];
+  /**
+   * The cables the animation travels on: `animationLinks[i]` is the id of the
+   * connection between `animationPath[i]` and `animationPath[i + 1]` ('' when
+   * the engine does not know it). Two devices can be joined by more than one
+   * cable, and only the engine knows which one the packet took.
+   */
+  animationLinks: string[];
   /** Failure of the failing leg, prefixed with its purpose */
   failureReason?: string;
   /** Aggregated leg notes, each prefixed with the leg purpose */
@@ -114,7 +121,14 @@ interface LegPlan {
 
 /** Terminal FlowResult for plan-level errors (no legs evaluated) */
 function flowError(failureReason: string): FlowResult {
-  return { verdict: 'error', legs: [], animationPath: [], failureReason, notes: [] };
+  return {
+    verdict: 'error',
+    legs: [],
+    animationPath: [],
+    animationLinks: [],
+    failureReason,
+    notes: [],
+  };
 }
 
 /**
@@ -124,6 +138,7 @@ function flowError(failureReason: string): FlowResult {
 function evaluateLegs(plans: LegPlan[], topo: Topology, planNotes: string[]): FlowResult {
   const legs: FlowLeg[] = [];
   const animationPath: string[] = [];
+  const animationLinks: string[] = [];
   const notes: string[] = [...planNotes];
 
   let previous: TraceResult | undefined;
@@ -144,6 +159,7 @@ function evaluateLegs(plans: LegPlan[], topo: Topology, planNotes: string[]): Fl
       // Consecutive legs share their joint device (leg N ends where leg N+1
       // starts): skip it so the animation does not stutter on the joint.
       if (animationPath[animationPath.length - 1] === hop.deviceId) continue;
+      if (animationPath.length > 0) animationLinks.push(hop.viaConnectionId ?? '');
       animationPath.push(hop.deviceId);
     }
     for (const note of trace.notes) {
@@ -155,13 +171,14 @@ function evaluateLegs(plans: LegPlan[], topo: Topology, planNotes: string[]): Fl
         verdict: trace.verdict,
         legs,
         animationPath,
+        animationLinks,
         failureReason: `${plan.purpose}: ${trace.failureReason ?? 'failed'}`,
         notes,
       };
     }
   }
 
-  return { verdict: 'success', legs, animationPath, notes };
+  return { verdict: 'success', legs, animationPath, animationLinks, notes };
 }
 
 /**
