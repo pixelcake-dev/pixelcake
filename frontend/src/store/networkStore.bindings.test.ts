@@ -140,14 +140,18 @@ describe('networkStore interface bindings', () => {
       expect(second).toMatchObject({ id: 'conn-1', sourcePort: 2, targetNic: 'nic-1' });
     });
 
-    it('is the path used by endConnection (drag between two handles)', async () => {
+    it('keeps the handles a link was drawn between (drag from one to the other)', async () => {
       const { store } = await freshStore();
       const s = store.getState();
       s.addDevice(makeSwitch('SW-1'));
       s.addDevice(makePc('PC-1', '192.168.1.10'));
 
-      s.startConnection('dev-1', 'top');
-      store.getState().endConnection('dev-0', 'bottom');
+      s.addConnection({
+        source: 'dev-1',
+        target: 'dev-0',
+        sourceHandle: 'top',
+        targetHandle: 'bottom',
+      });
 
       expect(store.getState().connections[0]).toMatchObject({
         source: 'dev-1',

@@ -56,7 +56,7 @@ const AdvancedSettingsTab = () => {
           </div>
           <p className="text-3xl font-bold text-[var(--accent-color)]">{devices.length}</p>
           <p className="text-xs text-[var(--text-color-light)] mt-1">
-            Dispositivi attualmente nel progetto
+            Dispositivi nel canvas aperto
           </p>
         </div>
 

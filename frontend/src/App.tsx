@@ -13,11 +13,9 @@ import NetworkCanvas from '@/components/Canvas/NetworkCanvas';
 import ContextMenu from '@/components/ui/ContextMenu';
 import ConnectionContextMenu from '@/components/ui/ConnectionContextMenu';
 import AddDeviceModal from '@/components/Modals/AddDeviceModal';
-import DevicePickerModal from '@/components/Modals/DevicePickerModal';
 import BulkAddDeviceModal from '@/components/Modals/BulkAddDeviceModal';
 import InspectorModal from '@/components/Modals/InspectorModal';
 import ConnectionInspectorModal from '@/components/Modals/ConnectionInspectorModal';
-import SimulationModal from '@/components/Modals/SimulationModal';
 import HelpModal from '@/components/Modals/HelpModal';
 import SettingsModal from '@/components/Modals/SettingsModal';
 import TerminalModal from '@/components/Modals/TerminalModal';
@@ -78,12 +76,10 @@ function App() {
         <ConnectionContextMenu />
 
         {/* Modals */}
-        <DevicePickerModal />
         <AddDeviceModal />
         <BulkAddDeviceModal />
         <InspectorModal />
         <ConnectionInspectorModal />
-        <SimulationModal />
         <HelpModal />
         <SettingsModal />
         <TerminalModal />

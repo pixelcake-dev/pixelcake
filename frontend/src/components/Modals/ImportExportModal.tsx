@@ -272,7 +272,7 @@ const ImportExportModal = () => {
             <>
               <Button variant="secondary" onClick={handleCopy} disabled={devices.length === 0}>
                 {copied ? <Check size={14} style={{ marginRight: 4 }} /> : <Copy size={14} style={{ marginRight: 4 }} />}
-                {copied ? 'Copiato!' : 'Copia negli appunti'}
+                {copied ? 'Copiato' : 'Copia negli appunti'}
               </Button>
               <Button variant="primary" onClick={handleDownload} disabled={devices.length === 0}>
                 <Download size={14} style={{ marginRight: 4 }} />

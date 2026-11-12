@@ -1,7 +1,7 @@
 /**
  * Welcome Screen
- * Excalidraw-style welcome screen integrata nel canvas
- * Mostra le fasi del progetto "infrastructure piece by piece"
+ * Shown inside the canvas while the project is empty: what the app is for,
+ * and the ways to start (new project, open a file, the sample network).
  */
 
 import { useState, useEffect } from 'react';
@@ -65,31 +65,31 @@ const WelcomeScreen = () => {
         <p>Visual Network Designer</p>
       </div>
 
-      {/* Sezione "Build piece by piece" */}
+      {/* What the app is for, in three steps */}
       <div className="welcome-process">
         <h3>
           <Icon icon="lucide:package" width={20} className="inline-block mr-2" />
-          Build your infrastructure piece by piece
+          Una rete, un pezzo alla volta
         </h3>
         <div className="process-steps">
           <div className="process-step">
             <span className="step-number">1.</span>
-            <strong>Design</strong> → Drag & drop network devices
+            <strong>Disegna</strong> → aggiungi i dispositivi e collegali
           </div>
           <div className="process-step">
             <span className="step-number">2.</span>
-            <strong>Connect</strong> → Create network topology
+            <strong>Configura</strong> → indirizzi, VLAN, rotte, regole del firewall
           </div>
           <div className="process-step">
             <span className="step-number">3.</span>
-            <strong>Test</strong> → Send a packet, see where it stops
+            <strong>Chiedi</strong> → manda un pacchetto e guarda dove si ferma, e perché
           </div>
         </div>
       </div>
 
       {/* Quick Start Actions */}
       <div className="welcome-actions">
-        <h4>Quick Start:</h4>
+        <h4>Per cominciare:</h4>
         <button onClick={handleNewProject} className="welcome-link">
           <Icon icon="lucide:plus" width={16} />
           Nuovo Progetto
@@ -100,24 +100,24 @@ const WelcomeScreen = () => {
         </button>
         <button onClick={handleLoadSample} className="welcome-link">
           <Icon icon="lucide:layout-template" width={16} />
-          Carica Sample Topology
+          Carica la rete di esempio
         </button>
       </div>
 
       {/* External Links */}
       <div className="welcome-links">
-        <h4>Links:</h4>
+        <h4>Collegamenti:</h4>
         <a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" className="welcome-link">
           <Icon icon="lucide:github" width={16} />
-          GitHub Repository
+          Codice su GitHub
         </a>
         <a href="#" onClick={handleDocumentation} className="welcome-link">
           <Icon icon="lucide:book-open" width={16} />
-          Documentation
+          Guida
         </a>
         <a href={GITHUB_ISSUES} target="_blank" rel="noopener noreferrer" className="welcome-link">
           <Icon icon="lucide:bug" width={16} />
-          Report an Issue
+          Segnala un problema
         </a>
       </div>
 

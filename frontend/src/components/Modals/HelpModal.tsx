@@ -75,26 +75,50 @@ const GuideTab = () => (
 
       <Step title="Configurali">
         Un doppio clic su un dispositivo ne apre la scheda (la stessa di clic destro → «Dettagli
-        (Modifica)»): nome, indirizzo IP, subnet mask, gateway e, per switch, router e firewall, le
-        VLAN. Switch, router e firewall hanno anche la scheda «Ports», dove si configura ogni
-        singola porta. Gli altri dispositivi hanno «Network Interfaces» con le loro schede di rete,
-        ed è lì che se ne cambia l&apos;indirizzo. Le modifiche valgono solo dopo aver premuto
-        «Salva».
+        (Modifica)»): nome, indirizzo IP, subnet mask e gateway. Switch, router e firewall hanno
+        anche la scheda «Porte», dove si configura ogni singola porta. Gli altri dispositivi hanno
+        «Schede di rete», ed è lì che se ne cambia l&apos;indirizzo. Le modifiche valgono solo dopo
+        aver premuto «Salva».
+      </Step>
+
+      <Step title="Instrada tra le reti">
+        Ogni porta di un router o di un firewall può avere un indirizzo (scheda «Porte»): è il
+        gateway dei dispositivi collegati lì, e la rete di quella porta è raggiunta senza altro. Le
+        reti che stanno dietro un altro router si scrivono nella scheda «Rotte», con l&apos;indirizzo
+        del prossimo salto; il gateway del router è la sua rotta predefinita. La stessa scheda mostra
+        la tabella di instradamento che ne risulta. Serve una rotta anche per il ritorno.
+      </Step>
+
+      <Step title="Separa con le VLAN">
+        Nella scheda «Porte» di uno switch ogni porta è di accesso, in una VLAN, oppure trunk, e
+        trasporta più VLAN con l&apos;etichetta. Due porte in VLAN diverse non si parlano: per farle
+        comunicare serve un router con una porta in ciascuna. Appena una porta ha una VLAN, quelle
+        che non hai toccato sono nella VLAN 1.
+      </Step>
+
+      <Step title="Filtra con il firewall">
+        Le porte di un firewall si mettono in una zona: trust, untrust o dmz. Senza regole decide
+        la politica delle zone: verso una zona più fidata il traffico è negato, il resto passa.
+        Nella scheda «Regole» si scrivono le eccezioni, lette dall&apos;alto in basso: decide la
+        prima che corrisponde, per servizio (ping, web, email), origine e destinazione. La risposta
+        a un flusso permesso passa sempre.
       </Step>
 
       <Step title="Chiedi se un dispositivo ne raggiunge un altro">
         Apri «Simulazione» (il pulsante con il fulmine), scegli «Partenza», «Destinazione» e il
         «Modello di Flusso» (ping, email, pagina web o download), poi premi «Avvia Simulazione». Il
         pacchetto percorre la rete sul disegno. Se non arriva, l&apos;animazione si ferma dove il
-        traffico viene bloccato e un messaggio ne spiega il motivo.
+        traffico viene bloccato e un messaggio ne spiega il motivo: quale apparato, quale porta,
+        quale rotta o quale regola.
       </Step>
 
       <Step title="Usa il terminale">
         «Console», nella barra a sinistra, apre il terminale. Con un clic destro su un dispositivo →
         «Console» si apre già posizionato su quel dispositivo. I comandi sono in inglese, per
-        esempio <Mono>ping Web-01 from PC-1</Mono> oppure <Mono>show interfaces Router-1</Mono>.
-        Quelli che cambiano la rete modificano lo stesso disegno che vedi. L&apos;elenco è nella
-        scheda «Comandi del terminale».
+        esempio <Mono>ping Web-01 from PC-1</Mono>, <Mono>trace Web-01 from PC-1 as web</Mono>{' '}
+        oppure <Mono>show routes Router-1</Mono>. Quelli che cambiano la rete, come{' '}
+        <Mono>add route 192.168.30.0/24 via 10.0.0.2 on Router-1</Mono>, modificano lo stesso
+        disegno che vedi. L&apos;elenco è nella scheda «Comandi del terminale».
       </Step>
 
       <Step title="Dividi il progetto in canvas">

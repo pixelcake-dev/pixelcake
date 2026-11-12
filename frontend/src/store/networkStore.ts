@@ -40,10 +40,6 @@ interface NetworkStore {
   deviceCounter: number;
   connectionCounter: number;
 
-  // Connection mode state
-  isConnecting: boolean;
-  connectionStart: { deviceId: string; handleId: string | null } | null;
-
   // Which canvas of the project this data is. An opaque tag for this store
   // (the project store owns the list of canvases), persisted next to the data
   // so the two can never be paired wrongly after a reload. null: data written
@@ -79,9 +75,6 @@ interface NetworkStore {
   removeConnection: (id: string) => void;
   getConnection: (id: string) => NetworkConnection | undefined;
   getConnectionsForDevice: (deviceId: string) => NetworkConnection[];
-  startConnection: (deviceId: string, handleId: string | null) => void;
-  endConnection: (deviceId: string, handleId: string | null) => void;
-  cancelConnection: () => void;
 
   // Actions - Settings
   setGlobalNetworkSettings: (settings: Partial<GlobalNetworkSettings>) => void;
@@ -158,8 +151,6 @@ export const useNetworkStore = create<NetworkStore>()(
       shouldFitView: false,
       deviceCounter: 0,
       connectionCounter: 0,
-      isConnecting: false,
-      connectionStart: null,
       canvasId: null,
       hasUnsavedChanges: false,
       canvasRevision: 0,
@@ -375,40 +366,6 @@ export const useNetworkStore = create<NetworkStore>()(
         );
       },
 
-      startConnection: (deviceId, handleId) => {
-        set({
-          isConnecting: true,
-          connectionStart: { deviceId, handleId },
-        });
-        document.body.classList.add('is-connecting');
-      },
-
-      endConnection: (deviceId, handleId) => {
-        const { connectionStart, isConnecting } = get();
-        if (!isConnecting || !connectionStart) return;
-
-        get().addConnection({
-          source: connectionStart.deviceId,
-          target: deviceId,
-          sourceHandle: connectionStart.handleId,
-          targetHandle: handleId,
-        });
-
-        set({
-          isConnecting: false,
-          connectionStart: null,
-        });
-        document.body.classList.remove('is-connecting');
-      },
-
-      cancelConnection: () => {
-        set({
-          isConnecting: false,
-          connectionStart: null,
-        });
-        document.body.classList.remove('is-connecting');
-      },
-
       // Settings Actions
       setGlobalNetworkSettings: (settings) => {
         set((state) => ({
@@ -557,11 +514,8 @@ export const useNetworkStore = create<NetworkStore>()(
           selectedDeviceId: null,
           selectedDeviceIds: [],
           hoveredDeviceId: null,
-          isConnecting: false,
-          connectionStart: null,
           canvasRevision: state.canvasRevision + 1,
         }));
-        document.body.classList.remove('is-connecting');
       },
     }),
     {

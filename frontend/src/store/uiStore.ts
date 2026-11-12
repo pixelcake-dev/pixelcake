@@ -20,9 +20,7 @@ interface UIStore {
   activeSidebarPanel: SidebarPanelId | null;
   modals: {
     addDevice: boolean;
-    devicePicker: boolean;
     inspector: boolean;
-    simulation: boolean;
     help: boolean;
     connectionInspector: boolean;
     settings: boolean;
@@ -107,9 +105,7 @@ export const useUIStore = create<UIStore>()(
       activeSidebarPanel: null,
       modals: {
         addDevice: false,
-        devicePicker: false,
         inspector: false,
-        simulation: false,
         help: false,
         connectionInspector: false,
         settings: false,

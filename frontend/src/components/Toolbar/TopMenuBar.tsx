@@ -59,7 +59,7 @@ const TopMenuBar = () => {
     autoConnectDevices();
   };
 
-  // Help → Mostra Welcome Screen. The welcome screen only exists on an empty
+  // Aiuto → Mostra la schermata di benvenuto. It only exists on an empty
   // canvas; asking to see it must never empty a drawing.
   const handleShowWelcome = () => {
     const hasDrawing = useNetworkStore.getState().devices.length > 0;
@@ -294,14 +294,14 @@ const TopMenuBar = () => {
         </div>
       </div>
 
-      {/* Help Menu */}
+      {/* Aiuto Menu */}
       <div className="menu-item">
-        <span>Help</span>
+        <span>Aiuto</span>
         <div className="dropdown-content">
           <ul>
             <li onClick={() => openHelp('guide')}>Guida</li>
             <li onClick={() => openHelp('commands')}>Comandi del terminale</li>
-            <li onClick={handleShowWelcome}>Mostra Welcome Screen</li>
+            <li onClick={handleShowWelcome}>Mostra la schermata di benvenuto</li>
             <li onClick={() => openHelp('about')}>Informazioni</li>
           </ul>
         </div>

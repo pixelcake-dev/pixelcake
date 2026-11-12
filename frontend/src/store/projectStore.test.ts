@@ -260,13 +260,6 @@ describe('project in the browser', () => {
       ],
       ['triggerFitView', app => app.network.getState().triggerFitView()],
       [
-        'starting and cancelling a link',
-        app => {
-          app.network.getState().startConnection('dev-0', null);
-          app.network.getState().cancelConnection();
-        },
-      ],
-      [
         'renaming the project to the name it has',
         app => app.project.getState().renameProject('Progetto senza nome'),
       ],
@@ -567,7 +560,6 @@ describe('project in the browser', () => {
       app.network.getState().addDevice(makePc('A-1'));
       app.network.getState().setSelectedDevice('dev-0');
       app.network.getState().selectMultipleDevices(['dev-0']);
-      app.network.getState().startConnection('dev-0', null);
       const revision = app.network.getState().canvasRevision;
 
       app.project.getState().switchCanvas(second);
@@ -575,8 +567,6 @@ describe('project in the browser', () => {
       expect(app.network.getState()).toMatchObject({
         selectedDeviceId: null,
         selectedDeviceIds: [],
-        isConnecting: false,
-        connectionStart: null,
         canvasId: second,
         canvasRevision: revision + 1,
       });

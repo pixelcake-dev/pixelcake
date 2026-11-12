@@ -1,6 +1,5 @@
 /**
- * Shared entry point for starting a flow simulation from the UI
- * (SimulationPanel and SimulationModal).
+ * Entry point for starting a flow simulation from the UI (SimulationPanel).
  *
  * Plans the flow per model (email via a mail server, web/download as
  * request+response round trip, ping as echo), evaluates every leg with the

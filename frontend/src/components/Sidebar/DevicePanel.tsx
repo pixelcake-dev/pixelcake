@@ -28,8 +28,9 @@ const DevicePanel = () => {
   const openModal = useUIStore((state) => state.openModal);
   const setAddDeviceType = useUIStore((state) => state.setAddDeviceType);
 
+  // Every template can be placed: the built-in ones and the custom ones
+  // created in Impostazioni → Template
   const templates = useTemplateStore((state) => state.templates);
-  const genericTemplates = templates.filter((t) => !t.isCustom);
 
   const devices = useNetworkStore((state) => state.devices);
   const loadTopology = useNetworkStore((state) => state.loadTopology);
@@ -41,15 +42,17 @@ const DevicePanel = () => {
   // Convert templates to device options
   const availableDevices = useMemo(
     () =>
-      genericTemplates.map((template) => ({
+      templates.map((template) => ({
         id: template.id, // Template ID for specific lookup
         type: template.type,
         name: template.name,
-        description: getDeviceDescription(template.type),
+        description: template.isCustom
+          ? `Template personalizzato (${template.type})`
+          : getDeviceDescription(template.type),
         icon: template.icon,
         color: template.color,
       })),
-    [genericTemplates]
+    [templates]
   );
 
   // Filter devices based on search query

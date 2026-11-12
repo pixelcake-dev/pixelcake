@@ -2,7 +2,7 @@
  * TopMenuBar tests — the menu entries that can lose a drawing, and the File
  * menu wired to the project file.
  *
- * - Help → "Mostra Welcome Screen" once emptied the canvas without asking: it
+ * - Help → "Mostra la schermata di benvenuto" once emptied the canvas without asking: it
  *   must never touch the drawing, whatever is on the other canvases.
  * - File → "Nuovo progetto…" and "Apri…" replace the whole project: with
  *   changes not yet saved to a file they must ask first.
@@ -151,10 +151,10 @@ describe('TopMenuBar', () => {
       }
       expect(entriesOf('File')).toEqual(['Nuovo progetto…', 'Apri…', 'Salva', 'Salva con nome…']);
       expect(entriesOf('Modifica')).toEqual(['Copia', 'Incolla']);
-      expect(entriesOf('Help')).toEqual([
+      expect(entriesOf('Aiuto')).toEqual([
         'Guida',
         'Comandi del terminale',
-        'Mostra Welcome Screen',
+        'Mostra la schermata di benvenuto',
         'Informazioni',
       ]);
     });
@@ -228,12 +228,12 @@ describe('TopMenuBar', () => {
     });
   });
 
-  describe('Help → Mostra Welcome Screen', () => {
+  describe('Aiuto → Mostra la schermata di benvenuto', () => {
     it('leaves the drawing untouched and explains why', () => {
       drawTwoDevices();
       render(<TopMenuBar />);
 
-      click('Mostra Welcome Screen');
+      click('Mostra la schermata di benvenuto');
 
       expect(labels()).toEqual(['PC-1', 'PC-2']);
       expect(useUIStore.getState().showWelcomeScreen).toBe(false);
@@ -246,7 +246,7 @@ describe('TopMenuBar', () => {
       const before = useProjectStore.getState().buildProjectFile().canvases;
       render(<TopMenuBar />);
 
-      click('Mostra Welcome Screen');
+      click('Mostra la schermata di benvenuto');
 
       expect(labels()).toEqual(['PC-1', 'PC-2']);
       expect(useProjectStore.getState().buildProjectFile().canvases).toEqual(before);
@@ -262,7 +262,7 @@ describe('TopMenuBar', () => {
       localStorage.setItem('pixelcake-hide-welcome', 'true');
       render(<TopMenuBar />);
 
-      click('Mostra Welcome Screen');
+      click('Mostra la schermata di benvenuto');
 
       expect(useUIStore.getState().showWelcomeScreen).toBe(true);
       expect(localStorage.getItem('pixelcake-hide-welcome')).toBeNull();

@@ -209,10 +209,10 @@ describe('App', () => {
   // ---------- whole flows, through the real screens ----------
 
   describe('welcome screen', () => {
-    it('"Carica Sample Topology" draws the sample, which is then something to save', () => {
+    it('"Carica la rete di esempio" draws the sample, which is then something to save', () => {
       render(<App />);
 
-      fireEvent.click(screen.getByText('Carica Sample Topology'));
+      fireEvent.click(screen.getByText('Carica la rete di esempio'));
 
       expect(screen.queryByText('Visual Network Designer')).toBeNull();
       expect(screen.getByText('PC-1')).toBeInTheDocument();
@@ -415,12 +415,12 @@ describe('App', () => {
   describe('guide', () => {
     const selectedTab = () => screen.getByRole('tab', { selected: true }).textContent;
 
-    it('the welcome screen\'s "Documentation" link opens it on "Come si usa"', () => {
+    it('the welcome screen\'s "Guida" link opens it on "Come si usa"', () => {
       // even if it was last left on another tab
       useUIStore.setState({ helpTab: 'about' });
       render(<App />);
 
-      fireEvent.click(screen.getByText('Documentation'));
+      fireEvent.click(screen.getByRole('link', { name: 'Guida' }));
 
       expect(screen.getByRole('heading', { name: 'Guida' })).toBeInTheDocument();
       expect(selectedTab()).toBe('Come si usa');

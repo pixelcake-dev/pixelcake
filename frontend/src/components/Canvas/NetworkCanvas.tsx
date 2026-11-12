@@ -51,8 +51,7 @@ const NetworkCanvas = () => {
   const removeDevice = useNetworkStore((state) => state.removeDevice);
   const addConnection = useNetworkStore((state) => state.addConnection);
   const setViewport = useNetworkStore((state) => state.setViewport);
-  const isConnecting = useNetworkStore((state) => state.isConnecting);
-  const cancelConnection = useNetworkStore((state) => state.cancelConnection);
+  const removeConnection = useNetworkStore((state) => state.removeConnection);
   const getConnection = useNetworkStore((state) => state.getConnection);
   const selectedDeviceIds = useNetworkStore((state) => state.selectedDeviceIds);
   const selectMultipleDevices = useNetworkStore((state) => state.selectMultipleDevices);
@@ -164,6 +163,17 @@ const NetworkCanvas = () => {
       });
     },
     [removeDevice]
+  );
+
+  // A link deleted with the Delete key goes away from the network too, not
+  // only from the picture
+  const handleEdgesDelete = useCallback(
+    (deleted: Edge[]) => {
+      deleted.forEach((edge) => {
+        removeConnection(edge.id);
+      });
+    },
+    [removeConnection]
   );
 
   // Handle context menu on edge (connection)
@@ -298,14 +308,11 @@ const NetworkCanvas = () => {
     [addConnection]
   );
 
-  // Close context menu and cancel connection when clicking on canvas
+  // Close the context menu when clicking on the canvas
   // Note: React Flow handles selection clearing automatically
   const handleCanvasClick = useCallback(() => {
     closeContextMenu();
-    if (isConnecting) {
-      cancelConnection();
-    }
-  }, [closeContextMenu, isConnecting, cancelConnection]);
+  }, [closeContextMenu]);
 
   // Save viewport when user pans or zooms
   const handleMoveEnd = useCallback(() => {
@@ -313,23 +320,21 @@ const NetworkCanvas = () => {
     setViewport(currentViewport);
   }, [reactFlowInstance, setViewport]);
 
-  // ESC to cancel connection
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isConnecting) {
-        cancelConnection();
-      }
-    };
-
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [isConnecting, cancelConnection]);
-
   // Keyboard shortcuts: Ctrl+C (copy), Ctrl+V (paste)
   useEffect(() => {
     const handleKeyboardShortcuts = (e: KeyboardEvent) => {
       // Check if Ctrl (Windows/Linux) or Cmd (Mac) is pressed
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+      if (!isCtrlOrCmd) return;
+
+      // The shortcuts belong to the drawing. While the user is typing, or has
+      // selected some text (the output of the terminal, say), copy and paste
+      // are the browser's: they must work on that text
+      const target = e.target;
+      const isTyping =
+        target instanceof HTMLElement &&
+        (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+      if (isTyping || (window.getSelection()?.toString() ?? '') !== '') return;
 
       // Ctrl+C - Copy selection
       if (isCtrlOrCmd && e.key === 'c' && selectedDeviceIds.length > 0) {
@@ -392,6 +397,7 @@ const NetworkCanvas = () => {
         onEdgesChange={onEdgesChange}
         onSelectionChange={handleSelectionChange}
         onNodesDelete={handleNodesDelete}
+        onEdgesDelete={handleEdgesDelete}
         onConnect={onConnect}
         onConnectStart={onConnectStart}
         onConnectEnd={onConnectEnd}

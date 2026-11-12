@@ -439,11 +439,11 @@ const TerminalModal = () => {
         <div className="flex items-center gap-2" onPointerDown={(e) => e.stopPropagation()}>
           <div
             className="w-3 h-3 rounded-full bg-[#ff5f56] hover:bg-[#ff6b63] transition-colors cursor-pointer"
-            title="Close"
+            title="Chiudi"
+            role="button"
+            aria-label="Chiudi il terminale"
             onClick={handleClose}
           ></div>
-          <div className="w-3 h-3 rounded-full bg-[#ffbd2e] hover:bg-[#ffc43d] transition-colors cursor-pointer" title="Minimize"></div>
-          <div className="w-3 h-3 rounded-full bg-[#27c93f] hover:bg-[#36d44e] transition-colors cursor-pointer" title="Maximize"></div>
         </div>
 
         {/* Titolo centrato */}

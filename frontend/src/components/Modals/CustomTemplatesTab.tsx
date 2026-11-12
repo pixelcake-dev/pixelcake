@@ -20,8 +20,6 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
     type: 'Server' as DeviceType,
     icon: 'mdi:server',
     color: '#5B7C8D',
-    terraformProvider: '',
-    terraformResource: '',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -37,10 +35,6 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
       type: formData.type,
       icon: formData.icon,
       color: formData.color,
-      terraformFields: {
-        provider: formData.terraformProvider,
-        resource_type: formData.terraformResource,
-      },
       isCustom: true,
       supportsVLAN,
       supportsSTP,
@@ -54,8 +48,6 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
       type: 'Server',
       icon: 'mdi:server',
       color: '#5B7C8D',
-      terraformProvider: '',
-      terraformResource: '',
     });
     setIsCreating(false);
   };
@@ -136,20 +128,6 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
                 />
               </div>
             </div>
-
-            <Input
-              label="Terraform Provider"
-              value={formData.terraformProvider}
-              onChange={(e) => setFormData({ ...formData, terraformProvider: e.target.value })}
-              placeholder="es: aws, azure, google"
-            />
-
-            <Input
-              label="Terraform Resource Type"
-              value={formData.terraformResource}
-              onChange={(e) => setFormData({ ...formData, terraformResource: e.target.value })}
-              placeholder="es: aws_instance, azurerm_firewall"
-            />
           </div>
 
           <div className="flex gap-2 mt-4">

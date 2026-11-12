@@ -229,5 +229,71 @@ describe('NetworkCanvas — mouse and keyboard', () => {
       expect(useNetworkStore.getState().clipboard).toBeNull();
       expect(labels()).toEqual(['PC-1']);
     });
+
+    it('Ctrl+V while typing in a field pastes text there, not devices on the canvas', async () => {
+      addPc('PC-1');
+      renderCanvas();
+      await clickDevice('PC-1');
+      press('c', { ctrlKey: true }); // a device is in the clipboard
+
+      for (const tag of ['input', 'textarea', 'select'] as const) {
+        const field = document.body.appendChild(document.createElement(tag));
+        const paste = new KeyboardEvent('keydown', {
+          key: 'v',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        });
+        fireEvent(field, paste);
+
+        expect(paste.defaultPrevented, tag).toBe(false);
+        expect(labels(), tag).toEqual(['PC-1']);
+        field.remove();
+      }
+    });
+
+    it('Ctrl+C while typing in a field copies its text, not the selected device', async () => {
+      addPc('PC-1');
+      renderCanvas();
+      await clickDevice('PC-1');
+
+      const field = document.body.appendChild(document.createElement('input'));
+      const copy = new KeyboardEvent('keydown', {
+        key: 'c',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      fireEvent(field, copy);
+
+      expect(copy.defaultPrevented).toBe(false);
+      expect(useNetworkStore.getState().clipboard).toBeNull();
+      field.remove();
+    });
+
+    it('Ctrl+C with text selected on the page copies that text (the output of the terminal, say)', async () => {
+      addPc('PC-1');
+      renderCanvas();
+      await clickDevice('PC-1');
+
+      const output = document.body.appendChild(document.createElement('pre'));
+      output.textContent = 'Reply from 192.168.20.10: hops=5 time=7ms';
+      const range = document.createRange();
+      range.selectNodeContents(output);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+
+      const copy = new KeyboardEvent('keydown', { key: 'c', ctrlKey: true, cancelable: true });
+      fireEvent(window, copy);
+
+      expect(copy.defaultPrevented).toBe(false);
+      expect(useNetworkStore.getState().clipboard).toBeNull();
+
+      window.getSelection()?.removeAllRanges();
+      output.remove();
+      // with nothing selected any more the shortcut is the canvas's again
+      press('c', { ctrlKey: true });
+      expect(useNetworkStore.getState().clipboard?.devices.map(d => d.label)).toEqual(['PC-1']);
+    });
   });
 });

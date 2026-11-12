@@ -201,7 +201,7 @@ const AppearanceSettingsTab = () => {
           <Icon icon="mdi:information-outline" width={18} className="mt-0.5 flex-shrink-0" />
           <span>
             Il tema selezionato verrà applicato a tutti gli elementi interattivi: bottoni, link,
-            hover, icone e animazioni. Prova a cambiare tema e modalità per vedere l'effetto!
+            hover, icone e animazioni.
           </span>
         </p>
       </div>

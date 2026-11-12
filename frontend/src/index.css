@@ -104,14 +104,6 @@ html, body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-body.is-connecting {
-  cursor: crosshair !important;
-}
-
-body.is-connecting * {
-  cursor: crosshair !important;
-}
-
 #root {
   width: 100%;
   height: 100vh;
@@ -328,25 +320,6 @@ body.is-connecting * {
   opacity: 1 !important;
 }
 
-/* Show all connection points during click-to-click mode */
-body.is-connecting .network-device:not(.connection-source) .connect-point::after {
-  opacity: 1 !important;
-}
-
-/* Yellow color during click-to-click mode - only on target devices (not source) */
-body.is-connecting .network-device:not(.connection-source) .connect-point::after {
-  background-color: #fbbf24 !important;
-  border-color: #f59e0b !important;
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.6) !important;
-  transform: translate(-50%, -50%) scale(1.3) !important;
-}
-
-/* Keep source device connection points visible but not yellow */
-body.is-connecting .network-device.connection-source .connect-point::after {
-  opacity: 1 !important;
-  background-color: var(--bg-canvas) !important;
-  border-color: var(--connector-color) !important;
-}
 
 /* Yellow color during React Flow drag-and-drop mode */
 /* Using body class added by onConnectStart/onConnectEnd */
