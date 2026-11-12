@@ -457,8 +457,9 @@ function parseInterface(rest: Token[], raw: string): Command {
 }
 
 /** `add route <network>|default via <next hop> [on <device...>]` */
-function parseRouteAdd(rest: Token[], raw: string): Command {
-  const usage = 'try: add route <network>|default via <next hop> [on <device>]';
+function parseRouteAdd(rest: Token[], raw: string, backup = false): Command {
+  // `add backup route …` is a second route to a network that has one
+  const usage = `try: add ${backup ? 'backup ' : ''}route <network>|default via <next hop> [on <device>]`;
   const args = stripLeadingNoise(rest, ['to']);
   const viaIdx = findKeyword(args, ['via']);
   const hop = args[viaIdx + 1];
@@ -466,18 +467,36 @@ function parseRouteAdd(rest: Token[], raw: string): Command {
   const destination = args[0].text;
   const nextHop = hop.text;
   const device = joinTokens(stripLeadingNoise(args.slice(viaIdx + 2), ['on', 'to', 'of']));
-  return device
-    ? { kind: 'route-add', destination, nextHop, device }
-    : { kind: 'route-add', destination, nextHop };
+  return {
+    kind: 'route-add',
+    destination,
+    nextHop,
+    ...(device ? { device } : {}),
+    ...(backup ? { backup: true as const } : {}),
+  };
 }
 
 /** `remove route <network>|default [from|on <device...>]` */
 function parseRouteRemove(rest: Token[], raw: string): Command {
+  // Without `via` every route to the network goes; with it, the one through that next hop
+  const usage = 'try: remove route <network>|default [via <next hop>] [from <device>]';
   const args = stripLeadingNoise(rest, ['to']);
-  if (args.length === 0) return unknown(raw, 'try: remove route <network>|default [from <device>]');
+  if (args.length === 0) return unknown(raw, usage);
   const destination = args[0].text;
-  const device = joinTokens(stripLeadingNoise(args.slice(1), ['from', 'on', 'of']));
-  return device ? { kind: 'route-remove', destination, device } : { kind: 'route-remove', destination };
+  let tail = args.slice(1);
+  let nextHop: string | undefined;
+  if (tail[0] !== undefined && !tail[0].quoted && tail[0].lower === 'via') {
+    if (tail[1] === undefined) return unknown(raw, usage);
+    nextHop = tail[1].text;
+    tail = tail.slice(2);
+  }
+  const device = joinTokens(stripLeadingNoise(tail, ['from', 'on', 'of']));
+  return {
+    kind: 'route-remove',
+    destination,
+    ...(nextHop !== undefined ? { nextHop } : {}),
+    ...(device ? { device } : {}),
+  };
 }
 
 /**
@@ -572,6 +591,12 @@ function parseAddRemove(action: 'add' | 'remove', rest: Token[], raw: string): C
   const noun = rest[0] !== undefined && !rest[0].quoted ? rest[0].lower : '';
   if (noun === 'route') {
     return action === 'add' ? parseRouteAdd(rest.slice(1), raw) : parseRouteRemove(rest.slice(1), raw);
+  }
+  // `add backup route …`; a backup route is removed like any other, by its next hop
+  if (noun === 'backup' && rest[1] !== undefined && !rest[1].quoted && rest[1].lower === 'route') {
+    return action === 'add'
+      ? parseRouteAdd(rest.slice(2), raw, true)
+      : unknown(raw, 'try: remove route <network>|default via <next hop> [from <device>]');
   }
   if (noun === 'rule') {
     return action === 'add' ? parseRuleAdd(rest.slice(1), raw) : parseRuleRemove(rest.slice(1), raw);

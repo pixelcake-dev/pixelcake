@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useId, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Scrollbars } from 'react-custom-scrollbars-2';
 import { SearchInput } from './SearchInput';
@@ -9,6 +9,11 @@ interface SearchableSelectProps {
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
   placeholder?: string;
+  /**
+   * Id of an element elsewhere on the page that names this field, when the
+   * caller draws the label itself instead of passing `label`
+   */
+  labelledBy?: string;
 }
 
 const SearchableSelect = ({
@@ -17,7 +22,12 @@ const SearchableSelect = ({
   onChange,
   options,
   placeholder = 'Seleziona...',
+  labelledBy,
 }: SearchableSelectProps) => {
+  // The button is named by its label and by the value it shows
+  const ownLabelId = useId();
+  const valueId = useId();
+  const labelId = label ? ownLabelId : labelledBy;
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [filteredOptions, setFilteredOptions] = useState(options);
@@ -69,7 +79,10 @@ const SearchableSelect = ({
   return (
     <div className="form-group relative" ref={dropdownRef}>
       {label && (
-        <label className="block text-sm font-medium mb-1 text-[var(--text-color-light)]">
+        <label
+          id={ownLabelId}
+          className="block text-sm font-medium mb-1 text-[var(--text-color-light)]"
+        >
           {label}
         </label>
       )}
@@ -78,9 +91,15 @@ const SearchableSelect = ({
       <button
         type="button"
         onClick={handleToggle}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-labelledby={labelId ? `${labelId} ${valueId}` : undefined}
         className="w-full px-3 py-2 rounded-md border border-[var(--border-color)] bg-[var(--bg-canvas)] text-[var(--text-color)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] flex items-center justify-between gap-2"
       >
-        <span className={`overflow-hidden text-ellipsis whitespace-nowrap ${!selectedOption ? 'text-[var(--text-color-light)]' : ''}`}>
+        <span
+          id={valueId}
+          className={`overflow-hidden text-ellipsis whitespace-nowrap ${!selectedOption ? 'text-[var(--text-color-light)]' : ''}`}
+        >
           {displayValue}
         </span>
         <ChevronDown

@@ -1,13 +1,24 @@
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
+import { usePresentationStore } from '@/store/presentationStore';
 import {
   openProject,
   requestNewProject,
   saveProject,
   saveProjectAs,
 } from '@/utils/projectFileAccess';
-import { Moon, Sun, ArrowDown, ArrowRight, Network, Building2, Sparkles, Check } from 'lucide-react';
+import {
+  Moon,
+  Sun,
+  ArrowDown,
+  ArrowRight,
+  Network,
+  Building2,
+  Presentation,
+  Sparkles,
+  Check,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import PixelCakeIcon from '@/assets/PixelCakeIcon.svg';
 
@@ -74,6 +85,13 @@ const TopMenuBar = () => {
     // Reset the "non mostrare più" preference, then show it
     localStorage.removeItem('pixelcake-hide-welcome');
     setShowWelcomeScreen(true);
+  };
+
+  // Presentation mode shows a drawing: there must be one
+  const handlePresent = () => {
+    if (!usePresentationStore.getState().enter()) {
+      toast.info('Il canvas è vuoto: non c\'è nulla da presentare.');
+    }
   };
 
   const handleFitView = () => {
@@ -155,6 +173,7 @@ const TopMenuBar = () => {
         <div className="dropdown-content">
           <ul>
             <li onClick={handleFitView}>Adatta alla finestra</li>
+            <li onClick={handlePresent}>Modalità presentazione</li>
             <hr />
             {/* Auto-Layout Submenu */}
             <li className="has-submenu">
@@ -307,9 +326,19 @@ const TopMenuBar = () => {
         </div>
       </div>
 
+      {/* Presentation mode */}
+      <button
+        type="button"
+        className="present-button"
+        onClick={handlePresent}
+        title="Mostra il disegno: fai una domanda alla rete, simula un guasto"
+      >
+        <Presentation size={16} aria-hidden="true" /> Presenta
+      </button>
+
       {/* Theme Toggle */}
       <button
-        className="ml-auto px-2 py-1 hover:text-[var(--accent-color)] cursor-pointer border-none bg-transparent"
+        className="ml-2 px-2 py-1 hover:text-[var(--accent-color)] cursor-pointer border-none bg-transparent"
         onClick={toggleDarkMode}
         title={darkMode ? 'Passa a tema chiaro' : 'Passa a tema scuro'}
       >

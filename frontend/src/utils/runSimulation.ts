@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useNetworkStore } from '@/store/networkStore';
 import { useSimulationStore } from '@/store/simulationStore';
 import { planAndEvaluateFlow } from '@/engine';
+import { liveTopology } from '@/utils/liveTopology';
 import type { FlowModelType } from '@/types';
 
 const FLOW_LABELS: Record<FlowModelType, string> = {
@@ -27,9 +28,10 @@ export function runFlowSimulation(
   targetId: string,
   flowModel: FlowModelType
 ): boolean {
-  const { devices, connections, globalNetworkSettings } = useNetworkStore.getState();
+  const topology = liveTopology();
+  const { globalNetworkSettings } = useNetworkStore.getState();
 
-  if (devices.length < 2) {
+  if (topology.devices.length < 2) {
     toast.warning('Aggiungi almeno due dispositivi per avviare una simulazione.');
     return false;
   }
@@ -42,24 +44,22 @@ export function runFlowSimulation(
     return false;
   }
 
-  const result = planAndEvaluateFlow(
-    flowModel,
-    sourceId,
-    targetId,
-    { devices, connections },
-    { emailMode: globalNetworkSettings.emailMode ?? 'auto' }
-  );
+  const result = planAndEvaluateFlow(flowModel, sourceId, targetId, topology, {
+    emailMode: globalNetworkSettings.emailMode ?? 'auto',
+  });
+  const start = () =>
+    useSimulationStore
+      .getState()
+      .startSimulation(result.animationPath, flowModel, result.animationLinks);
 
   if (result.verdict === 'success') {
-    useSimulationStore.getState().startSimulation(result.animationPath, flowModel);
+    start();
     return true;
   }
 
   // Failure: animate up to the drop point when there is a prefix to show
   const started = result.animationPath.length >= 2;
-  if (started) {
-    useSimulationStore.getState().startSimulation(result.animationPath, flowModel);
-  }
+  if (started) start();
   toast.error(`Simulazione ${FLOW_LABELS[flowModel]} fallita`, {
     description: result.failureReason ?? 'motivo sconosciuto',
   });

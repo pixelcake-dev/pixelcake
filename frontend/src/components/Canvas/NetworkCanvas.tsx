@@ -6,6 +6,7 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   useReactFlow,
+  useStore,
   ConnectionMode,
   ConnectionLineType,
   SelectionMode,
@@ -14,9 +15,11 @@ import type {
   Node,
   Edge,
   Connection,
+  ReactFlowState,
   OnConnect,
   NodeTypes,
   NodeChange,
+  NodeMouseHandler,
   OnConnectStart,
   OnConnectEnd,
   EdgeMouseHandler,
@@ -30,6 +33,7 @@ import WelcomeScreen from '@/components/WelcomeScreen';
 import { useNetworkStore } from '@/store/networkStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useUIStore } from '@/store/uiStore';
+import { usePresentationStore } from '@/store/presentationStore';
 import type { NetworkDevice as NetworkDeviceType } from '@/types/network';
 
 // Define node and edge types outside component to prevent re-renders
@@ -40,6 +44,35 @@ const nodeTypes: NodeTypes = {
 const edgeTypes = {
   custom: CustomEdge,
   particle: ParticleEdge, // Particle animations with CSS offset-path
+};
+
+// Colour of a device on the small map, by device type
+const MINI_MAP_COLORS: Record<string, string> = {
+  PC: '#3b82f6', // Blue
+  Switch: '#10b981', // Green
+  Router: '#f59e0b', // Amber
+  Server: '#8b5cf6', // Violet
+  Firewall: '#ef4444', // Red
+  AccessPoint: '#06b6d4', // Cyan
+  LoadBalancer: '#ec4899', // Pink
+  Database: '#f97316', // Orange
+  Cloud: '#6366f1', // Indigo
+};
+
+const miniMapColor = (node: Node): string =>
+  MINI_MAP_COLORS[(node.data as NetworkDeviceType).type] || '#6b7280'; // Gray fallback
+
+/**
+ * True once React Flow knows the size of every device on screen, which is
+ * what fitting the view needs. The sizes are lost, and measured again a
+ * moment later, each time the list of devices is handed to React Flow.
+ */
+const allNodesMeasured = (state: ReactFlowState): boolean => {
+  if (state.nodeInternals.size === 0) return false;
+  for (const node of state.nodeInternals.values()) {
+    if (!node.width || !node.height) return false;
+  }
+  return true;
 };
 
 const NetworkCanvas = () => {
@@ -68,8 +101,12 @@ const NetworkCanvas = () => {
   const showWelcomeScreen = useUIStore((state) => state.showWelcomeScreen);
   const canvasRevision = useNetworkStore((state) => state.canvasRevision);
   const canvasCount = useProjectStore((state) => state.canvases.length);
+  // Presentation mode: the drawing is shown, not edited
+  const presenting = usePresentationStore((state) => state.active);
+  const panelOpen = usePresentationStore((state) => state.panelOpen);
 
   const reactFlowInstance = useReactFlow();
+  const nodesMeasured = useStore(allNodesMeasured);
 
   // Memoize node and edge types to prevent React Flow warnings
   const memoizedNodeTypes = useMemo(() => nodeTypes, []);
@@ -85,24 +122,48 @@ const NetworkCanvas = () => {
   const dragGestureId = useRef<number>(0);
   const currentDragId = useRef<number | null>(null);
 
-  // Handle context menu on device
+  // Handle context menu on device. While presenting, the right button opens
+  // the same small menu as a click: nothing there edits the drawing
   const handleDeviceContextMenu = useCallback(
     (e: React.MouseEvent, device: NetworkDeviceType) => {
       e.preventDefault();
       e.stopPropagation();
+      const presentation = usePresentationStore.getState();
+      if (presentation.active) {
+        presentation.openMenu({ kind: 'device', id: device.id, x: e.clientX, y: e.clientY });
+        return;
+      }
       setContextMenuDevice(device, e.clientX, e.clientY);
     },
     [setContextMenuDevice]
   );
 
-  // Handle double click on device
+  // Handle double click on device (the inspector is a building tool)
   const handleDeviceDoubleClick = useCallback(
     (device: NetworkDeviceType) => {
+      if (usePresentationStore.getState().active) return;
       setInspectorDevice(device);
       openModal('inspector');
     },
     [setInspectorDevice, openModal]
   );
+
+  // Presentation mode: a click on a device or on a cable opens its menu
+  const handlePresentationNodeClick: NodeMouseHandler = useCallback((event, node) => {
+    usePresentationStore
+      .getState()
+      .openMenu({ kind: 'device', id: node.id, x: event.clientX, y: event.clientY });
+  }, []);
+
+  const handlePresentationEdgeClick: EdgeMouseHandler = useCallback((event, edge) => {
+    usePresentationStore
+      .getState()
+      .openMenu({ kind: 'connection', id: edge.id, x: event.clientX, y: event.clientY });
+  }, []);
+
+  const closePresentationMenu = useCallback(() => {
+    usePresentationStore.getState().closeMenu();
+  }, []);
 
   // Handle selection change from React Flow (selection box, click, etc.)
   const handleSelectionChange = useCallback(
@@ -181,6 +242,12 @@ const NetworkCanvas = () => {
     (event, edge) => {
       event.preventDefault();
       event.stopPropagation();
+
+      const presentation = usePresentationStore.getState();
+      if (presentation.active) {
+        presentation.openMenu({ kind: 'connection', id: edge.id, x: event.clientX, y: event.clientY });
+        return;
+      }
 
       // Get the full connection data from the store using edge.id
       const connection = getConnection(edge.id);
@@ -266,6 +333,29 @@ const NetworkCanvas = () => {
     reactFlowInstance.setViewport(useNetworkStore.getState().viewport);
   }, [canvasRevision, reactFlowInstance]);
 
+  // Presentation mode shows the whole drawing: it is fitted to the window on
+  // the way in, when another canvas comes on screen and when the panel opens
+  // or closes. Where the user was looking while building is not touched (see
+  // handleMoveEnd) and comes back on the way out.
+  const wasPresenting = useRef(false);
+  useEffect(() => {
+    if (!presenting) {
+      if (wasPresenting.current) {
+        wasPresenting.current = false;
+        reactFlowInstance.setViewport(useNetworkStore.getState().viewport, { duration: 200 });
+      }
+      return;
+    }
+    wasPresenting.current = true;
+    // Fitting needs the size of every device and the new size of the canvas
+    // (bars and panels have just been swapped): wait for both
+    if (!nodesMeasured) return;
+    const timer = setTimeout(() => {
+      reactFlowInstance.fitView({ padding: 0.15, duration: 300 });
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [presenting, panelOpen, canvasRevision, nodesMeasured, reactFlowInstance]);
+
   // Handle node position changes (drag)
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -314,8 +404,10 @@ const NetworkCanvas = () => {
     closeContextMenu();
   }, [closeContextMenu]);
 
-  // Save viewport when user pans or zooms
+  // Save viewport when user pans or zooms. Not while presenting: looking
+  // around a presentation must not move the view the drawing is saved with
   const handleMoveEnd = useCallback(() => {
+    if (usePresentationStore.getState().active) return;
     const currentViewport = reactFlowInstance.getViewport();
     setViewport(currentViewport);
   }, [reactFlowInstance, setViewport]);
@@ -326,6 +418,8 @@ const NetworkCanvas = () => {
       // Check if Ctrl (Windows/Linux) or Cmd (Mac) is pressed
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
       if (!isCtrlOrCmd) return;
+      // Nothing is copied or pasted into a drawing that is being presented
+      if (usePresentationStore.getState().active) return;
 
       // The shortcuts belong to the drawing. While the user is typing, or has
       // selected some text (the output of the terminal, say), copy and paste
@@ -377,7 +471,8 @@ const NetworkCanvas = () => {
 
   // The welcome screen only shows on an empty project: one canvas with
   // nothing on it. An empty canvas added to a project is just an empty canvas
-  const shouldShowWelcome = showWelcomeScreen && devices.length === 0 && canvasCount === 1;
+  const shouldShowWelcome =
+    !presenting && showWelcomeScreen && devices.length === 0 && canvasCount === 1;
 
   return (
     <div className="relative w-full h-full">
@@ -402,6 +497,10 @@ const NetworkCanvas = () => {
         onConnectStart={onConnectStart}
         onConnectEnd={onConnectEnd}
         onEdgeContextMenu={handleEdgeContextMenu}
+        onNodeClick={presenting ? handlePresentationNodeClick : undefined}
+        onEdgeClick={presenting ? handlePresentationEdgeClick : undefined}
+        onPaneClick={presenting ? closePresentationMenu : undefined}
+        onMoveStart={presenting ? closePresentationMenu : undefined}
         onError={handleError}
         onMoveEnd={handleMoveEnd}
         onMouseDown={handlePaneMouseDown}
@@ -426,34 +525,23 @@ const NetworkCanvas = () => {
           type: 'custom',
           animated: false,
         }}
-        // Multi-selection support
-        selectionOnDrag={true}
-        panOnDrag={[2]}
+        // Multi-selection support. While presenting nothing can be selected,
+        // moved, joined or deleted: dragging pans the view
+        selectionOnDrag={!presenting}
+        panOnDrag={presenting ? true : [2]}
         selectionMode={SelectionMode.Full}
-        multiSelectionKeyCode="Control"
-        deleteKeyCode="Delete"
+        multiSelectionKeyCode={presenting ? null : 'Control'}
+        deleteKeyCode={presenting ? null : 'Delete'}
+        nodesDraggable={!presenting}
+        nodesConnectable={!presenting}
+        elementsSelectable={!presenting}
+        // A double click while presenting is two clicks on a menu, not a zoom
+        zoomOnDoubleClick={!presenting}
       >
         <Background color="#aaa" gap={16} />
-        <Controls />
-        <MiniMap
-          nodeColor={(node) => {
-            const device = node.data as NetworkDeviceType;
-            // Color mapping for all 9 device types
-            const colorMap: Record<string, string> = {
-              PC: '#3b82f6',          // Blue
-              Switch: '#10b981',      // Green
-              Router: '#f59e0b',      // Amber
-              Server: '#8b5cf6',      // Violet
-              Firewall: '#ef4444',    // Red
-              AccessPoint: '#06b6d4', // Cyan
-              LoadBalancer: '#ec4899', // Pink
-              Database: '#f97316',    // Orange
-              Cloud: '#6366f1',       // Indigo
-            };
-            return colorMap[device.type] || '#6b7280'; // Gray fallback
-          }}
-          maskColor="rgba(0, 0, 0, 0.1)"
-        />
+        <Controls showInteractive={!presenting} />
+        {/* The small map is a tool for finding one's way while building */}
+        {!presenting && <MiniMap nodeColor={miniMapColor} maskColor="rgba(0, 0, 0, 0.1)" />}
         {/* Packet Animation Logic */}
         <PacketAnimation />
       </ReactFlow>

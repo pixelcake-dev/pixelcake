@@ -197,6 +197,29 @@ describe('InspectorModal — Rotte', () => {
     ]);
   });
 
+  it('shows a second route to the same network as the backup of the first', () => {
+    useNetworkStore.getState().updateDevice(device('Router-1').id, {
+      routes: [
+        { id: 'route-1', destination: '192.168.30.0/24', nextHop: '192.168.20.10' },
+        { id: 'route-2', destination: '192.168.30.0/24', nextHop: '192.168.10.11' },
+      ],
+    });
+    openInspector('Router-1');
+    openTab('Rotte (2)');
+
+    expect(screen.getByText(/La seconda è di riserva/)).toBeInTheDocument();
+    const toBranch = routingTableRows().filter(row => row[0] === '192.168.30.0/24');
+    expect(toBranch).toEqual([
+      ['192.168.30.0/24', '192.168.20.10', 'porta 2', 'statica'],
+      ['192.168.30.0/24', '192.168.10.11', 'porta 1', 'statica, di riserva'],
+    ]);
+
+    // two routes to one network are not a mistake: they are saved as written
+    save();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(device('Router-1').routes).toHaveLength(2);
+  });
+
   it('says that the routes of a router without addressed ports are not used', () => {
     useNetworkStore.getState().updateDevice(device('Router-1').id, {
       ports: device('Router-1').ports?.map(({ id, enabled }) => ({ id, enabled })),

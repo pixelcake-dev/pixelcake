@@ -63,8 +63,13 @@ export type Command =
   | { kind: 'port-disable'; port: number; device?: string }
   /** `iface` is a port number or a NIC name, as typed */
   | { kind: 'interface-set'; iface: string; setting: InterfaceSetting; device?: string }
-  | { kind: 'route-add'; destination: string; nextHop: string; device?: string }
-  | { kind: 'route-remove'; destination: string; device?: string }
+  /**
+   * `backup`: a second route to a network that has one (`add backup route`),
+   * used when the line of the first is down
+   */
+  | { kind: 'route-add'; destination: string; nextHop: string; device?: string; backup?: true }
+  /** `nextHop`: remove only the route through it (`remove route … via …`) */
+  | { kind: 'route-remove'; destination: string; nextHop?: string; device?: string }
   | {
       kind: 'rule-add';
       /** 1-based place in the list; undefined = at the end */

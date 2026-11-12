@@ -335,6 +335,30 @@ describe('TerminalModal', () => {
     expect(screen.getByLabelText('Terminal input')).toBeInTheDocument();
   });
 
+  it('sets the packet off on the cables the command names', () => {
+    const input = openTerminal();
+    executeCommandMock.mockImplementationOnce((_rawInput, context) => ({
+      lines: [],
+      context,
+      liveTrace: {
+        animationPath: ['dev-0', 'dev-1'],
+        animationLinks: ['conn-7'],
+        flowModel: 'web',
+        hopLines: [],
+        finalLines: [],
+      },
+    }));
+
+    typeCommand(input, 'browse b from a');
+
+    expect(useSimulationStore.getState()).toMatchObject({
+      isRunning: true,
+      flowModel: 'web',
+      path: ['dev-0', 'dev-1'],
+      links: ['conn-7'],
+    });
+  });
+
   it('Ctrl+C interrupts a running command without printing the remaining output', () => {
     const input = openTerminal();
     executeCommandMock.mockImplementationOnce((_rawInput, context) => ({

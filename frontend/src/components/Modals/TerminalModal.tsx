@@ -280,14 +280,14 @@ const TerminalModal = () => {
     // subscription above reveal the output hop by hop. The prompt stays
     // blocked (isBusy) until the run completes or Ctrl+C interrupts it.
     if (result.liveTrace) {
-      const { animationPath, flowModel, hopLines, finalLines } = result.liveTrace;
+      const { animationPath, animationLinks, flowModel, hopLines, finalLines } = result.liveTrace;
       const simulation = useSimulationStore.getState();
       if (simulation.isRunning) {
         simulation.stopSimulation();
       }
       liveRef.current = { hopLines, finalLines, printed: 0 };
       setIsBusy(true);
-      simulation.startSimulation(animationPath, flowModel);
+      simulation.startSimulation(animationPath, flowModel, animationLinks);
     }
 
     if (raw.trim() !== '') {

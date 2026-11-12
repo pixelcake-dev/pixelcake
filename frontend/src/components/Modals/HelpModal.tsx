@@ -54,8 +54,9 @@ const GuideTab = () => (
         dall&apos;elenco: controlla il nome e conferma, l&apos;indirizzo IP viene proposto in
         automatico. Il dispositivo compare al centro della parte di canvas che stai guardando.
         «Aggiungi in Blocco» ne crea molti in una volta. Nella scheda
-        «Topologie» dello stesso pannello ci sono due reti di esempio già pronte, una semplice e
-        una con VLAN, DMZ e firewall: caricarne una prende il posto di quanto è sul canvas.
+        «Topologie» dello stesso pannello ci sono tre reti di esempio già pronte: una semplice,
+        una con VLAN, DMZ e firewall, e una con due sedi e una linea di riserva. Caricarne una
+        prende il posto di quanto è sul canvas.
       </Step>
 
       <Step title="Spostali e selezionali">
@@ -86,7 +87,8 @@ const GuideTab = () => (
         gateway dei dispositivi collegati lì, e la rete di quella porta è raggiunta senza altro. Le
         reti che stanno dietro un altro router si scrivono nella scheda «Rotte», con l&apos;indirizzo
         del prossimo salto; il gateway del router è la sua rotta predefinita. La stessa scheda mostra
-        la tabella di instradamento che ne risulta. Serve una rotta anche per il ritorno.
+        la tabella di instradamento che ne risulta. Serve una rotta anche per il ritorno. Una
+        seconda rotta per la stessa rete è di riserva: subentra quando la linea della prima è giù.
       </Step>
 
       <Step title="Separa con le VLAN">
@@ -119,6 +121,30 @@ const GuideTab = () => (
         oppure <Mono>show routes Router-1</Mono>. Quelli che cambiano la rete, come{' '}
         <Mono>add route 192.168.30.0/24 via 10.0.0.2 on Router-1</Mono>, modificano lo stesso
         disegno che vedi. L&apos;elenco è nella scheda «Comandi del terminale».
+      </Step>
+
+      <Step title="Presenta la rete">
+        «Presenta», in alto a destra, mette via gli strumenti per disegnare: resta il disegno,
+        adattato alla finestra e non più modificabile con il mouse, con un pannello accanto. Un
+        clic su un dispositivo apre un piccolo menu: «Parti da qui» e «Arriva qui» scelgono i due
+        capi della domanda, che si possono scegliere anche dai menu «Da» e «A» del pannello. Scelto
+        il tipo di scambio (Ping, Web o Email) il pacchetto parte da solo e il pannello dice se
+        arriva, per quali dispositivi passa e, se si ferma, dove e perché. Nella barra in alto si
+        regola la velocità del pacchetto, si apre il terminale e si passa a schermo intero. Si esce
+        con «Esci» o con il tasto Esc.
+      </Step>
+
+      <Step title="Chiedi cosa succede se qualcosa si rompe">
+        In presentazione, un clic su un dispositivo o su un cavo e poi «Simula un guasto» lo
+        considera rotto. Il disegno non cambia, e all&apos;uscita il guasto sparisce. La domanda
+        sullo schermo viene rifatta subito: se c&apos;è un&apos;altra strada il pacchetto la prende,
+        altrimenti si ferma e il pannello dice dove. Tra switch la strada è la più corta che
+        funziona; un router passa alla rotta di riserva quando la linea della rotta principale è
+        guasta. Sotto «Guasti simulati» c&apos;è l&apos;effetto sul resto della rete: quante
+        comunicazioni tra i dispositivi finali si interrompono, quante passano da un&apos;altra
+        strada, quante non cambiano. Un clic su una di esse la mostra. La rete di esempio «Due
+        sedi: linea principale e di riserva» è fatta per provarlo. Lo spanning tree non è
+        simulato.
       </Step>
 
       <Step title="Dividi il progetto in canvas">

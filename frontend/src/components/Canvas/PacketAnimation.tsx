@@ -1,127 +1,101 @@
 /**
  * Packet Animation Logic Component
- * Manages hop-by-hop simulation timing and state updates
- * Visual animation is handled by CustomEdge using SVG animateMotion (React Flow official approach)
+ * Moves the packet of a simulation along its path, one cable at a time, and
+ * keeps simulationStore up to date. The drawing of the packet itself is done
+ * by CustomEdge (SVG animateMotion), which reads the cable and the duration
+ * from the store.
+ *
+ * One run at a time: a new `startSimulation`, a stop or an unmount cancels
+ * the run in progress at once, so two packets never fight over the store.
  */
 
 import { useEffect } from 'react';
 import { useReactFlow } from 'reactflow';
 import { useSimulationStore } from '@/store/simulationStore';
 import { useNetworkStore } from '@/store/networkStore';
+import { usePresentationStore } from '@/store/presentationStore';
+import { END_PAUSE_MS, HOP_PAUSE_MS, edgeDuration, pickConnection } from '@/utils/packetTiming';
 
 const PacketAnimation = () => {
   const reactFlowInstance = useReactFlow();
 
   const isRunning = useSimulationStore((state) => state.isRunning);
-  const path = useSimulationStore((state) => state.path);
-  const hopDelay = useSimulationStore((state) => state.hopDelay);
-  const setCurrentHop = useSimulationStore((state) => state.setCurrentHop);
-  const setCurrentConnection = useSimulationStore((state) => state.setCurrentConnection);
-  const stopSimulation = useSimulationStore((state) => state.stopSimulation);
-
-  const setSelectedDevice = useNetworkStore((state) => state.setSelectedDevice);
-  const connections = useNetworkStore((state) => state.connections);
+  const runId = useSimulationStore((state) => state.runId);
 
   useEffect(() => {
-    if (!isRunning || !path || path.length < 2) {
+    if (!isRunning) return;
+
+    const simulation = useSimulationStore.getState();
+    const { path, links } = simulation;
+    if (path.length < 2) {
+      simulation.stopSimulation();
       return;
     }
 
-    const animatePacketHopByHop = async () => {
-      try {
-        // Animate through the path hop-by-hop
-        for (let i = 0; i < path.length - 1; i++) {
-          const sourceId = path[i];
-          const targetId = path[i + 1];
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    /** Resolves after `ms`, or never when the run is cancelled meanwhile */
+    const wait = (ms: number) =>
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, ms);
+      });
 
-          // Update current hop in store
-          setCurrentHop(i);
+    const animate = async () => {
+      for (let i = 0; i < path.length - 1; i++) {
+        const fromId = path[i];
+        const toId = path[i + 1];
+        const store = useSimulationStore.getState();
+        const { speed } = store;
 
-          // Highlight current source device
-          setSelectedDevice(sourceId);
+        store.setCurrentHop(i);
+        store.setActiveDevice(fromId);
 
-          // Get nodes from React Flow
-          const sourceNode = reactFlowInstance.getNode(sourceId);
-          const targetNode = reactFlowInstance.getNode(targetId);
+        const fromNode = reactFlowInstance.getNode(fromId);
+        const toNode = reactFlowInstance.getNode(toId);
+        const connection = pickConnection(
+          useNetworkStore.getState().connections,
+          fromId,
+          toId,
+          links[i],
+          usePresentationStore.getState().failedConnections
+        );
+        // A device or a cable removed while the packet travels: skip the stretch
+        if (!fromNode || !toNode || !connection) continue;
 
-          if (!sourceNode || !targetNode) {
-            console.warn(`Missing node: ${sourceId} or ${targetId}`);
-            continue;
-          }
+        const centre = (node: typeof fromNode) => ({
+          x: node.position.x + (node.width ?? 120) / 2,
+          y: node.position.y + (node.height ?? 100) / 2,
+        });
+        const from = centre(fromNode);
+        const to = centre(toNode);
+        const duration = edgeDuration(Math.hypot(to.x - from.x, to.y - from.y), speed);
 
-          // Find the connection between these two nodes
-          // Try both directions (connection could be stored either way)
-          const connection = connections.find(
-            (conn) =>
-              (conn.source === sourceId && conn.target === targetId) ||
-              (conn.source === targetId && conn.target === sourceId)
-          );
+        // This starts the packet on the cable (CustomEdge)
+        store.setCurrentConnection(connection.id, connection.source !== fromId, duration);
+        await wait(duration);
+        if (cancelled) return;
 
-          if (!connection) {
-            console.warn(`No connection found between ${sourceId} and ${targetId}`);
-            continue;
-          }
-
-          // Determine if packet is traveling in reverse direction of connection
-          // Connection is stored as source→target, but packet might travel target→source
-          const isCorrectDirection = connection.source === sourceId && connection.target === targetId;
-          const isReversed = !isCorrectDirection;
-
-          // Set current connection with direction info - This triggers the animation in CustomEdge
-          setCurrentConnection(connection.id, isReversed);
-
-          // Calculate approximate duration based on node positions
-          // (CustomEdge calculates exact duration using handle positions)
-          const sourcePos = sourceNode.position;
-          const targetPos = targetNode.position;
-
-          const sourceWidth = sourceNode.width || 120;
-          const sourceHeight = sourceNode.height || 100;
-          const targetWidth = targetNode.width || 120;
-          const targetHeight = targetNode.height || 100;
-
-          // Calculate center positions for approximate distance
-          const sourceCenterX = sourcePos.x + sourceWidth / 2;
-          const sourceCenterY = sourcePos.y + sourceHeight / 2;
-          const targetCenterX = targetPos.x + targetWidth / 2;
-          const targetCenterY = targetPos.y + targetHeight / 2;
-
-          // Approximate animation duration (same formula as CustomEdge)
-          const edgeLength = Math.sqrt(
-            Math.pow(targetCenterX - sourceCenterX, 2) + Math.pow(targetCenterY - sourceCenterY, 2)
-          );
-          const duration = Math.max(edgeLength * 3, 400); // 3ms per unit, minimum 400ms
-
-          // Wait for animation to complete
-          await new Promise((resolve) => setTimeout(resolve, duration));
-
-          // Pause at intermediate hops (not at start or end)
-          if (i > 0 && i < path.length - 2) {
-            // Highlight the intermediate device we just reached
-            setSelectedDevice(targetId);
-
-            // Pause for hop delay (didactic pause)
-            await new Promise((resolve) => setTimeout(resolve, hopDelay));
-          }
+        // Arrived: stop a moment on every device that is not the last
+        useSimulationStore.getState().setActiveDevice(toId);
+        if (i < path.length - 2) {
+          await wait(HOP_PAUSE_MS / speed);
+          if (cancelled) return;
         }
-
-        // Highlight final destination device
-        setSelectedDevice(path[path.length - 1]);
-
-        // Brief pause at destination
-        await new Promise((resolve) => setTimeout(resolve, 300));
-      } catch (error) {
-        console.error('Animation error:', error);
-      } finally {
-        // Clear selection and stop simulation when done
-        setSelectedDevice(null);
-        setCurrentConnection(null);
-        stopSimulation();
       }
+
+      useSimulationStore.getState().setCurrentConnection(null);
+      await wait(END_PAUSE_MS / useSimulationStore.getState().speed);
+      if (cancelled) return;
+      useSimulationStore.getState().stopSimulation();
     };
 
-    animatePacketHopByHop();
-  }, [isRunning, path, hopDelay, reactFlowInstance, setCurrentHop, setSelectedDevice, setCurrentConnection, stopSimulation, connections]);
+    void animate();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isRunning, runId, reactFlowInstance]);
 
   // This component only manages logic, no visual rendering
   return null;

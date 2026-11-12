@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { formatNetwork, hasInterfaceAddresses, routingTable } from '@/engine';
+import { formatNetwork, hasInterfaceAddresses, isBackupRoute, routingTable } from '@/engine';
 import type { RouteEntry } from '@/engine';
 import { routeProblem } from '@/utils/networkConfigValidation';
 import type { NetworkDevice, StaticRoute } from '@/types';
@@ -61,6 +61,11 @@ const RoutesPanel: React.FC<RoutesPanelProps> = ({ device, routes, onChange }) =
         scrivono le reti che stanno dietro un altro router: il traffico per quella rete viene
         consegnato al prossimo salto. Il gateway della scheda «Generale» è la rotta predefinita, usata
         quando nessun&apos;altra corrisponde.
+      </p>
+      <p className="text-[var(--text-color-light)] -mt-3">
+        Due rotte per la stessa rete: vale la prima. La seconda è di riserva e subentra quando la
+        porta da cui esce la prima è spenta, o quando la sua linea è guasta (lo puoi simulare in
+        modalità presentazione).
       </p>
 
       {!addressed && (
@@ -210,6 +215,7 @@ const RoutesPanel: React.FC<RoutesPanelProps> = ({ device, routes, onChange }) =
                     <td className="py-1 font-sans">
                       {KIND_LABELS[entry.kind]}
                       {entry.kind === 'default' && !entry.route ? ' (gateway)' : ''}
+                      {isBackupRoute(table, index) && ', di riserva'}
                       {unreachable && ': il prossimo salto non è su nessuna rete del dispositivo'}
                       {down && ' (interfaccia spenta)'}
                     </td>

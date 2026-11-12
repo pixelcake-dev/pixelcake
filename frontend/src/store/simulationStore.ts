@@ -1,140 +1,107 @@
 /**
  * Simulation Store
- * Manages network simulation state and packet flow
+ * The packet travelling on the canvas: which way it goes, where it is now.
+ *
+ * Whoever wants an animation calls `startSimulation` with the devices to go
+ * through (and, when the engine gave them, the cables between them).
+ * PacketAnimation owns the timing and moves the packet; CustomEdge draws it.
+ * Nothing here is saved.
  */
 
 import { create } from 'zustand';
 import type { FlowModelType } from '@/types';
 
+/** How fast the packet travels: 1 is the normal pace */
+export const SIMULATION_SPEEDS = [0.5, 1, 2] as const;
+export type SimulationSpeed = (typeof SIMULATION_SPEEDS)[number];
+
 interface SimulationStore {
   // State
   isRunning: boolean;
-  sourceId: string | null;
-  targetId: string | null;
+  /** Goes up by one at every start: tells a run from the one before it */
+  runId: number;
   flowModel: FlowModelType;
+  /** Device ids the packet goes through, in order */
   path: string[];
-  currentStep: number;
-  currentHop: number; // Current hop index in path (0-based)
-  hopDelay: number; // Delay at each intermediate hop (ms)
-  isHopPaused: boolean; // Whether animation is paused at a hop
-  packetPosition: { x: number; y: number } | null;
-  currentConnectionId: string | null; // ID of connection currently being traversed
-  currentEdgePath: string | null; // SVG path of current edge for global circle animation
-  currentEdgeDuration: number; // Duration of current edge animation (ms)
-  isPacketReversed: boolean; // Whether packet is traveling in reverse direction of connection
+  /**
+   * `links[i]` is the id of the cable between `path[i]` and `path[i + 1]`.
+   * Empty string, or a shorter list: not known, the first working cable
+   * between the two devices is taken.
+   */
+  links: string[];
+  speed: SimulationSpeed;
+  /** Index in `path` of the device the packet is leaving */
+  currentHop: number;
+  /** The device the packet is on, while it stops there */
+  activeDeviceId: string | null;
+  /** The cable the packet is travelling on */
+  currentConnectionId: string | null;
+  /** How long it takes to cross it (ms) */
+  currentEdgeDuration: number;
+  /** True when it travels from the target end of the cable to its source end */
+  isPacketReversed: boolean;
 
   // Actions
-  startSimulation: (path: string[], flowModel: FlowModelType) => void;
+  /** Start an animation (replacing a running one) and return its `runId` */
+  startSimulation: (path: string[], flowModel: FlowModelType, links?: string[]) => number;
   stopSimulation: () => void;
-  setFlowModel: (model: FlowModelType) => void;
-  setCurrentStep: (step: number) => void;
+  setSpeed: (speed: SimulationSpeed) => void;
   setCurrentHop: (hop: number) => void;
-  setHopDelay: (delay: number) => void;
-  pauseAtHop: () => void;
-  resumeFromHop: () => void;
-  setPacketPosition: (position: { x: number; y: number } | null) => void;
-  setCurrentConnection: (connectionId: string | null, isReversed?: boolean) => void;
-  setCurrentEdgeAnimation: (path: string, duration: number) => void;
+  setActiveDevice: (deviceId: string | null) => void;
+  setCurrentConnection: (connectionId: string | null, isReversed?: boolean, duration?: number) => void;
   resetSimulation: () => void;
 }
 
-export const useSimulationStore = create<SimulationStore>((set) => ({
-  // Initial State
+const IDLE = {
   isRunning: false,
-  sourceId: null,
-  targetId: null,
-  flowModel: 'ping',
-  path: [],
-  currentStep: 0,
   currentHop: 0,
-  hopDelay: 400, // 400ms pause at each intermediate hop
-  isHopPaused: false,
-  packetPosition: null,
+  activeDeviceId: null,
   currentConnectionId: null,
-  currentEdgePath: null,
   currentEdgeDuration: 0,
   isPacketReversed: false,
+};
+
+export const useSimulationStore = create<SimulationStore>((set, get) => ({
+  // Initial State
+  ...IDLE,
+  runId: 0,
+  flowModel: 'ping',
+  path: [],
+  links: [],
+  speed: 1,
 
   // Actions
-  startSimulation: (path, flowModel) => {
-    set({
-      isRunning: true,
-      flowModel,
-      path,
-      currentStep: 0,
-      currentHop: 0,
-      isHopPaused: false,
-    });
+  startSimulation: (path, flowModel, links = []) => {
+    const runId = get().runId + 1;
+    set({ ...IDLE, isRunning: true, runId, flowModel, path, links });
+    return runId;
   },
 
   stopSimulation: () => {
-    set({
-      isRunning: false,
-      currentStep: 0,
-      currentHop: 0,
-      isHopPaused: false,
-      packetPosition: null,
-      currentConnectionId: null,
-      currentEdgePath: null,
-      currentEdgeDuration: 0,
-    });
+    set({ ...IDLE });
   },
 
-  setFlowModel: model => {
-    set({ flowModel: model });
-  },
-
-  setCurrentStep: step => {
-    set({ currentStep: step });
+  setSpeed: speed => {
+    set({ speed });
   },
 
   setCurrentHop: hop => {
     set({ currentHop: hop });
   },
 
-  setHopDelay: delay => {
-    set({ hopDelay: delay });
+  setActiveDevice: deviceId => {
+    set({ activeDeviceId: deviceId });
   },
 
-  pauseAtHop: () => {
-    set({ isHopPaused: true });
-  },
-
-  resumeFromHop: () => {
-    set({ isHopPaused: false });
-  },
-
-  setPacketPosition: position => {
-    set({ packetPosition: position });
-  },
-
-  setCurrentConnection: (connectionId, isReversed = false) => {
+  setCurrentConnection: (connectionId, isReversed = false, duration = 0) => {
     set({
       currentConnectionId: connectionId,
-      isPacketReversed: isReversed
-    });
-  },
-
-  setCurrentEdgeAnimation: (path, duration) => {
-    set({
-      currentEdgePath: path,
+      isPacketReversed: isReversed,
       currentEdgeDuration: duration,
     });
   },
 
   resetSimulation: () => {
-    set({
-      isRunning: false,
-      sourceId: null,
-      targetId: null,
-      path: [],
-      currentStep: 0,
-      currentHop: 0,
-      isHopPaused: false,
-      packetPosition: null,
-      currentConnectionId: null,
-      currentEdgePath: null,
-      currentEdgeDuration: 0,
-    });
+    set({ ...IDLE, path: [], links: [] });
   },
 }));

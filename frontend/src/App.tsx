@@ -6,10 +6,14 @@ import { useEffect } from 'react';
 import { ReactFlowProvider } from 'reactflow';
 import { Toaster } from 'sonner';
 import { useUIStore } from '@/store/uiStore';
+import { usePresentationStore } from '@/store/presentationStore';
 import { registerSaveShortcut } from '@/utils/projectFileAccess';
 import TopMenuBar from '@/components/Toolbar/TopMenuBar';
 import SidebarContainer from '@/components/Sidebar/SidebarContainer';
 import NetworkCanvas from '@/components/Canvas/NetworkCanvas';
+import PresentationBar from '@/components/Presentation/PresentationBar';
+import PresentationPanel from '@/components/Presentation/PresentationPanel';
+import PresentationMenu from '@/components/Presentation/PresentationMenu';
 import ContextMenu from '@/components/ui/ContextMenu';
 import ConnectionContextMenu from '@/components/ui/ConnectionContextMenu';
 import AddDeviceModal from '@/components/Modals/AddDeviceModal';
@@ -27,6 +31,8 @@ function App() {
   const theme = useUIStore((state) => state.theme);
   const darkMode = useUIStore((state) => state.darkMode);
   const setShowWelcomeScreen = useUIStore((state) => state.setShowWelcomeScreen);
+  // Presentation mode: the tools for building give way to the tools for showing
+  const presenting = usePresentationStore((state) => state.active);
 
   useEffect(() => {
     // Apply theme to body element whenever it changes
@@ -56,14 +62,13 @@ function App() {
         theme={darkMode ? 'dark' : 'light'}
       />
 
-      <div className="app-container">
-        {/* Top Menu Bar */}
-        <TopMenuBar />
+      <div className={presenting ? 'app-container presenting' : 'app-container'}>
+        {/* Top bar: the menus, or the bar of the presentation */}
+        {presenting ? <PresentationBar /> : <TopMenuBar />}
 
-        {/* Main Content: Sidebar + Canvas */}
+        {/* Main Content: Sidebar (or presentation panel) + Canvas */}
         <div className="app-main">
-          {/* Sidebar (left) */}
-          <SidebarContainer />
+          {presenting ? <PresentationPanel /> : <SidebarContainer />}
 
           {/* Canvas Area (right) */}
           <main className="canvas-area">
@@ -71,9 +76,15 @@ function App() {
           </main>
         </div>
 
-        {/* Context Menus */}
-        <ContextMenu />
-        <ConnectionContextMenu />
+        {/* Context Menus (while presenting, a click opens the presentation menu) */}
+        {presenting ? (
+          <PresentationMenu />
+        ) : (
+          <>
+            <ContextMenu />
+            <ConnectionContextMenu />
+          </>
+        )}
 
         {/* Modals */}
         <AddDeviceModal />

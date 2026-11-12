@@ -167,6 +167,52 @@ describe('parse — add / remove route', () => {
     expect(suggestion('add route')).toBe(usage);
   });
 
+  it('parses a backup route like a route, marked as such', () => {
+    expect(parse('add backup route 192.168.30.0/24 via 10.0.1.2 on Router-1')).toEqual({
+      kind: 'route-add',
+      destination: '192.168.30.0/24',
+      nextHop: '10.0.1.2',
+      device: 'Router-1',
+      backup: true,
+    });
+    expect(parse('add backup route default via 198.51.100.1')).toEqual({
+      kind: 'route-add',
+      destination: 'default',
+      nextHop: '198.51.100.1',
+      backup: true,
+    });
+    // a plain route carries no such mark
+    expect(parse('add route default via 198.51.100.1')).not.toHaveProperty('backup');
+  });
+
+  it('answers an incomplete backup route with its own form', () => {
+    const usage = 'try: add backup route <network>|default via <next hop> [on <device>]';
+    expect(suggestion('add backup route 192.168.30.0/24')).toBe(usage);
+    expect(suggestion('add backup route')).toBe(usage);
+    // "backup" alone is not a thing to add
+    expect(suggestion('add backup 192.168.30.0/24 via 10.0.0.2')).toContain('add route');
+  });
+
+  it('removes one route of several by its next hop', () => {
+    expect(parse('remove route 192.168.30.0/24 via 10.0.1.2 from Router-1')).toEqual({
+      kind: 'route-remove',
+      destination: '192.168.30.0/24',
+      nextHop: '10.0.1.2',
+      device: 'Router-1',
+    });
+    expect(parse('remove route default via 198.51.100.1')).toEqual({
+      kind: 'route-remove',
+      destination: 'default',
+      nextHop: '198.51.100.1',
+    });
+    expect(suggestion('remove route default via')).toBe(
+      'try: remove route <network>|default [via <next hop>] [from <device>]'
+    );
+    expect(suggestion('remove backup route default')).toBe(
+      'try: remove route <network>|default via <next hop> [from <device>]'
+    );
+  });
+
   it('removes a route by its network', () => {
     expect(parse('remove route 192.168.30.0/24 from Router-1')).toEqual({
       kind: 'route-remove',

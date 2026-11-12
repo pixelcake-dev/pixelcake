@@ -208,6 +208,75 @@ describe('a second site, routed from the terminal', () => {
     ]);
   });
 
+  it('adds a backup route after the main one, shows it as such, and removes one of the two', () => {
+    cableBranch();
+    run('add route 192.168.30.0/24 via 10.0.0.2 on Router-1');
+
+    expect(output('add backup route 192.168.30.0/24 via 192.168.20.10 on Router-1')).toEqual([
+      'Router-1: backup route to 192.168.30.0/24 via 192.168.20.10 added',
+      '  used when the interface of the route via 10.0.0.2 has no working link',
+    ]);
+    expect(device('Router-1').routes).toEqual([
+      { id: 'route-1', destination: '192.168.30.0/24', nextHop: '10.0.0.2' },
+      { id: 'route-2', destination: '192.168.30.0/24', nextHop: '192.168.20.10' },
+    ]);
+    const table = output('show routes of Router-1');
+    expect(table).toContain('192.168.30.0/24      10.0.0.2         port 3   static');
+    expect(table).toContain('192.168.30.0/24      192.168.20.10    port 2   static, backup');
+
+    // the main route is still the one used
+    expect(transcript('trace Branch-PC from PC-1')).toContain(
+      '  3  ○ Router-1 (Router)  — routed: 192.168.30.0/24 via 10.0.0.2 (port 3)'
+    );
+
+    // "add route" keeps meaning "the route to this network": it moves the main one
+    expect(output('add route 192.168.30.0/24 via 192.168.20.10 on Router-1')).toEqual([
+      'Router-1 already has a backup route to 192.168.30.0/24 via 192.168.20.10',
+      '  remove it first: remove route 192.168.30.0/24 via 192.168.20.10 from Router-1',
+    ]);
+    expect(output('add backup route 192.168.30.0/24 via 192.168.20.10 on Router-1')).toEqual([
+      'Router-1 already has a route to 192.168.30.0/24 via 192.168.20.10',
+    ]);
+
+    expect(output('remove route 192.168.30.0/24 via 10.9.9.9 from Router-1')).toEqual([
+      'Router-1 has no route to 192.168.30.0/24 via 10.9.9.9',
+    ]);
+    expect(output('remove route 192.168.30.0/24 via 192.168.20.10 from Router-1')).toEqual([
+      'Router-1: route to 192.168.30.0/24 via 192.168.20.10 removed',
+    ]);
+    expect(device('Router-1').routes).toEqual([
+      { id: 'route-1', destination: '192.168.30.0/24', nextHop: '10.0.0.2' },
+    ]);
+  });
+
+  it('a backup route with nothing to back up is simply the route; removing by network takes them all', () => {
+    cableBranch();
+    expect(output('add backup route 192.168.30.0/24 via 10.0.0.2 on Router-1')).toEqual([
+      'Router-1: route to 192.168.30.0/24 via 10.0.0.2 added',
+      '  it is the only route to 192.168.30.0/24: there is nothing to back up yet',
+    ]);
+    run('add backup route 192.168.30.0/24 via 192.168.20.10 on Router-1');
+    expect(device('Router-1').routes).toHaveLength(2);
+
+    expect(output('remove route 192.168.30.0/24 from Router-1')).toEqual([
+      'Router-1: 2 routes to 192.168.30.0/24 removed',
+    ]);
+    expect(device('Router-1').routes ?? []).toEqual([]);
+  });
+
+  it('a backup default route waits behind the gateway of the router', () => {
+    cableBranch();
+    run('set gateway of Router-1 to 10.0.0.2');
+    run('add backup route default via 192.168.20.10 on Router-1');
+
+    const table = output('show routes of Router-1');
+    // routes written by hand come before the gateway of the device
+    expect(table.filter(row => row.startsWith('default'))).toEqual([
+      'default              192.168.20.10    port 2   default',
+      'default              10.0.0.2         port 3   default (gateway), backup',
+    ]);
+  });
+
   it('warns about a next hop the router cannot reach, and shows it in the table', () => {
     cableBranch();
     expect(output('add route 192.168.40.0/24 via 172.16.0.1 on Router-1')).toEqual([
@@ -665,6 +734,7 @@ describe('help', () => {
     expect(output('help route').map(row => row.split('  ')[0])).toEqual([
       'show routes | rules [of] <device>',
       'add route <network>|default via <next hop> on <device>',
+      'add backup route <network> via <next hop> on <device>',
     ]);
     expect(output('help rule')).toHaveLength(2);
     expect(output('help zone')).toHaveLength(1);
@@ -697,6 +767,8 @@ describe('help', () => {
       'interface 5 trunk all on SW-Office',
       'interface 4 default on SW-Office',
       'add route default via 192.168.20.10 on Router-1',
+      'add backup route default via 192.168.10.11 on Router-1',
+      'remove route default via 192.168.10.11 from Router-1',
       'remove route default from Router-1',
       'add vlan 30 to SW-Office',
       'remove vlan 30 from SW-Office',

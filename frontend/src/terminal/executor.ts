@@ -20,6 +20,7 @@ import {
   interfaceLinks,
   listInterfaces,
   routingTable,
+  isBackupRoute,
   hasInterfaceAddresses,
   formatNetwork,
   canonicalNetwork,
@@ -37,6 +38,7 @@ import {
 } from '@/engine';
 import type { Topology, TraceResult, InterfaceLink, DeviceInterface, FlowResult } from '@/engine';
 import { isValidIP } from '@/utils/ipHelpers';
+import { liveTopology } from '@/utils/liveTopology';
 import { parse } from './parser';
 import type { Command, InterfaceSetting, TerminalLine, ShowTarget } from './types';
 import type {
@@ -62,6 +64,8 @@ export interface TerminalContext {
  */
 export interface LiveTrace {
   animationPath: string[];
+  /** The cable of each stretch of `animationPath`, as the engine took them */
+  animationLinks?: string[];
   flowModel: FlowModelType;
   /** Aligned with animationPath indices (may be empty, e.g. for ping) */
   hopLines: TerminalLine[];
@@ -85,9 +89,13 @@ const ok = (text: string): TerminalLine => line(text, 'success');
 const muted = (text: string): TerminalLine => line(text, 'muted');
 const heading = (text: string): TerminalLine => line(text, 'heading');
 
+/**
+ * What the commands look at: the canvas on screen, and the failures simulated
+ * in presentation mode while it is on, so a ping typed there agrees with the
+ * picture.
+ */
 function snapshot(): Topology {
-  const { devices, connections } = useNetworkStore.getState();
-  return { devices, connections };
+  return liveTopology();
 }
 
 /** Resolve a raw name/IP to a device, with a "did you mean" error on miss */
@@ -204,7 +212,13 @@ function runDiagnostic(
     if (flow.animationPath.length >= 2) {
       return {
         lines,
-        liveTrace: { animationPath: flow.animationPath, flowModel: 'ping', hopLines: [], finalLines },
+        liveTrace: {
+          animationPath: flow.animationPath,
+          animationLinks: flow.animationLinks,
+          flowModel: 'ping',
+          hopLines: [],
+          finalLines,
+        },
       };
     }
     return { lines: [...lines, ...finalLines] };
@@ -229,7 +243,8 @@ function runDiagnostic(
   if (animationPath.length >= 2) {
     // A web or email trace travels in the colour of its flow
     const flowModel: FlowModelType = service === 'web' || service === 'email' ? service : 'ping';
-    return { lines, liveTrace: { animationPath, flowModel, hopLines, finalLines } };
+    const animationLinks = result.hops.slice(1).map((h) => h.viaConnectionId ?? '');
+    return { lines, liveTrace: { animationPath, animationLinks, flowModel, hopLines, finalLines } };
   }
   return { lines: [...lines, ...hopLines, ...finalLines] };
 }
@@ -279,7 +294,13 @@ function runFlow(
   if (flow.animationPath.length >= 2) {
     return {
       lines,
-      liveTrace: { animationPath: flow.animationPath, flowModel: model, hopLines: [], finalLines },
+      liveTrace: {
+        animationPath: flow.animationPath,
+        animationLinks: flow.animationLinks,
+        flowModel: model,
+        hopLines: [],
+        finalLines,
+      },
     };
   }
   return { lines: [...lines, ...finalLines] };
@@ -533,9 +554,11 @@ function showRoutes(d: NetworkDevice): TerminalLine[] {
   } else {
     lines.push(heading(`${'DESTINATION'.padEnd(20)} ${'VIA'.padEnd(16)} ${'OUT'.padEnd(8)} KIND`));
   }
-  for (const entry of table) {
+  table.forEach((entry, index) => {
     const out = entry.out ? (entry.out.iface?.label ?? '-') : '?';
-    const kind = entry.kind === 'default' && !entry.route ? 'default (gateway)' : entry.kind;
+    const base = entry.kind === 'default' && !entry.route ? 'default (gateway)' : entry.kind;
+    // A second route to the same network waits for the line of the first to go down
+    const kind = isBackupRoute(table, index) ? `${base}, backup` : base;
     const row = `${formatNetwork(entry.network).padEnd(20)} ${(entry.nextHop ?? '-').padEnd(16)} ${out.padEnd(8)} ${kind}`;
     if (!entry.out) {
       lines.push(err(`${row}  ✗ next hop on none of its networks`));
@@ -544,7 +567,7 @@ function showRoutes(d: NetworkDevice): TerminalLine[] {
     } else {
       lines.push(line(row));
     }
-  }
+  });
   // Routes the engine refuses: say so instead of hiding them
   for (const route of d.routes ?? []) {
     if (!parseNetwork(route.destination) || !isValidIP(route.nextHop)) {
@@ -897,11 +920,13 @@ function runRoute(
   destination: string,
   nextHop: string | undefined,
   deviceQuery: string | undefined,
-  context: TerminalContext
+  context: TerminalContext,
+  /** `add backup route`: a second route to the network, after the one it has */
+  backup = false
 ): TerminalLine[] {
   const usage =
     action === 'add'
-      ? `add route ${destination} via ${nextHop ?? '<next hop>'} on <device>`
+      ? `add ${backup ? 'backup ' : ''}route ${destination} via ${nextHop ?? '<next hop>'} on <device>`
       : `remove route ${destination} from <device>`;
   const found = targetDevice(deviceQuery, context, usage);
   if ('errorLines' in found) return found.errorLines;
@@ -920,10 +945,21 @@ function runRoute(
   const name = formatNetwork(network);
 
   if (action === 'remove') {
-    if (!routes.some(same)) return [muted(`${device.label} has no route to ${name}`)];
-    const remaining = routes.filter((route) => !same(route));
+    const toSame = routes.filter(same);
+    if (toSame.length === 0) return [muted(`${device.label} has no route to ${name}`)];
+    // With a next hop only the route through it goes; without, every route to the network
+    const leaving = nextHop === undefined ? toSame : toSame.filter((route) => route.nextHop === nextHop);
+    if (leaving.length === 0) return [muted(`${device.label} has no route to ${name} via ${nextHop}`)];
+    const remaining = routes.filter((route) => !leaving.includes(route));
     useNetworkStore.getState().updateDevice(device.id, { routes: remaining.length > 0 ? remaining : undefined });
-    return [ok(`${device.label}: route to ${name} removed`)];
+    if (nextHop !== undefined) return [ok(`${device.label}: route to ${name} via ${nextHop} removed`)];
+    return [
+      ok(
+        leaving.length === 1
+          ? `${device.label}: route to ${name} removed`
+          : `${device.label}: ${leaving.length} routes to ${name} removed`
+      ),
+    ];
   }
 
   if (!isL3Capable(device)) {
@@ -950,19 +986,44 @@ function runRoute(
     hop = shared;
   }
 
-  const existing = routes.find(same);
-  const next = existing
-    ? routes.map((route) => (route === existing ? { ...route, destination: canonical, nextHop: hop } : route))
-    : [...routes, { id: nextId('route', routes), destination: canonical, nextHop: hop }];
+  // The first route to a network is the one used; any other is its backup
+  const toSame = routes.filter(same);
+  const existing = toSame[0];
+  const twin = toSame.find((route) => route.nextHop === hop);
+  let next: StaticRoute[];
+  if (backup) {
+    if (twin) return [...lines, muted(`${device.label} already has a route to ${name} via ${hop}`)];
+    next = [...routes, { id: nextId('route', routes), destination: canonical, nextHop: hop }];
+    if (existing) {
+      lines.unshift(
+        ok(`${device.label}: backup route to ${name} via ${hop} added`),
+        muted(`  used when the interface of the route via ${existing.nextHop} has no working link`)
+      );
+    } else {
+      lines.unshift(
+        ok(`${device.label}: route to ${name} via ${hop} added`),
+        muted(`  it is the only route to ${name}: there is nothing to back up yet`)
+      );
+    }
+  } else {
+    if (existing && twin && twin !== existing) {
+      return [
+        err(`${device.label} already has a backup route to ${name} via ${hop}`),
+        muted(`  remove it first: remove route ${name} via ${hop} from ${device.label}`),
+      ];
+    }
+    next = existing
+      ? routes.map((route) => (route === existing ? { ...route, destination: canonical, nextHop: hop } : route))
+      : [...routes, { id: nextId('route', routes), destination: canonical, nextHop: hop }];
+    lines.unshift(
+      ok(
+        existing
+          ? `${device.label}: route to ${name} now goes via ${hop} (was ${existing.nextHop})`
+          : `${device.label}: route to ${name} via ${hop} added`
+      )
+    );
+  }
   useNetworkStore.getState().updateDevice(device.id, { routes: next });
-
-  lines.unshift(
-    ok(
-      existing
-        ? `${device.label}: route to ${name} now goes via ${hop} (was ${existing.nextHop})`
-        : `${device.label}: route to ${name} via ${hop} added`
-    )
-  );
   if (!hasInterfaceAddresses(device)) {
     lines.push(muted(`  ${device.label} has no interface addresses yet: its routes are not used until a port has one`));
   } else if (!routingTable({ ...device, routes: next }).some((entry) => entry.route?.nextHop === hop && entry.out)) {
@@ -1096,6 +1157,7 @@ export const COMMAND_REFERENCE: Array<[string, string]> = [
   ['interface <n> access <vlan> | trunk <vlans>|all | default', 'VLAN of a switch port'],
   ['interface <n> zone trust|untrust|dmz|none on <device>', 'security zone of a firewall port'],
   ['add route <network>|default via <next hop> on <device>', 'static route (remove route <network> from <device>)'],
+  ['add backup route <network> via <next hop> on <device>', 'second route to a network, used when the line of the first is down'],
   ['add rule allow|deny <service> from <src> to <dst> on <fw>', 'firewall rule (remove rule <n> from <fw>)'],
   ['add vlan <id> to <device>', 'VLAN list of a device (remove vlan <id> from <device>)'],
   ['connect <A> to <B>', 'create a link (disconnect <A> from <B>)'],
@@ -1174,11 +1236,14 @@ export function executeCommand(rawInput: string, context: TerminalContext): Exec
       return { lines: runInterface(command.iface, command.setting, command.device, context), context };
     case 'route-add':
       return {
-        lines: runRoute('add', command.destination, command.nextHop, command.device, context),
+        lines: runRoute('add', command.destination, command.nextHop, command.device, context, command.backup),
         context,
       };
     case 'route-remove':
-      return { lines: runRoute('remove', command.destination, undefined, command.device, context), context };
+      return {
+        lines: runRoute('remove', command.destination, command.nextHop, command.device, context),
+        context,
+      };
     case 'rule-add':
       return { lines: runRuleAdd(command, context), context };
     case 'rule-remove':
