@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useId } from 'react';
 import type { SelectHTMLAttributes } from 'react';
 
 export type SelectSize = 'xs' | 'sm' | 'md' | 'lg' | 'full';
@@ -23,16 +23,21 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ label, error, className = '', children, size = 'full', fullWidth = false, ...props }, ref) => {
     // Determine width class
     const widthClass = fullWidth ? 'w-full' : sizeClasses[size];
+    // The label must name the control, for screen readers and for a click on
+    // it to reach the select: without an id of its own the select gets one
+    const generatedId = useId();
+    const selectId = props.id ?? generatedId;
 
     return (
       <div className="form-group">
         {label && (
-          <label htmlFor={props.id} className="block text-sm font-medium mb-1 text-[var(--text-color-light)]">
+          <label htmlFor={selectId} className="block text-sm font-medium mb-1 text-[var(--text-color-light)]">
             {label}
           </label>
         )}
         <select
           ref={ref}
+          id={selectId}
           className={`${widthClass} px-3 py-1.5 rounded-md border border-[var(--border-color)] bg-[var(--bg-canvas)] text-[var(--text-color)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] ${className}`}
           {...props}
         >

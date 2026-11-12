@@ -13,14 +13,16 @@ import PortGrid from '@/components/ui/PortGrid';
 import PortConfigPanel from '@/components/ui/PortConfigPanel';
 import NICList from '@/components/ui/NICList';
 import NICConfigPanel from '@/components/ui/NICConfigPanel';
+import RoutesPanel from '@/components/ui/RoutesPanel';
+import FirewallRulesPanel from '@/components/ui/FirewallRulesPanel';
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { generateMacAddress } from '@/utils/ipHelpers';
-import { interfaceLinks, listInterfaces } from '@/engine';
+import { interfaceLinks, isL3Capable, listInterfaces } from '@/engine';
 import { linkPeerLabel } from '@/utils/interfaceLabels';
-import { FileCode } from 'lucide-react';
-import type { Port, NetworkInterfaceCard } from '@/types/network';
+import { isBlankRoute, routeProblem, ruleProblem } from '@/utils/networkConfigValidation';
+import type { FirewallRule, NetworkInterfaceCard, Port, StaticRoute } from '@/types/network';
 
 const InspectorModal = () => {
   const isOpen = useUIStore((state) => state.modals.inspector);
@@ -55,6 +57,10 @@ const InspectorModal = () => {
   const [nics, setNics] = useState<NetworkInterfaceCard[]>([]);
   const [selectedNicId, setSelectedNicId] = useState<string | null>(null);
 
+  // Routing and filtering (router, firewall)
+  const [routes, setRoutes] = useState<StaticRoute[]>([]);
+  const [firewallRules, setFirewallRules] = useState<FirewallRule[]>([]);
+
   useEffect(() => {
     if (isOpen && inspectorDevice) {
       setName(inspectorDevice.label);
@@ -71,6 +77,8 @@ const InspectorModal = () => {
       setSelectedPortId(null);
       setNics(inspectorDevice.nics || []);
       setSelectedNicId(null);
+      setRoutes(inspectorDevice.routes || []);
+      setFirewallRules(inspectorDevice.firewallRules || []);
     }
   }, [isOpen, inspectorDevice]);
 
@@ -138,6 +146,31 @@ const InspectorModal = () => {
       return;
     }
 
+    // Routes and rules are saved only when the engine can read every one of
+    // them; a route row left empty is simply not kept
+    const keptRoutes = routes
+      .filter((route) => !isBlankRoute(route))
+      .map((route) => ({
+        ...route,
+        destination: route.destination.trim(),
+        nextHop: route.nextHop.trim(),
+      }));
+    const routeIndex = keptRoutes.findIndex((route) => routeProblem(route) !== undefined);
+    if (routeIndex >= 0) {
+      toast.error(`Rotta ${routeIndex + 1}: ${routeProblem(keptRoutes[routeIndex])}`);
+      return;
+    }
+    const keptRules = firewallRules.map((rule) => ({
+      ...rule,
+      source: rule.source.trim().toLowerCase(),
+      destination: rule.destination.trim().toLowerCase(),
+    }));
+    const ruleIndex = keptRules.findIndex((rule) => ruleProblem(rule) !== undefined);
+    if (ruleIndex >= 0) {
+      toast.error(`Regola ${ruleIndex + 1}: ${ruleProblem(keptRules[ruleIndex])}`);
+      return;
+    }
+
     updateDevice(inspectorDevice.id, {
       label: name,
       vendor: inspectorDevice.type !== 'PC' ? vendor : undefined,
@@ -155,6 +188,8 @@ const InspectorModal = () => {
         : undefined,
       ports: ports.length > 0 ? ports : undefined,
       nics: nics.length > 0 ? nics : undefined,
+      routes: keptRoutes.length > 0 ? keptRoutes : undefined,
+      firewallRules: keptRules.length > 0 ? keptRules : undefined,
     });
 
     handleClose();
@@ -188,19 +223,24 @@ const InspectorModal = () => {
     else linkedNics.set(iface.nic.id, linkPeerLabel(link));
   }
 
+  // Routers and firewalls route; firewalls also filter
+  const routesTraffic = isL3Capable(inspectorDevice);
+  const isFirewall = inspectorDevice.type.toLowerCase().includes('firewall');
+  const isSwitch = inspectorDevice.type.toLowerCase().includes('switch');
+
   // Define tabs
   const tabs: Tab[] = [
     {
       id: 'general',
-      label: 'General Configuration',
+      label: 'Generale',
       content: (
         <FormContainer columns={2} gap="4">
           {/* Column 1: Device Identity + STP */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Device Identity */}
-            <FormFieldset legend="Device Identity">
+            <FormFieldset legend="Identità">
               <FormContainer gap="2">
-                <DeviceTypeDisplay deviceType={inspectorDevice.type} label="Device Type" />
+                <DeviceTypeDisplay deviceType={inspectorDevice.type} label="Tipo" />
 
                 <Input
                   label="Nome Dispositivo"
@@ -232,7 +272,7 @@ const InspectorModal = () => {
 
             {/* STP Configuration */}
             {supportsSTP && (
-              <FormFieldset legend="STP Configuration">
+              <FormFieldset legend="Spanning Tree (STP)">
                 <FormContainer gap="2">
                   <div>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
@@ -243,13 +283,13 @@ const InspectorModal = () => {
                         style={{ width: '16px', height: '16px', cursor: 'pointer' }}
                       />
                       <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-color)' }}>
-                        STP Enabled
+                        STP attivo
                       </span>
                     </label>
                   </div>
 
                   <Select
-                    label="STP Mode"
+                    label="Modalità STP"
                     value={stpMode}
                     onChange={(e) => setStpMode(e.target.value as typeof stpMode)}
                     size="full"
@@ -262,7 +302,7 @@ const InspectorModal = () => {
                   </Select>
 
                   <Input
-                    label="Bridge Priority"
+                    label="Priorità del bridge"
                     type="number"
                     value={stpPriority}
                     onChange={(e) => setStpPriority(parseInt(e.target.value) || 32768)}
@@ -273,7 +313,10 @@ const InspectorModal = () => {
                     disabled={!stpEnabled}
                   />
                   <p style={{ fontSize: '12px', color: 'var(--text-color-light)', marginTop: '-8px' }}>
-                    Range: 0-65535 (step 4096, default 32768)
+                    Da 0 a 65535 a passi di 4096 (predefinita 32768)
+                  </p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-color-light)' }}>
+                    Lo spanning tree resta come documentazione: il motore non lo simula.
                   </p>
                 </FormContainer>
               </FormFieldset>
@@ -282,34 +325,34 @@ const InspectorModal = () => {
 
           {/* Column 2: Network Configuration */}
           <div>
-            <FormFieldset legend="Network Configuration">
+            <FormFieldset legend="Rete">
               <FormContainer gap="2">
                 {nics.length > 0 && supportsNICs ? (
                   <>
                     <Input
-                      label="Indirizzo IP (Read-Only)"
+                      label="Indirizzo IP (sola lettura)"
                       value={nics[0]?.ip || ip}
                       size="full"
                       readOnly
                     />
 
                     <Input
-                      label="Subnet Mask (Read-Only)"
+                      label="Subnet Mask (sola lettura)"
                       value={nics[0]?.subnet || subnet}
                       size="full"
                       readOnly
                     />
 
                     <Input
-                      label="Gateway (Read-Only)"
+                      label="Gateway (sola lettura)"
                       value={nics[0]?.gateway || gateway}
                       size="full"
                       readOnly
                     />
 
                     <p className="text-xs text-[var(--text-color-light)] mt-1">
-                      Configurazione di rete gestita tramite schede di rete (NICs).
-                      Modifica nella tab "Network Interfaces".
+                      L&apos;indirizzo è quello della prima scheda di rete: si modifica nella
+                      scheda «Schede di rete».
                     </p>
                   </>
                 ) : (
@@ -330,50 +373,34 @@ const InspectorModal = () => {
                     />
 
                     <Input
-                      label="Gateway"
+                      label={routesTraffic ? 'Gateway (rotta predefinita)' : 'Gateway'}
                       value={gateway}
                       onChange={(e) => setGateway(e.target.value)}
                       size="full"
                     />
+                    {routesTraffic && (
+                      <p className="text-xs text-[var(--text-color-light)] mt-1">
+                        L&apos;indirizzo qui sopra è quello con cui il dispositivo viene nominato; le
+                        reti a cui è collegato sono gli indirizzi delle sue porte.
+                      </p>
+                    )}
                   </>
                 )}
 
                 {supportsVLAN && (
-                  <VLANInput
-                    label="VLAN IDs"
-                    value={vlans}
-                    onChange={setVlans}
-                  />
+                  <>
+                    <VLANInput label="VLAN" value={vlans} onChange={setVlans} />
+                    <p className="text-xs text-[var(--text-color-light)] mt-1">
+                      {isSwitch
+                        ? 'Le VLAN che lo switch conosce: le altre vengono scartate. Vuoto: tutte. La VLAN di ogni porta si sceglie nella scheda «Porte».'
+                        : 'Le VLAN che il dispositivo accetta con etichetta su una porta trunk. Vuoto: solo traffico senza etichetta.'}
+                    </p>
+                  </>
                 )}
               </FormContainer>
             </FormFieldset>
           </div>
         </FormContainer>
-      ),
-    },
-    {
-      id: 'terraform',
-      label: 'Terraform Export',
-      content: (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '300px',
-            gap: '16px',
-            color: 'var(--text-color-light)',
-          }}
-        >
-          <FileCode size={48} />
-          <p style={{ fontSize: '16px', fontWeight: 500 }}>
-            Terraform export fields will be available in future updates
-          </p>
-          <p style={{ fontSize: '14px' }}>
-            This section will contain resource naming, tags, and cloud provider settings
-          </p>
-        </div>
       ),
     },
   ];
@@ -382,7 +409,7 @@ const InspectorModal = () => {
   if (supportsPorts) {
     tabs.push({
       id: 'ports',
-      label: `Ports${ports.length > 0 ? ` (${ports.length})` : ''}`,
+      label: `Porte${ports.length > 0 ? ` (${ports.length})` : ''}`,
       content: (
         <div style={{ display: 'flex', gap: '20px', minHeight: '400px', height: '500px' }}>
           {ports.length > 0 ? (
@@ -512,7 +539,7 @@ const InspectorModal = () => {
   if (supportsNICs) {
     tabs.push({
       id: 'nics',
-      label: `Network Interfaces${nics.length > 0 ? ` (${nics.length})` : ''}`,
+      label: `Schede di rete${nics.length > 0 ? ` (${nics.length})` : ''}`,
       content: (
         <div style={{ display: 'flex', gap: '20px', minHeight: '400px', height: '500px' }}>
           {nics.length > 0 ? (
@@ -631,6 +658,38 @@ const InspectorModal = () => {
               <p>Nessuna scheda di rete configurata per questo dispositivo.</p>
             </div>
           )}
+        </div>
+      ),
+    });
+  }
+
+  // Routes: routers and firewalls. The panel shows the table the engine would
+  // read from the form as it is now, unsaved edits included
+  if (routesTraffic) {
+    const keptRoutes = routes.filter((route) => !isBlankRoute(route));
+    tabs.push({
+      id: 'routes',
+      label: `Rotte${keptRoutes.length > 0 ? ` (${keptRoutes.length})` : ''}`,
+      content: (
+        <div style={{ minHeight: '400px' }}>
+          <RoutesPanel
+            device={{ ...liveDevice, ip, subnet, gateway, ports, nics, routes: keptRoutes }}
+            routes={routes}
+            onChange={setRoutes}
+          />
+        </div>
+      ),
+    });
+  }
+
+  // Rules: firewalls
+  if (isFirewall) {
+    tabs.push({
+      id: 'rules',
+      label: `Regole${firewallRules.length > 0 ? ` (${firewallRules.length})` : ''}`,
+      content: (
+        <div style={{ minHeight: '400px' }}>
+          <FirewallRulesPanel rules={firewallRules} ports={ports} onChange={setFirewallRules} />
         </div>
       ),
     });

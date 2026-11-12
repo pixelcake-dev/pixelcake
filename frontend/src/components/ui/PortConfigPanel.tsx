@@ -38,6 +38,7 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
   // Router and Firewall ports are L3 interfaces: they can carry an address
   const supportsAddress = isRouter || isFirewall;
   const [addressError, setAddressError] = useState<string | null>(null);
+  const [vlanError, setVlanError] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<Port>>({
     enabled: true,
     name: '',
@@ -51,8 +52,8 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
     subnet: '',
     // Router-specific
     nat: false,
-    // Firewall-specific
-    securityZone: 'trust',
+    // Firewall-specific: no zone until one is chosen
+    securityZone: undefined,
     ips: false,
   });
 
@@ -73,10 +74,11 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
         // Router-specific
         nat: port.nat || false,
         // Firewall-specific
-        securityZone: port.securityZone || 'trust',
+        securityZone: port.securityZone,
         ips: port.ips || false,
       });
       setAddressError(null);
+      setVlanError(null);
     }
   }, [port, isSwitch]);
 
@@ -122,12 +124,17 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
       if (formData.portType === 'access') {
         // Access mode: single VLAN number
         const vlanNumber = typeof formData.vlan === 'number' ? formData.vlan : undefined;
+        if (vlanNumber !== undefined && (vlanNumber < 1 || vlanNumber > 4094)) {
+          setVlanError(`${vlanNumber} non è una VLAN: il numero va da 1 a 4094`);
+          return;
+        }
         updates.vlan = vlanNumber;
       } else if (formData.portType === 'trunk') {
         // Trunk mode: array of VLANs
         const vlanArray = Array.isArray(formData.vlan) ? formData.vlan : undefined;
         updates.vlan = vlanArray;
       }
+      setVlanError(null);
     }
 
     // Router-specific fields
@@ -144,7 +151,21 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
     onSave(port.id, updates);
   };
 
+  /**
+   * Switching between access and trunk keeps what was typed: the single VLAN
+   * of an access port becomes the list of the trunk, and the first VLAN of a
+   * trunk becomes the VLAN of the access port.
+   */
+  const handlePortTypeChange = (portType: NonNullable<Port['portType']>) => {
+    let vlan = formData.vlan;
+    if (portType === 'trunk' && typeof vlan === 'number') vlan = [vlan];
+    if (portType === 'access' && Array.isArray(vlan)) vlan = vlan[0];
+    setFormData({ ...formData, portType, vlan });
+    setVlanError(null);
+  };
+
   const handleVlanChange = (value: string) => {
+    setVlanError(null);
     if (formData.portType === 'access') {
       // Access mode: parse single number
       const num = parseInt(value, 10);
@@ -224,10 +245,7 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
           label="Modalità Porta"
           value={formData.portType || (isSwitch ? 'access' : 'lan')}
           onChange={(e) =>
-            setFormData({
-              ...formData,
-              portType: e.target.value as 'access' | 'trunk' | 'wan' | 'lan' | 'dmz',
-            })
+            handlePortTypeChange(e.target.value as 'access' | 'trunk' | 'wan' | 'lan' | 'dmz')
           }
           size="full"
         >
@@ -244,6 +262,12 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
             </>
           )}
         </Select>
+        {!isSwitch && (
+          <span className="text-xs text-[var(--text-color-light)] -mt-2">
+            Solo descrittiva: non cambia il comportamento della porta.
+            {isFirewall && ' Per il firewall conta la zona di sicurezza.'}
+          </span>
+        )}
 
         {/* L3 Address - Only for Router/Firewall */}
         {supportsAddress && (
@@ -301,9 +325,19 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
               onChange={(e) => handleVlanChange(e.target.value)}
               size="full"
             />
-            <span className="text-xs text-[var(--text-color-light)] mt-1">
-              VLAN ID validi: 1-4094
+            <span className="text-xs text-[var(--text-color-light)] mt-1 block">
+              {formData.portType === 'access'
+                ? 'La porta appartiene a questa VLAN (numero da 1 a 4094). Vuoto: nessuna VLAN propria.'
+                : 'Le VLAN che la porta trasporta con etichetta (numeri da 1 a 4094). Vuoto: tutte.'}
             </span>
+            <span className="text-xs text-[var(--text-color-light)] mt-1 block">
+              Appena una porta dello switch ha una VLAN, quelle senza sono nella VLAN 1.
+            </span>
+            {vlanError && (
+              <div className="modal-error-box mt-2" role="alert">
+                {vlanError}
+              </div>
+            )}
           </div>
         )}
 
@@ -358,20 +392,30 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
             </label>
           </div>
         )}
+        {isRouter && (
+          <span className="text-xs text-[var(--text-color-light)] -mt-2">
+            Resta come documentazione: il motore non traduce gli indirizzi, e lo segnala nel
+            risultato.
+          </span>
+        )}
 
         {/* Security Zone - Only for Firewall */}
         {isFirewall && (
           <Select
             label="Zona di Sicurezza"
-            value={formData.securityZone || 'trust'}
+            value={formData.securityZone ?? ''}
             onChange={(e) =>
               setFormData({
                 ...formData,
-                securityZone: e.target.value as 'trust' | 'untrust' | 'dmz',
+                securityZone:
+                  e.target.value === ''
+                    ? undefined
+                    : (e.target.value as 'trust' | 'untrust' | 'dmz'),
               })
             }
             size="full"
           >
+            <option value="">Nessuna</option>
             <option value="trust">Trust (Rete Fidata)</option>
             <option value="untrust">Untrust (Rete Non Fidata)</option>
             <option value="dmz">DMZ (Zona Demilitarizzata)</option>
@@ -392,6 +436,11 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
               IPS/IDS Abilitato (Intrusion Prevention/Detection)
             </label>
           </div>
+        )}
+        {isFirewall && (
+          <span className="text-xs text-[var(--text-color-light)] -mt-2">
+            Resta come documentazione: il motore non lo simula.
+          </span>
         )}
 
         {/* Description */}
