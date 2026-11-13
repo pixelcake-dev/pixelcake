@@ -8,7 +8,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Pixelcake brand colors
+        // PixelCake brand colors
         primary: {
           50: '#e6f2ff',
           100: '#cce5ff',

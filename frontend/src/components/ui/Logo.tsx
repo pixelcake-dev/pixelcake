@@ -1,4 +1,5 @@
 import LogoSvg from '@/assets/PixelCakeLogo.svg';
+import { APP_NAME } from '@/constants/brand';
 
 interface LogoProps {
   size?: number;
@@ -9,7 +10,7 @@ const Logo = ({ size = 190, className = '' }: LogoProps) => {
   return (
     <img
       src={LogoSvg}
-      alt="PixelCake Logo"
+      alt={`${APP_NAME} Logo`}
       style={{ maxWidth: `${size}px` }}
       className={className}
       onError={(e) => {

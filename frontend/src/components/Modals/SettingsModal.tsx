@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { useUIStore } from '@/store/uiStore';
 import Logo from '@/components/ui/Logo';
+import { APP_MOTTO } from '@/constants/brand';
 import NetworkSettingsTab from './NetworkSettingsTab';
 import AppearanceSettingsTab from './AppearanceSettingsTab';
 import TemplatesSettingsTab from './TemplatesSettingsTab';
@@ -76,9 +77,7 @@ const SettingsModal = () => {
         <div className="modal-actions px-6 pb-6 pt-4">
           <div className="flex items-center justify-center gap-2 w-full">
             <Logo size={24} />
-            <p className="text-sm text-[var(--text-color-light)] italic">
-              "Infrastructure, piece by piece."
-            </p>
+            <p className="text-sm text-[var(--text-color-light)] italic">«{APP_MOTTO}»</p>
           </div>
         </div>
       }

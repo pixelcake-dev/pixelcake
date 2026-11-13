@@ -1,5 +1,5 @@
 /**
- * Pixelcake Main App Component
+ * PixelCake Main App Component
  */
 
 import { useEffect } from 'react';

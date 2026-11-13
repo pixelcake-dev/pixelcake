@@ -20,6 +20,7 @@ import Logo from '@/components/ui/Logo';
 import { useUIStore, type HelpTab } from '@/store/uiStore';
 import { COMMAND_REFERENCE } from '@/terminal/executor';
 import { GITHUB_REPO } from '@/constants/links';
+import { APP_MOTTO, APP_NAME } from '@/constants/brand';
 
 const TABS: Array<{ id: HelpTab; label: string }> = [
   { id: 'guide', label: 'Come si usa' },
@@ -244,7 +245,7 @@ const AboutRow = ({
 const AboutTab = () => (
   <div className="settings-panel">
     <div className="space-y-3">
-      <AboutRow icon="mdi:application" title="PixelCake">
+      <AboutRow icon="mdi:application" title={APP_NAME}>
         Ambiente visuale per disegnare una piccola rete e verificarla
       </AboutRow>
 
@@ -340,9 +341,7 @@ const HelpModal = () => {
         <div className="modal-actions px-6 pb-6 pt-4">
           <div className="flex items-center justify-center gap-2 w-full">
             <Logo size={24} />
-            <p className="text-sm text-[var(--text-color-light)] italic">
-              "Infrastructure, piece by piece."
-            </p>
+            <p className="text-sm text-[var(--text-color-light)] italic">«{APP_MOTTO}»</p>
           </div>
         </div>
       }

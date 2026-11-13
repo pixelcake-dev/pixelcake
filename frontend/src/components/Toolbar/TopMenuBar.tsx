@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import PixelCakeIcon from '@/assets/PixelCakeIcon.svg';
+import { APP_NAME } from '@/constants/brand';
 
 const TopMenuBar = () => {
   const darkMode = useUIStore((state) => state.darkMode);
@@ -134,7 +135,7 @@ const TopMenuBar = () => {
       {/* Logo */}
       <img
         src={PixelCakeIcon}
-        alt="Pixelcake Icon"
+        alt={`${APP_NAME} Icon`}
         className="h-10 mr-4 ml-[-2px]"
         onError={(e) => {
           // Hide image if not found

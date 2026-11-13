@@ -12,6 +12,7 @@ import { createSampleTopology } from '@/utils/sampleTopology';
 import { openProject, requestNewProject } from '@/utils/projectFileAccess';
 import PixelCakeLogo from '@/assets/PixelCakeLogo.svg';
 import { GITHUB_REPO, GITHUB_ISSUES } from '@/constants/links';
+import { APP_DESCRIPTOR, APP_MOTTO, APP_NAME } from '@/constants/brand';
 
 const WelcomeScreen = () => {
   const dismissWelcomeScreen = useUIStore((state) => state.dismissWelcomeScreen);
@@ -60,16 +61,16 @@ const WelcomeScreen = () => {
     <div className="welcome-screen-container">
       {/* Header con logo e titolo */}
       <div className="welcome-header">
-        <img src={PixelCakeLogo} alt="PixelCake Logo" className="welcome-logo" />
-        <h1>PixelCake</h1>
-        <p>Visual Network Designer</p>
+        <img src={PixelCakeLogo} alt={`${APP_NAME} Logo`} className="welcome-logo" />
+        <h1>{APP_NAME}</h1>
+        <p>{APP_DESCRIPTOR}</p>
       </div>
 
       {/* What the app is for, in three steps */}
       <div className="welcome-process">
         <h3>
           <Icon icon="lucide:package" width={20} className="inline-block mr-2" />
-          Una rete, un pezzo alla volta
+          {APP_MOTTO}
         </h3>
         <div className="process-steps">
           <div className="process-step">
