@@ -151,3 +151,12 @@ describe('DevicePanel — custom templates', () => {
     if (custom) useTemplateStore.getState().deleteTemplate(custom.id);
   });
 });
+
+describe('DevicePanel — its title', () => {
+  it('is the one of the panel it is in: the panel does not repeat it', () => {
+    const { container } = render(<DevicePanel />);
+
+    expect(container.querySelector('.sidebar-section-title')).toBeNull();
+    expect(screen.queryByText(/^aggiungi$/i)).toBeNull();
+  });
+});

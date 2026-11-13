@@ -95,8 +95,6 @@ const DevicePanel = () => {
 
   return (
     <div className="sidebar-panel-section">
-      <h4 className="sidebar-section-title">AGGIUNGI</h4>
-
       {/* Tab Header */}
       <div className="flex gap-2 mb-3">
         <button
@@ -182,6 +180,8 @@ const DevicePanel = () => {
           {/* Templates Tab */}
           <div className="space-y-2">
             <p className="text-xs text-[var(--text-color-light)] mb-1">
+              Reti di esempio già configurate. Caricarne una sostituisce il canvas aperto.
+            </p>
             <button
               className="sidebar-panel-item"
               onClick={() => handleLoadSample(createCompanySample)}
@@ -194,8 +194,6 @@ const DevicePanel = () => {
                 </span>
               </span>
             </button>
-              Reti di esempio già configurate. Caricarne una sostituisce il canvas aperto.
-            </p>
             <button
               className="sidebar-panel-item"
               onClick={() => handleLoadSample(createSampleTopology)}
