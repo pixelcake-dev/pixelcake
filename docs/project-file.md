@@ -145,6 +145,7 @@ item never takes the id of an existing one.
 | `nics` | array | Optional. Network interface cards (end devices), see below. |
 | `routes` | array | Optional. Static routes of a router or firewall, see below. The device's `gateway` is its default route. |
 | `firewallRules` | array | Optional. Rules of a firewall, in the order they are read: the first that matches decides. See below. |
+| `portForwards` | array | Optional. Port forwards of a router or firewall, in the order they are read: the first that matches is taken. See below. |
 
 Port:
 
@@ -159,7 +160,7 @@ Port:
 | `poe` | boolean | Optional. |
 | `description` | string | Optional. |
 | `ip`, `subnet` | string | Optional. Layer 3 address of the port (routers, firewalls). |
-| `nat` | boolean | Optional (routers). Kept as documentation: addresses are not translated. |
+| `nat` | boolean | Optional (routers, firewalls). Source NAT: a new flow the device forwards out of this port leaves with the address of the port, and its reply is sent on to the real sender. |
 | `securityZone` | `trust`, `untrust`, `dmz` | Optional (firewalls). The zone the firewall policy and rules refer to. |
 | `ips` | boolean | Optional (firewalls). Kept as documentation. |
 
@@ -198,6 +199,22 @@ Rules are read in the order of the array. When none matches, the zones of
 the two ports decide: traffic towards a more trusted zone is denied
 (`untrust` → `trust`, `untrust` → `dmz`, `dmz` → `trust`), the rest is
 allowed.
+
+Port forward:
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `id` | string | Unique within the device, e.g. `forward-1`. |
+| `service` | `any`, `ping`, `web`, `email` | The traffic it takes. |
+| `port` | integer | The port whose address is published: what arrives for that address, for the service, is forwarded. |
+| `to` | string | The address the traffic is sent on to. |
+| `enabled` | boolean | Optional. `false` switches the forward off; a forward is on when the field is missing. |
+| `description` | string | Optional. |
+
+Forwards are read in the order of the array. The answer leaves with the
+address of the port, the one that was asked. A firewall filters a forwarded
+flow by its real destination, the `to` of the forward: the forward says
+where the traffic goes, a rule has to say that it may.
 
 ### Connection
 
@@ -268,7 +285,7 @@ Everything else is repaired, and each repair is reported to the user:
 | `viewport` missing or not usable | `{ "x": 0, "y": 0, "zoom": 1 }`. |
 | A device that is not an object, has no `id` or `type`, or repeats an `id` | Dropped. |
 | A device without `label`, `ip`, `subnet`, `gateway` or `position`, or with invalid entries in `ports` / `nics` | Completed: `label` becomes the id, addresses become empty, `position` becomes `0, 0`, invalid interface entries are dropped. |
-| A route without `id`, `destination` or `nextHop`; a rule without `id`, with an `action` other than `allow` / `deny`, an unknown `service`, or no `source` / `destination` | Dropped: the other routes and rules keep their order. |
+| A route without `id`, `destination` or `nextHop`; a rule without `id`, with an `action` other than `allow` / `deny`, an unknown `service`, or no `source` / `destination`; a port forward without `id`, with an unknown `service`, a `port` that is not an integer, or no `to` | Dropped: the other routes, rules and forwards keep their order. |
 | A connection that is not an object or has no `id`, `source` or `target` | Dropped. |
 | Connections sharing an `id` | The first one is kept. |
 | A connection whose `source` or `target` is not a device of the canvas | Dropped. |

@@ -10,6 +10,7 @@ import type {
   NetworkConnection,
   NetworkInterfaceCard,
   Port,
+  PortForward,
   StaticRoute,
 } from '@/types';
 import { boundInterface } from '@/engine/interfaces';
@@ -93,6 +94,19 @@ function serializeRule(rule: FirewallRule, level: number): string[] {
   return lines;
 }
 
+/** Serialize a port forward to YAML lines (in order: the first that matches is taken) */
+function serializeForward(forward: PortForward, level: number): string[] {
+  const lines: string[] = [];
+  lines.push(`${indent(level)}- service: ${yamlValue(forward.service)}`);
+  lines.push(`${indent(level)}  interface: ${forward.port}`);
+  lines.push(`${indent(level)}  to: ${yamlValue(forward.to)}`);
+  if (forward.enabled === false) lines.push(`${indent(level)}  enabled: false`);
+  if (forward.description) {
+    lines.push(`${indent(level)}  description: ${yamlValue(forward.description)}`);
+  }
+  return lines;
+}
+
 /** Serialize a device to YAML lines */
 function serializeDevice(device: NetworkDevice, level: number): string[] {
   const lines: string[] = [];
@@ -149,6 +163,14 @@ function serializeDevice(device: NetworkDevice, level: number): string[] {
     lines.push(`${indent(level)}  firewall_rules:`);
     for (const rule of device.firewallRules) {
       lines.push(...serializeRule(rule, level + 2));
+    }
+  }
+
+  // Port forwards, first to last (source NAT is written on each port: `nat`)
+  if (device.portForwards && device.portForwards.length > 0) {
+    lines.push(`${indent(level)}  port_forwards:`);
+    for (const forward of device.portForwards) {
+      lines.push(...serializeForward(forward, level + 2));
     }
   }
 

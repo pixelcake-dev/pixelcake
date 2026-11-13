@@ -9,6 +9,7 @@ import type {
   NetworkDevice,
   NetworkConnection,
   Port,
+  PortForward,
   NetworkInterfaceCard,
   StaticRoute,
 } from '@/types';
@@ -97,6 +98,29 @@ function parseRoutes(list: unknown[], deviceName: string, warnings: string[]): S
 }
 
 const RULE_SERVICES: readonly FirewallRule['service'][] = ['any', 'ping', 'web', 'email'];
+
+/**
+ * Port forwards of a device, in file order. A forward that is not complete
+ * is left out with a warning: the order of the others is kept.
+ */
+function parseForwards(list: unknown[], deviceName: string, warnings: string[]): PortForward[] {
+  const forwards: PortForward[] = [];
+  list.forEach((raw, index) => {
+    const data = raw !== null && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+    const service = RULE_SERVICES.find((name) => name === (data.service ?? 'any'));
+    const port = typeof data.interface === 'number' ? data.interface : Number.NaN;
+    const to = data.to === undefined ? '' : String(data.to);
+    if (!service || !Number.isInteger(port) || !to) {
+      warnings.push(`${deviceName}: inoltro ${index + 1} incompleto o non valido, ignorato`);
+      return;
+    }
+    const forward: PortForward = { id: `forward-${forwards.length + 1}`, service, port, to };
+    if (data.enabled === false) forward.enabled = false;
+    if (typeof data.description === 'string') forward.description = data.description;
+    forwards.push(forward);
+  });
+  return forwards;
+}
 
 /**
  * Firewall rules of a device, in file order. A rule that is not complete is
@@ -297,7 +321,11 @@ export function parseYamlTopology(content: string): ImportResult {
         .map((n, idx) => parseNic(n, idx));
     }
 
-    // Static routes and firewall rules
+    // Static routes, firewall rules and port forwards
+    if (Array.isArray(d.port_forwards)) {
+      const forwards = parseForwards(d.port_forwards, name, warnings);
+      if (forwards.length > 0) device.portForwards = forwards;
+    }
     if (Array.isArray(d.routes)) {
       const routes = parseRoutes(d.routes, name, warnings);
       if (routes.length > 0) device.routes = routes;

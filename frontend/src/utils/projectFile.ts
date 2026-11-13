@@ -126,9 +126,11 @@ const DEVICE_KEYS = [
   'nics',
   'routes',
   'firewallRules',
+  'portForwards',
 ];
 const ROUTE_KEYS = ['id', 'destination', 'nextHop', 'description'];
 const RULE_KEYS = ['id', 'action', 'service', 'source', 'destination', 'enabled', 'description'];
+const FORWARD_KEYS = ['id', 'service', 'port', 'to', 'enabled', 'description'];
 const PORT_KEYS = [
   'id',
   'name',
@@ -256,6 +258,7 @@ const DEVICE_NESTED: Record<string, Reorder> = {
   nics: each(NIC_KEYS),
   routes: each(ROUTE_KEYS),
   firewallRules: each(RULE_KEYS),
+  portForwards: each(FORWARD_KEYS),
 };
 
 /**
@@ -360,6 +363,18 @@ function isRule(value: unknown): boolean {
   );
 }
 
+/** A port forward the engine can read: a service, the number of a port, an address */
+function isForward(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    isText(value.id) &&
+    ['any', 'ping', 'web', 'email'].includes(value.service as string) &&
+    typeof value.port === 'number' &&
+    Number.isInteger(value.port) &&
+    isText(value.to)
+  );
+}
+
 function parseDevices(list: unknown[], where: string, warnings: string[]): NetworkDevice[] {
   const devices: NetworkDevice[] = [];
   const seen = new Set<string>();
@@ -402,10 +417,12 @@ function parseDevices(list: unknown[], where: string, warnings: string[]): Netwo
       else delete device[key];
       fixed = true;
     }
-    // Routes and firewall rules: an entry the engine could not read is dropped
+    // Routes, firewall rules and port forwards: an entry the engine could
+    // not read is dropped
     for (const [key, isComplete] of [
       ['routes', isRoute],
       ['firewallRules', isRule],
+      ['portForwards', isForward],
     ] as const) {
       const given = device[key];
       if (given === undefined) continue;
