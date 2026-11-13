@@ -90,3 +90,33 @@ describe('ImportExportModal — export formats', () => {
     expect(screen.queryByRole('note')).toBeNull();
   });
 });
+
+describe('ImportExportModal — the buttons at the bottom', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    createNewProject({ name: 'Sede Milano' });
+    useUIStore.setState(state => ({ modals: { ...state.modals, importExport: true } }));
+  });
+
+  it.each([
+    ['export', /^Copia negli appunti$/],
+    ['export', /^Scarica .*\.yaml$/],
+    ['import', /^Importa$/],
+  ])('on the %s tab, %s has its icon on the line of its label', (tabName, name) => {
+    render(<ImportExportModal />);
+    if (tabName === 'import') fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+
+    const button = screen.getByRole('button', { name });
+    const icon = button.querySelector('svg');
+
+    expect(button.closest('.modal-actions')).not.toBeNull();
+    expect(icon).not.toBeNull();
+    // the row is the button's doing (see Button.test.tsx): icon and label are
+    // its two children, and the icon carries no layout of its own
+    expect(button.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(['inline-flex', 'items-center', 'gap-1'])
+    );
+    expect(icon?.parentElement).toBe(button);
+    expect(icon?.getAttribute('style')).toBeNull();
+  });
+});

@@ -271,11 +271,11 @@ const ImportExportModal = () => {
           {activeTab === 'export' ? (
             <>
               <Button variant="secondary" onClick={handleCopy} disabled={devices.length === 0}>
-                {copied ? <Check size={14} style={{ marginRight: 4 }} /> : <Copy size={14} style={{ marginRight: 4 }} />}
+                {copied ? <Check size={14} /> : <Copy size={14} />}
                 {copied ? 'Copiato' : 'Copia negli appunti'}
               </Button>
               <Button variant="primary" onClick={handleDownload} disabled={devices.length === 0}>
-                <Download size={14} style={{ marginRight: 4 }} />
+                <Download size={14} />
                 Scarica {getFileName()}
               </Button>
             </>
@@ -289,7 +289,7 @@ const ImportExportModal = () => {
                 onClick={handleImport}
                 disabled={!importResult || importResult.devices.length === 0}
               >
-                <Upload size={14} style={{ marginRight: 4 }} />
+                <Upload size={14} />
                 Importa
               </Button>
             </>

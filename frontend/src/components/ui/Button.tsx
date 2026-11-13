@@ -12,9 +12,12 @@ export const Button: React.FC<ButtonProps> = ({
   children,
   ...props
 }) => {
+  // What is inside stands in a row, centred, with a small gap: an icon next
+  // to its label. (An icon is a block of its own in this style sheet: left
+  // to the normal flow it took a line for itself, with the label under it.)
   // A button that cannot be pressed must look it
   const baseClasses =
-    'rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center gap-1 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variantClasses = {
     primary: 'bg-[var(--accent-color)] text-white hover:opacity-90 focus:ring-2 focus:ring-[var(--accent-color)] focus:ring-opacity-50',

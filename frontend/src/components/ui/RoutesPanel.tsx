@@ -164,7 +164,7 @@ const RoutesPanel: React.FC<RoutesPanelProps> = ({ device, routes, onChange }) =
             onChange([...routes, { id: nextRouteId(routes), destination: '', nextHop: '' }])
           }
         >
-          <Plus size={14} style={{ display: 'inline', marginRight: 4, verticalAlign: '-2px' }} />
+          <Plus size={14} />
           Aggiungi rotta
         </Button>
       </section>

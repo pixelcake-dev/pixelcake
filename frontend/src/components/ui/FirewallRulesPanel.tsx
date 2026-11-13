@@ -236,7 +236,7 @@ const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, o
             ])
           }
         >
-          <Plus size={14} style={{ display: 'inline', marginRight: 4, verticalAlign: '-2px' }} />
+          <Plus size={14} />
           Aggiungi regola
         </Button>
       </section>

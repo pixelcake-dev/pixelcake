@@ -296,11 +296,7 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
               disabled={!pngBlob}
               title="Copia l'immagine (PNG) per incollarla in un documento o in un messaggio"
             >
-              {copied ? (
-                <Check size={14} style={{ display: 'inline', marginRight: 4 }} />
-              ) : (
-                <Copy size={14} style={{ display: 'inline', marginRight: 4 }} />
-              )}
+              {copied ? <Check size={14} /> : <Copy size={14} />}
               {copied ? 'Copiata' : 'Copia negli appunti'}
             </Button>
           )}
@@ -309,7 +305,7 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
             onClick={() => void handleSave()}
             disabled={format === 'png' && !pngBlob}
           >
-            <Download size={14} style={{ display: 'inline', marginRight: 4 }} />
+            <Download size={14} />
             {preparing
               ? 'Preparo il PNG…'
               : canChooseWhereToSave()
