@@ -76,46 +76,50 @@ const NewProjectModal = () => {
       <FormContainer>
         {/* Project Info */}
         <FormFieldset legend="Informazioni Progetto">
-          <Input
-            label="Nome Progetto *"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="es. Infrastructure HQ"
-            fullWidth
-            required
-          />
-          <Input
-            label="Descrizione"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Breve descrizione del progetto..."
-            fullWidth
-          />
+          <FormContainer gap="3">
+            <Input
+              label="Nome Progetto *"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="es. Infrastructure HQ"
+              fullWidth
+              required
+            />
+            <Input
+              label="Descrizione"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Breve descrizione del progetto..."
+              fullWidth
+            />
+          </FormContainer>
         </FormFieldset>
 
         {/* Global Network Settings */}
         <FormFieldset legend="Impostazioni di Rete Globali">
-          <Input
-            label="Classe IP"
-            value={ipClass}
-            onChange={(e) => setIpClass(e.target.value)}
-            placeholder="192.168.1.0"
-            fullWidth
-          />
-          <Input
-            label="Subnet Mask"
-            value={subnet}
-            onChange={(e) => setSubnet(e.target.value)}
-            placeholder="255.255.255.0"
-            fullWidth
-          />
-          <Input
-            label="Gateway"
-            value={gateway}
-            onChange={(e) => setGateway(e.target.value)}
-            placeholder="192.168.1.1"
-            fullWidth
-          />
+          <FormContainer gap="3">
+            <Input
+              label="Classe IP"
+              value={ipClass}
+              onChange={(e) => setIpClass(e.target.value)}
+              placeholder="192.168.1.0"
+              fullWidth
+            />
+            <Input
+              label="Subnet Mask"
+              value={subnet}
+              onChange={(e) => setSubnet(e.target.value)}
+              placeholder="255.255.255.0"
+              fullWidth
+            />
+            <Input
+              label="Gateway"
+              value={gateway}
+              onChange={(e) => setGateway(e.target.value)}
+              placeholder="192.168.1.1"
+              fullWidth
+            />
+          </FormContainer>
         </FormFieldset>
 
         {/* Error Message */}

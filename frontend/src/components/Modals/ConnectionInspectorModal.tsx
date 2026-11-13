@@ -217,23 +217,26 @@ const ConnectionInspectorModal = () => {
         </div>
       )}
 
-      {/* Bandwidth */}
-      <Input
-        label="Bandwidth (es: 1Gbps, 100Mbps)"
-        value={bandwidth}
-        onChange={(e) => setBandwidth(e.target.value)}
-        placeholder="1Gbps"
-        size="sm"
-      />
+      {/* Bandwidth and label. An Input has no space of its own around it
+          (the select and the groups around these two have): the gap between
+          them and under them comes from this container */}
+      <FormContainer gap="4" className="mb-4">
+        <Input
+          label="Bandwidth (es: 1Gbps, 100Mbps)"
+          value={bandwidth}
+          onChange={(e) => setBandwidth(e.target.value)}
+          placeholder="1Gbps"
+          size="sm"
+        />
 
-      {/* Label */}
-      <Input
-        label="Etichetta Custom"
-        value={label}
-        onChange={(e) => setLabel(e.target.value)}
-        placeholder="Etichetta opzionale"
-        size="md"
-      />
+        <Input
+          label="Etichetta Custom"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="Etichetta opzionale"
+          size="md"
+        />
+      </FormContainer>
 
       {/* Custom Color */}
       <div className="form-group">

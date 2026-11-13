@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
+import { FormContainer } from '@/components/ui/FormContainer';
 import { useNetworkStore } from '@/store/networkStore';
 import { type EmailMode } from '@/types';
 
@@ -51,47 +52,55 @@ const NetworkSettingsTab = () => {
         Questi valori verranno usati come default per i nuovi dispositivi.
       </p>
 
-      <Input
-        label="Classe IP di Partenza"
-        value={ipClass}
-        onChange={(e) => setIpClass(e.target.value)}
-        placeholder="es. 192.168.1.0"
-        size="sm"
-        required
-      />
+      {/* A field has no space of its own around it: the gap between one field
+          and the label of the next comes from the container, as in the other
+          windows */}
+      <FormContainer gap="4">
+        <Input
+          label="Classe IP di Partenza"
+          value={ipClass}
+          onChange={(e) => setIpClass(e.target.value)}
+          placeholder="es. 192.168.1.0"
+          size="sm"
+          required
+        />
 
-      <Input
-        label="Subnet Mask di Default"
-        value={subnet}
-        onChange={(e) => setSubnet(e.target.value)}
-        placeholder="es. 255.255.255.0"
-        size="sm"
-        required
-      />
+        <Input
+          label="Subnet Mask di Default"
+          value={subnet}
+          onChange={(e) => setSubnet(e.target.value)}
+          placeholder="es. 255.255.255.0"
+          size="sm"
+          required
+        />
 
-      <Input
-        label="Gateway di Default"
-        value={gateway}
-        onChange={(e) => setGateway(e.target.value)}
-        placeholder="es. 192.168.1.1"
-        size="sm"
-        required
-      />
+        <Input
+          label="Gateway di Default"
+          value={gateway}
+          onChange={(e) => setGateway(e.target.value)}
+          placeholder="es. 192.168.1.1"
+          size="sm"
+          required
+        />
 
-      <Select
-        label="Modalità Email (SMTP)"
-        value={emailMode}
-        onChange={(e) => setEmailMode(e.target.value as EmailMode)}
-        size="md"
-      >
-        <option value="auto">Auto (rileva automaticamente)</option>
-        <option value="internal">Mail server interno</option>
-        <option value="cloud">Cloud (M365, Gmail...)</option>
-      </Select>
-      <p className="text-xs text-[var(--text-color-light)] -mt-2 mb-4">
-        Determina come viaggiano le email in simulazione: tramite un Mail Server interno o
-        attraverso l&apos;uscita internet.
-      </p>
+        {/* The select and the line that explains it are one field */}
+        <div>
+          <Select
+            label="Modalità Email (SMTP)"
+            value={emailMode}
+            onChange={(e) => setEmailMode(e.target.value as EmailMode)}
+            size="md"
+          >
+            <option value="auto">Auto (rileva automaticamente)</option>
+            <option value="internal">Mail server interno</option>
+            <option value="cloud">Cloud (M365, Gmail...)</option>
+          </Select>
+          <p className="text-xs text-[var(--text-color-light)] -mt-2 mb-4">
+            Determina come viaggiano le email in simulazione: tramite un Mail Server interno o
+            attraverso l&apos;uscita internet.
+          </p>
+        </div>
+      </FormContainer>
 
       <div className="mt-4">
         <Button variant="primary" onClick={handleSave}>

@@ -11,6 +11,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
 import type { NetworkConnection, NetworkDevice } from '@/types';
+import { expectSpacedApart } from '@/test/formLayout';
 import ConnectionInspectorModal from './ConnectionInspectorModal';
 
 vi.mock('sonner', () => ({
@@ -63,6 +64,17 @@ describe('ConnectionInspectorModal — interfaces', () => {
     store.loadTopology(sample.devices, sample.connections);
     useUIStore.getState().closeModal('connectionInspector');
     useUIStore.getState().setInspectorConnection(null);
+  });
+
+  it('no label is glued to the field above it: bandwidth and label are spaced', () => {
+    openInspector('PC-1', 'SW-Office');
+
+    const fields = ['Bandwidth (es: 1Gbps, 100Mbps)', 'Etichetta Custom'].map(label =>
+      screen.getByLabelText(label)
+    );
+    expectSpacedApart(fields);
+    // and the group under them does not start right against the second one
+    expect(fields[1].closest('[class*="gap-"]')?.className).toMatch(/(^|\s)mb-4(\s|$)/);
   });
 
   it('shows one picker per end, with the interface each end is attached to', () => {

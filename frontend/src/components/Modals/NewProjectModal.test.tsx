@@ -11,6 +11,7 @@ import { useNetworkStore } from '@/store/networkStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
+import { expectSpacedApart } from '@/test/formLayout';
 import NewProjectModal from './NewProjectModal';
 
 vi.mock('sonner', () => ({
@@ -102,6 +103,17 @@ describe('NewProjectModal', () => {
     expect(useProjectStore.getState().name).toBe('Sede Milano');
     expect(useNetworkStore.getState().devices.map(d => d.label)).toEqual(['PC-1']);
     expect(useNetworkStore.getState().hasUnsavedChanges).toBe(true);
+  });
+
+  it('no label is glued to the field above it, in either group of fields', () => {
+    render(<NewProjectModal />);
+
+    expectSpacedApart(
+      ['Nome Progetto *', 'Descrizione'].map(label => screen.getByLabelText(label))
+    );
+    expectSpacedApart(
+      ['Classe IP', 'Subnet Mask', 'Gateway'].map(label => screen.getByLabelText(label))
+    );
   });
 
   it('starts from the default network settings every time it opens', () => {

@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useNetworkStore } from '@/store/networkStore';
 import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
+import { expectSpacedApart } from '@/test/formLayout';
 import SettingsModal from './SettingsModal';
 
 vi.mock('sonner', () => ({
@@ -116,6 +117,23 @@ describe('SettingsModal', () => {
   });
 
   describe('Rete', () => {
+    it('no label is glued to the field above it', () => {
+      render(<SettingsModal />);
+
+      expectSpacedApart(
+        [
+          'Classe IP di Partenza',
+          'Subnet Mask di Default',
+          'Gateway di Default',
+          'Modalità Email (SMTP)',
+        ].map(label => screen.getByLabelText(label))
+      );
+      // the line that explains the last field stays with it
+      const select = screen.getByLabelText('Modalità Email (SMTP)');
+      const hint = screen.getByText(/Determina come viaggiano le email/);
+      expect(select.closest('.form-group')?.parentElement).toBe(hint.parentElement);
+    });
+
     it('confirms a save with a toast, not with a native alert', () => {
       const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
       render(<SettingsModal />);
