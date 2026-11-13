@@ -6,6 +6,7 @@
 import YAML from 'yaml';
 import type {
   DhcpPool,
+  DnsRecord,
   FirewallRule,
   NetworkDevice,
   NetworkConnection,
@@ -29,8 +30,9 @@ function isValidIP(ip: string): boolean {
 
 /**
  * The DHCP server of an interface (`dhcp_server`: `start`, `end` and, when
- * one is handed out, `gateway`). Without both ends of the range it is left
- * out with a warning. `where` names the interface: `Port 2`, `FW: eth0`.
+ * they are handed out, `gateway` and `dns`). Without both ends of the range
+ * it is left out with a warning. `where` names the interface: `Port 2`,
+ * `FW: eth0`.
  */
 function parsePool(value: unknown, where: string, warnings: string[]): DhcpPool | undefined {
   if (value === undefined || value === null) return undefined;
@@ -45,6 +47,9 @@ function parsePool(value: unknown, where: string, warnings: string[]): DhcpPool 
   const pool: DhcpPool = { start, end };
   if (data.gateway !== undefined && data.gateway !== null && data.gateway !== '') {
     pool.gateway = String(data.gateway);
+  }
+  if (data.dns !== undefined && data.dns !== null && data.dns !== '') {
+    pool.dns = String(data.dns);
   }
   return pool;
 }
@@ -87,8 +92,8 @@ function parsePort(data: Record<string, unknown>, warnings: string[]): Port {
 
 /**
  * Parse a NIC from YAML data. A card with `dhcp: true` takes its address
- * from a DHCP server: whatever address the file writes next to it is not
- * read, and neither is a `dhcp_server` (a card cannot do both).
+ * from a DHCP server: whatever address or DNS server the file writes next to
+ * it is not read, and neither is a `dhcp_server` (a card cannot do both).
  */
 function parseNic(
   data: Record<string, unknown>,
@@ -113,9 +118,30 @@ function parseNic(
     nic.dhcp = true;
     return nic;
   }
+  if (typeof data.dns === 'string' && data.dns) nic.dns = data.dns;
   const pool = parsePool(data.dhcp_server, `${deviceName}: ${name}`, warnings);
   if (pool) nic.dhcpServer = pool;
   return nic;
+}
+
+/**
+ * DNS records of a device (`name` + `address`), in file order. An entry
+ * without both is left out with a warning.
+ */
+function parseRecords(list: unknown[], deviceName: string, warnings: string[]): DnsRecord[] {
+  const records: DnsRecord[] = [];
+  list.forEach((raw, index) => {
+    const data = raw !== null && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+    // String(): YAML reads a bare number where an address was mistyped
+    const name = data.name === undefined || data.name === null ? '' : String(data.name);
+    const address = data.address === undefined || data.address === null ? '' : String(data.address);
+    if (!name || !address) {
+      warnings.push(`${deviceName}: record DNS ${index + 1} senza nome o indirizzo, ignorato`);
+      return;
+    }
+    records.push({ id: `record-${records.length + 1}`, name, address });
+  });
+  return records;
 }
 
 /**
@@ -140,7 +166,7 @@ function parseRoutes(list: unknown[], deviceName: string, warnings: string[]): S
   return routes;
 }
 
-const RULE_SERVICES: readonly FirewallRule['service'][] = ['any', 'ping', 'web', 'email'];
+const RULE_SERVICES: readonly FirewallRule['service'][] = ['any', 'ping', 'web', 'email', 'dns'];
 
 /**
  * Port forwards of a device, in file order. A forward that is not complete
@@ -370,7 +396,11 @@ export function parseYamlTopology(content: string): ImportResult {
       }
     }
 
-    // Static routes, firewall rules and port forwards
+    // Static routes, firewall rules, port forwards and DNS records
+    if (Array.isArray(d.dns_records)) {
+      const records = parseRecords(d.dns_records, name, warnings);
+      if (records.length > 0) device.dnsRecords = records;
+    }
     if (Array.isArray(d.port_forwards)) {
       const forwards = parseForwards(d.port_forwards, name, warnings);
       if (forwards.length > 0) device.portForwards = forwards;

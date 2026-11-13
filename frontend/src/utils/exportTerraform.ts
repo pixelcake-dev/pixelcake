@@ -100,7 +100,9 @@ function generateNicBlocks(device: NetworkDevice): string {
       ['speed', nic.speed || 'auto'],
     ];
 
-    // A card on DHCP has no address of its own; a server's card may hand some out
+    // A card on DHCP has no address of its own, and no DNS server of its
+    // own; a server's card may hand some out
+    if (nic.dns && !nic.dhcp) entries.push(['dns_server', nic.dns]);
     if (nic.dhcp) entries.push(['dhcp', true]);
     if (nic.dhcpServer) entries.push(['dhcp_pool', `${nic.dhcpServer.start}-${nic.dhcpServer.end}`]);
     if (nic.mac) entries.push(['mac_address', nic.mac]);
@@ -158,6 +160,12 @@ function generateDeviceResource(device: NetworkDevice): string {
   if (nicBlocks) {
     lines.push('');
     lines.push(nicBlocks);
+  }
+
+  // DNS records of a server
+  for (const record of device.dnsRecords ?? []) {
+    lines.push('');
+    lines.push(hclBlock(1, 'dns_record', [['name', record.name], ['address', record.address]]));
   }
 
   lines.push('}');

@@ -127,11 +127,13 @@ const DEVICE_KEYS = [
   'routes',
   'firewallRules',
   'portForwards',
+  'dnsRecords',
 ];
 const ROUTE_KEYS = ['id', 'destination', 'nextHop', 'description'];
 const RULE_KEYS = ['id', 'action', 'service', 'source', 'destination', 'enabled', 'description'];
 const FORWARD_KEYS = ['id', 'service', 'port', 'to', 'enabled', 'description'];
-const POOL_KEYS = ['start', 'end', 'gateway'];
+const RECORD_KEYS = ['id', 'name', 'address'];
+const POOL_KEYS = ['start', 'end', 'gateway', 'dns'];
 const PORT_KEYS = [
   'id',
   'name',
@@ -156,6 +158,7 @@ const NIC_KEYS = [
   'ip',
   'subnet',
   'gateway',
+  'dns',
   'dhcp',
   'dhcpServer',
   'mac',
@@ -255,7 +258,7 @@ function one(keys: readonly string[]): Reorder {
   return value => (isRecord(value) ? ordered(value, keys) : value);
 }
 
-/** The DHCP server of an interface, a port or a card: its range, then its gateway */
+/** The DHCP server of an interface, a port or a card: its range, then what it hands out with it */
 const INTERFACE_NESTED: Record<string, Reorder> = { dhcpServer: one(POOL_KEYS) };
 
 const DEVICE_NESTED: Record<string, Reorder> = {
@@ -266,6 +269,7 @@ const DEVICE_NESTED: Record<string, Reorder> = {
   routes: each(ROUTE_KEYS),
   firewallRules: each(RULE_KEYS),
   portForwards: each(FORWARD_KEYS),
+  dnsRecords: each(RECORD_KEYS),
 };
 
 /**
@@ -358,13 +362,16 @@ function isRoute(value: unknown): boolean {
   );
 }
 
+/** What a rule or a port forward can be about: a service, or any of them */
+const SERVICES = ['any', 'ping', 'web', 'email', 'dns'];
+
 /** A firewall rule the engine can read */
 function isRule(value: unknown): boolean {
   return (
     isRecord(value) &&
     isText(value.id) &&
     (value.action === 'allow' || value.action === 'deny') &&
-    ['any', 'ping', 'web', 'email'].includes(value.service as string) &&
+    SERVICES.includes(value.service as string) &&
     isText(value.source) &&
     isText(value.destination)
   );
@@ -375,27 +382,36 @@ function isForward(value: unknown): boolean {
   return (
     isRecord(value) &&
     isText(value.id) &&
-    ['any', 'ping', 'web', 'email'].includes(value.service as string) &&
+    SERVICES.includes(value.service as string) &&
     typeof value.port === 'number' &&
     Number.isInteger(value.port) &&
     isText(value.to)
   );
 }
 
-/** A DHCP pool the engine can read: a first and a last address, and a gateway or none, all text */
+/** A DNS record the engine can read: an id, a name and an address, all text */
+function isDnsRecord(value: unknown): boolean {
+  return isRecord(value) && isText(value.id) && isText(value.name) && isText(value.address);
+}
+
+/**
+ * A DHCP pool the engine can read: a first and a last address, and a gateway
+ * and a DNS server or none, all text
+ */
 function isPool(value: unknown): boolean {
   return (
     isRecord(value) &&
     isText(value.start) &&
     isText(value.end) &&
-    (value.gateway === undefined || isText(value.gateway))
+    (value.gateway === undefined || isText(value.gateway)) &&
+    (value.dns === undefined || isText(value.dns))
   );
 }
 
 /**
  * The ports or the cards of a device without what the engine could not read
- * of DHCP: a pool that is not one, a `dhcp` that is not yes or no. The SAME
- * list when there is nothing to drop.
+ * of DHCP and DNS: a pool that is not one, a `dhcp` that is not yes or no, a
+ * DNS server that is not text. The SAME list when there is nothing to drop.
  */
 function withReadableDhcp(interfaces: unknown[]): unknown[] {
   let changed = false;
@@ -403,11 +419,13 @@ function withReadableDhcp(interfaces: unknown[]): unknown[] {
     if (!isRecord(entry)) return entry;
     const badPool = entry.dhcpServer !== undefined && !isPool(entry.dhcpServer);
     const badFlag = entry.dhcp !== undefined && typeof entry.dhcp !== 'boolean';
-    if (!badPool && !badFlag) return entry;
+    const badDns = entry.dns !== undefined && !isText(entry.dns);
+    if (!badPool && !badFlag && !badDns) return entry;
     changed = true;
     const copy: JsonObject = { ...entry };
     if (badPool) delete copy.dhcpServer;
     if (badFlag) delete copy.dhcp;
+    if (badDns) delete copy.dns;
     return copy;
   });
   return changed ? kept : interfaces;
@@ -455,7 +473,8 @@ function parseDevices(list: unknown[], where: string, warnings: string[]): Netwo
       else delete device[key];
       fixed = true;
     }
-    // DHCP on a port or on a card: what the engine could not read is dropped
+    // DHCP on a port or on a card, the DNS server of a card: what the engine
+    // could not read is dropped
     for (const key of ['ports', 'nics'] as const) {
       const interfaces = device[key];
       if (!Array.isArray(interfaces)) continue;
@@ -464,12 +483,13 @@ function parseDevices(list: unknown[], where: string, warnings: string[]): Netwo
       device[key] = readable;
       fixed = true;
     }
-    // Routes, firewall rules and port forwards: an entry the engine could
-    // not read is dropped
+    // Routes, firewall rules, port forwards and DNS records: an entry the
+    // engine could not read is dropped
     for (const [key, isComplete] of [
       ['routes', isRoute],
       ['firewallRules', isRule],
       ['portForwards', isForward],
+      ['dnsRecords', isDnsRecord],
     ] as const) {
       const given = device[key];
       if (given === undefined) continue;

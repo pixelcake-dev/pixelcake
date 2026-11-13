@@ -179,6 +179,7 @@ const ImportExportModal = () => {
           routes: device.routes,
           firewallRules: device.firewallRules,
           portForwards: device.portForwards,
+          dnsRecords: device.dnsRecords,
         });
         // Get the newly created device (last one in array)
         const newDevices = useNetworkStore.getState().devices;

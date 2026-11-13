@@ -6,6 +6,7 @@
 
 import type {
   DhcpPool,
+  DnsRecord,
   FirewallRule,
   NetworkDevice,
   NetworkConnection,
@@ -37,7 +38,8 @@ function indent(level: number): string {
 
 /**
  * The DHCP server of an interface (a port, or a card of a server) as YAML
- * lines: the range it hands out, and the gateway when one is written
+ * lines: the range it hands out, then the gateway and the DNS server when
+ * one is written
  */
 function serializePool(pool: DhcpPool, level: number): string[] {
   const lines = [
@@ -46,6 +48,7 @@ function serializePool(pool: DhcpPool, level: number): string[] {
     `${indent(level)}    end: ${yamlValue(pool.end)}`,
   ];
   if (pool.gateway) lines.push(`${indent(level)}    gateway: ${yamlValue(pool.gateway)}`);
+  if (pool.dns) lines.push(`${indent(level)}    dns: ${yamlValue(pool.dns)}`);
   return lines;
 }
 
@@ -82,12 +85,14 @@ function serializeNic(nic: NetworkInterfaceCard, level: number): string[] {
   lines.push(`${indent(level)}  enabled: ${nic.enabled}`);
   if (nic.dhcp) {
     // The address comes from a DHCP server: the file says so, and never
-    // the address the card happens to be leased
+    // the address the card happens to be leased, nor the DNS server that
+    // came with it
     lines.push(`${indent(level)}  dhcp: true`);
   } else {
     if (nic.ip) lines.push(`${indent(level)}  ip: ${yamlValue(nic.ip)}`);
     if (nic.subnet) lines.push(`${indent(level)}  subnet: ${yamlValue(nic.subnet)}`);
     if (nic.gateway) lines.push(`${indent(level)}  gateway: ${yamlValue(nic.gateway)}`);
+    if (nic.dns) lines.push(`${indent(level)}  dns: ${yamlValue(nic.dns)}`);
     if (nic.dhcpServer) lines.push(...serializePool(nic.dhcpServer, level));
   }
   if (nic.speed) lines.push(`${indent(level)}  speed: ${yamlValue(nic.speed)}`);
@@ -128,6 +133,14 @@ function serializeForward(forward: PortForward, level: number): string[] {
     lines.push(`${indent(level)}  description: ${yamlValue(forward.description)}`);
   }
   return lines;
+}
+
+/** Serialize a DNS record to YAML lines: a name and the address it stands for */
+function serializeRecord(record: DnsRecord, level: number): string[] {
+  return [
+    `${indent(level)}- name: ${yamlValue(record.name)}`,
+    `${indent(level)}  address: ${yamlValue(record.address)}`,
+  ];
 }
 
 /** Serialize a device to YAML lines */
@@ -197,6 +210,14 @@ function serializeDevice(device: NetworkDevice, level: number): string[] {
     lines.push(`${indent(level)}  port_forwards:`);
     for (const forward of device.portForwards) {
       lines.push(...serializeForward(forward, level + 2));
+    }
+  }
+
+  // DNS records of a server
+  if (device.dnsRecords && device.dnsRecords.length > 0) {
+    lines.push(`${indent(level)}  dns_records:`);
+    for (const record of device.dnsRecords) {
+      lines.push(...serializeRecord(record, level + 2));
     }
   }
 

@@ -146,6 +146,7 @@ item never takes the id of an existing one.
 | `routes` | array | Optional. Static routes of a router or firewall, see below. The device's `gateway` is its default route. |
 | `firewallRules` | array | Optional. Rules of a firewall, in the order they are read: the first that matches decides. See below. |
 | `portForwards` | array | Optional. Port forwards of a router or firewall, in the order they are read: the first that matches is taken. See below. |
+| `dnsRecords` | array | Optional. The names a server answers for as a DNS server, see below. |
 
 Port:
 
@@ -174,7 +175,8 @@ NIC:
 | `enabled` | boolean | Administrative state. |
 | `speed` | `10M`, `100M`, `1G`, `2.5G`, `10G`, `auto` | Link speed. |
 | `ip`, `subnet`, `gateway` | string | Address of the interface. Empty while `dhcp` is `true`. |
-| `dhcp` | boolean | Optional. `true`: the card takes its address, mask and gateway from the DHCP server of its network, and keeps none of its own. |
+| `dns` | string | Optional. Address of the DNS server the card asks when a name is used in place of an address. Not on a card whose `dhcp` is `true`: there it comes with the lease. |
+| `dhcp` | boolean | Optional. `true`: the card takes its address, mask, gateway and DNS server from the DHCP server of its network, and keeps none of its own. |
 | `dhcpServer` | object | Optional (servers). DHCP server for the network of this card: the pool it hands out, see below. Not on a card whose `dhcp` is `true`. |
 | `mac`, `description` | string | Optional. |
 
@@ -185,6 +187,7 @@ DHCP pool (`dhcpServer` of a port or of a NIC):
 | `start` | string | First address of the range handed out. |
 | `end` | string | Last address of the range. Both must be in the network of the interface. |
 | `gateway` | string | Optional. Gateway handed out with the address. Without it: the address of the port itself on a router or firewall, none on a server. |
+| `dns` | string | Optional. Address of the DNS server handed out with the address. It may be on any network. Without it the cards served get none. |
 
 The mask handed out is the one of the interface. **A lease is never written
 in the file**: which card gets which address is worked out from the drawing
@@ -207,7 +210,7 @@ Firewall rule:
 |-------|------|---------|
 | `id` | string | Unique within the device, e.g. `rule-1`. |
 | `action` | `allow`, `deny` | What the rule does with the traffic it matches. |
-| `service` | `any`, `ping`, `web`, `email` | The traffic it applies to. |
+| `service` | `any`, `ping`, `web`, `email`, `dns` | The traffic it applies to. `dns` is a name lookup. |
 | `source`, `destination` | string | `any`, a zone (`trust`, `untrust`, `dmz`), an address or a network in CIDR form. |
 | `enabled` | boolean | Optional. `false` switches the rule off; a rule is on when the field is missing. |
 | `description` | string | Optional. |
@@ -222,7 +225,7 @@ Port forward:
 | Field | Type | Meaning |
 |-------|------|---------|
 | `id` | string | Unique within the device, e.g. `forward-1`. |
-| `service` | `any`, `ping`, `web`, `email` | The traffic it takes. |
+| `service` | `any`, `ping`, `web`, `email`, `dns` | The traffic it takes. |
 | `port` | integer | The port whose address is published: what arrives for that address, for the service, is forwarded. |
 | `to` | string | The address the traffic is sent on to. |
 | `enabled` | boolean | Optional. `false` switches the forward off; a forward is on when the field is missing. |
@@ -232,6 +235,21 @@ Forwards are read in the order of the array. The answer leaves with the
 address of the port, the one that was asked. A firewall filters a forwarded
 flow by its real destination, the `to` of the forward: the forward says
 where the traffic goes, a rule has to say that it may.
+
+DNS record:
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `id` | string | Unique within the device, e.g. `record-1`. |
+| `name` | string | Host name, with at least one dot: `gestionale.azienda.example`. Upper and lower case are the same. |
+| `address` | string | The address the name stands for. |
+
+Records are read on devices of type `Server`. A server answers only for the
+names in its list; a name written twice gives the address of its first
+record. A record whose `name` is not a host name, or whose `address` is not
+an address, is kept in the file and not used. **The address a name resolved
+to is never written in the file**: a name is looked up again each time a
+question uses it, by a request to the `dns` address of the card that asks.
 
 ### Connection
 
@@ -303,7 +321,8 @@ Everything else is repaired, and each repair is reported to the user:
 | A device that is not an object, has no `id` or `type`, or repeats an `id` | Dropped. |
 | A device without `label`, `ip`, `subnet`, `gateway` or `position`, or with invalid entries in `ports` / `nics` | Completed: `label` becomes the id, addresses become empty, `position` becomes `0, 0`, invalid interface entries are dropped. |
 | A route without `id`, `destination` or `nextHop`; a rule without `id`, with an `action` other than `allow` / `deny`, an unknown `service`, or no `source` / `destination`; a port forward without `id`, with an unknown `service`, a `port` that is not an integer, or no `to` | Dropped: the other routes, rules and forwards keep their order. |
-| A `dhcpServer` that is not an object, or without `start` or `end` as text, or with a `gateway` that is not text; a `dhcp` that is not a boolean | Dropped: the port or NIC keeps everything else. |
+| A `dhcpServer` that is not an object, or without `start` or `end` as text, or with a `gateway` or a `dns` that is not text; a `dhcp` that is not a boolean; a `dns` of a NIC that is not text | Dropped: the port or NIC keeps everything else. |
+| A DNS record without `id`, `name` or `address` as text | Dropped: the other records keep their order. |
 | A connection that is not an object or has no `id`, `source` or `target` | Dropped. |
 | Connections sharing an `id` | The first one is kept. |
 | A connection whose `source` or `target` is not a device of the canvas | Dropped. |
@@ -323,9 +342,9 @@ versions (or by hand) keep working:
   zones: choosing the port there is choosing a policy;
 - the device-level `ip`, `subnet` and `gateway` of a device with NICs are set
   from its first NIC;
-- a NIC whose `dhcp` is `true` loses whatever `ip`, `subnet` and `gateway`
-  it carries: they are not used while it is on DHCP, and could be mistaken
-  for the address it is leased.
+- a NIC whose `dhcp` is `true` loses whatever `ip`, `subnet`, `gateway` and
+  `dns` it carries: they are not used while it is on DHCP, and could be
+  mistaken for what it is leased.
 
 A file that is already in this form is read back exactly as it was written.
 

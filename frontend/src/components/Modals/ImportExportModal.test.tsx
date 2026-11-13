@@ -155,6 +155,15 @@ describe('ImportExportModal — importing a YAML file', () => {
     '      nics:',
     '        - name: eth0',
     '          dhcp: true',
+    '    - name: NS',
+    '      type: Server',
+    '      nics:',
+    '        - name: eth0',
+    '          ip: 192.168.50.53',
+    '          dns: 192.168.50.53',
+    '      dns_records:',
+    '        - name: www.azienda.example',
+    '          address: 192.168.50.20',
     '  connections:',
     '    - source: Portatile',
     '      target: FW',
@@ -199,10 +208,10 @@ describe('ImportExportModal — importing a YAML file', () => {
     expect(rows).toEqual(expect.arrayContaining(['FW', 'Firewall', 'Portatile', 'PC', 'DHCP']));
   });
 
-  it('replacing the drawing keeps routes, rules, forwards and DHCP', async () => {
+  it('replacing the drawing keeps routes, rules, forwards, DHCP and DNS', async () => {
     await chooseFile();
     fireEvent.click(screen.getByRole('button', { name: 'Importa' }));
-    expect(devices().map(d => d.label)).toEqual(['FW', 'Portatile']);
+    expect(devices().map(d => d.label)).toEqual(['FW', 'Portatile', 'NS']);
     expect(named('FW')).toMatchObject({
       routes: [{ destination: '10.0.0.0/8', nextHop: '192.168.50.254' }],
       firewallRules: [{ action: 'allow', service: 'web', destination: '192.168.50.20' }],
@@ -210,13 +219,17 @@ describe('ImportExportModal — importing a YAML file', () => {
     });
     expect(named('FW')?.ports?.[0].dhcpServer).toEqual({ start: '192.168.50.100', end: '192.168.50.110' });
     expect(named('Portatile')?.nics?.[0]).toMatchObject({ dhcp: true, ip: '' });
+    expect(named('NS')?.dnsRecords).toEqual([
+      { id: 'record-1', name: 'www.azienda.example', address: '192.168.50.20' },
+    ]);
+    expect(named('NS')?.nics?.[0].dns).toBe('192.168.50.53');
   });
 
   it('adding to the drawing keeps them too', async () => {
     await chooseFile();
     fireEvent.click(screen.getByLabelText('Aggiungi alla topologia'));
     fireEvent.click(screen.getByRole('button', { name: 'Importa' }));
-    expect(devices().map(d => d.label)).toEqual(['PC-1', 'FW', 'Portatile']);
+    expect(devices().map(d => d.label)).toEqual(['PC-1', 'FW', 'Portatile', 'NS']);
     expect(named('FW')).toMatchObject({
       routes: [{ destination: '10.0.0.0/8', nextHop: '192.168.50.254' }],
       firewallRules: [{ action: 'allow', service: 'web', destination: '192.168.50.20' }],
@@ -225,6 +238,10 @@ describe('ImportExportModal — importing a YAML file', () => {
     expect(named('FW')?.ports?.[0].dhcpServer).toEqual({ start: '192.168.50.100', end: '192.168.50.110' });
     expect(named('FW')?.ports?.[1].nat).toBe(true);
     expect(named('Portatile')?.nics?.[0]).toMatchObject({ dhcp: true, ip: '' });
+    expect(named('NS')?.dnsRecords).toEqual([
+      { id: 'record-1', name: 'www.azienda.example', address: '192.168.50.20' },
+    ]);
+    expect(named('NS')?.nics?.[0].dns).toBe('192.168.50.53');
     // the cable came with its two ends, so the laptop is served at once
     const { connections } = useNetworkStore.getState();
     expect(resolveDhcp({ devices: devices(), connections }).leases.map(lease => lease.ip)).toEqual([
