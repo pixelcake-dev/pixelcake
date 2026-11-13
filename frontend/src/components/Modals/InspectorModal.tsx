@@ -15,14 +15,27 @@ import NICList from '@/components/ui/NICList';
 import NICConfigPanel from '@/components/ui/NICConfigPanel';
 import RoutesPanel from '@/components/ui/RoutesPanel';
 import FirewallRulesPanel from '@/components/ui/FirewallRulesPanel';
+import NatPanel from '@/components/ui/NatPanel';
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { generateMacAddress } from '@/utils/ipHelpers';
 import { interfaceLinks, isL3Capable, listInterfaces } from '@/engine';
 import { linkPeerLabel } from '@/utils/interfaceLabels';
-import { isBlankRoute, routeProblem, ruleProblem } from '@/utils/networkConfigValidation';
-import type { FirewallRule, NetworkInterfaceCard, Port, StaticRoute } from '@/types/network';
+import {
+  forwardProblemText,
+  isBlankForward,
+  isBlankRoute,
+  routeProblem,
+  ruleProblem,
+} from '@/utils/networkConfigValidation';
+import type {
+  FirewallRule,
+  NetworkInterfaceCard,
+  Port,
+  PortForward,
+  StaticRoute,
+} from '@/types/network';
 
 const InspectorModal = () => {
   const isOpen = useUIStore((state) => state.modals.inspector);
@@ -60,6 +73,7 @@ const InspectorModal = () => {
   // Routing and filtering (router, firewall)
   const [routes, setRoutes] = useState<StaticRoute[]>([]);
   const [firewallRules, setFirewallRules] = useState<FirewallRule[]>([]);
+  const [portForwards, setPortForwards] = useState<PortForward[]>([]);
 
   useEffect(() => {
     if (isOpen && inspectorDevice) {
@@ -79,6 +93,7 @@ const InspectorModal = () => {
       setSelectedNicId(null);
       setRoutes(inspectorDevice.routes || []);
       setFirewallRules(inspectorDevice.firewallRules || []);
+      setPortForwards(inspectorDevice.portForwards || []);
     }
   }, [isOpen, inspectorDevice]);
 
@@ -170,6 +185,19 @@ const InspectorModal = () => {
       toast.error(`Regola ${ruleIndex + 1}: ${ruleProblem(keptRules[ruleIndex])}`);
       return;
     }
+    // Port forwards, like routes: a row whose address was never typed is not kept
+    const keptForwards = portForwards
+      .filter((forward) => !isBlankForward(forward))
+      .map((forward) => ({ ...forward, to: forward.to.trim() }));
+    const forwardIndex = keptForwards.findIndex(
+      (forward) => forwardProblemText(forward, ports) !== undefined
+    );
+    if (forwardIndex >= 0) {
+      toast.error(
+        `Inoltro ${forwardIndex + 1}: ${forwardProblemText(keptForwards[forwardIndex], ports)}`
+      );
+      return;
+    }
 
     updateDevice(inspectorDevice.id, {
       label: name,
@@ -190,6 +218,7 @@ const InspectorModal = () => {
       nics: nics.length > 0 ? nics : undefined,
       routes: keptRoutes.length > 0 ? keptRoutes : undefined,
       firewallRules: keptRules.length > 0 ? keptRules : undefined,
+      portForwards: keptForwards.length > 0 ? keptForwards : undefined,
     });
 
     handleClose();
@@ -690,6 +719,26 @@ const InspectorModal = () => {
       content: (
         <div style={{ minHeight: '400px' }}>
           <FirewallRulesPanel rules={firewallRules} ports={ports} onChange={setFirewallRules} />
+        </div>
+      ),
+    });
+  }
+
+  // Address translation: routers and firewalls that have ports. The panel
+  // reads the ports of the form as they are now, unsaved edits included
+  if (routesTraffic && supportsPorts) {
+    const keptForwards = portForwards.filter((forward) => !isBlankForward(forward));
+    tabs.push({
+      id: 'nat',
+      label: `NAT${keptForwards.length > 0 ? ` (${keptForwards.length})` : ''}`,
+      content: (
+        <div style={{ minHeight: '400px' }}>
+          <NatPanel
+            ports={ports}
+            forwards={portForwards}
+            isFirewall={isFirewall}
+            onChange={setPortForwards}
+          />
         </div>
       ),
     });

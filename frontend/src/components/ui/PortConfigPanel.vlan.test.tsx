@@ -136,14 +136,46 @@ describe('PortConfigPanel — security zone of a firewall port', () => {
   });
 });
 
-describe('PortConfigPanel — settings the engine does not simulate', () => {
-  it('says so next to NAT and IPS', () => {
-    const router = render(
-      <PortConfigPanel port={{ id: 1, enabled: true }} deviceType="Router" onSave={() => {}} onCancel={() => {}} />
-    );
-    expect(screen.getByText(/il motore non traduce gli indirizzi/)).toBeInTheDocument();
-    router.unmount();
+describe('PortConfigPanel — NAT', () => {
+  const NAT = 'NAT Abilitato (Network Address Translation)';
 
+  it.each(['Router', 'Firewall'])('a %s port can do NAT, and the panel says what that does', deviceType => {
+    const { saved } = renderPanel({ id: 2, enabled: true, ip: '203.0.113.1', subnet: '255.255.255.0' }, deviceType);
+
+    expect(screen.getByLabelText(NAT)).not.toBeChecked();
+    expect(screen.getByText(/Ciò che esce da questa porta prende il suo indirizzo/)).toBeInTheDocument();
+    expect(screen.queryByText(/il motore non traduce gli indirizzi/)).toBeNull();
+
+    fireEvent.click(screen.getByLabelText(NAT));
+    save();
+    expect(saved()?.nat).toBe(true);
+  });
+
+  it('shows a port that does NAT as doing it, and switches it off', () => {
+    const { saved } = renderPanel({ id: 2, enabled: true, ip: '203.0.113.1', nat: true }, 'Firewall');
+    expect(screen.getByLabelText(NAT)).toBeChecked();
+
+    fireEvent.click(screen.getByLabelText(NAT));
+    save();
+    expect(saved()?.nat).toBe(false);
+  });
+
+  it('warns while the port has no address: there is nothing to translate to', () => {
+    renderPanel({ id: 2, enabled: true }, 'Router');
+    expect(screen.queryByText(/finché non ne ha uno il NAT non traduce nulla/)).toBeNull();
+
+    fireEvent.click(screen.getByLabelText(NAT));
+    expect(screen.getByText(/finché non ne ha uno il NAT non traduce nulla/)).toBeInTheDocument();
+  });
+
+  it('a switch port has no NAT', () => {
+    renderPanel({ id: 3, enabled: true, portType: 'access' }, 'Switch');
+    expect(screen.queryByLabelText(NAT)).toBeNull();
+  });
+});
+
+describe('PortConfigPanel — settings the engine does not simulate', () => {
+  it('says so next to IPS', () => {
     render(
       <PortConfigPanel port={{ id: 1, enabled: true }} deviceType="Firewall" onSave={() => {}} onCancel={() => {}} />
     );

@@ -1,7 +1,7 @@
 /**
- * InspectorModal tests — the "Rotte" and "Regole" tabs: which devices have
- * them, editing, what is refused, and what reaches the store (and with it
- * the engine). Runs against the real stores with the sample network.
+ * InspectorModal tests — the "Rotte", "Regole" and "NAT" tabs: which devices
+ * have them, editing, what is refused, and what reaches the store (and with
+ * it the engine). Runs against the real stores with the sample network.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
-import { traceRoute } from '@/engine';
+import { matchForward, traceRoute } from '@/engine';
 import type { NetworkDevice } from '@/types';
 import InspectorModal from './InspectorModal';
 
@@ -77,15 +77,15 @@ beforeEach(() => {
 });
 
 describe('InspectorModal — tabs', () => {
-  it('a router has Generale, Porte and Rotte', () => {
+  it('a router has Generale, Porte, Rotte and NAT', () => {
     openInspector('Router-1');
-    expect(tabNames()).toEqual(['Generale', 'Porte (4)', 'Rotte']);
+    expect(tabNames()).toEqual(['Generale', 'Porte (4)', 'Rotte', 'NAT']);
   });
 
   it('a firewall also has Regole', () => {
     addFirewall();
     openInspector('FW-1');
-    expect(tabNames()).toEqual(['Generale', 'Porte (4)', 'Rotte', 'Regole']);
+    expect(tabNames()).toEqual(['Generale', 'Porte (4)', 'Rotte', 'Regole', 'NAT']);
   });
 
   it('a switch and an end device have neither', () => {
@@ -371,5 +371,209 @@ describe('InspectorModal — what is saved reaches the engine', () => {
     save();
 
     expect(web().verdict).toBe('success');
+  });
+});
+
+describe('InspectorModal — NAT', () => {
+  const SERVICE = "Servizio dell'inoltro 1";
+  const PORT = "Porta dell'inoltro 1";
+  const TO = "Indirizzo interno dell'inoltro 1";
+  const add = () => fireEvent.click(screen.getByRole('button', { name: 'Aggiungi inoltro' }));
+  const forwards = () => device('Router-1').portForwards;
+
+  /** Switch NAT on on a port of Router-1, as the "Porte" tab does */
+  function natOn(portId: number, patch: Partial<NonNullable<NetworkDevice['ports']>[number]> = {}) {
+    const router = device('Router-1');
+    useNetworkStore.getState().updateDevice(router.id, {
+      ports: router.ports?.map(p => (p.id === portId ? { ...p, nat: true, ...patch } : p)),
+    });
+  }
+
+  it('starts with no port doing NAT and nothing published, and says what that means', () => {
+    openInspector('Router-1');
+    openTab('NAT');
+
+    const natPorts = screen.getByRole('region', { name: 'Porte con NAT' });
+    expect(natPorts).toHaveTextContent('Nessuna porta fa NAT. Si attiva porta per porta, nella scheda «Porte».');
+    const published = screen.getByRole('region', { name: 'Servizi pubblicati' });
+    expect(published).toHaveTextContent('Nessun inoltro: da fuori si raggiunge soltanto il dispositivo stesso.');
+    expect(within(published).queryByRole('table')).toBeNull();
+  });
+
+  it('lists the ports that do NAT with the address they give', () => {
+    natOn(2);
+    openInspector('Router-1');
+    openTab('NAT');
+
+    const natPorts = screen.getByRole('region', { name: 'Porte con NAT' });
+    expect(within(natPorts).getAllByRole('listitem')).toHaveLength(1);
+    expect(natPorts).toHaveTextContent(/Porta 2.*ciò che esce prende l'indirizzo 192\.168\.20\.1/);
+  });
+
+  it('warns about a port with NAT and no address: it translates nothing', () => {
+    natOn(3);
+    openInspector('Router-1');
+    openTab('NAT');
+
+    const warning = within(screen.getByRole('region', { name: 'Porte con NAT' })).getByRole('alert');
+    expect(warning).toHaveTextContent('non ha un indirizzo, quindi non traduce nulla');
+  });
+
+  it('adds a forward, on the port that does NAT, and saves it', () => {
+    natOn(2);
+    openInspector('Router-1');
+    openTab('NAT');
+
+    add();
+    expect(screen.getByLabelText(SERVICE)).toHaveValue('web');
+    expect(screen.getByLabelText(PORT)).toHaveValue('2');
+    type(TO, ' 192.168.10.50 ');
+    // the tab counts what would be saved
+    expect(tabNames()).toContain('NAT (1)');
+    save();
+
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(forwards()).toEqual([{ id: 'forward-1', service: 'web', port: 2, to: '192.168.10.50' }]);
+  });
+
+  it('offers only the ports that have an address to publish', () => {
+    openInspector('Router-1');
+    openTab('NAT');
+    add();
+
+    const options = within(screen.getByLabelText(PORT)).getAllByRole('option').map(o => o.textContent);
+    expect(options).toHaveLength(2);
+    expect(options[0]).toContain('Porta 1');
+    expect(options[0]).toContain('(192.168.10.1)');
+    expect(options[1]).toContain('(192.168.20.1)');
+  });
+
+  it('with no addressed port there is nothing to publish from: the button says why', () => {
+    const router = device('Router-1');
+    useNetworkStore.getState().updateDevice(router.id, {
+      ports: router.ports?.map(p => ({ ...p, ip: undefined, subnet: undefined })),
+    });
+    openInspector('Router-1');
+    openTab('NAT');
+
+    expect(screen.getByRole('button', { name: 'Aggiungi inoltro' })).toBeDisabled();
+    expect(screen.getByText(/Nessuna porta ha un indirizzo da pubblicare/)).toBeInTheDocument();
+  });
+
+  it('refuses an address that is not one: says which forward, saves nothing', () => {
+    openInspector('Router-1');
+    openTab('NAT');
+    add();
+    type(TO, 'web-01');
+
+    expect(screen.getByRole('alert')).toHaveTextContent('"web-01" non è un indirizzo IPv4 valido');
+    save();
+
+    expect(toast.error).toHaveBeenCalledWith('Inoltro 1: "web-01" non è un indirizzo IPv4 valido');
+    expect(forwards()).toBeUndefined();
+    expect(useUIStore.getState().modals.inspector).toBe(true);
+  });
+
+  it('refuses a forward to the address of the port itself', () => {
+    openInspector('Router-1');
+    openTab('NAT');
+    add();
+    type(TO, '192.168.10.1');
+    save();
+
+    expect(toast.error).toHaveBeenCalledWith("Inoltro 1: 192.168.10.1 è l'indirizzo della porta 1 stessa");
+    expect(forwards()).toBeUndefined();
+  });
+
+  it('drops a row whose address was never typed', () => {
+    openInspector('Router-1');
+    openTab('NAT');
+    add();
+    add();
+    type("Indirizzo interno dell'inoltro 2", '192.168.20.10');
+    expect(tabNames()).toContain('NAT (1)');
+    save();
+
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(forwards()).toEqual([{ id: 'forward-2', service: 'web', port: 1, to: '192.168.20.10' }]);
+  });
+
+  it('orders the forwards, switches one off, changes service and port, and saves them so', () => {
+    openInspector('Router-1');
+    openTab('NAT');
+    add();
+    type(TO, '192.168.20.10');
+    add();
+    type("Indirizzo interno dell'inoltro 2", '192.168.20.20');
+    type("Servizio dell'inoltro 2", 'email');
+    type("Porta dell'inoltro 2", '2');
+
+    fireEvent.click(screen.getByRole('button', { name: "Sposta in su l'inoltro 2" }));
+    fireEvent.click(screen.getByLabelText('Inoltro 2 attivo'));
+    save();
+
+    expect(forwards()).toEqual([
+      { id: 'forward-2', service: 'email', port: 2, to: '192.168.20.20' },
+      { id: 'forward-1', service: 'web', port: 1, to: '192.168.20.10', enabled: false },
+    ]);
+  });
+
+  it('removes a forward, and the last one leaves the device without forwards', () => {
+    const router = device('Router-1');
+    useNetworkStore.getState().updateDevice(router.id, {
+      portForwards: [{ id: 'forward-1', service: 'web', port: 1, to: '192.168.20.10' }],
+    });
+    openInspector('Router-1');
+    expect(tabNames()).toContain('NAT (1)');
+    openTab(/^NAT/);
+
+    fireEvent.click(screen.getByRole('button', { name: "Elimina l'inoltro 1" }));
+    save();
+
+    expect(forwards()).toBeUndefined();
+  });
+
+  it('shows a forward on a port that lost its address, and refuses to save it as it is', () => {
+    const router = device('Router-1');
+    useNetworkStore.getState().updateDevice(router.id, {
+      portForwards: [{ id: 'forward-1', service: 'web', port: 3, to: '192.168.20.10' }],
+    });
+    openInspector('Router-1');
+    openTab(/^NAT/);
+
+    expect(screen.getByLabelText(PORT)).toHaveValue('3');
+    expect(within(screen.getByLabelText(PORT)).getAllByRole('option')[0]).toHaveTextContent(
+      'Porta 3 (senza indirizzo)'
+    );
+    save();
+    expect(toast.error).toHaveBeenCalledWith(
+      'Inoltro 1: la porta 3 non ha un indirizzo da pubblicare: dagliene uno nella scheda «Porte»'
+    );
+  });
+
+  it('on a router does not ask for a rule: a router does not filter', () => {
+    openInspector('Router-1');
+    openTab('NAT');
+    expect(screen.queryByText(/serve anche una regola che lo permetta/)).toBeNull();
+  });
+
+  it('on a firewall says that a forward needs a rule too', () => {
+    addFirewall();
+    openInspector('FW-1');
+    openTab('NAT');
+    expect(screen.getByText(/serve anche una regola che lo permetta/)).toBeInTheDocument();
+  });
+
+  it('what is saved reaches the engine: the forward takes what arrives for its port', () => {
+    openInspector('Router-1');
+    openTab('NAT');
+    add();
+    type(TO, '192.168.20.10');
+    type(PORT, '1');
+    save();
+
+    const taken = matchForward(device('Router-1'), 'web', '192.168.10.1');
+    expect(taken?.forward.to).toBe('192.168.20.10');
+    expect(matchForward(device('Router-1'), 'ping', '192.168.10.1')).toBeUndefined();
   });
 });

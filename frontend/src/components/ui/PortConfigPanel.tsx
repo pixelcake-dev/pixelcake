@@ -137,8 +137,8 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
       setVlanError(null);
     }
 
-    // Router-specific fields
-    if (isRouter) {
+    // Address translation: a router or a firewall
+    if (supportsAddress) {
       updates.nat = formData.nat;
     }
 
@@ -377,8 +377,8 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
           </div>
         )}
 
-        {/* NAT - Only for Router */}
-        {isRouter && (
+        {/* NAT - a router or a firewall */}
+        {supportsAddress && (
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -392,10 +392,16 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
             </label>
           </div>
         )}
-        {isRouter && (
+        {supportsAddress && (
           <span className="text-xs text-[var(--text-color-light)] -mt-2">
-            Resta come documentazione: il motore non traduce gli indirizzi, e lo segnala nel
-            risultato.
+            Ciò che esce da questa porta prende il suo indirizzo: serve verso Internet, che non
+            trasporta gli indirizzi privati. I servizi da raggiungere da fuori si pubblicano nella
+            scheda «NAT».
+            {formData.nat && !(formData.ip ?? '').trim() && (
+              <span className="block text-red-500" role="alert">
+                La porta non ha un indirizzo: finché non ne ha uno il NAT non traduce nulla.
+              </span>
+            )}
           </span>
         )}
 
