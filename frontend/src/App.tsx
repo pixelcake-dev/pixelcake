@@ -25,6 +25,7 @@ import SettingsModal from '@/components/Modals/SettingsModal';
 import TerminalModal from '@/components/Modals/TerminalModal';
 import NewProjectModal from '@/components/Modals/NewProjectModal';
 import ImportExportModal from '@/components/Modals/ImportExportModal';
+import ExportImageModal from '@/components/Modals/ExportImageModal';
 import 'reactflow/dist/style.css';
 
 function App() {
@@ -96,6 +97,7 @@ function App() {
         <TerminalModal />
         <NewProjectModal />
         <ImportExportModal />
+        <ExportImageModal />
       </div>
     </ReactFlowProvider>
   );

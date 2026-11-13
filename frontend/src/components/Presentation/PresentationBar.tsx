@@ -5,7 +5,16 @@
  */
 
 import { useEffect, useState } from 'react';
-import { LogOut, Maximize, Minimize, Moon, Presentation, Sun, Terminal } from 'lucide-react';
+import {
+  ImageDown,
+  LogOut,
+  Maximize,
+  Minimize,
+  Moon,
+  Presentation,
+  Sun,
+  Terminal,
+} from 'lucide-react';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useProjectStore } from '@/store/projectStore';
 import { SIMULATION_SPEEDS, useSimulationStore, type SimulationSpeed } from '@/store/simulationStore';
@@ -129,6 +138,16 @@ const PresentationBar = () => {
           onClick={() => openModal('codeTerminal')}
         >
           <Terminal size={18} />
+        </button>
+        {/* What is on screen now, as a picture: the drawing, the failures, the answer */}
+        <button
+          type="button"
+          className="presentation-icon-button"
+          title="Esporta immagine"
+          aria-label="Esporta immagine"
+          onClick={() => openModal('exportImage')}
+        >
+          <ImageDown size={18} />
         </button>
         {typeof document.documentElement.requestFullscreen === 'function' && (
           <button

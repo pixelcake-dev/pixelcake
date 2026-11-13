@@ -28,6 +28,7 @@ interface UIStore {
     codeTerminal: boolean;
     newProject: boolean;
     importExport: boolean;
+    exportImage: boolean;
   };
   addDeviceType: DeviceType | null;
   addDeviceTemplateId: string | null; // Template ID for specific device creation
@@ -113,6 +114,7 @@ export const useUIStore = create<UIStore>()(
         codeTerminal: false,
         newProject: false,
         importExport: false,
+        exportImage: false,
       },
       addDeviceType: null,
       addDeviceTemplateId: null,

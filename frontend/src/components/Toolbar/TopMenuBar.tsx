@@ -26,6 +26,7 @@ const TopMenuBar = () => {
   const darkMode = useUIStore((state) => state.darkMode);
   const toggleDarkMode = useUIStore((state) => state.toggleDarkMode);
   const openHelp = useUIStore((state) => state.openHelp);
+  const openModal = useUIStore((state) => state.openModal);
   const setShowWelcomeScreen = useUIStore((state) => state.setShowWelcomeScreen);
   const magnifiedDeviceTypes = useUIStore((state) => state.magnifiedDeviceTypes);
   const magnifiedConnectionTypes = useUIStore((state) => state.magnifiedConnectionTypes);
@@ -87,6 +88,15 @@ const TopMenuBar = () => {
     setShowWelcomeScreen(true);
   };
 
+  // File → Esporta immagine…: a picture of the drawing needs a drawing
+  const handleExportImage = () => {
+    if (useNetworkStore.getState().devices.length === 0) {
+      toast.info('Il canvas è vuoto: non c\'è nulla da esportare.');
+      return;
+    }
+    openModal('exportImage');
+  };
+
   // Presentation mode shows a drawing: there must be one
   const handlePresent = () => {
     if (!usePresentationStore.getState().enter()) {
@@ -142,6 +152,8 @@ const TopMenuBar = () => {
             <hr />
             <li onClick={handleSave}>Salva</li>
             <li onClick={handleSaveAs}>Salva con nome…</li>
+            <hr />
+            <li onClick={handleExportImage}>Esporta immagine…</li>
           </ul>
         </div>
       </div>

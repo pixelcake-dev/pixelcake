@@ -116,7 +116,13 @@ describe('TopMenuBar', () => {
     it('offers the project entries, and none of the ones that were removed', () => {
       render(<TopMenuBar />);
 
-      for (const entry of ['Nuovo progetto…', 'Apri…', 'Salva', 'Salva con nome…']) {
+      for (const entry of [
+        'Nuovo progetto…',
+        'Apri…',
+        'Salva',
+        'Salva con nome…',
+        'Esporta immagine…',
+      ]) {
         expect(screen.getByText(entry)).not.toHaveClass('disabled');
       }
       for (const removed of ['Nuovo', 'Nuovo Progetto', 'Apri...', 'Apri Progetto...']) {
@@ -149,7 +155,13 @@ describe('TopMenuBar', () => {
       ]) {
         expect(screen.queryByText(removed)).toBeNull();
       }
-      expect(entriesOf('File')).toEqual(['Nuovo progetto…', 'Apri…', 'Salva', 'Salva con nome…']);
+      expect(entriesOf('File')).toEqual([
+        'Nuovo progetto…',
+        'Apri…',
+        'Salva',
+        'Salva con nome…',
+        'Esporta immagine…',
+      ]);
       expect(entriesOf('Modifica')).toEqual(['Copia', 'Incolla']);
       expect(entriesOf('Aiuto')).toEqual([
         'Guida',

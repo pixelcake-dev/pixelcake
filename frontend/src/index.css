@@ -2302,14 +2302,17 @@ legend {
   cursor: default;
 }
 
-.presentation-segmented {
+/* A choice among a few, as buttons side by side (also used outside the presentation) */
+.presentation-segmented,
+.segmented {
   display: flex;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   overflow: hidden;
 }
 
-.presentation-segmented button {
+.presentation-segmented button,
+.segmented button {
   flex: 1;
   padding: 7px 10px;
   border: none;
@@ -2320,21 +2323,25 @@ legend {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.presentation-segmented button + button {
+.presentation-segmented button + button,
+.segmented button + button {
   border-left: 1px solid var(--border-color);
 }
 
-.presentation-segmented button:hover:not(.active) {
+.presentation-segmented button:hover:not(.active),
+.segmented button:hover:not(.active) {
   background-color: rgba(var(--accent-color-rgb), 0.1);
 }
 
-.presentation-segmented button.active {
+.presentation-segmented button.active,
+.segmented button.active {
   background-color: var(--accent-color);
   color: #fff;
   font-weight: 600;
 }
 
-.presentation-segmented.compact button {
+.presentation-segmented.compact button,
+.segmented.compact button {
   padding: 4px 10px;
   font-size: 0.8em;
 }
@@ -3013,4 +3020,115 @@ legend {
 .present-button:hover {
   background-color: var(--accent-color);
   color: #fff;
+}
+
+/* ============================================================
+   Export image: the preview of the picture and the choices
+   ============================================================ */
+.export-image {
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.export-image-preview {
+  flex: 1;
+  min-width: 0;
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--bg-page);
+}
+
+/* A picture without background is shown on the usual grey squares */
+.export-image-preview.transparent {
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #d4d4d4 25%, transparent 25%, transparent 75%, #d4d4d4 75%),
+    linear-gradient(45deg, #d4d4d4 25%, transparent 25%, transparent 75%, #d4d4d4 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+}
+
+.export-image-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  box-shadow: 0 1px 6px var(--shadow-color);
+}
+
+.export-image-preview.transparent img {
+  box-shadow: none;
+}
+
+.export-image-options {
+  width: 290px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.export-image-options fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+
+.export-image-options legend {
+  margin-bottom: 6px;
+  padding: 0;
+  color: var(--text-color-light);
+  font-size: 0.75em;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Three choices side by side stay on one line each */
+.export-image-options .segmented button {
+  padding: 5px 6px;
+  white-space: nowrap;
+}
+
+.export-image-hint {
+  margin: 6px 0 0;
+  color: var(--text-color-light);
+  font-size: 0.8em;
+  line-height: 1.4;
+}
+
+.export-image-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  color: var(--text-color);
+  font-size: 0.88em;
+  cursor: pointer;
+}
+
+.export-image-check input {
+  accent-color: var(--accent-color);
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .export-image {
+    flex-direction: column;
+  }
+
+  .export-image-preview {
+    flex: none;
+    height: 260px;
+  }
+
+  .export-image-options {
+    width: auto;
+  }
 }

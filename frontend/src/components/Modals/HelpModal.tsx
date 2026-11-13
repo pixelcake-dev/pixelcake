@@ -147,6 +147,19 @@ const GuideTab = () => (
         simulato.
       </Step>
 
+      <Step title="Esporta il disegno come immagine">
+        File → Esporta immagine… mostra l&apos;anteprima del disegno intero, senza selezioni né
+        punti di connessione. Scegli il formato: PNG, per documenti, presentazioni e messaggi, in
+        tre dimensioni, oppure SVG, vettoriale. Scegli il tema, chiaro o scuro qualunque sia quello
+        dello schermo, e con «Nome del progetto in alto» e «Sfondo trasparente» cosa c&apos;è
+        intorno al disegno. «Salva PNG…» chiede dove salvare il file; nei browser che non possono
+        chiederlo il pulsante è «Scarica PNG». Dove il browser lo permette, «Copia negli appunti»
+        lascia l&apos;immagine pronta da incollare. In presentazione la stessa finestra si apre dal
+        pulsante «Esporta immagine» della barra in alto: l&apos;immagine mostra i guasti simulati e
+        il percorso della risposta e, con «Domanda e risposta sotto il disegno», riporta la domanda
+        e la sua risposta.
+      </Step>
+
       <Step title="Dividi il progetto in canvas">
         Un progetto può avere più canvas. In «Explorer», il primo pulsante della barra a sinistra,
         ne aggiungi con «Nuovo Canvas», li rinomini, li elimini (ne resta sempre almeno uno) e passi
