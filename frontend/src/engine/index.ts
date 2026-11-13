@@ -112,6 +112,9 @@ export type {
 export { planAndEvaluateFlow, traceToDevice } from './flows';
 export type { FlowLeg, FlowResult } from './flows';
 
+export { dnsCardOf, dnsRecordsOf, hostNameKey, isHostName, lookup, servesDns } from './dns';
+export type { DnsLookup } from './dns';
+
 export {
   hasFailures,
   withFailures,

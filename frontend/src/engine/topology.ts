@@ -183,9 +183,10 @@ export function mirrorPrimaryNic(device: NetworkDevice): NetworkDevice {
 
 /**
  * The addressing of a device as it is kept in a drawing: a card that takes
- * its address from a DHCP server carries none of its own (whatever was typed
- * before DHCP was switched on, or was read from a file, is dropped), and the
- * device-level fields mirror the primary card (see mirrorPrimaryNic).
+ * its address from a DHCP server carries none of its own, and no DNS server
+ * of its own either (whatever was typed before DHCP was switched on, or was
+ * read from a file, is dropped), and the device-level fields mirror the
+ * primary card (see mirrorPrimaryNic).
  *
  * So nothing that reads a drawing can mistake a stale address for the one a
  * card has: that one is worked out from the drawing, in ./dhcp.
@@ -194,12 +195,17 @@ export function mirrorPrimaryNic(device: NetworkDevice): NetworkDevice {
  */
 export function normalizeAddressing(device: NetworkDevice): NetworkDevice {
   const stale = (device.nics ?? []).some(
-    nic => nic.dhcp && (nic.ip !== '' || nic.subnet !== '' || nic.gateway !== '')
+    nic => nic.dhcp && (nic.ip !== '' || nic.subnet !== '' || nic.gateway !== '' || nic.dns !== undefined)
   );
   if (!stale) return mirrorPrimaryNic(device);
   return mirrorPrimaryNic({
     ...device,
-    nics: device.nics?.map(nic => (nic.dhcp ? { ...nic, ip: '', subnet: '', gateway: '' } : nic)),
+    nics: device.nics?.map(nic => {
+      if (!nic.dhcp) return nic;
+      const kept = { ...nic, ip: '', subnet: '', gateway: '' };
+      delete kept.dns;
+      return kept;
+    }),
   });
 }
 

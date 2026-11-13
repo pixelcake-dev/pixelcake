@@ -11,7 +11,9 @@
  *    router or firewall port, or a card of a server. It hands out the
  *    addresses from `start` to `end`, with the mask of the interface and a
  *    gateway: the one written in the pool, else the interface's own address
- *    on a router or firewall, else none.
+ *    on a router or firewall, else none. A pool may also name a DNS server
+ *    (`dns`, any address): the card then asks that server for names, see
+ *    ./dns.
  *  - WHO ANSWERS WHOM: a card is served by a pool whose interface hears its
  *    broadcast, that is, sits on the same layer 2 network (see broadcastReach
  *    in ./l2). With more than one in reach, the first in drawing order that
@@ -66,6 +68,8 @@ export interface DhcpLease {
   mask: string;
   /** '' when the pool hands out none */
   gateway: string;
+  /** The DNS server handed out with the address, when the pool names one */
+  dns?: string;
   server: DhcpServerRef;
 }
 
@@ -106,8 +110,9 @@ export interface DhcpUnserved {
  *
  *  - no-address: its interface has no (valid) address, so no network
  *  - client:     its card takes its own address from DHCP
- *  - invalid:    `start`, `end` or `gateway` is not an address
- *  - outside:    `start`, `end` or `gateway` is not in the network of the interface
+ *  - invalid:    `start`, `end`, `gateway` or `dns` is not an address
+ *  - outside:    `start`, `end` or `gateway` is not in the network of the
+ *                interface (a DNS server may be anywhere)
  *  - reversed:   the range ends before it starts
  */
 export type PoolProblemCode = 'no-address' | 'client' | 'invalid' | 'outside' | 'reversed';
@@ -145,7 +150,8 @@ export interface DhcpPoolState extends DhcpServerRef {
 export interface DhcpResolution {
   /**
    * The drawing with every lease filled in: a card on DHCP carries the
-   * address, mask and gateway it was given (none when it got no lease), and
+   * address, mask, gateway and DNS server it was given (none when it got no
+   * lease), and
    * the device-level fields of its device follow, as for any primary card.
    * It is the SAME `devices` array when no card is on DHCP.
    */
@@ -220,6 +226,9 @@ export function poolProblem(
     if (!networkContains(own.network, value)) {
       return { code: 'outside', value, network, text: `${value} is outside ${network}, the network of ${where}` };
     }
+  }
+  if (pool.dns && !isValidIP(pool.dns)) {
+    return { code: 'invalid', value: pool.dns, text: `"${pool.dns}" is not an address` };
   }
   if (ipToNumber(pool.start) > ipToNumber(pool.end)) {
     return { code: 'reversed', text: `the range ends (${pool.end}) before it starts (${pool.start})` };
@@ -420,6 +429,7 @@ function resolve(drawing: NetworkDevice[], connections: NetworkConnection[]): Dh
           ip,
           mask: pool.state.mask,
           gateway: pool.state.gateway,
+          ...(pool.state.pool.dns ? { dns: pool.state.pool.dns } : {}),
           server: { deviceId: pool.state.deviceId, interfaceKey: pool.state.interfaceKey },
         };
         pool.state.leases.push(lease);
@@ -460,7 +470,14 @@ function resolve(drawing: NetworkDevice[], connections: NetworkConnection[]): Dh
     const nics = (device.nics ?? []).map(nic => {
       if (!nic.dhcp) return nic;
       const lease = leaseOf.get(`${device.id}|${nic.id}`);
-      return { ...nic, ip: lease?.ip ?? '', subnet: lease?.mask ?? '', gateway: lease?.gateway ?? '' };
+      return {
+        ...nic,
+        ip: lease?.ip ?? '',
+        subnet: lease?.mask ?? '',
+        gateway: lease?.gateway ?? '',
+        // (the DNS server comes with the lease, when the pool names one)
+        ...(lease?.dns ? { dns: lease.dns } : {}),
+      };
     });
     // The device-level fields follow the primary card, as they do when its
     // address is written by hand

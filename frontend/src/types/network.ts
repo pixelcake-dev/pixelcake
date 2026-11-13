@@ -22,6 +22,20 @@ export interface DhcpPool {
   // Gateway handed out with the address. Empty: the interface's own address
   // on a router or firewall, none on a server
   gateway?: string;
+  // DNS server handed out with the address (any address: it is usually on
+  // another network). Empty: none
+  dns?: string;
+}
+
+/**
+ * One name a DNS server answers for, and the address it stands for. A name
+ * is a host name with at least one dot (`www.azienda.example`), compared
+ * without regard to case; a server keeps one address per name.
+ */
+export interface DnsRecord {
+  id: string;              // Record ID (record-1, record-2...)
+  name: string;            // Host name
+  address: string;         // The address the name stands for
 }
 
 /**
@@ -36,10 +50,13 @@ export interface NetworkInterfaceCard {
   ip: string;              // IP address
   subnet: string;          // Subnet mask
   gateway: string;         // Gateway
+  // The DNS server the card asks when a name is used in place of an address.
+  // Written by hand; on a card on DHCP it comes with the lease instead
+  dns?: string;
   mac?: string;            // MAC address (auto-generated or custom)
   description?: string;    // Notes/comments
   // The card takes its address from a DHCP server on its network. While this
-  // is on, ip/subnet/gateway above are not used (and are kept empty)
+  // is on, ip/subnet/gateway/dns above are not used (and are kept empty)
   dhcp?: boolean;
   // DHCP server on this card (a server): the addresses it hands out
   dhcpServer?: DhcpPool;
@@ -86,9 +103,9 @@ export interface StaticRoute {
 
 /**
  * What a flow is, as far as a firewall can tell:
- * ping (ICMP echo), web (HTTP/HTTPS), email (SMTP).
+ * ping (ICMP echo), web (HTTP/HTTPS), email (SMTP), dns (a name lookup).
  */
-export type ServiceName = 'ping' | 'web' | 'email';
+export type ServiceName = 'ping' | 'web' | 'email' | 'dns';
 
 /**
  * Firewall rule. Rules are read top to bottom and the first one that matches
@@ -157,6 +174,9 @@ export interface NetworkDevice {
   // Address translation (Router, Firewall): services published from a port
   // to an address inside. Source NAT is a property of each port (`nat`).
   portForwards?: PortForward[];
+  // Name resolution (Server): the names this device answers for as a DNS
+  // server. Which server a device asks is written on its cards (`dns`).
+  dnsRecords?: DnsRecord[];
 }
 
 /**

@@ -396,6 +396,32 @@ function answering(
   };
 }
 
+/**
+ * A request and its reply for one service, between two devices: the plan of
+ * a ping, and of a DNS lookup (see ./dns). `targetIp` aims the request at
+ * one address of the target; an address the target publishes for the service
+ * is answered by the device its port forward names.
+ */
+export function planRoundTrip(
+  sourceId: string,
+  targetId: string,
+  topo: Topology,
+  service: ServiceName,
+  requestPurpose: string,
+  replyPurpose: string,
+  targetIp: string | undefined
+): FlowResult {
+  const aimed = answering(targetId, targetIp, service, topo);
+  return evaluateLegs(
+    [
+      { fromId: sourceId, toId: aimed.targetId, purpose: requestPurpose, service, targetIp },
+      { fromId: aimed.targetId, toId: sourceId, purpose: replyPurpose, service, returnTraffic: true },
+    ],
+    topo,
+    aimed.notes
+  );
+}
+
 /** Request/response plan shared by web and download */
 function planRequestResponse(
   sourceId: string,
@@ -447,29 +473,8 @@ export function planAndEvaluateFlow(
   }
 
   switch (model) {
-    case 'ping': {
-      const aimed = answering(targetId, options?.targetIp, 'ping', topo);
-      return evaluateLegs(
-        [
-          {
-            fromId: sourceId,
-            toId: aimed.targetId,
-            purpose: 'request',
-            service: 'ping',
-            targetIp: options?.targetIp,
-          },
-          {
-            fromId: aimed.targetId,
-            toId: sourceId,
-            purpose: 'reply',
-            service: 'ping',
-            returnTraffic: true,
-          },
-        ],
-        topo,
-        aimed.notes
-      );
-    }
+    case 'ping':
+      return planRoundTrip(sourceId, targetId, topo, 'ping', 'request', 'reply', options?.targetIp);
     case 'web':
       return planRequestResponse(
         sourceId,
