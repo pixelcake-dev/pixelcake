@@ -16,12 +16,24 @@ import NICConfigPanel from '@/components/ui/NICConfigPanel';
 import RoutesPanel from '@/components/ui/RoutesPanel';
 import FirewallRulesPanel from '@/components/ui/FirewallRulesPanel';
 import NatPanel from '@/components/ui/NatPanel';
+import DhcpPanel from '@/components/ui/DhcpPanel';
+import type { CardLease } from '@/components/ui/NICConfigPanel';
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { generateMacAddress } from '@/utils/ipHelpers';
-import { interfaceLinks, isL3Capable, listInterfaces } from '@/engine';
+import {
+  interfaceLinks,
+  isL3Capable,
+  leaseOf,
+  listInterfaces,
+  normalizeAddressing,
+  resolveDhcp,
+  servesDhcp,
+} from '@/engine';
+import type { DhcpResolution } from '@/engine';
 import { linkPeerLabel } from '@/utils/interfaceLabels';
+import { NO_LEASE_LABEL, cardLeaseText, firstPoolProblem } from '@/utils/dhcpLabels';
 import {
   forwardProblemText,
   isBlankForward,
@@ -30,12 +42,24 @@ import {
   ruleProblem,
 } from '@/utils/networkConfigValidation';
 import type {
+  DeviceTemplate,
   FirewallRule,
+  NetworkDevice,
   NetworkInterfaceCard,
   Port,
   PortForward,
   StaticRoute,
 } from '@/types/network';
+
+/** The template of a device: the one it was made from, else the one of its type */
+function templateOf(
+  device: Pick<NetworkDevice, 'templateId' | 'type'>,
+  templates: DeviceTemplate[]
+): DeviceTemplate | undefined {
+  return device.templateId
+    ? templates.find((t) => t.id === device.templateId)
+    : templates.find((t) => t.type === device.type);
+}
 
 const InspectorModal = () => {
   const isOpen = useUIStore((state) => state.modals.inspector);
@@ -156,8 +180,13 @@ const InspectorModal = () => {
   };
 
   const handleSave = () => {
-    if (!inspectorDevice || !name.trim() || !ip.trim()) {
-      toast.error('Nome e IP sono obbligatori');
+    if (!inspectorDevice) return;
+    // A device with network cards is addressed through them (and a card may
+    // take its address from DHCP, or have none): the address is asked for
+    // here only where it is typed here
+    const viaCards = nics.length > 0 && (templateOf(inspectorDevice, templates)?.supportsNICs ?? false);
+    if (!name.trim() || (!viaCards && !ip.trim())) {
+      toast.error(viaCards ? 'Il nome è obbligatorio' : 'Nome e IP sono obbligatori');
       return;
     }
 
@@ -199,6 +228,14 @@ const InspectorModal = () => {
       return;
     }
 
+    // A DHCP server is saved only if it can work with the addresses as they
+    // are now (the address of its port may have changed after it was typed)
+    const poolIssue = firstPoolProblem({ ...inspectorDevice, ports, nics });
+    if (poolIssue) {
+      toast.error(poolIssue);
+      return;
+    }
+
     updateDevice(inspectorDevice.id, {
       label: name,
       vendor: inspectorDevice.type !== 'PC' ? vendor : undefined,
@@ -231,9 +268,7 @@ const InspectorModal = () => {
   if (!isOpen || !inspectorDevice) return null;
 
   // Get template capabilities (prefer templateId for specific lookup)
-  const template = inspectorDevice.templateId
-    ? templates.find((t) => t.id === inspectorDevice.templateId)
-    : templates.find((t) => t.type === inspectorDevice.type);
+  const template = templateOf(inspectorDevice, templates);
   const supportsVLAN = template?.supportsVLAN || false;
   const supportsSTP = template?.supportsSTP || false;
   const supportsPorts = template?.supportsPorts || false;
@@ -256,6 +291,46 @@ const InspectorModal = () => {
   const routesTraffic = isL3Capable(inspectorDevice);
   const isFirewall = inspectorDevice.type.toLowerCase().includes('firewall');
   const isSwitch = inspectorDevice.type.toLowerCase().includes('switch');
+
+  // DHCP in the drawing with this device as it is in the form, unsaved edits
+  // included: what its cards are leased, what its pools give out
+  const withForm = (formNics: NetworkInterfaceCard[]) =>
+    devices.map((d) =>
+      d.id === liveDevice.id
+        ? normalizeAddressing({
+            ...liveDevice,
+            ports: ports.length > 0 ? ports : undefined,
+            nics: formNics.length > 0 ? formNics : undefined,
+          })
+        : d
+    );
+  const dhcp: DhcpResolution = resolveDhcp({ devices: withForm(nics), connections });
+  /** What a card of the form gets with its address on DHCP, whether it is on DHCP yet or not */
+  const cardLease = (nicId: string): CardLease => {
+    const asClient = nics.map((nic) =>
+      nic.id === nicId ? { ...nic, dhcp: true, dhcpServer: undefined } : nic
+    );
+    const preview = resolveDhcp({ devices: withForm(asClient), connections });
+    const lease = leaseOf(preview, liveDevice.id, nicId);
+    return {
+      text: cardLeaseText(preview, liveDevice.id, nicId).text,
+      given: lease ? { ip: lease.ip, subnet: lease.mask, gateway: lease.gateway } : undefined,
+    };
+  };
+  // What the list of the cards shows for those on DHCP
+  const leasedAddresses = new Map<string, string>();
+  for (const nic of nics) {
+    if (!nic.dhcp) continue;
+    const lease = leaseOf(dhcp, liveDevice.id, nic.id);
+    leasedAddresses.set(nic.id, lease ? `${lease.ip} · DHCP` : NO_LEASE_LABEL);
+  }
+  // The addressing of the device is the one of its first card: leased, when
+  // the card is on DHCP
+  const primaryNic = nics[0];
+  const primaryLease = primaryNic?.dhcp ? leaseOf(dhcp, liveDevice.id, primaryNic.id) : undefined;
+  const primaryAddressing = primaryNic?.dhcp
+    ? { ip: primaryLease?.ip ?? '', subnet: primaryLease?.mask ?? '', gateway: primaryLease?.gateway ?? '' }
+    : { ip: primaryNic?.ip || ip, subnet: primaryNic?.subnet || subnet, gateway: primaryNic?.gateway || gateway };
 
   // Define tabs
   const tabs: Tab[] = [
@@ -360,28 +435,38 @@ const InspectorModal = () => {
                   <>
                     <Input
                       label="Indirizzo IP (sola lettura)"
-                      value={nics[0]?.ip || ip}
+                      value={primaryAddressing.ip}
                       size="full"
                       readOnly
                     />
 
                     <Input
                       label="Subnet Mask (sola lettura)"
-                      value={nics[0]?.subnet || subnet}
+                      value={primaryAddressing.subnet}
                       size="full"
                       readOnly
                     />
 
                     <Input
                       label="Gateway (sola lettura)"
-                      value={nics[0]?.gateway || gateway}
+                      value={primaryAddressing.gateway}
                       size="full"
                       readOnly
                     />
 
                     <p className="text-xs text-[var(--text-color-light)] mt-1">
-                      L&apos;indirizzo è quello della prima scheda di rete: si modifica nella
-                      scheda «Schede di rete».
+                      {primaryNic?.dhcp ? (
+                        <>
+                          La prima scheda di rete prende l&apos;indirizzo dal DHCP:{' '}
+                          {cardLeaseText(dhcp, liveDevice.id, primaryNic.id).text}. Si cambia nella
+                          scheda «Schede di rete».
+                        </>
+                      ) : (
+                        <>
+                          L&apos;indirizzo è quello della prima scheda di rete: si modifica nella
+                          scheda «Schede di rete».
+                        </>
+                      )}
                     </p>
                   </>
                 ) : (
@@ -621,6 +706,7 @@ const InspectorModal = () => {
                     onAddNic={handleAddNic}
                     onRemoveNic={handleRemoveNic}
                     linkedNics={linkedNics}
+                    leasedAddresses={leasedAddresses}
                   />
                 </Scrollbars>
               </div>
@@ -670,6 +756,8 @@ const InspectorModal = () => {
                     nic={nics.find((n) => n.id === selectedNicId) || null}
                     onSave={handleNicSave}
                     onCancel={handleNicCancel}
+                    lease={selectedNicId !== null ? cardLease(selectedNicId) : undefined}
+                    canServe={servesDhcp(inspectorDevice) && !routesTraffic}
                   />
                 </Scrollbars>
               </div>
@@ -738,6 +826,25 @@ const InspectorModal = () => {
             forwards={portForwards}
             isFirewall={isFirewall}
             onChange={setPortForwards}
+          />
+        </div>
+      ),
+    });
+  }
+
+  // DHCP server: routers and firewalls on their ports, servers on their
+  // cards. The panel shows what the engine makes of the form as it is now
+  if (servesDhcp(inspectorDevice) && (supportsPorts || supportsNICs)) {
+    const poolCount = dhcp.pools.filter((pool) => pool.deviceId === liveDevice.id).length;
+    tabs.push({
+      id: 'dhcp',
+      label: `DHCP${poolCount > 0 ? ` (${poolCount})` : ''}`,
+      content: (
+        <div style={{ minHeight: '400px' }}>
+          <DhcpPanel
+            deviceId={liveDevice.id}
+            dhcp={dhcp}
+            setIn={supportsPorts ? 'Porte' : 'Schede di rete'}
           />
         </div>
       ),

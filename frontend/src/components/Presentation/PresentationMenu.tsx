@@ -8,6 +8,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Flag, MapPin, Wrench, ZapOff } from 'lucide-react';
 import { useNetworkStore } from '@/store/networkStore';
 import { usePresentationStore } from '@/store/presentationStore';
+import { useDhcp } from '@/utils/useDhcp';
+import { shownAddress } from '@/utils/dhcpLabels';
 
 /** Distance kept from the edges of the window */
 const MARGIN = 8;
@@ -26,6 +28,7 @@ const PresentationMenu = () => {
 
   const devices = useNetworkStore((state) => state.devices);
   const connections = useNetworkStore((state) => state.connections);
+  const dhcp = useDhcp();
 
   const ref = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
@@ -72,11 +75,13 @@ const PresentationMenu = () => {
     const device = devices.find((entry) => entry.id === menu.id);
     if (!device) return null;
     const isFailed = failedDevices.includes(device.id);
+    // (a device on DHCP shows the address it is leased)
+    const address = shownAddress(device, dhcp);
     return (
       <div ref={ref} className="presentation-menu" role="menu" aria-label={device.label} style={style}>
         <div className="presentation-menu-title">
           <strong>{device.label}</strong>
-          <span>{device.ip ? `${device.type} · ${device.ip}` : device.type}</span>
+          <span>{address ? `${device.type} · ${address}` : device.type}</span>
         </div>
         <button
           type="button"

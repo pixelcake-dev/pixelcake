@@ -77,15 +77,15 @@ beforeEach(() => {
 });
 
 describe('InspectorModal — tabs', () => {
-  it('a router has Generale, Porte, Rotte and NAT', () => {
+  it('a router has Generale, Porte, Rotte, NAT and DHCP', () => {
     openInspector('Router-1');
-    expect(tabNames()).toEqual(['Generale', 'Porte (4)', 'Rotte', 'NAT']);
+    expect(tabNames()).toEqual(['Generale', 'Porte (4)', 'Rotte', 'NAT', 'DHCP']);
   });
 
   it('a firewall also has Regole', () => {
     addFirewall();
     openInspector('FW-1');
-    expect(tabNames()).toEqual(['Generale', 'Porte (4)', 'Rotte', 'Regole', 'NAT']);
+    expect(tabNames()).toEqual(['Generale', 'Porte (4)', 'Rotte', 'Regole', 'NAT', 'DHCP']);
   });
 
   it('a switch and an end device have neither', () => {

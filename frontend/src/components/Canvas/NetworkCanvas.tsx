@@ -26,6 +26,8 @@ import type {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import NetworkDevice from './NetworkDevice';
+import { useDhcp } from '@/utils/useDhcp';
+import { shownAddress } from '@/utils/dhcpLabels';
 import CustomEdge from './CustomEdge';
 import ParticleEdge from './ParticleEdge';
 import PacketAnimation from './PacketAnimation';
@@ -258,6 +260,10 @@ const NetworkCanvas = () => {
     [getConnection, setContextMenuConnection]
   );
 
+  // What each device shows under its name: its address, the leased one
+  // for a device on DHCP
+  const dhcp = useDhcp();
+
   // Sync Zustand devices to React Flow nodes (memoized to prevent unnecessary re-renders)
   const reactFlowNodes: Node[] = useMemo(() =>
     devices.map((device) => ({
@@ -267,12 +273,13 @@ const NetworkCanvas = () => {
       selected: selectedDeviceIds.includes(device.id), // React Flow selection property
       data: {
         ...device,
+        address: shownAddress(device, dhcp),
         isSelected: selectedDeviceIds.includes(device.id), // Keep for backward compatibility
         onContextMenu: handleDeviceContextMenu,
         onDoubleClick: handleDeviceDoubleClick,
       },
     })),
-    [devices, selectedDeviceIds, handleDeviceContextMenu, handleDeviceDoubleClick]
+    [devices, dhcp, selectedDeviceIds, handleDeviceContextMenu, handleDeviceDoubleClick]
   );
 
   useEffect(() => {

@@ -16,6 +16,7 @@ import { useSimulationStore } from '@/store/simulationStore';
 import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
 import { createRedundancySample } from '@/utils/sampleRedundancy';
+import { createSampleTopology } from '@/utils/sampleTopology';
 import { MARK_COLORS, PALETTES } from '@/utils/drawingImage';
 import * as images from '@/utils/imageExport';
 import { device } from '@/test/networkFixtures';
@@ -757,5 +758,36 @@ describe('ExportImageModal — while presenting', () => {
 
     expect(screen.getByRole('heading', { name: 'Esporta immagine' })).toBeInTheDocument();
     expect(presentation().active).toBe(true);
+  });
+});
+
+describe('ExportImageModal — a device on DHCP', () => {
+  it('has under its name what the drawing has: the address it is leased, or that it has none', async () => {
+    network().clearAllDevices();
+    const sample = createSampleTopology();
+    network().loadTopology(sample.devices, sample.connections);
+    const named = (label: string) => network().devices.find((d) => d.label === label)!;
+    const router = named('Router-1');
+    network().updateDevice(router.id, {
+      ports: router.ports?.map((p) =>
+        p.id === 1 ? { ...p, dhcpServer: { start: '192.168.10.100', end: '192.168.10.199' } } : p
+      ),
+    });
+    for (const label of ['PC-1', 'Mail-01']) {
+      network().updateDevice(named(label).id, {
+        nics: named(label).nics?.map((nic) => ({ ...nic, dhcp: true })),
+      });
+    }
+
+    render(<ExportImageModal />);
+    await openDialog();
+    const texts = pictureTexts();
+    expect(texts).toContain('192.168.10.100 · DHCP');
+    expect(texts).toContain('DHCP: nessun indirizzo');
+    // the others as always
+    expect(texts).toContain('192.168.10.12');
+    expect(texts).toContain('192.168.10.1');
+    // nothing was written back on the drawing
+    expect(named('PC-1')).toMatchObject({ ip: '', nics: [{ dhcp: true, ip: '' }] });
   });
 });

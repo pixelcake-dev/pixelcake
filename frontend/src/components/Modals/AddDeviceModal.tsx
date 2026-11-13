@@ -9,7 +9,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { findNextAvailableIP, generateMacAddress } from '@/utils/ipHelpers';
-import { isL3Type } from '@/engine';
+import { isL3Type, withLeases } from '@/engine';
 import type { DeviceType, Port, NetworkInterfaceCard } from '@/types/network';
 
 const AddDeviceModal = () => {
@@ -41,8 +41,10 @@ const AddDeviceModal = () => {
       const typeCount = devices.filter((d) => d.type === addDeviceType).length;
       setName(`${templateName.replace(/\s+/g, '-')}-${typeCount}`);
 
-      // Find next available IP
-      const nextIp = findNextAvailableIP(devices, globalSettings);
+      // Find next available IP: not one a device has, written by hand or
+      // leased by DHCP
+      const { connections } = useNetworkStore.getState();
+      const nextIp = findNextAvailableIP(withLeases({ devices, connections }).devices, globalSettings);
       setIp(nextIp);
 
       if (template?.supportsPorts && template.defaultPortCount) {

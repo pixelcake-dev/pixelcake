@@ -3,21 +3,43 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { FormContainer } from '@/components/ui/FormContainer';
+import DhcpPoolFields from '@/components/ui/DhcpPoolFields';
 import { generateMacAddress } from '@/utils/ipHelpers';
-import type { NetworkInterfaceCard } from '@/types/network';
+import { BLANK_POOL_ERROR, isBlankPool, nicPoolProblemText, tidyPool } from '@/utils/dhcpLabels';
+import type { DhcpPool, NetworkInterfaceCard } from '@/types/network';
+
+/**
+ * What the card would have with its address on «Automatico (DHCP)», worked
+ * out from the drawing: the lease, or the reason there is none
+ */
+export interface CardLease {
+  /** `192.168.20.100 da Router-Core, porta 2`, or `Nessun indirizzo: …` */
+  text: string;
+  /** The address, mask and gateway given; absent when the card gets no lease */
+  given?: { ip: string; subnet: string; gateway: string };
+}
 
 interface NICConfigPanelProps {
   nic: NetworkInterfaceCard | null;
   onSave: (nicId: string, updates: Partial<NetworkInterfaceCard>) => void;
   onCancel: () => void;
+  /** What the card gets from DHCP (see CardLease); left out, DHCP is offered without a preview */
+  lease?: CardLease;
+  /** The card belongs to a server: it can hand out addresses to its network */
+  canServe?: boolean;
 }
+
+/** The pool fields before anything is typed */
+const EMPTY_POOL: DhcpPool = { start: '', end: '', gateway: '' };
 
 /**
  * NICConfigPanel Component
  * Detail panel for editing selected NIC configuration
- * Shows all NIC settings: enabled, name, speed, IP/Subnet/Gateway, MAC, description
+ * Shows all NIC settings: enabled, name, speed, the address (written by hand,
+ * or taken from a DHCP server), MAC, description and, on a server, the DHCP
+ * server of the network of the card
  */
-const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel }) => {
+const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel, lease, canServe = false }) => {
   const [formData, setFormData] = useState<Partial<NetworkInterfaceCard>>({
     enabled: true,
     name: '',
@@ -27,7 +49,12 @@ const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel }
     gateway: '',
     mac: '',
     description: '',
+    dhcp: false,
   });
+  // DHCP server of the card (a server): on or off, and what is typed
+  const [serves, setServes] = useState(false);
+  const [pool, setPool] = useState<DhcpPool>(EMPTY_POOL);
+  const [poolError, setPoolError] = useState<string | null>(null);
 
   // Initialize form data when NIC changes
   useEffect(() => {
@@ -41,24 +68,59 @@ const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel }
         gateway: nic.gateway || '',
         mac: nic.mac || '',
         description: nic.description || '',
+        dhcp: nic.dhcp === true,
       });
+      setServes(nic.dhcpServer !== undefined);
+      setPool({ ...EMPTY_POOL, ...nic.dhcpServer });
+      setPoolError(null);
     }
   }, [nic]);
+
+  const automatic = formData.dhcp === true;
+
+  /**
+   * From DHCP to an address written by hand: the fields start from the
+   * address the card had (it keeps it, now as its own). From an address to
+   * DHCP nothing is thrown away until the card is saved.
+   */
+  const handleModeChange = (dhcp: boolean) => {
+    if (dhcp || !automatic || formData.ip?.trim() || !lease?.given) {
+      setFormData({ ...formData, dhcp });
+      return;
+    }
+    setFormData({ ...formData, dhcp, ...lease.given });
+  };
 
   const handleSave = () => {
     if (!nic) return;
 
-    // Prepare updates
+    // Prepare updates. A card on DHCP keeps no address of its own
     const updates: Partial<NetworkInterfaceCard> = {
       enabled: formData.enabled,
       name: formData.name?.trim() || 'eth0',
       speed: formData.speed,
-      ip: formData.ip?.trim() || '',
-      subnet: formData.subnet?.trim() || '',
-      gateway: formData.gateway?.trim() || '',
+      ip: automatic ? '' : formData.ip?.trim() || '',
+      subnet: automatic ? '' : formData.subnet?.trim() || '',
+      gateway: automatic ? '' : formData.gateway?.trim() || '',
       mac: formData.mac?.trim() || undefined,
       description: formData.description?.trim() || undefined,
+      dhcp: automatic ? true : undefined,
     };
+
+    // DHCP server (a server's card that has its own address): the range is
+    // checked against the address just read
+    const serving = canServe && !automatic && serves;
+    if (serving) {
+      const problem = isBlankPool(pool)
+        ? BLANK_POOL_ERROR
+        : nicPoolProblemText({ ...nic, ...updates } as NetworkInterfaceCard, pool);
+      if (problem) {
+        setPoolError(problem);
+        return;
+      }
+    }
+    setPoolError(null);
+    updates.dhcpServer = serving ? tidyPool(pool) : undefined;
 
     onSave(nic.id, updates);
   };
@@ -130,37 +192,100 @@ const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel }
           <option value="10G">10 Gbps</option>
         </Select>
 
-        {/* IP Address */}
-        <Input
-          label="Indirizzo IP"
-          type="text"
-          placeholder="es. 192.168.1.10"
-          value={formData.ip}
-          onChange={(e) => setFormData({ ...formData, ip: e.target.value })}
+        {/* Where the address comes from */}
+        <Select
+          id="nic-address-mode"
+          label="Indirizzo"
+          value={automatic ? 'dhcp' : 'manual'}
+          onChange={(e) => handleModeChange(e.target.value === 'dhcp')}
           size="full"
-          required
-        />
+        >
+          <option value="manual">Manuale</option>
+          <option value="dhcp">Automatico (DHCP)</option>
+        </Select>
 
-        {/* Subnet Mask */}
-        <Input
-          label="Subnet Mask"
-          type="text"
-          placeholder="es. 255.255.255.0"
-          value={formData.subnet}
-          onChange={(e) => setFormData({ ...formData, subnet: e.target.value })}
-          size="full"
-          required
-        />
+        {automatic ? (
+          /* The lease, worked out from the drawing: nothing to type */
+          <div>
+            <div
+              className={lease && !lease.given ? 'modal-error-box' : 'modal-info-box'}
+              role="status"
+              data-testid="nic-lease"
+            >
+              {lease ? (
+                <>
+                  {lease.given && <strong>Indirizzo assegnato: </strong>}
+                  {lease.text}
+                  {lease.given && (
+                    <span className="block mt-1">
+                      Subnet mask {lease.given.subnet} · gateway {lease.given.gateway || 'nessuno'}
+                    </span>
+                  )}
+                </>
+              ) : (
+                'L\'indirizzo arriva dal server DHCP della rete a cui la scheda è collegata.'
+              )}
+            </div>
+            <span className="block text-xs text-[var(--text-color-light)] mt-1">
+              Indirizzo, subnet mask e gateway li assegna un server DHCP della stessa rete: una
+              porta di router o firewall, o un server, con «Server DHCP Abilitato». Si calcolano dal
+              disegno, sempre allo stesso modo.
+            </span>
+          </div>
+        ) : (
+          <>
+            {/* IP Address */}
+            <Input
+              label="Indirizzo IP"
+              type="text"
+              placeholder="es. 192.168.1.10"
+              value={formData.ip}
+              onChange={(e) => setFormData({ ...formData, ip: e.target.value })}
+              size="full"
+              required
+            />
 
-        {/* Gateway */}
-        <Input
-          label="Gateway"
-          type="text"
-          placeholder="es. 192.168.1.1"
-          value={formData.gateway}
-          onChange={(e) => setFormData({ ...formData, gateway: e.target.value })}
-          size="full"
-        />
+            {/* Subnet Mask */}
+            <Input
+              label="Subnet Mask"
+              type="text"
+              placeholder="es. 255.255.255.0"
+              value={formData.subnet}
+              onChange={(e) => setFormData({ ...formData, subnet: e.target.value })}
+              size="full"
+              required
+            />
+
+            {/* Gateway */}
+            <Input
+              label="Gateway"
+              type="text"
+              placeholder="es. 192.168.1.1"
+              value={formData.gateway}
+              onChange={(e) => setFormData({ ...formData, gateway: e.target.value })}
+              size="full"
+            />
+          </>
+        )}
+
+        {/* DHCP server - a server, for the network of this card */}
+        {canServe && !automatic && (
+          <DhcpPoolFields
+            idPrefix="nic"
+            enabled={serves}
+            pool={pool}
+            onToggle={(enabled) => {
+              setServes(enabled);
+              setPoolError(null);
+            }}
+            onChange={(next) => {
+              setPool(next);
+              setPoolError(null);
+            }}
+            gatewayHint="Vuoto: nessun gateway, i dispositivi parlano solo dentro la loro rete. Di solito è l'indirizzo del router."
+            error={poolError}
+          />
+        )}
 
         {/* MAC Address */}
         <div>

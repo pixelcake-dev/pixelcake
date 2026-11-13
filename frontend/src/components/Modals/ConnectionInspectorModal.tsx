@@ -7,7 +7,7 @@ import { FormContainer, FormFieldset } from '@/components/ui/FormContainer';
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
-import { bindingFor, boundInterface, listInterfaces, usedInterfaceKeys } from '@/engine';
+import { bindingFor, boundInterface, listInterfaces, usedInterfaceKeys, withLeases } from '@/engine';
 import type { DeviceInterface } from '@/engine';
 import { interfaceOptionLabel } from '@/utils/interfaceLabels';
 import type { ConnectionType, NetworkDevice } from '@/types/network';
@@ -104,9 +104,12 @@ const ConnectionInspectorModal = () => {
 
   if (!isOpen || !inspectorConnection) return null;
 
-  // Get source and target device labels for display
-  const sourceDevice = devices.find((d) => d.id === inspectorConnection.source);
-  const targetDevice = devices.find((d) => d.id === inspectorConnection.target);
+  // The two devices, as they are named in the lists below: an interface is
+  // listed with its address, the leased one for a card on DHCP. (Only the
+  // key of the interface chosen is saved.)
+  const shown = withLeases({ devices, connections }).devices;
+  const sourceDevice = shown.find((d) => d.id === inspectorConnection.source);
+  const targetDevice = shown.find((d) => d.id === inspectorConnection.target);
   const connectionLabel = `${sourceDevice?.label || 'Unknown'} → ${targetDevice?.label || 'Unknown'}`;
 
   // Interfaces that cannot be chosen for an end: used by another link, or

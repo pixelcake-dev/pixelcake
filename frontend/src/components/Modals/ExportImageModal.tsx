@@ -21,6 +21,8 @@ import { Button } from '@/components/ui/Button';
 import { assessImpact, hasFailures, planAndEvaluateFlow, withFailures } from '@/engine';
 import type { Failures, Topology } from '@/engine';
 import { captionOf } from '@/utils/presentation';
+import { useDhcp } from '@/utils/useDhcp';
+import { shownAddress } from '@/utils/dhcpLabels';
 import {
   pixelSize,
   renderDrawingImage,
@@ -99,6 +101,18 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
       ? (canvases.find((canvas) => canvas.id === activeCanvasId)?.name ?? null)
       : null;
 
+  // Under each device the image says what the drawing says: for a device on
+  // DHCP, the address it is leased
+  const dhcp = useDhcp();
+  const drawnDevices = useMemo(
+    () =>
+      devices.map((device) => {
+        const address = shownAddress(device, dhcp);
+        return address === device.ip ? device : { ...device, ip: address };
+      }),
+    [devices, dhcp]
+  );
+
   const measureText = useMemo(() => createTextMeasure(), []);
   // The size of each device is read from the screen, again when the drawing changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -156,7 +170,7 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
     () =>
       renderDrawingImage(
         {
-          devices,
+          devices: drawnDevices,
           connections,
           deviceTemplates,
           connectionTemplates,
@@ -173,7 +187,7 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
         }
       ),
     [
-      devices,
+      drawnDevices,
       connections,
       deviceTemplates,
       connectionTemplates,

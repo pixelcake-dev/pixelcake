@@ -5,6 +5,7 @@
 
 import dagre from 'dagre';
 import type { NetworkDevice, NetworkConnection, ConnectionType } from '@/types';
+import { withLeases } from '@/engine';
 
 /**
  * Node dimensions for layout calculation
@@ -73,10 +74,14 @@ export function getConnectionType(
   const sourceTier = getDeviceTier(sourceDevice);
   const targetTier = getDeviceTier(targetDevice);
 
-  // Extract network class (first 2 octets) to detect inter-building connections
+  // Extract network class (first 2 octets) to detect inter-building connections.
+  // A device that takes its address from DHCP has none to tell a building by:
+  // it is where the device it is cabled to is
+  const leased = (device: NetworkDevice) => device.nics?.[0]?.dhcp === true;
   const sourceNetClass = sourceDevice.ip.split('.').slice(0, 2).join('.');
   const targetNetClass = targetDevice.ip.split('.').slice(0, 2).join('.');
-  const isInterBuilding = sourceNetClass !== targetNetClass;
+  const isInterBuilding =
+    !leased(sourceDevice) && !leased(targetDevice) && sourceNetClass !== targetNetClass;
 
   // Extract subnet (first 3 octets)
   const sourceSubnet = sourceDevice.ip.split('.').slice(0, 3).join('.');
@@ -266,8 +271,13 @@ export function applySubnetGroupedLayout(
   // This groups buildings/locations together (e.g., 192.168.x.x, 10.10.x.x, 172.16.x.x)
   const subnetGroups = new Map<string, NetworkDevice[]>();
 
+  // (a device on DHCP is grouped by the address it is leased)
+  const leasedIp = new Map(
+    withLeases({ devices, connections }).devices.map((device) => [device.id, device.ip] as const)
+  );
+
   devices.forEach((device) => {
-    const octets = device.ip.split('.');
+    const octets = (leasedIp.get(device.id) ?? device.ip).split('.');
     // Use first 2 octets for network class grouping
     // This keeps all floors/subnets of same building together
     const networkClass = `${octets[0]}.${octets[1]}`;

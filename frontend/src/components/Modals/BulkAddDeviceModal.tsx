@@ -9,6 +9,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { bulkAddDevices } from '@/utils/bulkDeviceHelpers';
+import { withLeases } from '@/engine';
 import type { DeviceType } from '@/types/network';
 
 /**
@@ -161,10 +162,13 @@ const BulkAddDeviceModal = () => {
       return;
     }
 
+    // (the addresses proposed skip those a device has, written by hand or
+    // leased by DHCP)
+    const { connections } = useNetworkStore.getState();
     const added = bulkAddDevices(
       configurableRows,
       standardQuantities,
-      devices,
+      withLeases({ devices, connections }).devices,
       globalSettings,
       templates,
       addDevice

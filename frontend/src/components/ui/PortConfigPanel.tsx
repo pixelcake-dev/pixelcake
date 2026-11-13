@@ -3,11 +3,16 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { FormContainer, FormFieldset } from '@/components/ui/FormContainer';
+import DhcpPoolFields from '@/components/ui/DhcpPoolFields';
 import { isValidIP } from '@/utils/ipHelpers';
-import type { Port } from '@/types/network';
+import { BLANK_POOL_ERROR, isBlankPool, portPoolProblemText, tidyPool } from '@/utils/dhcpLabels';
+import type { DhcpPool, Port } from '@/types/network';
 
 /** Mask given to an addressed port when the field is left empty */
 const DEFAULT_PORT_SUBNET = '255.255.255.0';
+
+/** The pool fields before anything is typed */
+const EMPTY_POOL: DhcpPool = { start: '', end: '', gateway: '' };
 
 interface PortConfigPanelProps {
   port: Port | null;
@@ -22,7 +27,8 @@ interface PortConfigPanelProps {
  * PortConfigPanel Component
  * Detail panel for editing selected port configuration
  * Shows all port settings: enabled, name, type, VLAN, speed, PoE, description,
- * the L3 address of Router/Firewall ports and (read-only) what the port is linked to
+ * the L3 address of Router/Firewall ports, the DHCP server of the network of
+ * such a port, and (read-only) what the port is linked to
  */
 const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
   port,
@@ -39,6 +45,10 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
   const supportsAddress = isRouter || isFirewall;
   const [addressError, setAddressError] = useState<string | null>(null);
   const [vlanError, setVlanError] = useState<string | null>(null);
+  // DHCP server of the port (router, firewall): on or off, and what is typed
+  const [serves, setServes] = useState(false);
+  const [pool, setPool] = useState<DhcpPool>(EMPTY_POOL);
+  const [poolError, setPoolError] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<Port>>({
     enabled: true,
     name: '',
@@ -79,6 +89,9 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
       });
       setAddressError(null);
       setVlanError(null);
+      setServes(port.dhcpServer !== undefined);
+      setPool({ ...EMPTY_POOL, ...port.dhcpServer });
+      setPoolError(null);
     }
   }, [port, isSwitch]);
 
@@ -114,6 +127,19 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
       // No address: both fields are cleared. Address without mask: /24
       updates.ip = ip || undefined;
       updates.subnet = ip ? subnet || DEFAULT_PORT_SUBNET : undefined;
+
+      // DHCP server: the range is checked against the address just read
+      if (serves) {
+        const problem = isBlankPool(pool)
+          ? BLANK_POOL_ERROR
+          : portPoolProblemText(deviceType, { ...port, ip: updates.ip, subnet: updates.subnet }, pool);
+        if (problem) {
+          setPoolError(problem);
+          return;
+        }
+      }
+      setPoolError(null);
+      updates.dhcpServer = serves ? tidyPool(pool) : undefined;
     }
 
     // Switch-specific fields
@@ -308,6 +334,25 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
               )}
             </FormContainer>
           </FormFieldset>
+        )}
+
+        {/* DHCP server - a router or a firewall, for the network of this port */}
+        {supportsAddress && (
+          <DhcpPoolFields
+            idPrefix="port"
+            enabled={serves}
+            pool={pool}
+            onToggle={(enabled) => {
+              setServes(enabled);
+              setPoolError(null);
+            }}
+            onChange={(next) => {
+              setPool(next);
+              setPoolError(null);
+            }}
+            gatewayHint="Vuoto: l'indirizzo di questa porta, che è il gateway della sua rete."
+            error={poolError}
+          />
         )}
 
         {/* VLAN - Only for Switch */}

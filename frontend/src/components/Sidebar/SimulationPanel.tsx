@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNetworkStore } from '@/store/networkStore';
 import { useSimulationStore } from '@/store/simulationStore';
 import { runFlowSimulation } from '@/utils/runSimulation';
+import { useDhcp } from '@/utils/useDhcp';
+import { shownAddress } from '@/utils/dhcpLabels';
 import Select from '@/components/ui/Select';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import { Button } from '@/components/ui/Button';
@@ -24,13 +26,15 @@ const SimulationPanel = () => {
   }, [devices]);
 
   // Convert devices to options format for SearchableSelect
+  const dhcp = useDhcp();
   const deviceOptions = useMemo(() => {
-    return sortedDevices.map((device) => ({
-      value: device.id,
-      // (the Internet symbol, for one, has no address to show)
-      label: device.ip ? `${device.label} (${device.ip})` : device.label,
-    }));
-  }, [sortedDevices]);
+    return sortedDevices.map((device) => {
+      // (the Internet symbol, for one, has no address to show; a device on
+      // DHCP shows the one it is leased)
+      const address = shownAddress(device, dhcp);
+      return { value: device.id, label: address ? `${device.label} (${address})` : device.label };
+    });
+  }, [sortedDevices, dhcp]);
 
   // Simulation settings state
   const [sourceId, setSourceId] = useState('');

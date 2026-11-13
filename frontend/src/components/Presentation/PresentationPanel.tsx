@@ -36,6 +36,8 @@ import {
   type ImpactGroup,
 } from '@/utils/presentation';
 import { usePresentationAnswer } from './usePresentationAnswer';
+import { useDhcp } from '@/utils/useDhcp';
+import { shownAddress } from '@/utils/dhcpLabels';
 
 const FLOWS: PresentationFlow[] = ['ping', 'web', 'email'];
 
@@ -161,15 +163,17 @@ const PresentationPanel = () => {
     return (id: string) => labels.get(id) ?? id;
   }, [devices]);
 
+  const dhcp = useDhcp();
   const deviceOptions = useMemo(
     () =>
       [...devices]
         .sort((a, b) => a.label.localeCompare(b.label))
-        .map((device) => ({
-          value: device.id,
-          label: device.ip ? `${device.label} (${device.ip})` : device.label,
-        })),
-    [devices]
+        .map((device) => {
+          // (a device on DHCP shows the address it is leased)
+          const address = shownAddress(device, dhcp);
+          return { value: device.id, label: address ? `${device.label} (${address})` : device.label };
+        }),
+    [devices, dhcp]
   );
 
   const cableName = (connectionId: string) => {

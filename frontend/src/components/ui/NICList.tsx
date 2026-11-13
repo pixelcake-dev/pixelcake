@@ -11,13 +11,19 @@ interface NICListProps {
   onRemoveNic: (nicId: string) => void;
   /** NIC id → what it is linked to ("SW-Office (porta 1)"); only linked NICs are present */
   linkedNics?: ReadonlyMap<string, string>;
+  /**
+   * NIC id → what to show as the address of a card that takes it from DHCP
+   * ("192.168.20.100 · DHCP", "DHCP: nessun indirizzo"); the other cards show
+   * the address written on them
+   */
+  leasedAddresses?: ReadonlyMap<string, string>;
 }
 
 /**
  * NICList Component
  * Displays network interface cards as a vertical list with status indicators
- * Shows interface name, IP, MAC, and status for each NIC, and marks the NICs
- * that have a connection attached
+ * Shows interface name, IP (the leased one for a card on DHCP), MAC, and
+ * status for each NIC, and marks the NICs that have a connection attached
  */
 const NICList: React.FC<NICListProps> = ({
   nics,
@@ -26,6 +32,7 @@ const NICList: React.FC<NICListProps> = ({
   onAddNic,
   onRemoveNic,
   linkedNics,
+  leasedAddresses,
 }) => {
   const getNicStatusColor = (nic: NetworkInterfaceCard): string => {
     if (!nic.enabled) return 'var(--text-color-light)';
@@ -145,7 +152,7 @@ const NICList: React.FC<NICListProps> = ({
               <div className="nic-card-details">
                 <div className="nic-detail-row">
                   <span className="nic-detail-label">IP:</span>
-                  <span className="nic-detail-value">{nic.ip}</span>
+                  <span className="nic-detail-value">{leasedAddresses?.get(nic.id) ?? nic.ip}</span>
                 </div>
 
                 <div className="nic-detail-row">

@@ -12,6 +12,12 @@ import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
 
 interface NetworkDeviceData extends NetworkDeviceType {
+  /**
+   * What is shown under the name: the address written by hand, or the one
+   * the device is leased by a DHCP server (see shownAddress). Left out, the
+   * device-level address is shown.
+   */
+  address?: string;
   isSelected?: boolean;
   onContextMenu?: (e: React.MouseEvent, device: NetworkDeviceType) => void;
   onDoubleClick?: (device: NetworkDeviceType) => void;
@@ -27,6 +33,7 @@ function arePropsEqual(
     prevProps.selected === nextProps.selected &&
     prevProps.data.label === nextProps.data.label &&
     prevProps.data.ip === nextProps.data.ip &&
+    prevProps.data.address === nextProps.data.address &&
     prevProps.data.type === nextProps.data.type &&
     prevProps.data.templateId === nextProps.data.templateId &&
     prevProps.data.position.x === nextProps.data.position.x &&
@@ -179,7 +186,7 @@ const NetworkDevice = memo(({ data, id }: NodeProps<NetworkDeviceData>) => {
           {data.label}
         </span>
         <span className="device-ip text-xs text-gray-500 dark:text-gray-400 mt-1">
-          {data.ip}
+          {data.address ?? data.ip}
         </span>
       </div>
     </div>
