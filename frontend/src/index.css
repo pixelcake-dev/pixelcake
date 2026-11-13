@@ -838,6 +838,38 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   margin: 0;
 }
 
+/* The name of a sidebar button, beside it while the pointer or the keyboard
+   is on it. It is drawn on the page (see Sidebar.tsx), above the panel a
+   button opens (150) and the menu bar (200). Its colours are those of the
+   page turned round, so it stands out in light and in dark */
+.sidebar-tooltip {
+  position: fixed;
+  z-index: 300;
+  transform: translateY(-50%);
+  padding: 5px 10px;
+  border-radius: 6px;
+  background-color: var(--text-color);
+  color: var(--bg-canvas);
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px var(--shadow-color);
+  pointer-events: none;
+  animation: sidebar-tooltip-in 0.12s ease-out;
+}
+
+@keyframes sidebar-tooltip-in {
+  from {
+    opacity: 0;
+    transform: translate(-4px, -50%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
 .sidebar-panel-close {
   background: transparent;
   border: none;

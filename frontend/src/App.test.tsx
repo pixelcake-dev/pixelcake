@@ -69,7 +69,7 @@ describe('App', () => {
 
     // the designer itself is on screen: menu bar, sidebar and canvas
     expect(screen.getByText('File')).toBeInTheDocument();
-    expect(screen.getByTitle('Explorer')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explorer' })).toBeInTheDocument();
     expect(document.querySelector('.react-flow')).not.toBeNull();
     // and nothing stands in front of it asking to sign in
     expect(screen.queryByRole('button', { name: /accedi|login|entra/i })).toBeNull();

@@ -1,5 +1,67 @@
+import { useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useUIStore, type SidebarPanelId } from '@/store/uiStore';
 import { Zap, Plus, Files, Settings, Terminal, ArrowUpDown } from 'lucide-react';
+
+/**
+ * A button of the sidebar: an icon, and its name shown next to it while the
+ * pointer or the keyboard is on it.
+ *
+ * The name is drawn on the page, outside the sidebar, because the panel a
+ * button opens slides in over the sidebar's own layer and would cover it.
+ * It is for the eye only: the button already carries the name for whoever
+ * does not see the icon.
+ */
+const SidebarButton = ({
+  label,
+  active = false,
+  className = '',
+  onClick,
+  children,
+}: {
+  label: string;
+  active?: boolean;
+  className?: string;
+  onClick: () => void;
+  children: ReactNode;
+}) => {
+  const button = useRef<HTMLButtonElement>(null);
+  const [nameAt, setNameAt] = useState<{ top: number; left: number } | null>(null);
+
+  const showName = () => {
+    const box = button.current?.getBoundingClientRect();
+    if (box) setNameAt({ top: box.top + box.height / 2, left: box.right + 8 });
+  };
+  const hideName = () => setNameAt(null);
+
+  return (
+    <>
+      <button
+        ref={button}
+        className={`sidebar-icon ${className} ${active ? 'active' : ''}`}
+        aria-label={label}
+        onClick={() => {
+          // What the button opens appears where the name is: the name has done its job
+          hideName();
+          onClick();
+        }}
+        onMouseEnter={showName}
+        onMouseLeave={hideName}
+        onFocus={showName}
+        onBlur={hideName}
+      >
+        {children}
+      </button>
+      {nameAt &&
+        createPortal(
+          <span className="sidebar-tooltip" style={nameAt} aria-hidden="true">
+            {label}
+          </span>,
+          document.body
+        )}
+    </>
+  );
+};
 
 const Sidebar = () => {
   const activeSidebarPanel = useUIStore((state) => state.activeSidebarPanel);
@@ -21,62 +83,54 @@ const Sidebar = () => {
     <div className="sidebar">
       <div className="sidebar-main">
         {/* File Menu Button */}
-        <button
-          className={`sidebar-icon sidebar-toggle ${activeSidebarPanel === 'explorer' ? 'active' : ''}`}
-          title="Explorer"
+        <SidebarButton
+          label="Explorer"
+          className="sidebar-toggle"
+          active={activeSidebarPanel === 'explorer'}
           onClick={() => handleSectionClick('explorer')}
         >
           <Files size={28} />
-        </button>
+        </SidebarButton>
 
         <div className="sidebar-divider" />
 
         {/* Simulation */}
-        <button
-          className={`sidebar-icon ${activeSidebarPanel === 'simulation' ? 'active' : ''}`}
-          title="Simulazione"
+        <SidebarButton
+          label="Simulazione"
+          active={activeSidebarPanel === 'simulation'}
           onClick={() => handleSectionClick('simulation')}
         >
           <Zap size={28} style={{ color: '#8b5cf6' }} />
-        </button>
+        </SidebarButton>
 
         {/* Add Device */}
-        <button
-          className={`sidebar-icon ${activeSidebarPanel === 'devices' ? 'active' : ''}`}
-          title="Aggiungi Dispositivo"
+        <SidebarButton
+          label="Aggiungi Dispositivo"
+          active={activeSidebarPanel === 'devices'}
           onClick={() => handleSectionClick('devices')}
         >
           <Plus size={28} style={{ color: '#3b82f6' }} />
-        </button>
+        </SidebarButton>
 
         {/* Console */}
-        <button
-          className="sidebar-icon"
-          title="Console"
-          onClick={() => openModal('codeTerminal')}
-        >
+        <SidebarButton label="Console" onClick={() => openModal('codeTerminal')}>
           <Terminal size={28} style={{ color: '#10b981' }} />
-        </button>
+        </SidebarButton>
 
         {/* Import/Export */}
-        <button
-          className="sidebar-icon"
-          title="Import/Export"
-          onClick={() => openModal('importExport')}
-        >
+        <SidebarButton label="Import/Export" onClick={() => openModal('importExport')}>
           <ArrowUpDown size={28} style={{ color: '#f59e0b' }} />
-        </button>
+        </SidebarButton>
       </div>
 
       {/* Footer Section */}
       <div className="sidebar-footer">
-        <button
-          className="sidebar-icon"
-          title="Impostazioni"
-          onClick={() => isSettingsOpen ? closeModal('settings') : openModal('settings')}
+        <SidebarButton
+          label="Impostazioni"
+          onClick={() => (isSettingsOpen ? closeModal('settings') : openModal('settings'))}
         >
           <Settings size={28} />
-        </button>
+        </SidebarButton>
       </div>
     </div>
   );
