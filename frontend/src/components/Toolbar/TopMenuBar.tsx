@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 import PixelCakeIcon from '@/assets/PixelCakeIcon.svg';
 import { APP_NAME } from '@/constants/brand';
+import { useProjectStore } from '@/store/projectStore';
 
 const TopMenuBar = () => {
   const darkMode = useUIStore((state) => state.darkMode);
@@ -44,6 +45,12 @@ const TopMenuBar = () => {
   const copySelection = useNetworkStore((state) => state.copySelection);
   const paste = useNetworkStore((state) => state.paste);
   const connectionTemplates = useTemplateStore((state) => state.connectionTemplates);
+  const projectName = useProjectStore((state) => state.name);
+  const canvases = useProjectStore((state) => state.canvases);
+  const activeCanvasId = useProjectStore((state) => state.activeCanvasId);
+  const hasUnsavedChanges = useNetworkStore((state) => state.hasUnsavedChanges);
+  const setActiveSidebarPanel = useUIStore((state) => state.setActiveSidebarPanel);
+  const activeCanvas = canvases.find((canvas) => canvas.id === activeCanvasId);
 
   // File menu. Each entry is a thin call into utils/projectFileAccess, which
   // asks before unsaved changes are lost and reports the outcome with a toast.
@@ -338,6 +345,29 @@ const TopMenuBar = () => {
           </ul>
         </div>
       </div>
+
+      {/* Which project is open, and which of its canvases when it has more
+          than one. A click opens the Explorer, where both are renamed and
+          the canvas is changed */}
+      <button
+        type="button"
+        className="topbar-project"
+        onClick={() => setActiveSidebarPanel('explorer')}
+        title="Progetto aperto. Clic per aprire l'Explorer: nome, canvas, salvataggio"
+      >
+        {hasUnsavedChanges && (
+          <span
+            className="explorer-unsaved-dot"
+            role="img"
+            aria-label="Modifiche non salvate su file"
+            title="Modifiche non salvate su file"
+          />
+        )}
+        <span className="topbar-project-name">{projectName}</span>
+        {canvases.length > 1 && activeCanvas && (
+          <span className="topbar-project-canvas">{activeCanvas.name}</span>
+        )}
+      </button>
 
       {/* Presentation mode */}
       <button

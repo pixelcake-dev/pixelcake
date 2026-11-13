@@ -287,17 +287,19 @@ describe('App', () => {
 
       await waitFor(() => expect(screen.getByText('Reception')).toBeInTheDocument());
       expect(screen.queryByText('Visual Network Designer')).toBeNull();
-      // the explorer shows the project that was opened
-      expect(screen.getByText('Sede Roma')).toBeInTheDocument();
+      // the explorer shows the project that was opened, and so does the bar at the top
+      expect(screen.getByTitle('Sede Roma')).toBeInTheDocument();
+      expect(document.querySelector('.topbar-project-name')).toHaveTextContent('Sede Roma');
       expect(screen.getByText('Aperto da file')).toBeInTheDocument();
-      expect(screen.getByText('Piano terra')).toBeInTheDocument();
+      expect(screen.getByTitle('Piano terra')).toBeInTheDocument();
+      expect(document.querySelector('.topbar-project-canvas')).toHaveTextContent('Piano terra');
       expect(screen.getByText('Primo piano')).toBeInTheDocument();
       expect(screen.queryByText('Modifiche non salvate su file')).toBeNull();
 
       // its second canvas is empty: the device leaves the screen, and comes back
       fireEvent.click(screen.getByText('Primo piano'));
       expect(screen.queryByText('Reception')).toBeNull();
-      fireEvent.click(screen.getByText('Piano terra'));
+      fireEvent.click(screen.getByTitle('Piano terra'));
       expect(screen.getByText('Reception')).toBeInTheDocument();
     });
 
@@ -311,7 +313,8 @@ describe('App', () => {
       });
       fireEvent.click(screen.getByRole('button', { name: 'Crea Progetto' }));
 
-      expect(screen.getByText('Sede Torino')).toBeInTheDocument();
+      // the name of the project, in the bar at the top (and in the Explorer when it is open)
+      expect(document.querySelector('.topbar-project-name')).toHaveTextContent('Sede Torino');
       expect(screen.queryByText('Visual Network Designer')).toBeNull();
       expect(screen.queryByLabelText('Nome Progetto *')).toBeNull();
       expect(useProjectStore.getState().canvases).toHaveLength(1);

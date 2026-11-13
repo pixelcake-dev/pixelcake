@@ -448,6 +448,63 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   position: absolute;
   width: 15px;
   height: 15px;
+  position: relative; /* the name of the project is centred on it */
+}
+
+/* The project that is open, in the middle of the bar: its name, then the
+   canvas when the project has more than one, and a dot while there are
+   changes not saved to a file. It is centred on the window, not on the room
+   left between the menus and the buttons, so it is as wide as twice the
+   narrower of the two sides allows (the menus end about 320px from the
+   left); on a window too narrow for it, it is left out */
+.topbar-project {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 640px);
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.topbar-project-name,
+.topbar-project-canvas {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-project-name {
+  font-weight: 600;
+}
+
+.topbar-project-canvas {
+  color: var(--text-color-light);
+}
+
+.topbar-project-canvas::before {
+  content: '/';
+  margin-right: 8px;
+  opacity: 0.6;
+}
+
+.topbar-project:hover .topbar-project-name {
+  color: var(--accent-color);
+}
+
+@media (max-width: 800px) {
+  .topbar-project {
+    display: none;
+  }
   background-color: var(--packet-color-default);
   border: 2px solid var(--bg-canvas);
   border-radius: 50%;
