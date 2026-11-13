@@ -17,6 +17,7 @@ import RoutesPanel from '@/components/ui/RoutesPanel';
 import FirewallRulesPanel from '@/components/ui/FirewallRulesPanel';
 import NatPanel from '@/components/ui/NatPanel';
 import DhcpPanel from '@/components/ui/DhcpPanel';
+import DnsPanel from '@/components/ui/DnsPanel';
 import type { CardLease } from '@/components/ui/NICConfigPanel';
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
@@ -30,6 +31,7 @@ import {
   normalizeAddressing,
   resolveDhcp,
   servesDhcp,
+  servesDns,
 } from '@/engine';
 import type { DhcpResolution } from '@/engine';
 import { linkPeerLabel } from '@/utils/interfaceLabels';
@@ -37,12 +39,16 @@ import { NO_LEASE_LABEL, cardLeaseText, firstPoolProblem } from '@/utils/dhcpLab
 import {
   forwardProblemText,
   isBlankForward,
+  isBlankRecord,
   isBlankRoute,
+  recordProblem,
   routeProblem,
   ruleProblem,
+  tidyRecord,
 } from '@/utils/networkConfigValidation';
 import type {
   DeviceTemplate,
+  DnsRecord,
   FirewallRule,
   NetworkDevice,
   NetworkInterfaceCard,
@@ -99,6 +105,9 @@ const InspectorModal = () => {
   const [firewallRules, setFirewallRules] = useState<FirewallRule[]>([]);
   const [portForwards, setPortForwards] = useState<PortForward[]>([]);
 
+  // Name resolution (server): the names it answers for
+  const [dnsRecords, setDnsRecords] = useState<DnsRecord[]>([]);
+
   useEffect(() => {
     if (isOpen && inspectorDevice) {
       setName(inspectorDevice.label);
@@ -118,6 +127,7 @@ const InspectorModal = () => {
       setRoutes(inspectorDevice.routes || []);
       setFirewallRules(inspectorDevice.firewallRules || []);
       setPortForwards(inspectorDevice.portForwards || []);
+      setDnsRecords(inspectorDevice.dnsRecords || []);
     }
   }, [isOpen, inspectorDevice]);
 
@@ -228,6 +238,19 @@ const InspectorModal = () => {
       return;
     }
 
+    // DNS records, like routes: a row left empty is not kept, and a name is
+    // kept the way names are compared
+    const keptRecords = dnsRecords.filter((record) => !isBlankRecord(record)).map(tidyRecord);
+    const recordIndex = keptRecords.findIndex(
+      (record) => recordProblem(record, keptRecords) !== undefined
+    );
+    if (recordIndex >= 0) {
+      toast.error(
+        `Record DNS ${recordIndex + 1}: ${recordProblem(keptRecords[recordIndex], keptRecords)}`
+      );
+      return;
+    }
+
     // A DHCP server is saved only if it can work with the addresses as they
     // are now (the address of its port may have changed after it was typed)
     const poolIssue = firstPoolProblem({ ...inspectorDevice, ports, nics });
@@ -256,6 +279,7 @@ const InspectorModal = () => {
       routes: keptRoutes.length > 0 ? keptRoutes : undefined,
       firewallRules: keptRules.length > 0 ? keptRules : undefined,
       portForwards: keptForwards.length > 0 ? keptForwards : undefined,
+      dnsRecords: keptRecords.length > 0 ? keptRecords : undefined,
     });
 
     handleClose();
@@ -314,7 +338,9 @@ const InspectorModal = () => {
     const lease = leaseOf(preview, liveDevice.id, nicId);
     return {
       text: cardLeaseText(preview, liveDevice.id, nicId).text,
-      given: lease ? { ip: lease.ip, subnet: lease.mask, gateway: lease.gateway } : undefined,
+      given: lease
+        ? { ip: lease.ip, subnet: lease.mask, gateway: lease.gateway, dns: lease.dns }
+        : undefined,
     };
   };
   // What the list of the cards shows for those on DHCP
@@ -846,6 +872,25 @@ const InspectorModal = () => {
             deviceId={liveDevice.id}
             dhcp={dhcp}
             setIn={supportsPorts ? 'Porte' : 'Schede di rete'}
+          />
+        </div>
+      ),
+    });
+  }
+
+  // DNS server: a server. The panel checks the rows of the form as they are
+  // typed, and says at which address the server is asked
+  if (servesDns(inspectorDevice)) {
+    const recordCount = dnsRecords.filter((record) => !isBlankRecord(record)).length;
+    tabs.push({
+      id: 'dns',
+      label: `DNS${recordCount > 0 ? ` (${recordCount})` : ''}`,
+      content: (
+        <div style={{ minHeight: '400px' }}>
+          <DnsPanel
+            records={dnsRecords}
+            onChange={setDnsRecords}
+            addresses={nics.filter((nic) => !nic.dhcp && nic.ip).map((nic) => nic.ip)}
           />
         </div>
       ),

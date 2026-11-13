@@ -7,7 +7,7 @@ interface DhcpPoolFieldsProps {
   idPrefix: string;
   /** The interface hands out addresses */
   enabled: boolean;
-  /** The range and the gateway as typed */
+  /** The range, the gateway and the DNS server as typed */
   pool: DhcpPool;
   onToggle: (enabled: boolean) => void;
   onChange: (pool: DhcpPool) => void;
@@ -81,6 +81,19 @@ const DhcpPoolFields: React.FC<DhcpPoolFieldsProps> = ({
           size="full"
         />
         <span className="text-xs text-[var(--text-color-light)]">{gatewayHint}</span>
+        <Input
+          id={`${idPrefix}-dhcp-dns`}
+          label="Server DNS consegnato (opzionale)"
+          type="text"
+          placeholder="es. 192.168.30.10"
+          value={pool.dns ?? ''}
+          onChange={(e) => onChange({ ...pool, dns: e.target.value })}
+          size="full"
+        />
+        <span className="text-xs text-[var(--text-color-light)]">
+          Vuoto: nessuno. È l&apos;indirizzo del server a cui i dispositivi chiedono i nomi, e
+          può stare in un&apos;altra rete.
+        </span>
       </>
     )}
     {error && (

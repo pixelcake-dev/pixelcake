@@ -45,7 +45,8 @@ const DhcpPanel: React.FC<DhcpPanelProps> = ({ deviceId, dhcp, setIn }) => {
     <div className="flex flex-col gap-4 text-sm">
       <p className="text-[var(--text-color-light)]">
         Un server DHCP dà indirizzo, subnet mask e gateway ai dispositivi della sua rete che hanno
-        la scheda su «Automatico (DHCP)». Gli indirizzi si calcolano dal disegno, sempre allo
+        la scheda su «Automatico (DHCP)», e il server DNS a cui chiedere i nomi quando
+        l&apos;intervallo ne indica uno. Gli indirizzi si calcolano dal disegno, sempre allo
         stesso modo: i dispositivi vengono serviti nell&apos;ordine in cui compaiono, e ciascuno
         prende il primo indirizzo libero.
       </p>
@@ -72,6 +73,7 @@ const DhcpPanel: React.FC<DhcpPanelProps> = ({ deviceId, dhcp, setIn }) => {
                 ) : (
                   <span className="block text-[var(--text-color-light)]">
                     {pool.gateway ? `Gateway consegnato ${pool.gateway}` : 'Nessun gateway consegnato'}
+                    {pool.pool.dns ? ` · server DNS consegnato ${pool.pool.dns}` : ''}
                     {' · '}
                     {pool.leases.length} {pool.leases.length === 1 ? 'assegnato' : 'assegnati'},{' '}
                     {pool.free} {pool.free === 1 ? 'libero' : 'liberi'} su {pool.size}

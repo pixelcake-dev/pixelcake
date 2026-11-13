@@ -135,6 +135,7 @@ const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, o
                           <option value="ping">Ping</option>
                           <option value="web">Web</option>
                           <option value="email">Email</option>
+                          <option value="dns">DNS</option>
                         </select>
                       </td>
                       <td className="pr-2 py-1">

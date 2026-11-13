@@ -147,6 +147,7 @@ const NatPanel: React.FC<NatPanelProps> = ({ ports, forwards, isFirewall, onChan
                         >
                           <option value="web">Web</option>
                           <option value="email">Email</option>
+                          <option value="dns">DNS</option>
                           <option value="ping">Ping</option>
                           <option value="any">Qualsiasi</option>
                         </select>

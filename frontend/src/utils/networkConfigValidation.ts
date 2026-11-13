@@ -1,13 +1,13 @@
 /**
- * Validation of what a person types for a static route, a firewall rule or a
- * port forward, with the reason in Italian for the forms that show it. The
- * engine has its own tolerance (it leaves out what it cannot read); the forms
- * refuse it before it is saved.
+ * Validation of what a person types for a static route, a firewall rule, a
+ * port forward or a DNS record, with the reason in Italian for the forms that
+ * show it. The engine has its own tolerance (it leaves out what it cannot
+ * read); the forms refuse it before it is saved.
  */
 
-import { isValidRuleEndpoint, parseNetwork } from '@/engine';
+import { hostNameKey, isHostName, isValidRuleEndpoint, parseNetwork } from '@/engine';
 import { isValidIP } from '@/utils/ipHelpers';
-import type { FirewallRule, Port, PortForward, StaticRoute } from '@/types';
+import type { DnsRecord, FirewallRule, Port, PortForward, StaticRoute } from '@/types';
 
 /** True for a route row left completely empty: it is dropped on save, not an error */
 export function isBlankRoute(route: StaticRoute): boolean {
@@ -58,4 +58,45 @@ export function forwardProblemText(forward: PortForward, ports: Port[]): string 
   }
   if (port.ip === to) return `${to} è l'indirizzo della porta ${forward.port} stessa`;
   return undefined;
+}
+
+/** True for a record row left completely empty: it is dropped on save, not an error */
+export function isBlankRecord(record: DnsRecord): boolean {
+  return !record.name.trim() && !record.address.trim();
+}
+
+/** A record as it is kept: the name as names are compared, the address trimmed */
+export function tidyRecord(record: DnsRecord): DnsRecord {
+  return { ...record, name: hostNameKey(record.name), address: record.address.trim() };
+}
+
+/**
+ * What is wrong with a DNS record as typed, given the list it is in;
+ * undefined when it is fine (or blank). A name may be in a list once: the
+ * second row that carries it is the one refused.
+ */
+export function recordProblem(record: DnsRecord, records: DnsRecord[]): string | undefined {
+  if (isBlankRecord(record)) return undefined;
+  const { name, address } = tidyRecord(record);
+  if (!name) return 'manca il nome';
+  if (!isHostName(name)) {
+    return `"${record.name.trim()}" non è un nome valido: lettere, cifre e trattini, con almeno un punto, come www.azienda.example`;
+  }
+  if (!address) return 'manca l\'indirizzo a cui corrisponde il nome';
+  if (!isValidIP(address)) return `"${address}" non è un indirizzo IPv4 valido`;
+  const first = records.findIndex((other) => hostNameKey(other.name) === name);
+  if (first !== -1 && records[first] !== record) {
+    return `il nome ${name} è già nel record ${first + 1}: un nome ha un solo indirizzo`;
+  }
+  return undefined;
+}
+
+/**
+ * What is wrong with the DNS server typed on a network card; undefined when
+ * it is fine (or empty: a card may ask nobody)
+ */
+export function dnsServerProblem(text: string): string | undefined {
+  const value = text.trim();
+  if (!value || isValidIP(value)) return undefined;
+  return `"${value}" non è un indirizzo IPv4 valido: il server DNS si indica con il suo indirizzo`;
 }

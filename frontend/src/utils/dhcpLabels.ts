@@ -113,13 +113,21 @@ export function cardLeaseText(
 
 /** True for a pool whose range was never typed: it is not kept, and is not an error */
 export function isBlankPool(pool: DhcpPool): boolean {
-  return !pool.start.trim() && !pool.end.trim() && !(pool.gateway ?? '').trim();
+  return (
+    !pool.start.trim() && !pool.end.trim() && !(pool.gateway ?? '').trim() && !(pool.dns ?? '').trim()
+  );
 }
 
-/** A pool as it is kept: trimmed, and without a gateway that was left empty */
+/** A pool as it is kept: trimmed, and without a gateway or a DNS server that was left empty */
 export function tidyPool(pool: DhcpPool): DhcpPool {
   const gateway = (pool.gateway ?? '').trim();
-  return { start: pool.start.trim(), end: pool.end.trim(), ...(gateway ? { gateway } : {}) };
+  const dns = (pool.dns ?? '').trim();
+  return {
+    start: pool.start.trim(),
+    end: pool.end.trim(),
+    ...(gateway ? { gateway } : {}),
+    ...(dns ? { dns } : {}),
+  };
 }
 
 /**

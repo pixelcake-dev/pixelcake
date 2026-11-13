@@ -6,6 +6,7 @@ import { FormContainer } from '@/components/ui/FormContainer';
 import DhcpPoolFields from '@/components/ui/DhcpPoolFields';
 import { generateMacAddress } from '@/utils/ipHelpers';
 import { BLANK_POOL_ERROR, isBlankPool, nicPoolProblemText, tidyPool } from '@/utils/dhcpLabels';
+import { dnsServerProblem } from '@/utils/networkConfigValidation';
 import type { DhcpPool, NetworkInterfaceCard } from '@/types/network';
 
 /**
@@ -15,8 +16,11 @@ import type { DhcpPool, NetworkInterfaceCard } from '@/types/network';
 export interface CardLease {
   /** `192.168.20.100 da Router-Core, porta 2`, or `Nessun indirizzo: …` */
   text: string;
-  /** The address, mask and gateway given; absent when the card gets no lease */
-  given?: { ip: string; subnet: string; gateway: string };
+  /**
+   * The address, mask and gateway given, and the DNS server when the pool
+   * hands one out; absent when the card gets no lease
+   */
+  given?: { ip: string; subnet: string; gateway: string; dns?: string };
 }
 
 interface NICConfigPanelProps {
@@ -30,14 +34,14 @@ interface NICConfigPanelProps {
 }
 
 /** The pool fields before anything is typed */
-const EMPTY_POOL: DhcpPool = { start: '', end: '', gateway: '' };
+const EMPTY_POOL: DhcpPool = { start: '', end: '', gateway: '', dns: '' };
 
 /**
  * NICConfigPanel Component
  * Detail panel for editing selected NIC configuration
  * Shows all NIC settings: enabled, name, speed, the address (written by hand,
- * or taken from a DHCP server), MAC, description and, on a server, the DHCP
- * server of the network of the card
+ * or taken from a DHCP server), the DNS server the card asks, MAC, description
+ * and, on a server, the DHCP server of the network of the card
  */
 const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel, lease, canServe = false }) => {
   const [formData, setFormData] = useState<Partial<NetworkInterfaceCard>>({
@@ -47,10 +51,12 @@ const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel, 
     ip: '',
     subnet: '',
     gateway: '',
+    dns: '',
     mac: '',
     description: '',
     dhcp: false,
   });
+  const [dnsError, setDnsError] = useState<string | null>(null);
   // DHCP server of the card (a server): on or off, and what is typed
   const [serves, setServes] = useState(false);
   const [pool, setPool] = useState<DhcpPool>(EMPTY_POOL);
@@ -66,6 +72,7 @@ const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel, 
         ip: nic.ip || '',
         subnet: nic.subnet || '',
         gateway: nic.gateway || '',
+        dns: nic.dns || '',
         mac: nic.mac || '',
         description: nic.description || '',
         dhcp: nic.dhcp === true,
@@ -73,6 +80,7 @@ const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel, 
       setServes(nic.dhcpServer !== undefined);
       setPool({ ...EMPTY_POOL, ...nic.dhcpServer });
       setPoolError(null);
+      setDnsError(null);
     }
   }, [nic]);
 
@@ -80,21 +88,31 @@ const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel, 
 
   /**
    * From DHCP to an address written by hand: the fields start from the
-   * address the card had (it keeps it, now as its own). From an address to
-   * DHCP nothing is thrown away until the card is saved.
+   * address the card had, and from the DNS server that came with it (it
+   * keeps them, now as its own). From an address to DHCP nothing is thrown
+   * away until the card is saved.
    */
   const handleModeChange = (dhcp: boolean) => {
     if (dhcp || !automatic || formData.ip?.trim() || !lease?.given) {
       setFormData({ ...formData, dhcp });
       return;
     }
-    setFormData({ ...formData, dhcp, ...lease.given });
+    setFormData({ ...formData, dhcp, ...lease.given, dns: lease.given.dns ?? '' });
   };
 
   const handleSave = () => {
     if (!nic) return;
 
-    // Prepare updates. A card on DHCP keeps no address of its own
+    // The DNS server of a card whose address is written by hand: an address, or nothing
+    const dnsProblem = automatic ? undefined : dnsServerProblem(formData.dns ?? '');
+    if (dnsProblem) {
+      setDnsError(dnsProblem);
+      return;
+    }
+    setDnsError(null);
+
+    // Prepare updates. A card on DHCP keeps no address of its own, and no
+    // DNS server of its own: both come with the lease
     const updates: Partial<NetworkInterfaceCard> = {
       enabled: formData.enabled,
       name: formData.name?.trim() || 'eth0',
@@ -102,6 +120,7 @@ const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel, 
       ip: automatic ? '' : formData.ip?.trim() || '',
       subnet: automatic ? '' : formData.subnet?.trim() || '',
       gateway: automatic ? '' : formData.gateway?.trim() || '',
+      dns: automatic ? undefined : formData.dns?.trim() || undefined,
       mac: formData.mac?.trim() || undefined,
       description: formData.description?.trim() || undefined,
       dhcp: automatic ? true : undefined,
@@ -219,6 +238,7 @@ const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel, 
                   {lease.given && (
                     <span className="block mt-1">
                       Subnet mask {lease.given.subnet} · gateway {lease.given.gateway || 'nessuno'}
+                      {' · '}server DNS {lease.given.dns || 'nessuno'}
                     </span>
                   )}
                 </>
@@ -229,7 +249,8 @@ const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel, 
             <span className="block text-xs text-[var(--text-color-light)] mt-1">
               Indirizzo, subnet mask e gateway li assegna un server DHCP della stessa rete: una
               porta di router o firewall, o un server, con «Server DHCP Abilitato». Si calcolano dal
-              disegno, sempre allo stesso modo.
+              disegno, sempre allo stesso modo. Il server DNS arriva con l&apos;indirizzo, se
+              quel server ne consegna uno.
             </span>
           </div>
         ) : (
@@ -265,6 +286,31 @@ const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel, 
               onChange={(e) => setFormData({ ...formData, gateway: e.target.value })}
               size="full"
             />
+
+            {/* DNS server: whom the card asks for names */}
+            <div>
+              <Input
+                id="nic-dns"
+                label="Server DNS"
+                type="text"
+                placeholder="es. 192.168.1.53"
+                value={formData.dns}
+                onChange={(e) => {
+                  setFormData({ ...formData, dns: e.target.value });
+                  setDnsError(null);
+                }}
+                size="full"
+              />
+              <span className="block text-xs text-[var(--text-color-light)] mt-1">
+                L&apos;indirizzo del server a cui la scheda chiede a quale indirizzo corrisponde un
+                nome. Vuoto: nessuno, e un nome usato al posto di un indirizzo non trova risposta.
+              </span>
+              {dnsError && (
+                <div className="modal-error-box mt-2" role="alert">
+                  {dnsError}
+                </div>
+              )}
+            </div>
           </>
         )}
 

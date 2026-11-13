@@ -12,7 +12,7 @@ import type { DhcpPool, Port } from '@/types/network';
 const DEFAULT_PORT_SUBNET = '255.255.255.0';
 
 /** The pool fields before anything is typed */
-const EMPTY_POOL: DhcpPool = { start: '', end: '', gateway: '' };
+const EMPTY_POOL: DhcpPool = { start: '', end: '', gateway: '', dns: '' };
 
 interface PortConfigPanelProps {
   port: Port | null;

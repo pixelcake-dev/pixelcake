@@ -386,7 +386,7 @@ describe('InspectorModal — the DHCP server of a server', () => {
     expect(tabNames()).toEqual(['Generale', 'Schede di rete (1)']);
 
     openInspector('Web-01');
-    expect(tabNames()).toEqual(['Generale', 'Schede di rete (1)', 'DHCP']);
+    expect(tabNames()).toEqual(['Generale', 'Schede di rete (1)', 'DHCP', 'DNS']);
     openTab(/^Schede di rete/);
     selectCard('eth0');
     expect(screen.getByLabelText(/^Server DHCP Abilitato/)).not.toBeChecked();
