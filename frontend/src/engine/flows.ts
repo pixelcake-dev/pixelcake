@@ -22,7 +22,7 @@ import type { Topology, TraceResult, Verdict } from './types';
 import { buildAdjacency } from './topology';
 import { traceRoute } from './trace';
 import type { TraceOptions } from './trace';
-import { isPrivateAddress, publications } from './nat';
+import { isPrivateAddress, matchForward, publications } from './nat';
 import { ownedAddresses } from './addressing';
 
 /** One evaluated segment of a flow (e.g. the SMTP submit leg of an email) */
@@ -135,6 +135,53 @@ function flowError(failureReason: string): FlowResult {
 }
 
 /**
+ * One packet from a device to another, aimed as its sender would aim it.
+ *
+ * A device behind NAT is not reached from outside at its own address: the
+ * Internet does not carry it. Who is outside aims at the device's own public
+ * address, when it has one (a firewall named by the address it has inside),
+ * else at the address a port forward publishes it at. The note says which.
+ *
+ * An address given in `options.targetIp` is the address aimed at, and nothing
+ * is tried in its place; a reply goes where its request came from.
+ */
+export function traceToDevice(
+  fromId: string,
+  toId: string,
+  topo: Topology,
+  options: TraceOptions = {}
+): { trace: TraceResult; note?: string } {
+  const trace = traceRoute(fromId, toId, topo, options);
+  if (
+    options.returnTraffic ||
+    options.targetIp !== undefined ||
+    trace.unroutable?.role !== 'destination'
+  ) {
+    return { trace };
+  }
+
+  const target = topo.devices.find(d => d.id === toId);
+  const name = target?.label ?? toId;
+  const own = target ? ownedAddresses(target).find(ip => !isPrivateAddress(ip)) : undefined;
+  if (own) {
+    return {
+      trace: traceRoute(fromId, toId, topo, { ...options, targetIp: own }),
+      note: `${name} is reached from outside at ${own}, its public address`,
+    };
+  }
+  const [published] = publications(topo, trace.unroutable.address, options.service ?? 'ping');
+  if (published) {
+    return {
+      trace: traceRoute(fromId, toId, topo, { ...options, targetIp: published.address }),
+      note:
+        `${name} is behind NAT: reached at ${published.address}, where ` +
+        `${published.device.label} publishes it (port forward ${published.number})`,
+    };
+  }
+  return { trace };
+}
+
+/**
  * Evaluate planned legs in order with traceRoute, stopping after the first
  * failing leg, and aggregate hops/notes/failure into a FlowResult.
  */
@@ -158,31 +205,14 @@ function evaluateLegs(plans: LegPlan[], topo: Topology, planNotes: string[]): Fl
       sourceIp: reply ? (reply.reachedIp ?? reply.targetIp) : undefined,
       natState: reply?.translations,
     };
-    let trace = traceRoute(plan.fromId, plan.toId, topo, options);
-
-    // A device behind NAT is not reached from outside at its own address: who
-    // is outside aims at the address a port forward publishes it at. (An
-    // address typed by the user is the address aimed at, and nothing else.)
-    if (!reply && plan.targetIp === undefined && trace.unroutable?.role === 'destination') {
-      const target = topo.devices.find(d => d.id === plan.toId);
-      const name = target?.label ?? plan.toId;
-      // Its own public address, if it has one (a firewall named by the
-      // address it has inside), else the address it is published at
-      const own = target ? ownedAddresses(target).find(ip => !isPrivateAddress(ip)) : undefined;
-      const [published] = publications(topo, trace.unroutable.address, plan.service);
-      if (own) {
-        notes.push(`${plan.purpose}: ${name} is reached from outside at ${own}, its public address`);
-        trace = traceRoute(plan.fromId, plan.toId, topo, { ...options, targetIp: own });
-      } else if (published) {
-        notes.push(
-          `${plan.purpose}: ${name} is behind NAT: reached at ${published.address}, where ` +
-            `${published.device.label} publishes it (port forward ${published.number})`
-        );
-        trace = traceRoute(plan.fromId, plan.toId, topo, { ...options, targetIp: published.address });
-      }
-    }
+    // The reply leaves from the device the request was delivered to
+    const delivered = reply?.verdict === 'success' ? reply.hops[reply.hops.length - 1] : undefined;
+    const fromId = delivered?.deviceId ?? plan.fromId;
+    // (a device behind NAT is aimed at where it is reached from outside)
+    const { trace, note } = traceToDevice(fromId, plan.toId, topo, options);
+    if (note) notes.push(`${plan.purpose}: ${note}`);
     previous = trace;
-    legs.push({ fromId: plan.fromId, toId: plan.toId, purpose: plan.purpose, trace });
+    legs.push({ fromId, toId: plan.toId, purpose: plan.purpose, trace });
 
     for (const hop of trace.hops) {
       // Consecutive legs share their joint device (leg N ends where leg N+1
@@ -342,6 +372,34 @@ function planEmail(
   }
 }
 
+/**
+ * The device that answers a request aimed at `targetIp`. An address a device
+ * publishes for the service belongs to that device, and what arrives for it
+ * is sent on: the flow is planned to, and answered from, the device the port
+ * forward names. The note says so.
+ */
+function answering(
+  targetId: string,
+  targetIp: string | undefined,
+  service: ServiceName,
+  topo: Topology
+): { targetId: string; notes: string[] } {
+  if (targetIp === undefined) return { targetId, notes: [] };
+  const owner = topo.devices.find(d => ownedAddresses(d).includes(targetIp));
+  const match = owner ? matchForward(owner, service, targetIp) : undefined;
+  const inside = match
+    ? topo.devices.find(d => ownedAddresses(d).includes(match.forward.to))
+    : undefined;
+  if (!owner || !match || !inside || inside.id === owner.id) return { targetId, notes: [] };
+  return {
+    targetId: inside.id,
+    notes: [
+      `${targetIp} is ${owner.label}, which forwards ${service} to ${inside.label} ` +
+        `(port forward ${match.number})`,
+    ],
+  };
+}
+
 /** Request/response plan shared by web and download */
 function planRequestResponse(
   sourceId: string,
@@ -351,16 +409,17 @@ function planRequestResponse(
   responsePurpose: string,
   targetIp: string | undefined
 ): FlowResult {
-  const target = topo.devices.find(d => d.id === targetId);
-  const planNotes: string[] = [];
+  const aimed = answering(targetId, targetIp, 'web', topo);
+  const target = topo.devices.find(d => d.id === aimed.targetId);
+  const planNotes: string[] = [...aimed.notes];
   if (target && !isServerLike(target)) {
     planNotes.push(`target ${target.label} is not a server-type device`);
   }
   return evaluateLegs(
     [
-      { fromId: sourceId, toId: targetId, purpose: requestPurpose, service: 'web', targetIp },
+      { fromId: sourceId, toId: aimed.targetId, purpose: requestPurpose, service: 'web', targetIp },
       {
-        fromId: targetId,
+        fromId: aimed.targetId,
         toId: sourceId,
         purpose: responsePurpose,
         service: 'web',
@@ -392,18 +451,19 @@ export function planAndEvaluateFlow(
   }
 
   switch (model) {
-    case 'ping':
+    case 'ping': {
+      const aimed = answering(targetId, options?.targetIp, 'ping', topo);
       return evaluateLegs(
         [
           {
             fromId: sourceId,
-            toId: targetId,
+            toId: aimed.targetId,
             purpose: 'request',
             service: 'ping',
             targetIp: options?.targetIp,
           },
           {
-            fromId: targetId,
+            fromId: aimed.targetId,
             toId: sourceId,
             purpose: 'reply',
             service: 'ping',
@@ -411,8 +471,9 @@ export function planAndEvaluateFlow(
           },
         ],
         topo,
-        []
+        aimed.notes
       );
+    }
     case 'web':
       return planRequestResponse(
         sourceId,

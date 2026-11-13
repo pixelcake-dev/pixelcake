@@ -87,7 +87,7 @@ export {
 export type { NatTranslation, NumberedForward, Publication } from './nat';
 export type { Unroutable } from './l2';
 
-export { planAndEvaluateFlow } from './flows';
+export { planAndEvaluateFlow, traceToDevice } from './flows';
 export type { FlowLeg, FlowResult } from './flows';
 
 export {

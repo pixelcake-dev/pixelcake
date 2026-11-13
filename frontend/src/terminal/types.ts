@@ -25,7 +25,8 @@ export type ShowTarget =
   | 'neighbors'
   | 'ip'
   | 'routes'
-  | 'rules';
+  | 'rules'
+  | 'nat';
 
 export type SetProperty = 'ip' | 'gateway' | 'subnet' | 'name';
 
@@ -42,7 +43,9 @@ export type InterfaceSetting =
   /** An empty list is a trunk carrying every VLAN */
   | { what: 'trunk'; vlans: number[] }
   | { what: 'no-vlan' }
-  | { what: 'zone'; zone: ZoneName | null };
+  | { what: 'zone'; zone: ZoneName | null }
+  /** Source NAT on a router or firewall port */
+  | { what: 'nat'; on: boolean };
 
 /**
  * Parsed command. Device arguments are RAW STRINGS (labels may be multi-word,
@@ -82,6 +85,16 @@ export type Command =
       device?: string;
     }
   | { kind: 'rule-remove'; position: number; device?: string }
+  | {
+      kind: 'forward-add';
+      service: ServiceName | 'any';
+      /** The port whose address is published: its number, as typed */
+      iface: string;
+      /** An address inside — or a device name, resolved by the executor */
+      to: string;
+      device?: string;
+    }
+  | { kind: 'forward-remove'; position: number; device?: string }
   | { kind: 'use'; device: string }
   | { kind: 'exit' }
   | { kind: 'clear' }

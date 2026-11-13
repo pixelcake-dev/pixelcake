@@ -9,6 +9,7 @@ import { COMMAND_REFERENCE, executeCommand } from './executor';
 import type { ExecutionResult, TerminalContext } from './executor';
 import { useNetworkStore } from '@/store/networkStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
+import { createCompanySample } from '@/utils/sampleCompany';
 import type { NetworkDevice, Port } from '@/types';
 
 vi.mock('sonner', () => ({
@@ -671,6 +672,264 @@ describe('a firewall at the edge, from the terminal', () => {
 
 // ---------- flows ----------
 
+describe('NAT, from the terminal', () => {
+  // The sample of the welcome screen: a firewall that does NAT towards the
+  // Internet and publishes the portal (web) and the mail server (email)
+  beforeEach(() => {
+    const store = useNetworkStore.getState();
+    store.clearAllDevices();
+    const sample = createCompanySample();
+    store.loadTopology(sample.devices, sample.connections);
+  });
+
+  it('shows which interfaces translate and what is published', () => {
+    expect(output('show nat FW-Edge')).toEqual([
+      'NAT of FW-Edge',
+      '  interface 3   what leaves by it takes the address 203.0.113.1',
+      'FORWARDS (the first that matches is taken)',
+      '   1  web    from interface 3   (203.0.113.1) to 172.16.0.10',
+      '   2  email  from interface 3   (203.0.113.1) to 192.168.30.40',
+    ]);
+    expect(output('show nat Router-Core')).toEqual([
+      'NAT of Router-Core',
+      '  no interface does NAT: what leaves keeps its own address',
+      'FORWARDS (the first that matches is taken)',
+      '  none: from outside only the device itself is reached',
+    ]);
+    expect(output('show nat SW-Core')).toEqual(['SW-Core is a Switch: it translates no addresses']);
+  });
+
+  it('counts it in the configuration of the device, and only where there is some', () => {
+    expect(output('show config FW-Edge')).toContain(
+      '  nat:      on interface 3, 2 forwards — "show nat FW-Edge" for detail'
+    );
+    expect(output('show config Router-Core').join(' ')).not.toContain('nat:');
+  });
+
+  it('a trace shows the address a packet leaves with', () => {
+    expect(transcript('trace Cliente-Remoto from PC-Vendite')).toEqual([
+      'Tracing route to Cliente-Remoto (203.0.113.50) from PC-Vendite:',
+      '  1  ○ PC-Vendite (PC)',
+      '  2  ○ SW-Uffici (Switch)  — VLAN 10',
+      '  3  ○ SW-Core (Switch)  — VLAN 10',
+      '  4  ○ Router-Core (Router)  — routed: default route via 10.0.0.2 (port 4)',
+      '  5  ○ FW-Edge (Firewall)  — routed: 203.0.113.0/24 is on port 3; ' +
+        'firewall FW-Edge: no rule matches, zone policy trust → untrust allowed; ' +
+        'NAT: source 192.168.10.12 → 203.0.113.1',
+      '  6  ○ Internet (Cloud)  — Internet is not simulated: traffic assumed to pass',
+      '  7  ● Cliente-Remoto (PC)',
+      '  note: firewall FW-Edge: no rule matches, zone policy trust → untrust allowed',
+      '  note: Internet is not simulated: traffic assumed to pass',
+      'Trace complete: destination reached.',
+    ]);
+  });
+
+  it('switching NAT off on the port that faces the Internet cuts the inside off, and says why', () => {
+    expect(verdict('ping Cliente-Remoto from PC-Vendite')).toBe('Reply from 203.0.113.50: hops=7 time=11ms');
+
+    expect(output('interface 3 nat off on FW-Edge')).toEqual([
+      'port 3 on FW-Edge no longer does NAT: what leaves by it keeps its own address',
+    ]);
+    expect(portOf('FW-Edge', 3).nat).toBeUndefined();
+    expect(output('interface 3 nat off on FW-Edge')).toEqual(['port 3 on FW-Edge does no NAT already']);
+
+    expect(transcript('ping Cliente-Remoto from PC-Vendite').slice(0, 3)).toEqual([
+      'Pinging Cliente-Remoto (203.0.113.50) from PC-Vendite...',
+      'Ping failed (blocked): request: Internet does not carry private addresses: 192.168.10.12 has to be ' +
+        'translated before it goes out, and NAT is off on port 3 on FW-Edge',
+      '  dropped at: Internet',
+    ]);
+
+    expect(output('interface 3 nat on FW-Edge')).toEqual([
+      'port 3 on FW-Edge now does NAT: what leaves by it takes the address 203.0.113.1',
+    ]);
+    expect(portOf('FW-Edge', 3).nat).toBe(true);
+    expect(output('interface 3 nat on on FW-Edge')).toEqual(['port 3 on FW-Edge already does NAT']);
+    expect(verdict('ping Cliente-Remoto from PC-Vendite')).toBe('Reply from 203.0.113.50: hops=7 time=11ms');
+  });
+
+  it('NAT on a port without an address is written, with a warning', () => {
+    expect(output('interface 4 nat on FW-Edge')).toEqual([
+      'port 4 on FW-Edge now does NAT',
+      '  it has no address yet: nothing is translated until it has one (interface 4 ip <address>)',
+    ]);
+    expect(portOf('FW-Edge', 4).nat).toBe(true);
+    expect(output('show nat FW-Edge')).toContain('  interface 4   has no address: it translates nothing');
+  });
+
+  it('NAT belongs on the ports of a router or a firewall', () => {
+    expect(output('interface 2 nat on SW-Core')).toEqual([
+      'NAT is set on the ports of a router or a firewall: SW-Core is a Switch',
+    ]);
+    expect(output('interface eth0 nat on PC-Vendite')).toEqual([
+      'NAT is set on the ports of a router or a firewall: PC-Vendite is a PC',
+    ]);
+    expect(portOf('SW-Core', 2).nat).toBeUndefined();
+  });
+
+  it('who is outside is sent to the address that publishes the server, and told so', () => {
+    expect(transcript('browse Portale-Clienti from Cliente-Remoto')).toEqual([
+      'Browsing Portale-Clienti (203.0.113.1) from Cliente-Remoto...',
+      '  ✓ HTTP request: Cliente-Remoto → Portale-Clienti',
+      '  ✓ HTTP response: Portale-Clienti → Cliente-Remoto',
+      'Page received from Portale-Clienti',
+      '  note: HTTP request: Portale-Clienti is behind NAT: reached at 203.0.113.1, where FW-Edge publishes it (port forward 1)',
+      '  note: HTTP request: Internet is not simulated: traffic assumed to pass',
+      '  note: HTTP request: firewall FW-Edge: allowed by rule 1 (allow web from untrust to 172.16.0.10)',
+      '  note: HTTP response: firewall FW-Edge: no rule matches, zone policy dmz → untrust allowed',
+      '  note: HTTP response: Internet is not simulated: traffic assumed to pass',
+    ]);
+    expect(transcript('trace Portale-Clienti from Cliente-Remoto as web')).toEqual([
+      'Tracing route to Portale-Clienti (203.0.113.1) from Cliente-Remoto as web:',
+      '  1  ○ Cliente-Remoto (PC)',
+      '  2  ○ Internet (Cloud)  — Internet is not simulated: traffic assumed to pass',
+      '  3  ○ FW-Edge (Firewall)  — NAT: destination 203.0.113.1 → 172.16.0.10 (port forward 1); ' +
+        'routed: 172.16.0.0/24 is on port 2; ' +
+        'firewall FW-Edge: allowed by rule 1 (allow web from untrust to 172.16.0.10)',
+      '  4  ○ SW-DMZ (Switch)',
+      '  5  ● Portale-Clienti (Server)',
+      '  note: Portale-Clienti is behind NAT: reached at 203.0.113.1, where FW-Edge publishes it (port forward 1)',
+      '  note: Internet is not simulated: traffic assumed to pass',
+      '  note: firewall FW-Edge: allowed by rule 1 (allow web from untrust to 172.16.0.10)',
+      'Trace complete: destination reached.',
+    ]);
+  });
+
+  it('the public address, typed, is answered by the server it is published for', () => {
+    expect(transcript('browse 203.0.113.1 from Cliente-Remoto').slice(0, 5)).toEqual([
+      'Browsing Portale-Clienti (203.0.113.1) from Cliente-Remoto...',
+      '  ✓ HTTP request: Cliente-Remoto → Portale-Clienti',
+      '  ✓ HTTP response: Portale-Clienti → Cliente-Remoto',
+      'Page received from Portale-Clienti',
+      '  note: 203.0.113.1 is FW-Edge, which forwards web to Portale-Clienti (port forward 1)',
+    ]);
+  });
+
+  it('a ping is not published: the name fails with the reason, the firewall itself answers', () => {
+    expect(transcript('ping Portale-Clienti from Cliente-Remoto')).toEqual([
+      'Pinging Portale-Clienti (172.16.0.10) from Cliente-Remoto...',
+      'Ping failed (blocked): request: Internet does not carry private addresses: 172.16.0.10 is not ' +
+        'reachable from outside: no port forward publishes it for ping',
+      '  dropped at: Internet',
+    ]);
+    expect(transcript('ping FW-Edge from Cliente-Remoto')).toEqual([
+      'Pinging FW-Edge (203.0.113.1) from Cliente-Remoto...',
+      'Reply from 203.0.113.1: hops=3 time=3ms',
+      '  note: request: FW-Edge is reached from outside at 203.0.113.1, its public address',
+      '  note: request: Internet is not simulated: traffic assumed to pass',
+      '  note: reply: Internet is not simulated: traffic assumed to pass',
+    ]);
+  });
+
+  it('removing the forward closes the way in; writing it again, by the name of the server, opens it', () => {
+    expect(output('remove forward 1 from FW-Edge')).toEqual([
+      'FW-Edge: forward 1 removed — forward web from interface 3 to 172.16.0.10',
+    ]);
+    expect(verdict('browse Portale-Clienti from Cliente-Remoto')).toBe(
+      'Browse failed (blocked): HTTP request: Internet does not carry private addresses: 172.16.0.10 is not ' +
+        'reachable from outside: no port forward publishes it for web'
+    );
+
+    expect(output('add forward web from interface 3 to Portale-Clienti on FW-Edge')).toEqual([
+      'FW-Edge: forward 2 added — forward web from interface 3 to 172.16.0.10',
+      '  Portale-Clienti → 172.16.0.10',
+      '  from outside it is reached at 203.0.113.1',
+    ]);
+    expect(device('FW-Edge').portForwards).toEqual([
+      { id: 'forward-2', service: 'email', port: 3, to: '192.168.30.40', description: 'posta in arrivo' },
+      { id: 'forward-1', service: 'web', port: 3, to: '172.16.0.10' },
+    ]);
+    expect(verdict('browse Portale-Clienti from Cliente-Remoto')).toBe('Page received from Portale-Clienti');
+    expect(output('add forward web from interface 3 to 172.16.0.10 on FW-Edge')).toEqual([
+      'FW-Edge already has it: forward 2',
+    ]);
+  });
+
+  it('warns about a forward an earlier one hides, and about a firewall with no rule for it', () => {
+    expect(output('add forward any from interface 3 to Srv-Auth on FW-Edge')).toEqual([
+      'FW-Edge: forward 3 added — forward any from interface 3 to 192.168.30.10',
+      '  Srv-Auth → 192.168.30.10',
+      '  from outside it is reached at 203.0.113.1',
+      '  warning: forward 1 comes first for the same interface and service',
+      '  a firewall also needs a rule that lets it in: add rule allow any from untrust to 192.168.30.10 on FW-Edge',
+    ]);
+    // on a router there is nothing to remind: it does not filter
+    expect(output('add forward web from interface 3 to 192.168.30.30 on Router-Core')).toEqual([
+      'Router-Core: forward 1 added — forward web from interface 3 to 192.168.30.30',
+      '  from outside it is reached at 192.168.30.1',
+    ]);
+  });
+
+  it('refuses a forward that cannot work, and writes nothing', () => {
+    const before = device('FW-Edge').portForwards;
+    expect(output('add forward ping from port 9 to 172.16.0.10 on FW-Edge')).toEqual([
+      'FW-Edge has no interface "9" (it has: ports 1-4)',
+    ]);
+    expect(output('add forward ping from interface 3 to nowhere on FW-Edge')).toEqual([
+      '"nowhere" is not an address or a device',
+    ]);
+    expect(output('add forward ping from interface 3 to Internet on FW-Edge')).toEqual([
+      'Internet has no address to forward to',
+    ]);
+    expect(output('add forward ping from interface 3 to 203.0.113.1 on FW-Edge')).toEqual([
+      '203.0.113.1 is the address of interface 3 itself',
+    ]);
+    expect(output('add forward ping from interface 4 to 172.16.0.10 on FW-Edge')).toEqual([
+      'interface 4 on FW-Edge has no address to publish',
+    ]);
+    expect(output('add forward web from interface 1 to 172.16.0.10 on SW-Core')).toEqual([
+      'SW-Core is a Switch: forwards belong on routers and firewalls',
+    ]);
+    expect(output('add forward web from interface 3 to 172.16.0.10')).toEqual([
+      'specify a device: "add forward web from interface 3 to 172.16.0.10 on <device>"',
+    ]);
+    expect(device('FW-Edge').portForwards).toEqual(before);
+    expect(device('SW-Core').portForwards).toBeUndefined();
+  });
+
+  it('removes by number, and says when there is no such forward', () => {
+    expect(output('remove forward 9 from FW-Edge')).toEqual(['FW-Edge has no forward 9 (it has 2)']);
+    expect(output('remove forward 1 from SW-Core')).toEqual(['SW-Core has no forwards']);
+    expect(output('remove forward 2 from FW-Edge')).toEqual([
+      'FW-Edge: forward 2 removed — forward email from interface 3 to 192.168.30.40',
+    ]);
+    expect(output('remove forward 1 from FW-Edge')).toEqual([
+      'FW-Edge: forward 1 removed — forward web from interface 3 to 172.16.0.10',
+    ]);
+    // the last one leaves the device without the list
+    expect(device('FW-Edge').portForwards).toBeUndefined();
+  });
+
+  it('works in the context of the device', () => {
+    const inFirewall: TerminalContext = { deviceLabel: 'FW-Edge' };
+    expect(output('interface 3 nat off', inFirewall)).toEqual([
+      'port 3 on FW-Edge no longer does NAT: what leaves by it keeps its own address',
+    ]);
+    expect(output('interface 3 nat', inFirewall)).toEqual([
+      'port 3 on FW-Edge now does NAT: what leaves by it takes the address 203.0.113.1',
+    ]);
+    expect(output('show nat', inFirewall)[0]).toBe('NAT of FW-Edge');
+    expect(output('remove forward 2', inFirewall)).toEqual([
+      'FW-Edge: forward 2 removed — forward email from interface 3 to 192.168.30.40',
+    ]);
+    expect(output('add forward email from 3 to Mail', inFirewall)).toEqual([
+      'FW-Edge: forward 2 added — forward email from interface 3 to 192.168.30.40',
+      '  Mail → 192.168.30.40',
+      '  from outside it is reached at 203.0.113.1',
+    ]);
+  });
+
+  it('is in the help', () => {
+    expect(output('help nat').map(row => row.split('  ')[0])).toEqual([
+      'show routes | rules | nat [of] <device>',
+      'interface <n> nat [off] on <device>',
+    ]);
+    expect(output('help forward')).toHaveLength(1);
+    // the longest line of the reference still fits its column
+    for (const [syntax] of COMMAND_REFERENCE) expect(syntax.length, syntax).toBeLessThanOrEqual(58);
+  });
+});
+
 describe('browse, mail, download', () => {
   it('runs a whole exchange and reports each leg', () => {
     expect(transcript('browse Web-01 from PC-1')).toEqual([
@@ -732,7 +991,7 @@ describe('help', () => {
 
   it('finds the commands about one word', () => {
     expect(output('help route').map(row => row.split('  ')[0])).toEqual([
-      'show routes | rules [of] <device>',
+      'show routes | rules | nat [of] <device>',
       'add route <network>|default via <next hop> on <device>',
       'add backup route <network> via <next hop> on <device>',
     ]);
@@ -755,6 +1014,7 @@ describe('help', () => {
       'show ip of PC-1',
       'show routes of Router-1',
       'show rules of Router-1',
+      'show nat of Router-1',
       'show config PC-1',
       'show ports SW-Office',
       'show neighbors PC-1',
@@ -766,6 +1026,10 @@ describe('help', () => {
       'interface 5 trunk 30,40 on SW-Office',
       'interface 5 trunk all on SW-Office',
       'interface 4 default on SW-Office',
+      'interface 4 nat on Router-1',
+      'interface 4 nat off on Router-1',
+      'add forward web from interface 1 to 192.168.20.10 on Router-1',
+      'remove forward 1 from Router-1',
       'add route default via 192.168.20.10 on Router-1',
       'add backup route default via 192.168.10.11 on Router-1',
       'remove route default via 192.168.10.11 from Router-1',

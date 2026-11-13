@@ -35,6 +35,7 @@ const SHOW_TARGETS: readonly ShowTarget[] = [
   'ip',
   'routes',
   'rules',
+  'nat',
 ];
 
 const SET_PROPERTIES: readonly SetProperty[] = ['ip', 'gateway', 'subnet', 'name'];
@@ -101,13 +102,14 @@ const ARTICLES: readonly string[] = ['the', 'a'];
 const DEVICE_NOISE: readonly string[] = ['device', 'host'];
 
 const SHOW_USAGE =
-  'try: show devices | interfaces | ports | vlans | connections | config | neighbors | ip | routes | rules';
+  'try: show devices | interfaces | ports | vlans | connections | config | neighbors | ip | routes | rules | nat';
 const ADD_USAGE =
   'try: add vlan <id> [to] <device> | add route <network> via <next hop> [on <device>] | ' +
-  'add rule allow|deny <service> from <source> to <destination> [on <device>]';
+  'add rule allow|deny <service> from <source> to <destination> [on <device>] | ' +
+  'add forward <service> from interface <n> to <address> [on <device>]';
 const REMOVE_USAGE =
   'try: remove vlan <id> from <device> | remove route <network> [from <device>] | ' +
-  'remove rule <n> [from <device>]';
+  'remove rule <n> [from <device>] | remove forward <n> [from <device>]';
 const SET_USAGE = 'try: set ip|gateway|subnet|name [of] <device> [to] <value>';
 
 /** Split the input into tokens; double-quoted spans become single verbatim tokens. */
@@ -358,12 +360,13 @@ function vlanId(text: string): number | undefined {
  *   trunk <vlan,vlan…> | all        switch port: trunk
  *   default                         switch port: no VLAN of its own
  *   zone trust|untrust|dmz|none     firewall port: security zone
+ *   nat [on] | nat off|none         router/firewall port: source NAT
  */
 function parseInterface(rest: Token[], raw: string): Command {
   const usage = 'try: interface <n> up|down [on] <device>';
   const more =
     'also: ip <address>[/<prefix>]|none, gateway <address>|none, access <vlan>, ' +
-    'trunk <vlans>|all, default, zone trust|untrust|dmz|none';
+    'trunk <vlans>|all, default, zone trust|untrust|dmz|none, nat [off]';
   const idToken = rest[0];
   if (idToken === undefined) return unknown(raw, `${usage} — ${more}`);
   const iface = idToken.text;
@@ -450,6 +453,15 @@ function parseInterface(rest: Token[], raw: string): Command {
       const zone = ZONES.find(z => z === value.lower);
       if (zone === undefined) return unknown(raw, `unknown zone "${value.text}" — ${hint}`);
       return withDevice({ what: 'zone', zone }, 3);
+    }
+    case 'nat': {
+      // `nat` alone switches it on. `nat on <device>` reads the same whether
+      // "on" is the value or the word before the device: one is dropped as
+      // the value, any other with the device
+      if (value !== undefined && !value.quoted && ['off', 'none', 'no', 'disable'].includes(value.lower)) {
+        return withDevice({ what: 'nat', on: false }, 3);
+      }
+      return withDevice({ what: 'nat', on: true }, 2);
     }
     default:
       return unknown(raw, `missing up|down — ${usage} — ${more}`);
@@ -586,7 +598,80 @@ function parseRuleRemove(rest: Token[], raw: string): Command {
   return device ? { kind: 'rule-remove', position, device } : { kind: 'rule-remove', position };
 }
 
-/** `add vlan|route|rule …` / `remove|delete vlan|route|rule …` */
+/**
+ * `add forward [<service>|any] from [interface] <n> to <address|device...>
+ * [on <device...>]` — the service may be left out (any).
+ */
+function parseForwardAdd(rest: Token[], raw: string): Command {
+  const usage = 'try: add forward <service>|any from interface <n> to <address> [on <device>]';
+
+  // Optional service: straight to `from` means any
+  let index = 0;
+  let service: ServiceName | 'any' = 'any';
+  const serviceToken = rest[0];
+  if (serviceToken !== undefined && (serviceToken.quoted || serviceToken.lower !== 'from')) {
+    if (serviceToken.lower === 'any' || serviceToken.lower === 'all') {
+      service = 'any';
+    } else {
+      const named = SERVICES[serviceToken.lower];
+      if (named === undefined) {
+        return unknown(raw, `unknown service "${serviceToken.text}" (ping, web, email or any) — ${usage}`);
+      }
+      service = named;
+    }
+    index = 1;
+  }
+
+  const tail = rest.slice(index);
+  if (tail.length === 0 || tail[0].quoted || tail[0].lower !== 'from') return unknown(raw, usage);
+  // `from interface 3`, `from port 3`, `from 3`
+  let at = 1;
+  if (tail[at] !== undefined && !tail[at].quoted && ['interface', 'port'].includes(tail[at].lower)) at++;
+  const ifaceToken = tail[at];
+  if (ifaceToken === undefined) return unknown(raw, usage);
+  if (!/^\d+$/.test(ifaceToken.text)) {
+    return unknown(raw, `a forward is published from a port: "${ifaceToken.text}" is not a port number — ${usage}`);
+  }
+  const toToken = tail[at + 1];
+  if (toToken === undefined || toToken.quoted || toToken.lower !== 'to') return unknown(raw, usage);
+
+  // The LAST `on` splits the address from the device the forward goes on
+  const afterTo = tail.slice(at + 2);
+  let onIdx = -1;
+  for (let i = afterTo.length - 1; i >= 0; i--) {
+    if (!afterTo[i].quoted && afterTo[i].lower === 'on') {
+      onIdx = i;
+      break;
+    }
+  }
+  const to = joinTokens(onIdx === -1 ? afterTo : afterTo.slice(0, onIdx));
+  const device = onIdx === -1 ? '' : joinTokens(stripLeadingNoise(afterTo.slice(onIdx + 1), []));
+  if (!to || (onIdx !== -1 && !device)) return unknown(raw, usage);
+
+  const command: Extract<Command, { kind: 'forward-add' }> = {
+    kind: 'forward-add',
+    service,
+    iface: ifaceToken.text,
+    to,
+  };
+  if (device) command.device = device;
+  return command;
+}
+
+/** `remove forward <n> [from|on <device...>]` */
+function parseForwardRemove(rest: Token[], raw: string): Command {
+  const usage = 'try: remove forward <n> [from <device>]';
+  const numberToken = rest[0];
+  if (numberToken === undefined) return unknown(raw, usage);
+  if (!/^\d+$/.test(numberToken.text) || parseInt(numberToken.text, 10) < 1) {
+    return unknown(raw, `forward number must be a number, got "${numberToken.text}" — ${usage}`);
+  }
+  const position = parseInt(numberToken.text, 10);
+  const device = joinTokens(stripLeadingNoise(rest.slice(1), ['from', 'on', 'of']));
+  return device ? { kind: 'forward-remove', position, device } : { kind: 'forward-remove', position };
+}
+
+/** `add vlan|route|rule|forward …` / `remove|delete vlan|route|rule|forward …` */
 function parseAddRemove(action: 'add' | 'remove', rest: Token[], raw: string): Command {
   const noun = rest[0] !== undefined && !rest[0].quoted ? rest[0].lower : '';
   if (noun === 'route') {
@@ -600,6 +685,11 @@ function parseAddRemove(action: 'add' | 'remove', rest: Token[], raw: string): C
   }
   if (noun === 'rule') {
     return action === 'add' ? parseRuleAdd(rest.slice(1), raw) : parseRuleRemove(rest.slice(1), raw);
+  }
+  if (noun === 'forward') {
+    return action === 'add'
+      ? parseForwardAdd(rest.slice(1), raw)
+      : parseForwardRemove(rest.slice(1), raw);
   }
   if (noun === 'vlan') return parseVlan(action === 'add' ? 'vlan-add' : 'vlan-remove', rest, raw);
   return unknown(raw, action === 'add' ? ADD_USAGE : REMOVE_USAGE);

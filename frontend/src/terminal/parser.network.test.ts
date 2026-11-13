@@ -1,6 +1,7 @@
 /**
  * Parser tests for the network configuration grammar: routes, firewall rules,
- * per-interface settings, the flow verbs and `trace … as <service>`.
+ * port forwards, per-interface settings, the flow verbs and `trace … as
+ * <service>`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -435,6 +436,145 @@ describe('parse — interface settings', () => {
     expect(hint).toContain('up|down');
     expect(hint).toContain('access <vlan>');
     expect(hint).toContain('zone trust|untrust|dmz|none');
+  });
+});
+
+describe('parse — show nat', () => {
+  it('reads the device, with or without "of"', () => {
+    expect(parse('show nat FW-Edge')).toEqual({ kind: 'show', what: 'nat', device: 'FW-Edge' });
+    expect(parse('show nat of FW-Edge')).toEqual({ kind: 'show', what: 'nat', device: 'FW-Edge' });
+    expect(parse('show nat')).toEqual({ kind: 'show', what: 'nat' });
+  });
+});
+
+describe('parse — interface … nat', () => {
+  const nat = (on: boolean, device?: string) => ({
+    kind: 'interface-set',
+    iface: '3',
+    setting: { what: 'nat', on },
+    ...(device ? { device } : {}),
+  });
+
+  it('"nat" switches it on, whichever of the two "on" is written', () => {
+    expect(parse('interface 3 nat on FW-Edge')).toEqual(nat(true, 'FW-Edge'));
+    expect(parse('interface 3 nat on on FW-Edge')).toEqual(nat(true, 'FW-Edge'));
+    expect(parse('interface 3 nat FW-Edge')).toEqual(nat(true, 'FW-Edge'));
+    expect(parse('interface 3 nat on Edge Firewall')).toEqual(nat(true, 'Edge Firewall'));
+  });
+
+  it('works without a device, for the device context', () => {
+    expect(parse('interface 3 nat')).toEqual(nat(true));
+    expect(parse('interface 3 nat on')).toEqual(nat(true));
+    expect(parse('interface 3 nat off')).toEqual(nat(false));
+  });
+
+  it.each(['off', 'none', 'no', 'disable', 'OFF'])('"nat %s" switches it off', word => {
+    expect(parse(`interface 3 nat ${word} on FW-Edge`)).toEqual(nat(false, 'FW-Edge'));
+    expect(parse(`interface 3 nat ${word} FW-Edge`)).toEqual(nat(false, 'FW-Edge'));
+  });
+
+  it('a device called like a setting is kept when quoted', () => {
+    expect(parse('interface 3 nat on "off"')).toEqual(nat(true, 'off'));
+  });
+
+  it('the settings an interface takes are listed when one is unknown', () => {
+    expect(suggestion('interface 3 translate on FW-Edge')).toContain('nat [off]');
+  });
+});
+
+describe('parse — add / remove forward', () => {
+  it('reads service, interface, address and device', () => {
+    expect(parse('add forward web from interface 3 to 172.16.0.10 on FW-Edge')).toEqual({
+      kind: 'forward-add',
+      service: 'web',
+      iface: '3',
+      to: '172.16.0.10',
+      device: 'FW-Edge',
+    });
+  });
+
+  it('"interface" may be left out, or written "port"', () => {
+    const expected = { kind: 'forward-add', service: 'email', iface: '2', to: '10.0.0.5', device: 'R1' };
+    expect(parse('add forward email from 2 to 10.0.0.5 on R1')).toEqual(expected);
+    expect(parse('add forward email from port 2 to 10.0.0.5 on R1')).toEqual(expected);
+    expect(parse('add forward email from interface 2 to 10.0.0.5 on R1')).toEqual(expected);
+  });
+
+  it('no service, "any" and "all" all mean every service', () => {
+    for (const service of ['', 'any ', 'all ']) {
+      expect(expectKind(`add forward ${service}from interface 3 to 10.0.0.5 on R1`, 'forward-add').service).toBe(
+        'any'
+      );
+    }
+  });
+
+  it('accepts the names people use for the same services', () => {
+    expect(expectKind('add forward http from 3 to 10.0.0.5 on R1', 'forward-add').service).toBe('web');
+    expect(expectKind('add forward smtp from 3 to 10.0.0.5 on R1', 'forward-add').service).toBe('email');
+    expect(expectKind('add forward icmp from 3 to 10.0.0.5 on R1', 'forward-add').service).toBe('ping');
+  });
+
+  it('the address may be a device name, of more than one word, quoted or not', () => {
+    expect(parse('add forward web from interface 3 to Web Server 1 on Edge Firewall')).toEqual({
+      kind: 'forward-add',
+      service: 'web',
+      iface: '3',
+      to: 'Web Server 1',
+      device: 'Edge Firewall',
+    });
+    expect(expectKind('add forward web from 3 to "Server on Floor 2" on FW-1', 'forward-add')).toMatchObject({
+      to: 'Server on Floor 2',
+      device: 'FW-1',
+    });
+  });
+
+  it('works without a device, for the device context', () => {
+    expect(parse('add forward web from interface 3 to 172.16.0.10')).toEqual({
+      kind: 'forward-add',
+      service: 'web',
+      iface: '3',
+      to: '172.16.0.10',
+    });
+  });
+
+  it('says what is wrong with a forward it cannot read', () => {
+    expect(suggestion('add forward ssh from interface 3 to 10.0.0.5 on R1')).toContain('unknown service "ssh"');
+    expect(suggestion('add forward web from interface eth0 to 10.0.0.5 on R1')).toContain(
+      '"eth0" is not a port number'
+    );
+    for (const broken of [
+      'add forward',
+      'add forward web',
+      'add forward web from',
+      'add forward web from interface 3',
+      'add forward web from interface 3 to',
+      'add forward web from interface 3 10.0.0.5',
+      'add forward web to 10.0.0.5 on R1',
+      'add forward web from interface 3 to 10.0.0.5 on',
+    ]) {
+      expect(suggestion(broken), broken).toContain(
+        'add forward <service>|any from interface <n> to <address> [on <device>]'
+      );
+    }
+  });
+
+  it('removes a forward by its number', () => {
+    expect(parse('remove forward 2 from FW-Edge')).toEqual({ kind: 'forward-remove', position: 2, device: 'FW-Edge' });
+    expect(parse('remove forward 2 on FW-Edge')).toEqual({ kind: 'forward-remove', position: 2, device: 'FW-Edge' });
+    expect(parse('delete forward 1 from FW-Edge')).toEqual({ kind: 'forward-remove', position: 1, device: 'FW-Edge' });
+    expect(parse('remove forward 1')).toEqual({ kind: 'forward-remove', position: 1 });
+  });
+
+  it('refuses a number that is not one', () => {
+    for (const broken of ['remove forward', 'remove forward first', 'remove forward 0', 'remove forward -1']) {
+      expect(suggestion(broken), broken).toContain('remove forward <n> [from <device>]');
+    }
+  });
+
+  it('is offered with the other things that can be added and removed', () => {
+    expect(suggestion('add something')).toContain('add forward <service> from interface <n> to <address>');
+    expect(suggestion('remove something')).toContain('remove forward <n>');
+    expect(suggestion('show something')).toContain('| nat');
   });
 });
 

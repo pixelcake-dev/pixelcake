@@ -579,6 +579,51 @@ describe('port forward: coming in', () => {
     expect(typed.reachedIp).toBe('192.168.1.20');
   });
 
+  it('a whole exchange with the public address typed is answered by the server, from that address', () => {
+    const exchange = planAndEvaluateFlow('web', 'ext', 'gw', published(), { targetIp: '203.0.113.2' });
+
+    expect(exchange.verdict).toBe('success');
+    // planned to the device the forward names, and answered from it
+    expect(exchange.legs.map(leg => [leg.fromId, leg.toId])).toEqual([
+      ['ext', 'srv'],
+      ['srv', 'ext'],
+    ]);
+    expect(exchange.notes[0]).toBe('203.0.113.2 is GW, which forwards web to Srv (port forward 1)');
+    expect(exchange.notes.join(' ')).not.toContain('not a server-type device');
+    expect(way(exchange.legs[1].trace)[0]).toBe('Srv');
+    expect(exchange.legs[1].trace.seenSourceIp).toBe('203.0.113.2');
+  });
+
+  it('a ping typed at the public address is for the device, unless ping is forwarded too', () => {
+    const atDevice = planAndEvaluateFlow('ping', 'ext', 'gw', published(), { targetIp: '203.0.113.2' });
+    expect(atDevice.verdict).toBe('success');
+    expect(atDevice.legs.map(leg => [leg.fromId, leg.toId])).toEqual([
+      ['ext', 'gw'],
+      ['gw', 'ext'],
+    ]);
+    expect(atDevice.notes).toEqual([
+      'request: Internet is not simulated: traffic assumed to pass',
+      'reply: Internet is not simulated: traffic assumed to pass',
+    ]);
+
+    const everything = site({ forwards: [forward('any', 2, '192.168.1.20')] });
+    const forwarded = planAndEvaluateFlow('ping', 'ext', 'gw', everything, { targetIp: '203.0.113.2' });
+    expect(forwarded.verdict).toBe('success');
+    expect(forwarded.legs.map(leg => [leg.fromId, leg.toId])).toEqual([
+      ['ext', 'srv'],
+      ['srv', 'ext'],
+    ]);
+  });
+
+  it('a reply leaves from the device the request was delivered to', () => {
+    // a forward that changes under the same address between two services
+    const t = site({ forwards: [forward('web', 2, '192.168.1.20'), forward('email', 2, '192.168.1.10')] });
+    const mail = planAndEvaluateFlow('ping', 'ext', 'gw', t, { targetIp: '203.0.113.2' });
+    expect(mail.legs[1].fromId).toBe('gw');
+    const web = planAndEvaluateFlow('web', 'ext', 'gw', t, { targetIp: '203.0.113.2' });
+    expect(web.legs[1].fromId).toBe('srv');
+  });
+
   it('a service that is not forwarded does not get in', () => {
     const ping = planAndEvaluateFlow('ping', 'ext', 'srv', published());
     expect(ping.verdict).toBe('blocked');

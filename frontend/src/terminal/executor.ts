@@ -14,7 +14,7 @@ import {
   primaryIp,
   primaryAddress,
   ownedAddresses,
-  traceRoute,
+  traceToDevice,
   planAndEvaluateFlow,
   boundInterface,
   interfaceLinks,
@@ -34,6 +34,9 @@ import {
   describePortVlan,
   describeRule,
   isValidRuleEndpoint,
+  describeForward,
+  forwardAddress,
+  forwardProblem,
   DEFAULT_MASK,
 } from '@/engine';
 import type { Topology, TraceResult, InterfaceLink, DeviceInterface, FlowResult } from '@/engine';
@@ -47,6 +50,7 @@ import type {
   NetworkDevice,
   NetworkInterfaceCard,
   Port,
+  PortForward,
   ServiceName,
   StaticRoute,
 } from '@/types';
@@ -196,13 +200,16 @@ function runDiagnostic(
   if (kind === 'ping') {
     // Echo semantics: both directions evaluated, round trip animated
     const flow = planAndEvaluateFlow('ping', source.id, destination.id, topo, { targetIp });
-    lines.push(muted(`Pinging ${destination.label} (${shownIp || 'no ip'}) from ${source.label}...`));
+    // The address the ping went to: the one typed, the device's own, or the
+    // one it is reached at from outside (a note says so)
+    const aimedIp = flow.legs[0]?.trace.targetIp ?? shownIp;
+    lines.push(muted(`Pinging ${destination.label} (${aimedIp || 'no ip'}) from ${source.label}...`));
 
     const finalLines: TerminalLine[] = [];
     if (flow.verdict === 'success') {
       const requestHops = flow.legs[0]?.trace.hops.length ?? 1;
       const rttMs = 1 + 2 * Math.max(0, requestHops - 2);
-      finalLines.push(ok(`Reply from ${shownIp}: hops=${requestHops} time=${rttMs}ms`));
+      finalLines.push(ok(`Reply from ${aimedIp}: hops=${requestHops} time=${rttMs}ms`));
     } else {
       finalLines.push(err(`Ping failed (${flow.verdict}): ${flow.failureReason ?? 'unknown reason'}`));
       finalLines.push(...droppedAt(flow));
@@ -225,14 +232,22 @@ function runDiagnostic(
   }
 
   // trace: one-way, hop lines revealed as the packet travels
-  const result = traceRoute(source.id, destination.id, topo, { service, targetIp });
+  const { trace: result, note: aimNote } = traceToDevice(source.id, destination.id, topo, {
+    service,
+    targetIp,
+  });
   const asService = service ? ` as ${service}` : '';
   lines.push(
-    muted(`Tracing route to ${destination.label} (${shownIp || 'no ip'}) from ${source.label}${asService}:`)
+    muted(
+      `Tracing route to ${destination.label} (${(result.targetIp ?? shownIp) || 'no ip'}) ` +
+        `from ${source.label}${asService}:`
+    )
   );
 
   const hopLines = result.hops.map((hop, i) => hopLine(hop, i));
-  const finalLines: TerminalLine[] = result.notes.map((note) => muted(`  note: ${note}`));
+  const finalLines: TerminalLine[] = [...(aimNote ? [aimNote] : []), ...result.notes].map((note) =>
+    muted(`  note: ${note}`)
+  );
   if (result.verdict === 'success') {
     finalLines.push(ok('Trace complete: destination reached.'));
   } else {
@@ -273,9 +288,14 @@ function runFlow(
     emailMode,
     targetIp: model === 'email' ? undefined : targetIp,
   });
-  const lines = [muted(`${words.doing} ${destination.label} (${shownIp || 'no ip'}) from ${source.label}...`)];
-
   const label = (id: string) => topo.devices.find((d) => d.id === id)?.label ?? id;
+  // A page is asked at the address the request went to, of the device that
+  // answers there: a typed public address may be one a firewall publishes a
+  // server at (a mail goes by its relay)
+  const aimedIp = model === 'email' ? shownIp : (flow.legs[0]?.trace.targetIp ?? shownIp);
+  const answers = model === 'email' ? destination.label : label(flow.legs[0]?.toId ?? destination.id);
+  const lines = [muted(`${words.doing} ${answers} (${aimedIp || 'no ip'}) from ${source.label}...`)];
+
   const finalLines: TerminalLine[] = flow.legs.map((leg) => {
     const passed = leg.trace.verdict === 'success';
     return line(
@@ -284,7 +304,7 @@ function runFlow(
     );
   });
   if (flow.verdict === 'success') {
-    finalLines.push(ok(`${words.done} ${destination.label}`));
+    finalLines.push(ok(`${words.done} ${answers}`));
   } else {
     finalLines.push(err(`${words.name} failed (${flow.verdict}): ${flow.failureReason ?? 'unknown reason'}`));
     finalLines.push(...droppedAt(flow));
@@ -425,6 +445,13 @@ function showConfig(d: NetworkDevice): TerminalLine[] {
   }
   if (d.firewallRules && d.firewallRules.length > 0) {
     lines.push(line(`  rules:    ${d.firewallRules.length} — "show rules ${d.label}" for detail`));
+  }
+  const natPorts = (d.ports ?? []).filter((p) => p.nat);
+  const forwards = d.portForwards ?? [];
+  if (natPorts.length > 0 || forwards.length > 0) {
+    const where = natPorts.length > 0 ? `on interface ${natPorts.map((p) => p.id).join(', ')}` : 'off';
+    const published = `${forwards.length} forward${forwards.length === 1 ? '' : 's'}`;
+    lines.push(line(`  nat:      ${where}, ${published} — "show nat ${d.label}" for detail`));
   }
   return lines;
 }
@@ -600,6 +627,34 @@ function showRules(d: NetworkDevice): TerminalLine[] {
   return lines;
 }
 
+/** `show nat <device>` — the ports that translate what leaves by them, then what is published */
+function showNat(d: NetworkDevice): TerminalLine[] {
+  const forwards = d.portForwards ?? [];
+  if (!isL3Capable(d) && forwards.length === 0) {
+    return [muted(`${d.label} is a ${d.type}: it translates no addresses`)];
+  }
+  const lines = [heading(`NAT of ${d.label}`)];
+  const natPorts = (d.ports ?? []).filter((p) => p.nat);
+  if (natPorts.length === 0) lines.push(muted('  no interface does NAT: what leaves keeps its own address'));
+  for (const p of natPorts) {
+    lines.push(
+      p.ip && isValidIP(p.ip)
+        ? line(`  interface ${String(p.id).padEnd(3)} what leaves by it takes the address ${p.ip}`)
+        : muted(`  interface ${String(p.id).padEnd(3)} has no address: it translates nothing`)
+    );
+  }
+  lines.push(heading('FORWARDS (the first that matches is taken)'));
+  if (forwards.length === 0) lines.push(muted('  none: from outside only the device itself is reached'));
+  forwards.forEach((forward, index) => {
+    const address = forwardAddress(d, forward);
+    const row =
+      `  ${String(index + 1).padStart(2)}  ${forward.service.padEnd(6)} ` +
+      `from interface ${String(forward.port).padEnd(3)} (${address ?? 'no address'}) to ${forward.to}`;
+    lines.push(forward.enabled === false ? muted(`${row}  (disabled)`) : line(row));
+  });
+  return lines;
+}
+
 function runShow(what: ShowTarget, deviceQuery: string | undefined, context: TerminalContext): TerminalLine[] {
   const topo = snapshot();
   if (what === 'devices') return showDevices(topo);
@@ -623,6 +678,7 @@ function runShow(what: ShowTarget, deviceQuery: string | undefined, context: Ter
   if (what === 'ip') return showIp(device);
   if (what === 'routes') return showRoutes(device);
   if (what === 'rules') return showRules(device);
+  if (what === 'nat') return showNat(device);
   return showNeighbors(topo, device);
 }
 
@@ -901,6 +957,28 @@ function runInterface(
       savePort(device, { ...iface.port, securityZone: setting.zone });
       return [ok(`${name} is now in zone ${setting.zone}`)];
     }
+
+    case 'nat': {
+      if (iface.kind !== 'port' || !isL3Capable(device)) {
+        return [err(`NAT is set on the ports of a router or a firewall: ${device.label} is a ${device.type}`)];
+      }
+      const doing = iface.port.nat === true;
+      if (doing === setting.on) {
+        return [muted(`${name} ${doing ? 'already does NAT' : 'does no NAT already'}`)];
+      }
+      if (!setting.on) {
+        savePort(device, without(iface.port, 'nat'));
+        return [ok(`${name} no longer does NAT: what leaves by it keeps its own address`)];
+      }
+      savePort(device, { ...iface.port, nat: true });
+      if (!isValidIP(iface.ip)) {
+        return [
+          ok(`${name} now does NAT`),
+          muted(`  it has no address yet: nothing is translated until it has one (interface ${ifaceId} ip <address>)`),
+        ];
+      }
+      return [ok(`${name} now does NAT: what leaves by it takes the address ${iface.ip}`)];
+    }
   }
 }
 
@@ -1138,6 +1216,110 @@ function runRuleRemove(position: number, deviceQuery: string | undefined, contex
 
 /* ── help ─────────────────────────────────────────────────────────────── */
 
+/* ── port forwards ────────────────────────────────────────────────────── */
+
+function runForwardAdd(
+  command: Extract<Command, { kind: 'forward-add' }>,
+  context: TerminalContext
+): TerminalLine[] {
+  const found = targetDevice(
+    command.device,
+    context,
+    `add forward ${command.service} from interface ${command.iface} to ${command.to} on <device>`
+  );
+  if ('errorLines' in found) return found.errorLines;
+  const { device, topo } = found;
+  if (!isL3Capable(device)) {
+    return [err(`${device.label} is a ${device.type}: forwards belong on routers and firewalls`)];
+  }
+  const iface = findInterface(device, command.iface);
+  if (!iface || iface.kind !== 'port') {
+    return [err(`${device.label} has no interface "${command.iface}" (it has: ${interfaceNames(device)})`)];
+  }
+
+  // The address inside, as typed; a device name becomes its address
+  let to = command.to.trim();
+  let note: string | undefined;
+  if (!isValidIP(to)) {
+    const named = resolveEndpoint(to, topo)?.device;
+    const address = named ? primaryAddress(named) : '';
+    if (!named) return [err(`"${command.to}" is not an address or a device`)];
+    if (!isValidIP(address)) return [err(`${named.label} has no address to forward to`)];
+    note = `${named.label} → ${address}`;
+    to = address;
+  }
+
+  const forwards = device.portForwards ?? [];
+  const forward: PortForward = {
+    id: nextId('forward', forwards),
+    service: command.service,
+    port: iface.port.id,
+    to,
+  };
+  const problem = forwardProblem(device, forward);
+  if (problem) return [err(problem)];
+  const same = forwards.findIndex(
+    (entry) => entry.service === forward.service && entry.port === forward.port && entry.to === forward.to
+  );
+  if (same !== -1) return [muted(`${device.label} already has it: forward ${same + 1}`)];
+
+  useNetworkStore.getState().updateDevice(device.id, { portForwards: [...forwards, forward] });
+
+  const lines = [ok(`${device.label}: forward ${forwards.length + 1} added — ${describeForward(forward)}`)];
+  if (note) lines.push(muted(`  ${note}`));
+  lines.push(muted(`  from outside it is reached at ${forwardAddress(device, forward)}`));
+  // An earlier forward for the same service on the same port takes the traffic first
+  const before = forwards.findIndex(
+    (entry) =>
+      entry.enabled !== false &&
+      entry.port === forward.port &&
+      (entry.service === 'any' || forward.service === 'any' || entry.service === forward.service)
+  );
+  if (before !== -1) {
+    lines.push(muted(`  warning: forward ${before + 1} comes first for the same interface and service`));
+  }
+  // A firewall filters what a forward lets in
+  const filters = device.type.toLowerCase().includes('firewall');
+  const allowed = (device.firewallRules ?? []).some(
+    (rule) => rule.enabled !== false && rule.action === 'allow' && rule.destination === to
+  );
+  if (filters && !allowed) {
+    lines.push(
+      muted(
+        `  a firewall also needs a rule that lets it in: ` +
+          `add rule allow ${forward.service} from untrust to ${to} on ${device.label}`
+      )
+    );
+  }
+  return lines;
+}
+
+function runForwardRemove(
+  position: number,
+  deviceQuery: string | undefined,
+  context: TerminalContext
+): TerminalLine[] {
+  const found = targetDevice(deviceQuery, context, `remove forward ${position} from <device>`);
+  if ('errorLines' in found) return found.errorLines;
+  const { device } = found;
+  const forwards = device.portForwards ?? [];
+  const forward = forwards[position - 1];
+  if (!forward) {
+    return [
+      err(
+        forwards.length === 0
+          ? `${device.label} has no forwards`
+          : `${device.label} has no forward ${position} (it has ${forwards.length})`
+      ),
+    ];
+  }
+  const remaining = forwards.filter((entry) => entry !== forward);
+  useNetworkStore.getState().updateDevice(device.id, {
+    portForwards: remaining.length > 0 ? remaining : undefined,
+  });
+  return [ok(`${device.label}: forward ${position} removed — ${describeForward(forward)}`)];
+}
+
 /**
  * The command reference: what `help` prints, and the list the in-app guide
  * shows. One table, so the two can never disagree.
@@ -1149,16 +1331,18 @@ export const COMMAND_REFERENCE: Array<[string, string]> = [
   ['show devices | vlans | connections', 'topology overview'],
   ['show interfaces [of] <device>', 'unified ports + NICs table (the standard view)'],
   ['show ip [of] <device>', 'compact addressing summary (also ipconfig/ifconfig)'],
-  ['show routes | rules [of] <device>', 'routing table, firewall rules'],
+  ['show routes | rules | nat [of] <device>', 'routing table, firewall rules, address translation'],
   ['show config | ports | neighbors <device>', 'device detail'],
   ['set ip|gateway|subnet|name of <device> to <value>', 'change device config'],
   ['interface <n> up|down on <device>', 'interface state (also enable|disable port <n>)'],
   ['interface <n> ip <address>/<prefix> on <device>', 'address of a router/firewall port or network card'],
   ['interface <n> access <vlan> | trunk <vlans>|all | default', 'VLAN of a switch port'],
   ['interface <n> zone trust|untrust|dmz|none on <device>', 'security zone of a firewall port'],
+  ['interface <n> nat [off] on <device>', 'source NAT on a router/firewall port: what leaves takes its address'],
   ['add route <network>|default via <next hop> on <device>', 'static route (remove route <network> from <device>)'],
   ['add backup route <network> via <next hop> on <device>', 'second route to a network, used when the line of the first is down'],
   ['add rule allow|deny <service> from <src> to <dst> on <fw>', 'firewall rule (remove rule <n> from <fw>)'],
+  ['add forward <svc> from interface <n> to <address> on <dev>', 'publish a service inside (remove forward <n> from <dev>)'],
   ['add vlan <id> to <device>', 'VLAN list of a device (remove vlan <id> from <device>)'],
   ['connect <A> to <B>', 'create a link (disconnect <A> from <B>)'],
   ['use <device> / exit', 'enter/leave device context (implies "from" and "on")'],
@@ -1248,6 +1432,10 @@ export function executeCommand(rawInput: string, context: TerminalContext): Exec
       return { lines: runRuleAdd(command, context), context };
     case 'rule-remove':
       return { lines: runRuleRemove(command.position, command.device, context), context };
+    case 'forward-add':
+      return { lines: runForwardAdd(command, context), context };
+    case 'forward-remove':
+      return { lines: runForwardRemove(command.position, command.device, context), context };
     case 'unknown': {
       const lines = [err(`unknown command: "${command.input}"`)];
       if (command.suggestion) lines.push(muted(`  ${command.suggestion}`));
