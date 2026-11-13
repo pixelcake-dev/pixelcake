@@ -101,6 +101,9 @@ export interface NetworkDevice {
   position: { x: number; y: number };
   // Network Advanced Config
   vlan?: number[]; // VLAN IDs (es. [10, 20, 30])
+  // Spanning tree settings. The engine does not simulate them and nothing in
+  // the interface shows or edits them: the field stays so that a file or a
+  // stored drawing that carries it opens and is saved again unchanged
   stp?: {
     enabled: boolean;
     mode?: 'STP' | 'RSTP' | 'PVST+' | 'MST';
@@ -150,7 +153,8 @@ export interface NetworkConnection {
   vlan?: number[]; // VLAN IDs (for future network logic)
   label?: string; // Custom label
   color?: string; // Custom color override
-  // STP Port Configuration
+  // STP Port Configuration (not simulated, not shown: kept for the files
+  // that carry it, like `stp` on a device)
   stpPortState?: 'forwarding' | 'blocking' | 'disabled' | 'learning';
   stpPortPriority?: number; // Port priority (0-240, step 16)
 }
@@ -207,7 +211,7 @@ export interface DeviceTemplate {
   terraformFields?: Record<string, string | number | boolean>;
   isCustom: boolean;
   supportsVLAN: boolean; // Device supports VLAN configuration
-  supportsSTP: boolean; // Device supports STP configuration
+  supportsSTP: boolean; // Kept for files and stored templates: nothing in the interface reads it
   supportsPorts: boolean; // Device supports port management
   supportsNICs: boolean; // Device supports Network Interface Cards (PC, Server, Database, Cloud, etc.)
   portOptions?: number[]; // Available port counts (e.g., [5, 8, 16, 24, 48])
