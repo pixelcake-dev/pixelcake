@@ -78,6 +78,13 @@ describe('CustomEdge — presentation mode', () => {
     expect(plain.opacity).toBe('0.6');
   });
 
+  it('a cable at rest has the colour of the theme, so it changes when the theme does', () => {
+    // the name of the colour, not its value of the moment the cable was drawn
+    expect(look(renderEdge()).stroke).toBe('var(--line-color)');
+    presentation().toggleDeviceFailure('dev-b');
+    expect(look(renderEdge()).stroke).toBe('var(--line-color)');
+  });
+
   it('a cut cable is red and broken up', () => {
     presentation().toggleConnectionFailure('cable-1');
     expect(look(renderEdge())).toEqual({ stroke: RED, dash: '3 7', opacity: '0.9' });

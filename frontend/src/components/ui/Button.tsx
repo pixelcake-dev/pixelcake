@@ -12,7 +12,9 @@ export const Button: React.FC<ButtonProps> = ({
   children,
   ...props
 }) => {
-  const baseClasses = 'rounded-lg font-medium transition-colors focus:outline-none focus:ring-2';
+  // A button that cannot be pressed must look it
+  const baseClasses =
+    'rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variantClasses = {
     primary: 'bg-[var(--accent-color)] text-white hover:opacity-90 focus:ring-2 focus:ring-[var(--accent-color)] focus:ring-opacity-50',

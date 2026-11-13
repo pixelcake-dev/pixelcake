@@ -19,11 +19,15 @@ import { useSimulationStore } from '@/store/simulationStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import type { NetworkConnection } from '@/types/network';
 import { FLOW_MODEL_COLORS } from '@/types/network';
+import { MARK_COLORS } from '@/utils/drawingImage';
 
-/** Colours of presentation mode, readable on both themes */
-const ROUTE_COLOR_ARRIVES = '#10b981';
-const ROUTE_COLOR_STOPS = '#f59e0b';
-const FAILURE_COLOR = '#ef4444';
+/**
+ * Colours of presentation mode, readable on both themes. The picture of the
+ * drawing (File → Esporta immagine…) uses the very same ones.
+ */
+const ROUTE_COLOR_ARRIVES = MARK_COLORS.arrives;
+const ROUTE_COLOR_STOPS = MARK_COLORS.stops;
+const FAILURE_COLOR = MARK_COLORS.failure;
 
 const CustomEdge = ({
   id,
@@ -111,9 +115,10 @@ const CustomEdge = ({
   // Get connection template for this type
   const template = data.type ? getConnectionTemplateByType(data.type) : undefined;
 
-  const lineColor = getComputedStyle(document.documentElement)
-    .getPropertyValue('--line-color')
-    .trim();
+  // The colour of a cable at rest belongs to the theme. Named here and left
+  // to the style sheet, it changes with the theme at once (read as a value,
+  // it stayed that of the old theme until the cable was drawn again)
+  const lineColor = 'var(--line-color)';
 
   // Get edge color: custom color > template color > CSS variable (line-color)
   const edgeColor = data.color || template?.color || lineColor;
