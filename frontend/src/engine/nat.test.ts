@@ -302,6 +302,18 @@ describe('source NAT: going out', () => {
     ]);
   });
 
+  it('a device does not use what another device remembers', () => {
+    const elsewhere = [{ deviceId: 'another', kind: 'source' as const, inside: '192.168.1.10', outside: '203.0.113.2' }];
+    const stray = traceRoute('ext', 'pc', site(), {
+      returnTraffic: true,
+      targetIp: '203.0.113.2',
+      natState: elsewhere,
+    });
+    expect(stray.verdict).toBe('success');
+    expect(stray.hops.map(h => h.label)).toEqual(['Ext', 'Internet', 'GW']);
+    expect(stray.reachedIp).toBeUndefined();
+  });
+
   it('what the device sends itself is not translated', () => {
     const result = traceRoute('gw', 'ext', site());
     expect(result.verdict).toBe('success');
@@ -320,6 +332,12 @@ describe('source NAT: going out', () => {
         'goes out, and NAT is off on port 2 on GW'
     );
     expect(result.unroutable).toEqual({ role: 'source', address: '192.168.1.10' });
+
+    // a whole exchange stops there too: nothing else is tried, nothing is said about the way in
+    const exchange = planAndEvaluateFlow('ping', 'pc', 'ext', site({ nat: false }));
+    expect(exchange.verdict).toBe('blocked');
+    expect(exchange.legs).toHaveLength(1);
+    expect(exchange.notes).toEqual([]);
     expect(result.hops.map(h => [h.label, h.status])).toEqual([
       ['PC', 'forwarded'],
       ['SW', 'forwarded'],
@@ -615,13 +633,22 @@ describe('port forward: coming in', () => {
     ]);
   });
 
-  it('a reply leaves from the device the request was delivered to', () => {
-    // a forward that changes under the same address between two services
+  it('who answers at one address depends on the service asked', () => {
+    // web goes to the server, email to the PC, a ping is for the device
     const t = site({ forwards: [forward('web', 2, '192.168.1.20'), forward('email', 2, '192.168.1.10')] });
-    const mail = planAndEvaluateFlow('ping', 'ext', 'gw', t, { targetIp: '203.0.113.2' });
-    expect(mail.legs[1].fromId).toBe('gw');
+    const ping = planAndEvaluateFlow('ping', 'ext', 'gw', t, { targetIp: '203.0.113.2' });
+    expect(ping.legs.map(leg => leg.fromId)).toEqual(['ext', 'gw']);
     const web = planAndEvaluateFlow('web', 'ext', 'gw', t, { targetIp: '203.0.113.2' });
-    expect(web.legs[1].fromId).toBe('srv');
+    expect(web.legs.map(leg => leg.fromId)).toEqual(['ext', 'srv']);
+    expect(web.verdict).toBe('success');
+  });
+
+  it('a forward is for what arrives: what the device sends to its own address is for itself', () => {
+    const own = traceRoute('gw', 'srv', published(), { service: 'web', targetIp: '203.0.113.2' });
+    expect(own.verdict).toBe('success');
+    expect(own.hops.map(h => [h.label, h.status])).toEqual([['GW', 'delivered']]);
+    expect(own.reachedIp).toBeUndefined();
+    expect(own.translations).toBeUndefined();
   });
 
   it('a service that is not forwarded does not get in', () => {

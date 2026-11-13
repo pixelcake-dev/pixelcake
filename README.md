@@ -143,7 +143,7 @@ The app's icons are bundled with it. Only an icon name typed by hand in a custom
 
 ```bash
 cd frontend
-pnpm test:run      # 1694 tests: engine, terminal, project files, import/export, pictures, screens
+pnpm test:run      # 1696 tests: engine, terminal, project files, import/export, pictures, screens
 pnpm type-check
 pnpm lint
 pnpm build

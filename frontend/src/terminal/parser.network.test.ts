@@ -475,6 +475,9 @@ describe('parse — interface … nat', () => {
 
   it('a device called like a setting is kept when quoted', () => {
     expect(parse('interface 3 nat on "off"')).toEqual(nat(true, 'off'));
+    // also right after "nat", where the word would otherwise be the setting
+    expect(parse('interface 3 nat "off"')).toEqual(nat(true, 'off'));
+    expect(parse('interface 3 nat "none"')).toEqual(nat(true, 'none'));
   });
 
   it('the settings an interface takes are listed when one is unknown', () => {

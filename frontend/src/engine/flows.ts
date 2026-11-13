@@ -143,7 +143,7 @@ function flowError(failureReason: string): FlowResult {
  * else at the address a port forward publishes it at. The note says which.
  *
  * An address given in `options.targetIp` is the address aimed at, and nothing
- * is tried in its place; a reply goes where its request came from.
+ * is tried in its place (a reply always has one: where its request came from).
  */
 export function traceToDevice(
   fromId: string,
@@ -152,11 +152,7 @@ export function traceToDevice(
   options: TraceOptions = {}
 ): { trace: TraceResult; note?: string } {
   const trace = traceRoute(fromId, toId, topo, options);
-  if (
-    options.returnTraffic ||
-    options.targetIp !== undefined ||
-    trace.unroutable?.role !== 'destination'
-  ) {
+  if (options.targetIp !== undefined || trace.unroutable?.role !== 'destination') {
     return { trace };
   }
 
@@ -205,14 +201,11 @@ function evaluateLegs(plans: LegPlan[], topo: Topology, planNotes: string[]): Fl
       sourceIp: reply ? (reply.reachedIp ?? reply.targetIp) : undefined,
       natState: reply?.translations,
     };
-    // The reply leaves from the device the request was delivered to
-    const delivered = reply?.verdict === 'success' ? reply.hops[reply.hops.length - 1] : undefined;
-    const fromId = delivered?.deviceId ?? plan.fromId;
     // (a device behind NAT is aimed at where it is reached from outside)
-    const { trace, note } = traceToDevice(fromId, plan.toId, topo, options);
+    const { trace, note } = traceToDevice(plan.fromId, plan.toId, topo, options);
     if (note) notes.push(`${plan.purpose}: ${note}`);
     previous = trace;
-    legs.push({ fromId, toId: plan.toId, purpose: plan.purpose, trace });
+    legs.push({ fromId: plan.fromId, toId: plan.toId, purpose: plan.purpose, trace });
 
     for (const hop of trace.hops) {
       // Consecutive legs share their joint device (leg N ends where leg N+1
