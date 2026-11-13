@@ -211,13 +211,19 @@ describe('App', () => {
   describe('welcome screen', () => {
     it('"Carica la rete di esempio" draws the sample, which is then something to save', () => {
       render(<App />);
+      const fitsAsked = useNetworkStore.getState().fitViewRequest;
 
       fireEvent.click(screen.getByText('Carica la rete di esempio'));
 
       expect(screen.queryByText('Visual Network Designer')).toBeNull();
-      expect(screen.getByText('PC-1')).toBeInTheDocument();
-      expect(screen.getByText('Router-1')).toBeInTheDocument();
+      // The network of a small company: offices, Wi-Fi, servers, a DMZ
+      expect(useNetworkStore.getState().devices).toHaveLength(20);
+      for (const label of ['PC-Contabilità', 'AP-Uffici', 'Router-Core', 'FW-Edge', 'Portale-Clienti', 'Mail']) {
+        expect(screen.getByText(label)).toBeInTheDocument();
+      }
       expect(useNetworkStore.getState().hasUnsavedChanges).toBe(true);
+      // and the whole of it is asked into view, wherever the board was
+      expect(useNetworkStore.getState().fitViewRequest).toBe(fitsAsked + 1);
     });
 
     it('"Apri Progetto" opens the file picker: cancelling it leaves the welcome screen', async () => {

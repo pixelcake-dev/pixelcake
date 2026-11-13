@@ -79,7 +79,7 @@ const NetworkCanvas = () => {
   const devices = useNetworkStore((state) => state.devices);
   const connections = useNetworkStore((state) => state.connections);
   const viewport = useNetworkStore((state) => state.viewport);
-  const shouldFitView = useNetworkStore((state) => state.shouldFitView);
+  const fitViewRequest = useNetworkStore((state) => state.fitViewRequest);
   const updateDevice = useNetworkStore((state) => state.updateDevice);
   const removeDevice = useNetworkStore((state) => state.removeDevice);
   const addConnection = useNetworkStore((state) => state.addConnection);
@@ -313,15 +313,23 @@ const NetworkCanvas = () => {
     setEdges(reactFlowEdges);
   }, [connections, magnifiedConnectionTypes, particleAnimationEnabled, setEdges]);
 
-  // Fit view when triggered from TopMenuBar
+  // Bring the whole drawing into view when asked (Vista → Adatta alla
+  // finestra, a sample network just loaded). Fitting needs the size of every
+  // device: a request made together with a new drawing waits until React
+  // Flow has measured it, and the short wait lets the drawing that is on its
+  // way in replace the one still on screen first.
+  const fittedRequest = useRef(fitViewRequest);
   useEffect(() => {
-    if (shouldFitView) {
+    if (fittedRequest.current === fitViewRequest || !nodesMeasured) return;
+    const timer = setTimeout(() => {
+      fittedRequest.current = fitViewRequest;
       reactFlowInstance.fitView({
         padding: 0.2, // 20% padding around edges
         duration: 300, // Smooth animation 300ms
       });
-    }
-  }, [shouldFitView, reactFlowInstance]);
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [fitViewRequest, nodesMeasured, reactFlowInstance]);
 
   // A different canvas came on screen (canvas switch, project opened or
   // created): show it where it was left. `defaultViewport` only covers the

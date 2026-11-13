@@ -55,9 +55,10 @@ const GuideTab = () => (
         dall&apos;elenco: controlla il nome e conferma, l&apos;indirizzo IP viene proposto in
         automatico. Il dispositivo compare al centro della parte di canvas che stai guardando.
         «Aggiungi in Blocco» ne crea molti in una volta. Nella scheda
-        «Topologie» dello stesso pannello ci sono tre reti di esempio già pronte: una semplice,
-        una con VLAN, DMZ e firewall, e una con due sedi e una linea di riserva. Caricarne una
-        prende il posto di quanto è sul canvas.
+        «Topologie» dello stesso pannello ci sono quattro reti di esempio già pronte: quella di
+        una piccola azienda (la stessa della schermata iniziale), una semplice, una con VLAN, DMZ
+        e firewall, e una con due sedi e una linea di riserva. Caricarne una prende il posto di
+        quanto è sul canvas.
       </Step>
 
       <Step title="Spostali e selezionali">
@@ -119,9 +120,11 @@ const GuideTab = () => (
       <Step title="Usa il terminale">
         «Console», nella barra a sinistra, apre il terminale. Con un clic destro su un dispositivo →
         «Console» si apre già posizionato su quel dispositivo. I comandi sono in inglese, per
-        esempio <Mono>ping Web-01 from PC-1</Mono>, <Mono>trace Web-01 from PC-1 as web</Mono>{' '}
-        oppure <Mono>show routes Router-1</Mono>. Quelli che cambiano la rete, come{' '}
-        <Mono>add route 192.168.30.0/24 via 10.0.0.2 on Router-1</Mono>, modificano lo stesso
+        esempio, sulla rete di esempio della schermata iniziale,{' '}
+        <Mono>ping Web-Gestionale from PC-Vendite</Mono>,{' '}
+        <Mono>trace Web-Gestionale from Portatile-1 as web</Mono> oppure{' '}
+        <Mono>show routes Router-Core</Mono>. Quelli che cambiano la rete, come{' '}
+        <Mono>add route 192.168.40.0/24 via 10.0.0.2 on Router-Core</Mono>, modificano lo stesso
         disegno che vedi. L&apos;elenco è nella scheda «Comandi del terminale».
       </Step>
 

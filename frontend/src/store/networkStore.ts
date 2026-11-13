@@ -34,7 +34,8 @@ interface NetworkStore {
   viewport: { x: number; y: number; zoom: number };
 
   // Canvas view actions (non-persisted, triggers only)
-  shouldFitView: boolean;
+  /** Goes up by one each time the whole drawing is to be brought into view */
+  fitViewRequest: number;
 
   // Counters (persistiti per evitare ID duplicati)
   deviceCounter: number;
@@ -148,7 +149,7 @@ export const useNetworkStore = create<NetworkStore>()(
       selectedDeviceIds: [],
       clipboard: null,
       viewport: { x: 0, y: 0, zoom: 1 },
-      shouldFitView: false,
+      fitViewRequest: 0,
       deviceCounter: 0,
       connectionCounter: 0,
       canvasId: null,
@@ -399,9 +400,10 @@ export const useNetworkStore = create<NetworkStore>()(
       },
 
       triggerFitView: () => {
-        set({ shouldFitView: true });
-        // Reset immediately so it can be triggered again
-        setTimeout(() => set({ shouldFitView: false }), 100);
+        // A request, not a state: the canvas answers each one once, when it
+        // can (a drawing that has just been loaded is fitted once its
+        // devices have a size)
+        set((state) => ({ fitViewRequest: state.fitViewRequest + 1 }));
       },
 
       // Layout Actions

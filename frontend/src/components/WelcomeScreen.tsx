@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
-import { createSampleTopology } from '@/utils/sampleTopology';
+import { createCompanySample } from '@/utils/sampleCompany';
 import { openProject, requestNewProject } from '@/utils/projectFileAccess';
 import PixelCakeLogo from '@/assets/PixelCakeLogo.svg';
 import { GITHUB_REPO, GITHUB_ISSUES } from '@/constants/links';
@@ -46,10 +46,12 @@ const WelcomeScreen = () => {
   const handleLoadSample = () => {
     dismissWelcomeScreen(neverShowAgain);
 
-    // Carica effettivamente la sample topology
-    const topology = createSampleTopology();
+    // The network of a small company, whole in the window whatever part of
+    // the board was on screen before
+    const topology = createCompanySample();
     const networkStore = useNetworkStore.getState();
     networkStore.loadTopology(topology.devices, topology.connections);
+    networkStore.triggerFitView();
   };
 
   const handleDocumentation = (e: React.MouseEvent) => {

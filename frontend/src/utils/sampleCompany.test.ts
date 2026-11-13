@@ -1,0 +1,482 @@
+/**
+ * The sample network the welcome screen loads (a small company: offices,
+ * Wi-Fi, servers, a DMZ, a firewall): its structure, and the questions it is
+ * there to answer. If one of these answers changes, either the engine or the
+ * sample is wrong.
+ */
+
+import { describe, it, expect } from 'vitest';
+import { createCompanySample } from './sampleCompany';
+import { isValidIP, isValidMAC } from './ipHelpers';
+import {
+  assessImpact,
+  boundInterface,
+  formatNetwork,
+  forwardingRole,
+  isVlanAware,
+  normalizeBindings,
+  planAndEvaluateFlow,
+  portVlanMode,
+  routingTable,
+  sanitizeBindings,
+  withFailures,
+} from '@/engine';
+import type { Failures, FlowResult } from '@/engine';
+import type { FlowModelType, NetworkDevice } from '@/types';
+
+const sample = createCompanySample();
+
+function device(label: string): NetworkDevice {
+  const found = sample.devices.find(d => d.label === label);
+  if (!found) throw new Error(`sample has no device "${label}"`);
+  return found;
+}
+
+const labelOf = (id: string) => sample.devices.find(d => d.id === id)?.label ?? id;
+
+/** Failures by device label and by cable id */
+const broken = (devices: string[] = [], connections: string[] = []): Failures => ({
+  devices: devices.map(label => device(label).id),
+  connections,
+});
+
+function ask(model: FlowModelType, from: string, to: string, failures?: Failures): FlowResult {
+  return planAndEvaluateFlow(model, device(from).id, device(to).id, withFailures(sample, failures));
+}
+
+/** "Router-Core (routed: …)" for every hop of a leg (the first, unless told) */
+const path = (result: FlowResult, leg = 0): string[] =>
+  result.legs[leg].trace.hops.map(h => (h.note ? `${h.label} (${h.note})` : h.label));
+
+/** The devices of a leg, by label */
+const way = (result: FlowResult, leg = 0) => result.legs[leg].trace.hops.map(h => h.label).join(' > ');
+
+const table = (label: string) =>
+  routingTable(device(label)).map(e => [formatNetwork(e.network), e.kind, e.nextHop ?? '-', e.out?.iface?.label]);
+
+const OFFICES = ['PC-Contabilità', 'PC-Vendite', 'Stampante'];
+const WIFI = ['Portatile-1', 'Portatile-2'];
+const SERVERS = ['Srv-Auth', 'DB-Gestionale', 'Web-Gestionale', 'Mail', 'NAS'];
+
+describe('createCompanySample — structure', () => {
+  it('is deterministic and its ids are unique', () => {
+    expect(createCompanySample()).toEqual(createCompanySample());
+    expect(new Set(sample.devices.map(d => d.id)).size).toBe(sample.devices.length);
+    expect(new Set(sample.connections.map(c => c.id)).size).toBe(sample.connections.length);
+    expect(new Set(sample.devices.map(d => d.label)).size).toBe(sample.devices.length);
+  });
+
+  it('is a company of twenty devices: every kind a small one has', () => {
+    expect(sample.devices).toHaveLength(20);
+    expect(sample.connections).toHaveLength(20);
+
+    const count = (templateId: string) => sample.devices.filter(d => d.templateId === templateId).length;
+    expect({
+      cloud: count('tpl-cloud'),
+      firewall: count('tpl-firewall'),
+      router: count('tpl-router'),
+      switches: count('tpl-switch'),
+      accessPoints: count('tpl-accesspoint'),
+      pcs: count('tpl-pc'),
+      printers: count('tpl-printer'),
+      servers: count('tpl-server'),
+      webServers: count('tpl-webserver'),
+      mailServers: count('tpl-mailserver'),
+      databases: count('tpl-database'),
+      nas: count('tpl-nas'),
+    }).toEqual({
+      cloud: 1,
+      firewall: 1,
+      router: 1,
+      switches: 4,
+      accessPoints: 1,
+      pcs: 5,
+      printers: 1,
+      servers: 1,
+      webServers: 2,
+      mailServers: 1,
+      databases: 1,
+      nas: 1,
+    });
+  });
+
+  it('has every link attached to an interface at both ends, with nothing to repair', () => {
+    for (const connection of sample.connections) {
+      const source = sample.devices.find(d => d.id === connection.source);
+      const target = sample.devices.find(d => d.id === connection.target);
+      expect(source && boundInterface(connection, source, 'source'), connection.id).toBeDefined();
+      expect(target && boundInterface(connection, target, 'target'), connection.id).toBeDefined();
+    }
+    expect(sanitizeBindings(sample.devices, sample.connections)).toBe(sample.connections);
+    expect(normalizeBindings(sample.devices, sample.connections)).toBe(sample.connections);
+  });
+
+  it('no interface carries two cables', () => {
+    const used = sample.connections.flatMap(c => [
+      `${c.source}/${c.sourcePort ?? c.sourceNic}`,
+      `${c.target}/${c.targetPort ?? c.targetNic}`,
+    ]);
+    expect(new Set(used).size).toBe(used.length);
+  });
+
+  it('carries only valid addresses and MACs, and no address twice', () => {
+    const addresses: string[] = [];
+    for (const d of sample.devices) {
+      for (const ip of [d.ip, d.gateway, ...(d.ports ?? []).map(p => p.ip ?? '')]) {
+        if (ip) expect(isValidIP(ip), `${d.label} ${ip}`).toBe(true);
+      }
+      for (const nic of d.nics ?? []) {
+        if (nic.ip) expect(isValidIP(nic.ip), `${d.label} ${nic.name}`).toBe(true);
+        expect(nic.mac !== undefined && isValidMAC(nic.mac), `${d.label} ${nic.name}`).toBe(true);
+      }
+      // The addresses a device answers to: those of its ports or cards, or its own
+      const own = [...(d.ports ?? []).map(p => p.ip ?? ''), ...(d.nics ?? []).map(n => n.ip)].filter(Boolean);
+      addresses.push(...(own.length > 0 ? own : [d.ip].filter(Boolean)));
+    }
+    expect(new Set(addresses).size).toBe(addresses.length);
+
+    const macs = sample.devices.flatMap(d => (d.nics ?? []).map(n => n.mac));
+    expect(new Set(macs).size).toBe(macs.length);
+  });
+
+  it('a device with network cards shows the address of its first card', () => {
+    for (const d of sample.devices) {
+      const first = d.nics?.[0];
+      if (!first) continue;
+      expect([d.ip, d.gateway], d.label).toEqual([first.ip, first.gateway]);
+    }
+  });
+
+  it('uses the features it is there to show: VLANs on ports, a trunk, zones, rules', () => {
+    // Offices and Wi-Fi share a switch and are kept apart by the VLAN of each port
+    expect(isVlanAware(device('SW-Uffici'))).toBe(true);
+    expect(isVlanAware(device('SW-Core'))).toBe(true);
+    expect(isVlanAware(device('SW-Server'))).toBe(true);
+    expect(isVlanAware(device('SW-DMZ'))).toBe(false);
+
+    const mode = (label: string, port: number) =>
+      portVlanMode(device(label).ports?.find(p => p.id === port));
+    expect(mode('SW-Uffici', 1)).toEqual({ kind: 'access', vlan: 10, explicit: true });
+    expect(mode('SW-Uffici', 4)).toEqual({ kind: 'access', vlan: 20, explicit: true });
+    // One cable carries both VLANs between the two switches
+    expect(mode('SW-Uffici', 8)).toEqual({ kind: 'trunk', vlans: [10, 20] });
+    expect(mode('SW-Core', 1)).toEqual({ kind: 'trunk', vlans: [10, 20] });
+    expect(mode('SW-Server', 8)).toEqual({ kind: 'access', vlan: 30, explicit: true });
+
+    expect(device('FW-Edge').ports?.map(p => p.securityZone)).toEqual(['trust', 'dmz', 'untrust', undefined]);
+    expect(device('FW-Edge').firewallRules?.map(r => `${r.action} ${r.service} ${r.source} > ${r.destination}`)).toEqual([
+      'allow web untrust > 172.16.0.10',
+      'allow email untrust > 192.168.30.40',
+      'allow web 172.16.0.10 > 192.168.30.20',
+    ]);
+  });
+
+  it('the rules of the firewall name devices that are there', () => {
+    expect(device('Portale-Clienti').ip).toBe('172.16.0.10');
+    expect(device('Mail').ip).toBe('192.168.30.40');
+    expect(device('DB-Gestionale').ip).toBe('192.168.30.20');
+  });
+
+  it('the access point is a bridge with a radio card for each device on the Wi-Fi', () => {
+    const accessPoint = device('AP-Uffici');
+    expect(forwardingRole(accessPoint)).toBe('bridge');
+    expect(accessPoint.nics?.map(n => n.name)).toEqual(['eth0', 'wlan0', 'wlan1']);
+    const onRadio = sample.connections.filter(
+      c => c.target === accessPoint.id && c.targetNic !== 'nic-1'
+    );
+    expect(onRadio.map(c => labelOf(c.source)).sort()).toEqual(WIFI);
+    expect(onRadio.every(c => c.label === 'Wi-Fi')).toBe(true);
+  });
+
+  it('gives the two routing devices the tables a person would expect', () => {
+    expect(table('Router-Core')).toEqual([
+      ['10.0.0.0/30', 'connected', '-', 'port 4'],
+      ['192.168.10.0/24', 'connected', '-', 'port 1'],
+      ['192.168.20.0/24', 'connected', '-', 'port 2'],
+      ['192.168.30.0/24', 'connected', '-', 'port 3'],
+      ['default', 'default', '10.0.0.2', 'port 4'],
+    ]);
+    expect(table('FW-Edge')).toEqual([
+      ['10.0.0.0/30', 'connected', '-', 'port 1'],
+      ['172.16.0.0/24', 'connected', '-', 'port 2'],
+      ['203.0.113.0/24', 'connected', '-', 'port 3'],
+      ['192.168.0.0/16', 'static', '10.0.0.1', 'port 1'],
+    ]);
+  });
+
+  it('is laid out with no device over another', () => {
+    // A device is about 120 px wide (a long name makes it wider) and 117 tall
+    for (const a of sample.devices) {
+      for (const b of sample.devices) {
+        if (a.id >= b.id) continue;
+        const apart =
+          Math.abs(a.position.x - b.position.x) >= 180 || Math.abs(a.position.y - b.position.y) >= 150;
+        expect(apart, `${a.label} and ${b.label}`).toBe(true);
+      }
+    }
+  });
+});
+
+describe('createCompanySample — the questions it answers', () => {
+  it('two PCs of the offices talk through their switch, and so does the printer', () => {
+    const result = ask('ping', 'PC-Contabilità', 'PC-Vendite');
+    expect(result.verdict).toBe('success');
+    expect(path(result)).toEqual(['PC-Contabilità', 'SW-Uffici (VLAN 10)', 'PC-Vendite']);
+    expect(result.notes).toEqual([]);
+
+    expect(path(ask('ping', 'PC-Vendite', 'Stampante'))).toEqual([
+      'PC-Vendite',
+      'SW-Uffici (VLAN 10)',
+      'Stampante',
+    ]);
+  });
+
+  it('two laptops on the Wi-Fi talk through the access point alone', () => {
+    const result = ask('ping', 'Portatile-1', 'Portatile-2');
+    expect(result.verdict).toBe('success');
+    expect(path(result)).toEqual(['Portatile-1', 'AP-Uffici', 'Portatile-2']);
+  });
+
+  it('a PC opens the management software: trunk, router, the VLAN of the servers', () => {
+    const result = ask('web', 'PC-Contabilità', 'Web-Gestionale');
+    expect(result.verdict).toBe('success');
+    expect(path(result)).toEqual([
+      'PC-Contabilità',
+      'SW-Uffici (VLAN 10)',
+      'SW-Core (VLAN 10)',
+      'Router-Core (routed: 192.168.30.0/24 is on port 3)',
+      'SW-Server (VLAN 30)',
+      'Web-Gestionale',
+    ]);
+    expect(path(result, 1)).toEqual([
+      'Web-Gestionale',
+      'SW-Server (VLAN 30)',
+      'Router-Core (routed: 192.168.10.0/24 is on port 1)',
+      'SW-Core (VLAN 10)',
+      'SW-Uffici (VLAN 10)',
+      'PC-Contabilità',
+    ]);
+    expect(result.notes).toEqual([]);
+  });
+
+  it('a laptop on the Wi-Fi does the same in its own VLAN, on the same trunk', () => {
+    const result = ask('web', 'Portatile-1', 'Web-Gestionale');
+    expect(result.verdict).toBe('success');
+    expect(path(result)).toEqual([
+      'Portatile-1',
+      'AP-Uffici',
+      'SW-Uffici (VLAN 20)',
+      'SW-Core (VLAN 20)',
+      'Router-Core (routed: 192.168.30.0/24 is on port 3)',
+      'SW-Server (VLAN 30)',
+      'Web-Gestionale',
+    ]);
+  });
+
+  it('the Wi-Fi and the offices are two networks on one switch: between them is the router', () => {
+    const result = ask('ping', 'Portatile-1', 'PC-Vendite');
+    expect(result.verdict).toBe('success');
+    expect(path(result)).toEqual([
+      'Portatile-1',
+      'AP-Uffici',
+      'SW-Uffici (VLAN 20)',
+      'SW-Core (VLAN 20)',
+      'Router-Core (routed: 192.168.10.0/24 is on port 1)',
+      'SW-Core (VLAN 10)',
+      'SW-Uffici (VLAN 10)',
+      'PC-Vendite',
+    ]);
+  });
+
+  it('every device inside reaches every server', () => {
+    for (const from of [...OFFICES, ...WIFI]) {
+      for (const to of SERVERS) {
+        expect(ask('ping', from, to).verdict, `${from} > ${to}`).toBe('success');
+      }
+    }
+  });
+
+  it('a mail between two PCs goes to the mail server and from there to the other PC', () => {
+    const result = ask('email', 'PC-Contabilità', 'PC-Vendite');
+    expect(result.verdict).toBe('success');
+    expect(result.legs.map(leg => leg.purpose)).toEqual(['SMTP submit', 'delivery']);
+    expect(way(result, 0)).toBe('PC-Contabilità > SW-Uffici > SW-Core > Router-Core > SW-Server > Mail');
+    expect(way(result, 1)).toBe('Mail > SW-Server > Router-Core > SW-Core > SW-Uffici > PC-Vendite');
+  });
+
+  it('the inside browses the portal in the DMZ: the zone policy lets it, the answer comes back', () => {
+    const result = ask('web', 'PC-Vendite', 'Portale-Clienti');
+    expect(result.verdict).toBe('success');
+    expect(path(result)).toEqual([
+      'PC-Vendite',
+      'SW-Uffici (VLAN 10)',
+      'SW-Core (VLAN 10)',
+      'Router-Core (routed: default route via 10.0.0.2 (port 4))',
+      'FW-Edge (routed: 172.16.0.0/24 is on port 2; firewall FW-Edge: no rule matches, zone policy trust → dmz allowed)',
+      'SW-DMZ',
+      'Portale-Clienti',
+    ]);
+    expect(result.notes).toEqual([
+      'HTTP request: firewall FW-Edge: no rule matches, zone policy trust → dmz allowed',
+      'HTTP response: firewall FW-Edge: no rule matches, zone policy dmz → trust allowed (reply to an allowed flow)',
+    ]);
+  });
+
+  it('the inside reaches the outside, across the Internet symbol, which says it is assumed', () => {
+    const result = ask('ping', 'PC-Vendite', 'Cliente-Remoto');
+    expect(result.verdict).toBe('success');
+    expect(way(result)).toBe(
+      'PC-Vendite > SW-Uffici > SW-Core > Router-Core > FW-Edge > Internet > Cliente-Remoto'
+    );
+    expect(result.notes).toContain('request: Internet is not simulated: traffic assumed to pass');
+  });
+
+  it('a customer outside opens the portal: the first rule of the firewall', () => {
+    const result = ask('web', 'Cliente-Remoto', 'Portale-Clienti');
+    expect(result.verdict).toBe('success');
+    expect(way(result)).toBe('Cliente-Remoto > Internet > FW-Edge > SW-DMZ > Portale-Clienti');
+    expect(result.notes).toContain(
+      'HTTP request: firewall FW-Edge: allowed by rule 1 (allow web from untrust to 172.16.0.10)'
+    );
+  });
+
+  it('the customer cannot ping the portal: the rule is for web', () => {
+    const result = ask('ping', 'Cliente-Remoto', 'Portale-Clienti');
+    expect(result.verdict).toBe('blocked');
+    expect(result.failureReason).toBe(
+      'request: firewall FW-Edge: no rule matches, zone policy untrust → dmz denied'
+    );
+  });
+
+  it('the customer reaches nothing inside: not the database, not the management software', () => {
+    for (const to of ['DB-Gestionale', 'Web-Gestionale', 'Srv-Auth', 'NAS', 'PC-Vendite', 'Portatile-1']) {
+      for (const model of ['ping', 'web'] as const) {
+        const result = ask(model, 'Cliente-Remoto', to);
+        expect(result.verdict, `${model} > ${to}`).toBe('blocked');
+        expect(result.failureReason, `${model} > ${to}`).toContain('zone policy untrust → trust denied');
+      }
+    }
+  });
+
+  it('mail from outside comes in to the mail server, by the second rule, and goes on to the PC', () => {
+    const result = ask('email', 'Cliente-Remoto', 'PC-Contabilità');
+    expect(result.verdict).toBe('success');
+    expect(way(result, 0)).toBe('Cliente-Remoto > Internet > FW-Edge > Router-Core > SW-Server > Mail');
+    expect(way(result, 1)).toBe('Mail > SW-Server > Router-Core > SW-Core > SW-Uffici > PC-Contabilità');
+    expect(result.notes).toContain(
+      'SMTP submit: firewall FW-Edge: allowed by rule 2 (allow email from untrust to 192.168.30.40)'
+    );
+  });
+
+  it('the portal reads its database: the third rule, for that server alone', () => {
+    const result = ask('web', 'Portale-Clienti', 'DB-Gestionale');
+    expect(result.verdict).toBe('success');
+    expect(way(result)).toBe('Portale-Clienti > SW-DMZ > FW-Edge > Router-Core > SW-Server > DB-Gestionale');
+    expect(result.notes).toContain(
+      'HTTP request: firewall FW-Edge: allowed by rule 3 (allow web from 172.16.0.10 to 192.168.30.20)'
+    );
+  });
+
+  it('and nothing else inside: were the portal broken into, the way stops at the firewall', () => {
+    for (const [model, to] of [
+      ['ping', 'DB-Gestionale'],
+      ['ping', 'Srv-Auth'],
+      ['web', 'Web-Gestionale'],
+      ['web', 'NAS'],
+      ['ping', 'PC-Contabilità'],
+    ] as const) {
+      const result = ask(model, 'Portale-Clienti', to);
+      expect(result.verdict, `${model} > ${to}`).toBe('blocked');
+      expect(result.failureReason, `${model} > ${to}`).toContain('zone policy dmz → trust denied');
+    }
+  });
+
+  it('the switches are managed on a network of their own, which nothing routes', () => {
+    const result = ask('ping', 'PC-Contabilità', 'SW-Uffici');
+    expect(result.verdict).toBe('blocked');
+    expect(result.failureReason).toBe('request: FW-Edge has no route to 10.99.0.3');
+    // The router, the firewall and the access point are reachable from the offices
+    for (const to of ['Router-Core', 'FW-Edge', 'AP-Uffici']) {
+      expect(ask('ping', 'PC-Contabilità', to).verdict, to).toBe('success');
+    }
+  });
+
+  it('with everything working, 111 of the 132 pings between end devices arrive: the firewall stops the rest', () => {
+    const report = assessImpact(sample, broken(), { flow: 'ping' });
+    expect(report.broken).toEqual([]);
+    expect(report.rerouted).toEqual([]);
+    // 12 end devices; the customer reaches none of the other 11, the portal none of the 10 inside
+    expect(report.unchanged).toBe(12 * 11 - 11 - 10);
+  });
+});
+
+describe('createCompanySample — what happens if this breaks', () => {
+  it('the trunk: offices and Wi-Fi are cut off from the rest, and still work among themselves', () => {
+    const failures = broken([], ['link-trunk-uffici']);
+
+    const toServer = ask('ping', 'PC-Vendite', 'NAS', failures);
+    expect(toServer.verdict).toBe('blocked');
+    expect(toServer.failureReason).toBe('request: link SW-Uffici–SW-Core is down');
+    expect(ask('ping', 'Portatile-1', 'PC-Vendite', failures).verdict).toBe('blocked');
+
+    expect(ask('ping', 'PC-Vendite', 'Stampante', failures).verdict).toBe('success');
+    expect(ask('ping', 'Portatile-1', 'Portatile-2', failures).verdict).toBe('success');
+
+    const report = assessImpact(sample, failures, { flow: 'ping' });
+    expect(report.rerouted).toEqual([]);
+    expect(report.broken).toHaveLength(72);
+    expect(report.unchanged).toBe(39);
+  });
+
+  it('the cable of the router in the Wi-Fi VLAN: only the Wi-Fi loses the rest', () => {
+    const failures = broken([], ['link-vlan-20']);
+
+    const result = ask('ping', 'Portatile-1', 'Web-Gestionale', failures);
+    expect(result.verdict).toBe('blocked');
+    expect(result.failureReason).toBe('request: link SW-Core–Router-Core is down');
+    expect(ask('ping', 'Portatile-1', 'Portatile-2', failures).verdict).toBe('success');
+    expect(ask('ping', 'PC-Vendite', 'NAS', failures).verdict).toBe('success');
+
+    const report = assessImpact(sample, failures, { flow: 'ping' });
+    expect(new Set(report.broken.flatMap(f => [labelOf(f.sourceId), labelOf(f.targetId)]))).toContain('Portatile-1');
+    expect(report.broken.every(f => WIFI.includes(labelOf(f.sourceId)) || WIFI.includes(labelOf(f.targetId)))).toBe(true);
+    expect(report.broken).toHaveLength(36);
+  });
+
+  it('the switch of the servers: no server is reachable, the offices still reach the portal and the outside', () => {
+    const failures = broken(['SW-Server']);
+    for (const to of SERVERS) {
+      expect(ask('ping', 'PC-Contabilità', to, failures).verdict, to).toBe('blocked');
+    }
+    expect(ask('web', 'PC-Contabilità', 'Portale-Clienti', failures).verdict).toBe('success');
+    expect(ask('ping', 'PC-Contabilità', 'Cliente-Remoto', failures).verdict).toBe('success');
+
+    const report = assessImpact(sample, failures, { flow: 'ping' });
+    expect(report.broken).toHaveLength(80);
+    expect(report.unchanged).toBe(31);
+  });
+
+  it('the access point: the Wi-Fi is gone, nobody else notices', () => {
+    const report = assessImpact(sample, broken(['AP-Uffici']), { flow: 'ping' });
+    expect(report.broken.every(f => WIFI.includes(labelOf(f.sourceId)) || WIFI.includes(labelOf(f.targetId)))).toBe(true);
+    expect(report.broken).toHaveLength(38);
+    expect(report.unchanged).toBe(73);
+  });
+
+  it('the mail server: a mail between two PCs stops there', () => {
+    const result = ask('email', 'PC-Contabilità', 'PC-Vendite', broken(['Mail']));
+    expect(result.verdict).toBe('blocked');
+    expect(result.failureReason).toBe('SMTP submit: Mail is down');
+  });
+
+  it('the firewall: the inside goes on working, the portal and the outside are gone', () => {
+    const failures = broken(['FW-Edge']);
+    expect(ask('web', 'PC-Vendite', 'Web-Gestionale', failures).verdict).toBe('success');
+    expect(ask('web', 'PC-Vendite', 'Portale-Clienti', failures).verdict).toBe('blocked');
+    expect(ask('web', 'Cliente-Remoto', 'Portale-Clienti', failures).verdict).toBe('blocked');
+
+    const report = assessImpact(sample, failures, { flow: 'ping' });
+    expect(report.broken).toHaveLength(21);
+    expect(report.unchanged).toBe(90);
+  });
+});

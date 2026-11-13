@@ -5,6 +5,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
+import { createCompanySample } from '@/utils/sampleCompany';
 import { createPerimeterSample } from '@/utils/samplePerimeter';
 import { createRedundancySample } from '@/utils/sampleRedundancy';
 import { Plug, Package } from 'lucide-react';
@@ -37,6 +38,7 @@ const DevicePanel = () => {
   const devices = useNetworkStore((state) => state.devices);
   const loadTopology = useNetworkStore((state) => state.loadTopology);
   const clearAllDevices = useNetworkStore((state) => state.clearAllDevices);
+  const triggerFitView = useNetworkStore((state) => state.triggerFitView);
 
   const [activeTab, setActiveTab] = useState<'devices' | 'templates'>('devices');
   const [searchQuery, setSearchQuery] = useState('');
@@ -86,6 +88,8 @@ const DevicePanel = () => {
       clearAllDevices();
       const topology = create();
       loadTopology(topology.devices, topology.connections);
+      // Whole in the window, whatever part of the board was on screen
+      triggerFitView();
     }
   };
 
@@ -178,6 +182,18 @@ const DevicePanel = () => {
           {/* Templates Tab */}
           <div className="space-y-2">
             <p className="text-xs text-[var(--text-color-light)] mb-1">
+            <button
+              className="sidebar-panel-item"
+              onClick={() => handleLoadSample(createCompanySample)}
+            >
+              <Plug size={20} style={{ color: '#f59e0b', flexShrink: 0 }} />
+              <span>
+                Azienda: uffici, Wi-Fi, server e DMZ
+                <span className="block text-xs text-[var(--text-color-light)]">
+                  La rete di esempio: VLAN su un trunk, access point, firewall con tre regole
+                </span>
+              </span>
+            </button>
               Reti di esempio già configurate. Caricarne una sostituisce il canvas aperto.
             </p>
             <button

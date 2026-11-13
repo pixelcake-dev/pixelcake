@@ -27,13 +27,60 @@ afterEach(() => {
 });
 
 describe('DevicePanel — sample networks', () => {
-  it('offers the simple office, the site with VLANs, DMZ and firewall, and the two sites with a backup line', () => {
+  it('offers the company first, then the simple office, the site with VLANs, DMZ and firewall, and the two sites with a backup line', () => {
     openSamples();
+    const offered = screen
+      .getAllByRole('button')
+      .map(button => button.textContent ?? '')
+      .filter(text => /^(Azienda|Ufficio|Sede|Due sedi):/.test(text));
+    expect(offered.map(text => text.split(':')[0])).toEqual(['Azienda', 'Ufficio', 'Sede', 'Due sedi']);
+    expect(screen.getByRole('button', { name: /Azienda: uffici, Wi-Fi, server e DMZ/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Ufficio: due reti e un router/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Sede: VLAN, DMZ e firewall/ })).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /Due sedi: linea principale e di riserva/ })
     ).toBeInTheDocument();
+  });
+
+  it('loads the company: every device, every cable on its interface, the whole of it asked into view', () => {
+    openSamples();
+    const fitsAsked = useNetworkStore.getState().fitViewRequest;
+
+    fireEvent.click(screen.getByRole('button', { name: /Azienda: uffici, Wi-Fi, server e DMZ/ }));
+
+    expect(labels()).toHaveLength(20);
+    for (const label of ['FW-Edge', 'Router-Core', 'SW-Uffici', 'AP-Uffici', 'Portatile-1', 'Srv-Auth', 'DB-Gestionale']) {
+      expect(labels()).toContain(label);
+    }
+    const { connections } = useNetworkStore.getState();
+    expect(connections).toHaveLength(20);
+    for (const connection of connections) {
+      expect(connection.sourcePort ?? connection.sourceNic, connection.id).toBeDefined();
+      expect(connection.targetPort ?? connection.targetNic, connection.id).toBeDefined();
+    }
+    expect(useNetworkStore.getState().fitViewRequest).toBe(fitsAsked + 1);
+  });
+
+  it('every sample is asked into view when it is loaded', () => {
+    openSamples();
+    for (const name of [/Ufficio: due reti/, /Sede: VLAN/, /Due sedi:/]) {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const fitsAsked = useNetworkStore.getState().fitViewRequest;
+      fireEvent.click(screen.getByRole('button', { name }));
+      expect(useNetworkStore.getState().fitViewRequest, String(name)).toBe(fitsAsked + 1);
+    }
+  });
+
+  it('a sample that is not loaded, because the answer was no, moves nothing', () => {
+    openSamples();
+    fireEvent.click(screen.getByRole('button', { name: /Ufficio: due reti/ }));
+    const fitsAsked = useNetworkStore.getState().fitViewRequest;
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    fireEvent.click(screen.getByRole('button', { name: /Azienda: uffici/ }));
+
+    expect(labels()).toContain('Router-1');
+    expect(useNetworkStore.getState().fitViewRequest).toBe(fitsAsked);
   });
 
   it('loads the two sites: every device, every cable, each cable on its port', () => {
