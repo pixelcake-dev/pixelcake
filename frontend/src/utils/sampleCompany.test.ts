@@ -22,6 +22,7 @@ import {
   withFailures,
 } from '@/engine';
 import { describeForward, forwardProblem, isPrivateAddress } from '@/engine';
+import { normalizeAddressing, resolveDhcp } from '@/engine';
 import type { Failures, FlowResult } from '@/engine';
 import type { FlowModelType, NetworkDevice } from '@/types';
 
@@ -563,5 +564,84 @@ describe('createCompanySample — what happens if this breaks', () => {
     const report = assessImpact(sample, failures, { flow: 'ping' });
     expect(report.broken).toHaveLength(21);
     expect(report.unchanged).toBe(90);
+  });
+});
+
+describe('createCompanySample — DHCP', () => {
+  const dhcp = resolveDhcp(sample);
+  const pools = dhcp.pools.map(pool => [pool.name, pool.pool.start, pool.pool.end, pool.gateway, pool.leases.length, pool.free]);
+
+  it('the router hands out the offices and the Wi-Fi, a hundred addresses each, with itself as gateway', () => {
+    expect(pools).toEqual([
+      ['Router-Core port 1', '192.168.10.100', '192.168.10.199', '192.168.10.1', 0, 100],
+      ['Router-Core port 2', '192.168.20.100', '192.168.20.199', '192.168.20.1', 2, 98],
+    ]);
+    expect(dhcp.pools.every(pool => pool.problem === undefined)).toBe(true);
+    expect(dhcp.warnings).toEqual([]);
+  });
+
+  it('the two laptops take their address from it, in the order they are drawn; nobody else does', () => {
+    expect(dhcp.leases.map(lease => [labelOf(lease.deviceId), lease.ip, lease.mask, lease.gateway])).toEqual([
+      ['Portatile-1', '192.168.20.100', '255.255.255.0', '192.168.20.1'],
+      ['Portatile-2', '192.168.20.101', '255.255.255.0', '192.168.20.1'],
+    ]);
+    expect(dhcp.unserved).toEqual([]);
+    const onDhcp = sample.devices.filter(d => (d.nics ?? []).some(n => n.dhcp)).map(d => d.label);
+    expect(onDhcp).toEqual(WIFI);
+  });
+
+  it('a laptop is kept with no address of its own: nothing to mistake for the one it is leased', () => {
+    for (const label of WIFI) {
+      expect(device(label)).toMatchObject({ ip: '', gateway: '', nics: [{ dhcp: true, ip: '', subnet: '', gateway: '' }] });
+    }
+    // loading it changes nothing of it (see normalizeAddressing)
+    for (const d of sample.devices) expect(normalizeAddressing(d), d.label).toBe(d);
+  });
+
+  it('no address written by hand sits inside a range', () => {
+    const inRange = (ip: string) => {
+      const last = Number(ip.split('.')[3]);
+      return /^192\.168\.(10|20)\./.test(ip) && last >= 100 && last <= 199;
+    };
+    const written = sample.devices.flatMap(d => [
+      d.ip,
+      ...(d.ports ?? []).map(p => p.ip ?? ''),
+      ...(d.nics ?? []).map(n => n.ip),
+    ]);
+    expect(written.filter(inRange)).toEqual([]);
+  });
+
+  it('a third laptop on the Wi-Fi would be given the next address, an office PC one of the offices', () => {
+    const more = createCompanySample();
+    const card = { id: 'nic-1', name: 'eth0', enabled: true, speed: 'auto' as const, ip: '', subnet: '', gateway: '', dhcp: true };
+    const guest = { ...more.devices.find(d => d.label === 'Portatile-2')!, id: 'portatile-3', label: 'Portatile-3', nics: [card] };
+    const desk = { ...more.devices.find(d => d.label === 'PC-Vendite')!, id: 'pc-nuovo', label: 'PC-Nuovo', ip: '', gateway: '', nics: [card] };
+    more.devices.push(guest, desk);
+    // the access point has no free radio card: the cable is not attached to one there
+    more.connections.push(
+      { id: 'link-portatile-3', source: 'portatile-3', target: 'ap-uffici', sourceNic: 'nic-1' },
+      { id: 'link-pc-nuovo', source: 'pc-nuovo', target: 'sw-uffici', sourceNic: 'nic-1', targetPort: 5 }
+    );
+    more.devices.find(d => d.label === 'SW-Uffici')!.ports![4].vlan = 10;
+    const leases = resolveDhcp(more).leases.map(lease => [
+      more.devices.find(d => d.id === lease.deviceId)?.label,
+      lease.ip,
+    ]);
+    expect(leases).toEqual([
+      ['Portatile-1', '192.168.20.100'],
+      ['Portatile-2', '192.168.20.101'],
+      ['Portatile-3', '192.168.20.102'],
+      ['PC-Nuovo', '192.168.10.100'],
+    ]);
+  });
+
+  it('with the router down the laptops keep their address, and talk to each other and to nobody else', () => {
+    const failures = broken(['Router-Core']);
+    expect(ask('ping', 'Portatile-1', 'Portatile-2', failures)).toMatchObject({ verdict: 'success' });
+    expect(ask('ping', 'Portatile-1', 'Portatile-2', failures).legs[0].trace).toMatchObject({
+      sourceIp: '192.168.20.100',
+      targetIp: '192.168.20.101',
+    });
+    expect(ask('web', 'Portatile-1', 'Web-Gestionale', failures).verdict).toBe('blocked');
   });
 });

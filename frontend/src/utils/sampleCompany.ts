@@ -33,6 +33,11 @@
  *    leaves with its public address, 203.0.113.1. Two port forwards publish
  *    the portal (web) and the mail server (email) at that address: it is the
  *    only way in, the Internet does not carry the private addresses inside
+ *  - Router-Core is the DHCP server of the offices and of the Wi-Fi: each of
+ *    its two ports hands out the addresses from .100 to .199 of its network.
+ *    The two laptops take theirs from it (192.168.20.100 and .101); the PCs,
+ *    the printer, the access point and the servers have theirs written by
+ *    hand, as fixed things do
  *
  * Devices have the shape AddDeviceModal produces. Positions are hand-placed.
  * The list goes from the desks outwards (offices, core, servers, DMZ, edge,
@@ -62,6 +67,29 @@ function ports(
 
 function nic(id: string, name: string, mac: string, ip = '', gateway = ''): NetworkInterfaceCard {
   return { id, name, enabled: true, speed: 'auto', ip, subnet: MASK, gateway, mac };
+}
+
+/** A PC whose one card takes its address from the DHCP server of its network */
+function dhcpClient(
+  id: string,
+  label: string,
+  mac: string,
+  location: string,
+  position: { x: number; y: number }
+): NetworkDevice {
+  return {
+    id,
+    type: 'PC',
+    templateId: 'tpl-pc',
+    label,
+    // No address of its own, at device level or on the card: it is leased
+    ip: '',
+    subnet: MASK,
+    gateway: '',
+    location,
+    position,
+    nics: [{ id: 'nic-1', name: 'eth0', enabled: true, speed: 'auto', ip: '', subnet: '', gateway: '', mac, dhcp: true }],
+  };
 }
 
 function endDevice(
@@ -163,14 +191,9 @@ export function createCompanySample(): {
         nic('nic-3', 'wlan1', '02:00:C0:A8:14:F1'),
       ],
     },
-    endDevice(
-      'portatile-1', 'PC', 'tpl-pc', 'Portatile-1',
-      '192.168.20.11', WIFI_GATEWAY, '02:00:C0:A8:14:0B', 'Uffici', { x: 600, y: 920 }
-    ),
-    endDevice(
-      'portatile-2', 'PC', 'tpl-pc', 'Portatile-2',
-      '192.168.20.12', WIFI_GATEWAY, '02:00:C0:A8:14:0C', 'Uffici', { x: 840, y: 920 }
-    ),
+    // The laptops come and go: they take their address from Router-Core
+    dhcpClient('portatile-1', 'Portatile-1', '02:00:C0:A8:14:0B', 'Uffici', { x: 600, y: 920 }),
+    dhcpClient('portatile-2', 'Portatile-2', '02:00:C0:A8:14:0C', 'Uffici', { x: 840, y: 920 }),
 
     // ── Core ─────────────────────────────────────────────────────────────
     {
@@ -187,9 +210,20 @@ export function createCompanySample(): {
       location: 'Sala Server',
       position: { x: 620, y: 380 },
       portCount: 4,
+      // The two networks people sit on get their addresses from the router
       ports: ports(4, 'lan', {
-        1: { name: 'Uffici (VLAN 10)', ip: OFFICE_GATEWAY, subnet: MASK },
-        2: { name: 'Wi-Fi (VLAN 20)', ip: WIFI_GATEWAY, subnet: MASK },
+        1: {
+          name: 'Uffici (VLAN 10)',
+          ip: OFFICE_GATEWAY,
+          subnet: MASK,
+          dhcpServer: { start: '192.168.10.100', end: '192.168.10.199' },
+        },
+        2: {
+          name: 'Wi-Fi (VLAN 20)',
+          ip: WIFI_GATEWAY,
+          subnet: MASK,
+          dhcpServer: { start: '192.168.20.100', end: '192.168.20.199' },
+        },
         3: { name: 'Server (VLAN 30)', ip: SERVER_GATEWAY, subnet: MASK },
         4: { name: 'Firewall', ip: '10.0.0.1', subnet: P2P_MASK },
       }),

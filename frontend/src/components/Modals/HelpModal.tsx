@@ -121,6 +121,21 @@ const GuideTab = () => (
         schermata iniziale è fatta così.
       </Step>
 
+      <Step title="Dai gli indirizzi con il DHCP">
+        Un dispositivo può prendere l&apos;indirizzo da solo: nella scheda «Schede di rete», alla
+        voce «Indirizzo», scegli «Automatico (DHCP)» al posto di «Manuale». Glielo dà un server
+        DHCP della stessa rete: una porta di router o di firewall, oppure la scheda di un server,
+        con «Server DHCP Abilitato» e l&apos;intervallo da «Primo indirizzo» a «Ultimo indirizzo».
+        Con l&apos;indirizzo arrivano la subnet mask e il gateway. Gli indirizzi si calcolano dal
+        disegno, sempre allo stesso modo: i dispositivi vengono serviti nell&apos;ordine in cui
+        compaiono e ciascuno prende il primo indirizzo libero, saltando quelli scritti a mano. La
+        scheda «DHCP» del server elenca chi ha preso quale indirizzo, e sul disegno un indirizzo
+        assegnato è seguito da «DHCP». Una scheda che non trova un server resta senza indirizzo,
+        e la sua finestra dice perché. Un router non passa la richiesta a un&apos;altra rete: il
+        relay non è simulato, e nemmeno le prenotazioni e le scadenze. Nella rete di esempio della
+        schermata iniziale i due portatili prendono l&apos;indirizzo così, da Router-Core.
+      </Step>
+
       <Step title="Chiedi se un dispositivo ne raggiunge un altro">
         Apri «Simulazione» (il pulsante con il fulmine), scegli «Partenza», «Destinazione» e il
         «Modello di Flusso» (ping, email, pagina web o download), poi premi «Avvia Simulazione». Il
