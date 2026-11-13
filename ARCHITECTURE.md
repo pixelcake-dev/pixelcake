@@ -44,7 +44,7 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 - Device and connection templates with auto-update
 - Custom device types with their icon and colour; they are placed from the device panel like the built-in ones
 - Connection types with line styles and colors
-- Template capabilities: supportsVLAN, supportsSTP, supportsPorts, supportsNICs
+- Template capabilities: supportsVLAN, supportsPorts, supportsNICs. `supportsSTP` is still stored, because files and stored templates carry it, and shows nothing: spanning tree is not simulated and the interface has no setting for it
 - Custom templates travel inside the project file; opening a project adds the ones that are missing (`addMissingTemplates`)
 - LocalStorage key: `pixelcake-templates-v8`
 
@@ -56,6 +56,8 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 - **CustomEdge** (`frontend/src/components/Canvas/CustomEdge.tsx`) - Custom edge with connection type styling
 - **ParticleEdge** (`frontend/src/components/Canvas/ParticleEdge.tsx`) - Particle flow animation wrapper with CSS offset-path
 - **PacketAnimation** (`frontend/src/components/Canvas/PacketAnimation.tsx`) - Moves the packet of a simulation cable by cable and keeps simulationStore up to date; CustomEdge draws it. One run at a time: a new start, a stop or an unmount cancels the run in progress. Timing and the choice of the cable are in `utils/packetTiming.ts`
+
+The panels React Flow draws by itself (zoom buttons, small map, credit) take the colours of the theme from `index.css`. React Flow's own style sheet is loaded after it, so those rules start with `.react-flow` to outrank it. The credit is never hidden.
 
 While presenting, NetworkCanvas makes the drawing read-only (nothing is selected, moved, joined, deleted or pasted; dragging pans), a click on a device or a cable opens the presentation menu, the drawing is fitted to the window, and the view saved with the drawing is not touched. NetworkDevice and CustomEdge mark the ends of the question, a broken device, a cut cable and the way of the answer.
 
@@ -91,6 +93,8 @@ While presenting, NetworkCanvas makes the drawing read-only (nothing is selected
 - Opening and saving a project have no modal: they go through the file picker (`frontend/src/utils/projectFileAccess.ts`)
 
 ### UI Components
+- **Modal / BaseModal** - The window every dialog is built on. Esc closes it as its X does (`ui/useEscapeToClose.ts`): whatever Esc can close is on one list while it is open, a single listener closes the last entry, so each press closes one thing, the one on top (a list of the icon picker before its window, a window before the one under it). Whoever uses Esc for itself (an edit in place) marks the event with `preventDefault()`; a press that is marked is left alone, also by the presentation bar
+- **Button** - Lays what is inside it out in a row: an icon and its label stay on one line, with no styling of the icon by the caller
 - **TabContainer** - Reusable tab system for modals
 - **VLANInput** - Multi-value input with tag chips (range 1-4094)
 - **DeviceTypeDisplay** - Read-only device type preview with icon
@@ -284,7 +288,7 @@ interface FlowMap {
 - Basic: `id, type, label, ip, subnet, gateway, vendor, location, position`
 - `templateId?: string` - Specific template ID (e.g., 'tpl-mailserver')
 - `vlan?: number[]` - VLAN IDs (1-4094)
-- `stp?: { enabled, mode, priority }` - STP configuration
+- `stp?: { enabled, mode, priority }` - Spanning tree settings. Not simulated and not shown or edited anywhere in the interface: kept so that a file that carries them opens and is saved again unchanged
 - `portCount?, ports?: Port[]` - Network ports (Switch/Router/Firewall)
 - `nics?: NetworkInterfaceCard[]` - NICs for end devices
 - `routes?: StaticRoute[]` - Static routes (Router/Firewall): `{ id, destination, nextHop, description? }`, destination in CIDR form. `gateway` is the default route
@@ -311,11 +315,11 @@ ip: string, subnet: string, gateway: string, mac?: string, description?: string
   In YAML: `source_port`, `target_port`, `source_nic`, `target_nic` (NIC name);
   devices also carry `template_id`, ports carry `ip`/`subnet`.
 - `vlan?: number[]` - Tagged VLANs
-- `stpPortState?, stpPortPriority?`
+- `stpPortState?, stpPortPriority?` - kept for files, like `stp` on a device
 
 ### DeviceTemplate
 - Basic: `id, name, type, icon, color, terraformFields, isCustom`
-- Capabilities: `supportsVLAN, supportsSTP, supportsPorts, supportsNICs`
+- Capabilities: `supportsVLAN, supportsPorts, supportsNICs` (and `supportsSTP`, kept for files: nothing reads it)
 - `defaultPortCount?, portOptions?`
 
 ## Device Templates (20 total)

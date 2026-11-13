@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Removed
+- **The spanning tree settings of a device** ("STP attivo", "Modalità STP" and the bridge priority, in the Inspector). The engine does not simulate spanning tree, so they changed nothing. What a project file, a YAML file or a stored template carries about spanning tree is still read, left alone by every edit and written back as it was.
 - **The backend.** The FastAPI service, its database and admin panel, and the API client in the frontend are gone: the app runs entirely in the browser. Entries further down that mention the backend describe earlier versions.
 - **The login page.** It asked for nothing and checked nothing: the app now opens straight on the designer. The particle library it used (`@tsparticles/*`) is no longer a dependency.
 - **Interface entries that did nothing**: "Esporta come PNG", "Annulla", "Ripristina" and "Taglia" in the menus, "Preferiti" and "Account" in the sidebar, "Configurazione..." and "Evidenzia Percorso" in the right-click menus.
@@ -49,12 +50,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Subtle 2px track line matching BulkAddDeviceModal design
 
 ### Changed
+- **Esc closes the window on top**, as its X does: the device window, the settings, Import/Export, the guide and every other window. One window for each press; a list open inside a window (the icon picker) closes before the window does, a press on a drop-down field is spent on its list, and Esc in a text edited in place still cancels only the edit. While presenting, Esc with a window open closes the window and the presentation goes on. The terminal keeps its own keys.
+- **One name, one motto.** The browser tab is titled "PixelCake - Visual Network Designer", and the settings and the guide end with the motto of the welcome screen, in Italian. Name, descriptor and motto are written once, in `frontend/src/constants/brand.ts`.
 - **A button that cannot be pressed looks it.** Disabled buttons in the dialogs were drawn like the others.
 - **The packet animation is quicker and can be restarted.** A long exchange took about twenty seconds; cables now take between a third of a second and a second each. Starting a new animation, or stopping one, cancels the one in progress at once. The device the packet is stopping on is ringed.
 - **The engine follows the shortest way that works**, not the shortest on the drawing: a port that is down is gone round when there is another way. End devices no longer carry traffic for others, and a router with addressed ports no longer passes traffic between two devices addressed in one network.
 - **A router with more than one hop to go is checked**, no longer assumed. A router whose ports have no address still lets traffic through, with a note, so drawings made before this change give the answers they gave.
 - **New routers and firewalls start without a gateway**: on a router the gateway is its default route. New devices appear in the middle of the visible canvas.
-- **Inspector**: labels in Italian; a firewall port can be in no zone; the settings the engine does not simulate (NAT, IPS, STP) say so.
+- **Inspector**: labels in Italian; a firewall port can be in no zone; the settings the engine does not simulate (NAT, IPS) say so.
 - **Help**: the outdated release notes are replaced by a guide in three tabs: how to use the app, the terminal commands (the same table the terminal prints with `help`) and information about the app. The Help menu opens it on each tab.
 - **Shortcut list** (Impostazioni → Avanzate): it now lists only what the canvas really does. Panning is with the right mouse button, multi-selection with Ctrl+click; the Ctrl+L line described a shortcut that never existed.
 - **Import/Export**: YAML is the default export format. The Terraform export is labelled as a draft and says that it cannot be applied.
@@ -68,6 +71,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Two-part processing: configurable devices (with ports) + standard devices (with NICs)
 
 ### Fixed
+- **Dark theme: the zoom buttons and the small map are no longer white.** They take the colours of the theme, in light and dark and in both colour themes. The credit to React Flow is readable on a dark canvas and no longer runs under the zoom buttons.
+- **Import/Export: the icon of a button sat on a line of its own**, above its label. A button now keeps its icon next to its label, whoever uses it.
+- **Labels glued to the field above** in Impostazioni → Rete, in "Nuovo Progetto" and in "Modifica Connessione": the fields are spaced like those of the other windows.
 - **Cables follow a change of theme at once.** After switching between light and dark, each cable kept the grey of the old theme until it was drawn again.
 - **The packet travels on the cable the engine took.** Between two devices joined by two cables the animation always ran on the first one drawn, even when the traffic was on the other.
 - Ctrl+V while typing in a field pasted a copy of the selected devices on the canvas; Ctrl+C took over copying text. The canvas shortcuts now leave text alone.
