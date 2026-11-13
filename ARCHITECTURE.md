@@ -44,7 +44,7 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 - Device and connection templates with auto-update
 - Custom device types with their icon and colour; they are placed from the device panel like the built-in ones
 - Connection types with line styles and colors
-- Template capabilities: supportsVLAN, supportsPorts, supportsNICs. `supportsSTP` is still stored, because files and stored templates carry it, and shows nothing: spanning tree is not simulated and the interface has no setting for it
+- Template capabilities: supportsVLAN, supportsSTP, supportsPorts, supportsNICs
 - Custom templates travel inside the project file; opening a project adds the ones that are missing (`addMissingTemplates`)
 - LocalStorage key: `pixelcake-templates-v8`
 
@@ -298,7 +298,7 @@ interface FlowMap {
 - Basic: `id, type, label, ip, subnet, gateway, vendor, location, position`
 - `templateId?: string` - Specific template ID (e.g., 'tpl-mailserver')
 - `vlan?: number[]` - VLAN IDs (1-4094)
-- `stp?: { enabled, mode, priority }` - Spanning tree settings. Not simulated and not shown or edited anywhere in the interface: kept so that a file that carries them opens and is saved again unchanged
+- `stp?: { enabled, mode, priority }` - STP configuration (kept as documentation: the engine does not simulate it, and the Inspector says so)
 - `portCount?, ports?: Port[]` - Network ports (Switch/Router/Firewall)
 - `nics?: NetworkInterfaceCard[]` - NICs for end devices
 - `routes?: StaticRoute[]` - Static routes (Router/Firewall): `{ id, destination, nextHop, description? }`, destination in CIDR form. `gateway` is the default route
@@ -325,11 +325,11 @@ ip: string, subnet: string, gateway: string, mac?: string, description?: string
   In YAML: `source_port`, `target_port`, `source_nic`, `target_nic` (NIC name);
   devices also carry `template_id`, ports carry `ip`/`subnet`.
 - `vlan?: number[]` - Tagged VLANs
-- `stpPortState?, stpPortPriority?` - kept for files, like `stp` on a device
+- `stpPortState?, stpPortPriority?`
 
 ### DeviceTemplate
 - Basic: `id, name, type, icon, color, terraformFields, isCustom`
-- Capabilities: `supportsVLAN, supportsPorts, supportsNICs` (and `supportsSTP`, kept for files: nothing reads it)
+- Capabilities: `supportsVLAN, supportsSTP, supportsPorts, supportsNICs`
 - `defaultPortCount?, portOptions?`
 
 ## Device Templates (20 total)

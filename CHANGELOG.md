@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - **The second colour theme**, "Modern Tech" (Impostazioni → Aspetto). The app has one set of colours, the two of its logo, in light and in dark; the settings keep that one choice, as a switch. A theme picked with an older version is not kept.
-- **The spanning tree settings of a device** ("STP attivo", "Modalità STP" and the bridge priority, in the Inspector). The engine does not simulate spanning tree, so they changed nothing. What a project file, a YAML file or a stored template carries about spanning tree is still read, left alone by every edit and written back as it was.
 - **The backend.** The FastAPI service, its database and admin panel, and the API client in the frontend are gone: the app runs entirely in the browser. Entries further down that mention the backend describe earlier versions.
 - **The login page.** It asked for nothing and checked nothing: the app now opens straight on the designer. The particle library it used (`@tsparticles/*`) is no longer a dependency.
 - **Interface entries that did nothing**: "Esporta come PNG", "Annulla", "Ripristina" and "Taglia" in the menus, "Preferiti" and "Account" in the sidebar, "Configurazione..." and "Evidenzia Percorso" in the right-click menus.
@@ -64,7 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The engine follows the shortest way that works**, not the shortest on the drawing: a port that is down is gone round when there is another way. End devices no longer carry traffic for others, and a router with addressed ports no longer passes traffic between two devices addressed in one network.
 - **A router with more than one hop to go is checked**, no longer assumed. A router whose ports have no address still lets traffic through, with a note, so drawings made before this change give the answers they gave.
 - **New routers and firewalls start without a gateway**: on a router the gateway is its default route. New devices appear in the middle of the visible canvas.
-- **Inspector**: labels in Italian; a firewall port can be in no zone; the settings the engine does not simulate (NAT, IPS) say so.
+- **Inspector**: labels in Italian; a firewall port can be in no zone; the settings the engine does not simulate (NAT, IPS, STP) say so.
 - **Help**: the outdated release notes are replaced by a guide in three tabs: how to use the app, the terminal commands (the same table the terminal prints with `help`) and information about the app. The Help menu opens it on each tab.
 - **Shortcut list** (Impostazioni → Avanzate): it now lists only what the canvas really does. Panning is with the right mouse button, multi-selection with Ctrl+click; the Ctrl+L line described a shortcut that never existed.
 - **Import/Export**: YAML is the default export format. The Terraform export is labelled as a draft and says that it cannot be applied.

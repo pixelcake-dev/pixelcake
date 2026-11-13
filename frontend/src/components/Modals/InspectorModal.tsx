@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Scrollbars } from 'react-custom-scrollbars-2';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { FormContainer, FormFieldset } from '@/components/ui/FormContainer';
 import TabContainer, { type Tab } from '@/components/ui/TabContainer';
@@ -43,6 +44,11 @@ const InspectorModal = () => {
   const [gateway, setGateway] = useState('');
   const [vlans, setVlans] = useState<number[]>([]);
 
+  // STP Config
+  const [stpEnabled, setStpEnabled] = useState(false);
+  const [stpMode, setStpMode] = useState<'STP' | 'RSTP' | 'PVST+' | 'MST'>('RSTP');
+  const [stpPriority, setStpPriority] = useState(32768);
+
   // Port Management
   const [ports, setPorts] = useState<Port[]>([]);
   const [selectedPortId, setSelectedPortId] = useState<number | null>(null);
@@ -64,6 +70,9 @@ const InspectorModal = () => {
       setSubnet(inspectorDevice.subnet);
       setGateway(inspectorDevice.gateway);
       setVlans(inspectorDevice.vlan || []);
+      setStpEnabled(inspectorDevice.stp?.enabled || false);
+      setStpMode(inspectorDevice.stp?.mode || 'RSTP');
+      setStpPriority(inspectorDevice.stp?.priority || 32768);
       setPorts(inspectorDevice.ports || []);
       setSelectedPortId(null);
       setNics(inspectorDevice.nics || []);
@@ -162,9 +171,6 @@ const InspectorModal = () => {
       return;
     }
 
-    // Only what this window shows is written. What a device carries beside it
-    // (the spanning tree settings of an older file: the engine does not
-    // simulate them and nothing here edits them) is left as it is
     updateDevice(inspectorDevice.id, {
       label: name,
       vendor: inspectorDevice.type !== 'PC' ? vendor : undefined,
@@ -173,6 +179,13 @@ const InspectorModal = () => {
       subnet,
       gateway,
       vlan: vlans.length > 0 ? vlans : undefined,
+      stp: stpEnabled
+        ? {
+            enabled: stpEnabled,
+            mode: stpMode,
+            priority: stpPriority,
+          }
+        : undefined,
       ports: ports.length > 0 ? ports : undefined,
       nics: nics.length > 0 ? nics : undefined,
       routes: keptRoutes.length > 0 ? keptRoutes : undefined,
@@ -193,6 +206,7 @@ const InspectorModal = () => {
     ? templates.find((t) => t.id === inspectorDevice.templateId)
     : templates.find((t) => t.type === inspectorDevice.type);
   const supportsVLAN = template?.supportsVLAN || false;
+  const supportsSTP = template?.supportsSTP || false;
   const supportsPorts = template?.supportsPorts || false;
   const supportsNICs = template?.supportsNICs || false;
 
@@ -221,7 +235,7 @@ const InspectorModal = () => {
       label: 'Generale',
       content: (
         <FormContainer columns={2} gap="4">
-          {/* Column 1: Device Identity */}
+          {/* Column 1: Device Identity + STP */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Device Identity */}
             <FormFieldset legend="Identità">
@@ -255,6 +269,58 @@ const InspectorModal = () => {
                 )}
               </FormContainer>
             </FormFieldset>
+
+            {/* STP Configuration */}
+            {supportsSTP && (
+              <FormFieldset legend="Spanning Tree (STP)">
+                <FormContainer gap="2">
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={stpEnabled}
+                        onChange={(e) => setStpEnabled(e.target.checked)}
+                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                      />
+                      <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-color)' }}>
+                        STP attivo
+                      </span>
+                    </label>
+                  </div>
+
+                  <Select
+                    label="Modalità STP"
+                    value={stpMode}
+                    onChange={(e) => setStpMode(e.target.value as typeof stpMode)}
+                    size="full"
+                    disabled={!stpEnabled}
+                  >
+                    <option value="STP">STP (802.1D)</option>
+                    <option value="RSTP">RSTP (802.1w)</option>
+                    <option value="PVST+">PVST+ (Cisco)</option>
+                    <option value="MST">MST (802.1s)</option>
+                  </Select>
+
+                  <Input
+                    label="Priorità del bridge"
+                    type="number"
+                    value={stpPriority}
+                    onChange={(e) => setStpPriority(parseInt(e.target.value) || 32768)}
+                    min={0}
+                    max={65535}
+                    step={4096}
+                    size="full"
+                    disabled={!stpEnabled}
+                  />
+                  <p style={{ fontSize: '12px', color: 'var(--text-color-light)', marginTop: '-8px' }}>
+                    Da 0 a 65535 a passi di 4096 (predefinita 32768)
+                  </p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-color-light)' }}>
+                    Lo spanning tree resta come documentazione: il motore non lo simula.
+                  </p>
+                </FormContainer>
+              </FormFieldset>
+            )}
           </div>
 
           {/* Column 2: Network Configuration */}
