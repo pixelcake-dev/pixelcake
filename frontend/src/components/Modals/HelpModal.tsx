@@ -68,8 +68,9 @@ const GuideTab = () => (
       </Step>
 
       <Step title="Collegali">
-        Ogni dispositivo ha quattro punti di connessione, uno per lato. Trascina da un punto fino a
-        un punto di un altro dispositivo: a ciascun capo il collegamento viene assegnato a una porta
+        Ogni dispositivo ha quattro punti di connessione, uno per lato: compaiono quando ci passi
+        sopra con il mouse o lo selezioni. Trascina da un punto fino a un punto di un altro
+        dispositivo: a ciascun capo il collegamento viene assegnato a una porta
         o a una scheda di rete libera. Su un firewall con zone di sicurezza la porta va scelta a
         mano. Con un clic destro sul collegamento, «Modifica Connessione» permette di cambiare le
         interfacce, il tipo, la banda, l&apos;etichetta e il colore.

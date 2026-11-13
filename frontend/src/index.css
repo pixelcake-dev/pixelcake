@@ -351,7 +351,10 @@ html, body {
   transition: none !important;
 }
 
-/* Small visible indicator using pseudo-element */
+/* Small visible indicator using pseudo-element. Hidden at rest: four marks
+   on every device, all at once, covered the drawing. (The hit area above is
+   always there, and it is part of the device: the marks appear as the
+   pointer comes near.) */
 .connect-point::after {
   content: '';
   position: absolute;
@@ -363,13 +366,16 @@ html, body {
   background-color: var(--bg-canvas);
   border: 3px solid var(--connector-color);
   border-radius: 50%;
-  opacity: 0.7;
+  opacity: 0;
   transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
   pointer-events: none;
 }
 
-/* Show indicators on hover */
-.react-flow__node:hover .connect-point::after {
+/* They show on the device under the pointer and on a selected one (which is
+   also how they are reached where there is no pointer to hover with); on
+   every device while a cable is being dragged, see below */
+.react-flow__node:hover .connect-point::after,
+.react-flow__node.selected .connect-point::after {
   opacity: 1 !important;
 }
 
