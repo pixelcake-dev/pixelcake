@@ -38,6 +38,12 @@
  *    The two laptops take theirs from it (192.168.20.100 and .101); the PCs,
  *    the printer, the access point and the servers have theirs written by
  *    hand, as fixed things do
+ *  - Srv-Auth is the DNS server of the inside: it keeps the names of the
+ *    management software, of the mail server and of the portal (at its
+ *    address in the DMZ), under azienda.example. The PCs and the printer of
+ *    the offices name it on their cards; the laptops are handed it with their
+ *    lease, and the same goes for whatever takes an address in the offices.
+ *    Cliente-Remoto has no DNS server: outside, a name finds nobody to ask
  *
  * Devices have the shape AddDeviceModal produces. Positions are hand-placed.
  * The list goes from the desks outwards (offices, core, servers, DMZ, edge,
@@ -65,8 +71,8 @@ function ports(
   }));
 }
 
-function nic(id: string, name: string, mac: string, ip = '', gateway = ''): NetworkInterfaceCard {
-  return { id, name, enabled: true, speed: 'auto', ip, subnet: MASK, gateway, mac };
+function nic(id: string, name: string, mac: string, ip = '', gateway = '', dns = ''): NetworkInterfaceCard {
+  return { id, name, enabled: true, speed: 'auto', ip, subnet: MASK, gateway, ...(dns ? { dns } : {}), mac };
 }
 
 /** A PC whose one card takes its address from the DHCP server of its network */
@@ -101,7 +107,9 @@ function endDevice(
   gateway: string,
   mac: string,
   location: string,
-  position: { x: number; y: number }
+  position: { x: number; y: number },
+  /** The DNS server its card asks, when it asks one */
+  dns = ''
 ): NetworkDevice {
   return {
     id,
@@ -114,7 +122,7 @@ function endDevice(
     gateway,
     location,
     position,
-    nics: [nic('nic-1', 'eth0', mac, ip, gateway)],
+    nics: [nic('nic-1', 'eth0', mac, ip, gateway, dns)],
   };
 }
 
@@ -148,6 +156,8 @@ function switchDevice(
 const OFFICE_GATEWAY = '192.168.10.1';
 const WIFI_GATEWAY = '192.168.20.1';
 const SERVER_GATEWAY = '192.168.30.1';
+/** Srv-Auth: the DNS server of the inside */
+const DNS_SERVER = '192.168.30.10';
 
 export function createCompanySample(): {
   devices: NetworkDevice[];
@@ -164,15 +174,15 @@ export function createCompanySample(): {
     }),
     endDevice(
       'pc-contabilita', 'PC', 'tpl-pc', 'PC-Contabilità',
-      '192.168.10.11', OFFICE_GATEWAY, '02:00:C0:A8:0A:0B', 'Uffici', { x: 0, y: 920 }
+      '192.168.10.11', OFFICE_GATEWAY, '02:00:C0:A8:0A:0B', 'Uffici', { x: 0, y: 920 }, DNS_SERVER
     ),
     endDevice(
       'pc-vendite', 'PC', 'tpl-pc', 'PC-Vendite',
-      '192.168.10.12', OFFICE_GATEWAY, '02:00:C0:A8:0A:0C', 'Uffici', { x: 200, y: 920 }
+      '192.168.10.12', OFFICE_GATEWAY, '02:00:C0:A8:0A:0C', 'Uffici', { x: 200, y: 920 }, DNS_SERVER
     ),
     endDevice(
       'stampante', 'PC', 'tpl-printer', 'Stampante',
-      '192.168.10.50', OFFICE_GATEWAY, '02:00:C0:A8:0A:32', 'Uffici', { x: 400, y: 920 }
+      '192.168.10.50', OFFICE_GATEWAY, '02:00:C0:A8:0A:32', 'Uffici', { x: 400, y: 920 }, DNS_SERVER
     ),
     {
       id: 'ap-uffici',
@@ -191,7 +201,8 @@ export function createCompanySample(): {
         nic('nic-3', 'wlan1', '02:00:C0:A8:14:F1'),
       ],
     },
-    // The laptops come and go: they take their address from Router-Core
+    // The laptops come and go: they take their address from Router-Core, and
+    // with it the DNS server to ask
     dhcpClient('portatile-1', 'Portatile-1', '02:00:C0:A8:14:0B', 'Uffici', { x: 600, y: 920 }),
     dhcpClient('portatile-2', 'Portatile-2', '02:00:C0:A8:14:0C', 'Uffici', { x: 840, y: 920 }),
 
@@ -210,19 +221,20 @@ export function createCompanySample(): {
       location: 'Sala Server',
       position: { x: 620, y: 380 },
       portCount: 4,
-      // The two networks people sit on get their addresses from the router
+      // The two networks people sit on get their addresses from the router,
+      // and with them the DNS server of the inside
       ports: ports(4, 'lan', {
         1: {
           name: 'Uffici (VLAN 10)',
           ip: OFFICE_GATEWAY,
           subnet: MASK,
-          dhcpServer: { start: '192.168.10.100', end: '192.168.10.199' },
+          dhcpServer: { start: '192.168.10.100', end: '192.168.10.199', dns: DNS_SERVER },
         },
         2: {
           name: 'Wi-Fi (VLAN 20)',
           ip: WIFI_GATEWAY,
           subnet: MASK,
-          dhcpServer: { start: '192.168.20.100', end: '192.168.20.199' },
+          dhcpServer: { start: '192.168.20.100', end: '192.168.20.199', dns: DNS_SERVER },
         },
         3: { name: 'Server (VLAN 30)', ip: SERVER_GATEWAY, subnet: MASK },
         4: { name: 'Firewall', ip: '10.0.0.1', subnet: P2P_MASK },
@@ -245,10 +257,19 @@ export function createCompanySample(): {
     }),
 
     // ── Servers (VLAN 30, 192.168.30.0/24) ───────────────────────────────
-    endDevice(
-      'srv-auth', 'Server', 'tpl-server', 'Srv-Auth',
-      '192.168.30.10', SERVER_GATEWAY, '02:00:C0:A8:1E:0A', 'Sala Server', { x: 900, y: 740 }
-    ),
+    {
+      ...endDevice(
+        'srv-auth', 'Server', 'tpl-server', 'Srv-Auth',
+        DNS_SERVER, SERVER_GATEWAY, '02:00:C0:A8:1E:0A', 'Sala Server', { x: 900, y: 740 }
+      ),
+      // The names of the inside. The portal is known by its address in the
+      // DMZ: from inside it is reached there, not at the public one
+      dnsRecords: [
+        { id: 'record-1', name: 'gestionale.azienda.example', address: '192.168.30.30' },
+        { id: 'record-2', name: 'posta.azienda.example', address: '192.168.30.40' },
+        { id: 'record-3', name: 'portale.azienda.example', address: '172.16.0.10' },
+      ],
+    },
     endDevice(
       'db-gestionale', 'Database', 'tpl-database', 'DB-Gestionale',
       '192.168.30.20', SERVER_GATEWAY, '02:00:C0:A8:1E:14', 'Sala Server', { x: 1100, y: 740 }

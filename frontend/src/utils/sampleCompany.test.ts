@@ -22,7 +22,8 @@ import {
   withFailures,
 } from '@/engine';
 import { describeForward, forwardProblem, isPrivateAddress } from '@/engine';
-import { normalizeAddressing, resolveDhcp } from '@/engine';
+import { normalizeAddressing, resolveDhcp, withLeases } from '@/engine';
+import { dnsCardOf, dnsRecordsOf, isHostName, lookup } from '@/engine';
 import type { Failures, FlowResult } from '@/engine';
 import type { FlowModelType, NetworkDevice } from '@/types';
 
@@ -643,5 +644,109 @@ describe('createCompanySample — DHCP', () => {
       targetIp: '192.168.20.101',
     });
     expect(ask('web', 'Portatile-1', 'Web-Gestionale', failures).verdict).toBe('blocked');
+  });
+});
+
+describe('createCompanySample — DNS', () => {
+  const leased = withLeases(sample);
+  const find = (from: string, name: string, failures?: Failures) =>
+    lookup(withFailures(sample, failures), device(from).id, name);
+  const NAMES = [
+    ['gestionale.azienda.example', 'Web-Gestionale', '192.168.30.30'],
+    ['posta.azienda.example', 'Mail', '192.168.30.40'],
+    ['portale.azienda.example', 'Portale-Clienti', '172.16.0.10'],
+  ];
+
+  it('Srv-Auth keeps the names of the inside, each the address of the device it is for', () => {
+    expect(dnsRecordsOf(device('Srv-Auth')).map(record => [record.name, record.address])).toEqual(
+      NAMES.map(([name, , address]) => [name, address])
+    );
+    // (every record is one the engine reads: none is left out)
+    expect(device('Srv-Auth').dnsRecords).toHaveLength(NAMES.length);
+    for (const [name, label, address] of NAMES) {
+      expect(isHostName(name), name).toBe(true);
+      expect(device(label).nics?.[0].ip, name).toBe(address);
+    }
+    const keepers = sample.devices.filter(d => d.dnsRecords !== undefined).map(d => d.label);
+    expect(keepers).toEqual(['Srv-Auth']);
+  });
+
+  it('the offices name it on their cards, the laptops are handed it with their lease, nobody else asks', () => {
+    for (const label of OFFICES) expect(device(label).nics?.[0].dns, label).toBe('192.168.30.10');
+    // a laptop keeps none of its own
+    for (const label of WIFI) expect(device(label).nics?.[0], label).not.toHaveProperty('dns');
+    expect(resolveDhcp(sample).pools.map(pool => pool.pool.dns)).toEqual(['192.168.30.10', '192.168.30.10']);
+    expect(resolveDhcp(sample).leases.map(lease => lease.dns)).toEqual(['192.168.30.10', '192.168.30.10']);
+
+    const asking = leased.devices.filter(d => dnsCardOf(d) !== undefined);
+    expect(asking.map(d => d.label)).toEqual([...OFFICES, ...WIFI]);
+    expect(asking.map(d => dnsCardOf(d)?.dns)).toEqual(Array(5).fill('192.168.30.10'));
+    expect(device('Srv-Auth').nics?.[0].ip).toBe('192.168.30.10');
+  });
+
+  it('a PC of the offices looks a name up: through the trunk and the router, to the server and back', () => {
+    const result = find('PC-Vendite', 'gestionale.azienda.example');
+    expect(result).toMatchObject({ address: '192.168.30.30', serverIp: '192.168.30.10' });
+    expect(result.server?.label).toBe('Srv-Auth');
+    expect(result.trip && way(result.trip, 0)).toBe(
+      'PC-Vendite > SW-Uffici > SW-Core > Router-Core > SW-Server > Srv-Auth'
+    );
+    expect(result.trip && way(result.trip, 1)).toBe(
+      'Srv-Auth > SW-Server > Router-Core > SW-Core > SW-Uffici > PC-Vendite'
+    );
+    expect(result.trip?.notes).toEqual([]);
+  });
+
+  it('every device that asks finds every name', () => {
+    for (const from of [...OFFICES, ...WIFI]) {
+      for (const [name, , address] of NAMES) {
+        expect(find(from, name).address, `${from}: ${name}`).toBe(address);
+      }
+    }
+  });
+
+  it('a laptop asks from the address it is leased', () => {
+    const result = find('Portatile-1', 'posta.azienda.example');
+    expect(result.trip?.legs[0].trace).toMatchObject({ sourceIp: '192.168.20.100', targetIp: '192.168.30.10' });
+    expect(result.address).toBe('192.168.30.40');
+  });
+
+  it('what a name resolves to is reached as the address would be', () => {
+    for (const [name, label] of NAMES) {
+      const address = find('PC-Vendite', name).address;
+      const flow = planAndEvaluateFlow('web', device('PC-Vendite').id, device(label).id, sample, { targetIp: address });
+      expect(flow.verdict, name).toBe('success');
+      expect(flow.legs[0].trace.targetIp, name).toBe(address);
+    }
+  });
+
+  it('a name nobody wrote has no record, and the customer outside has nobody to ask', () => {
+    expect(find('PC-Vendite', 'intranet.azienda.example').failureReason).toBe(
+      'Srv-Auth has no record for intranet.azienda.example'
+    );
+    expect(find('Cliente-Remoto', 'portale.azienda.example')).toEqual({
+      name: 'portale.azienda.example',
+      failureReason: 'Cliente-Remoto has no DNS server: it cannot look up portale.azienda.example',
+    });
+    // a server of the inside asks nobody either: its card names no DNS server
+    expect(find('Web-Gestionale', 'posta.azienda.example').failureReason).toBe(
+      'Web-Gestionale has no DNS server: it cannot look up posta.azienda.example'
+    );
+  });
+
+  it('with Srv-Auth down no name is found, and every address still answers', () => {
+    const failures = broken(['Srv-Auth']);
+    expect(find('PC-Vendite', 'gestionale.azienda.example', failures).failureReason).toBe(
+      'DNS request: Srv-Auth is down'
+    );
+    expect(ask('web', 'PC-Vendite', 'Web-Gestionale', failures).verdict).toBe('success');
+  });
+
+  it('with the trunk cut the offices and the Wi-Fi lose the names with the rest', () => {
+    const failures = broken([], ['link-trunk-uffici']);
+    expect(find('PC-Vendite', 'gestionale.azienda.example', failures).failureReason).toBe(
+      'DNS request: link SW-Uffici–SW-Core is down'
+    );
+    expect(find('Portatile-1', 'gestionale.azienda.example', failures).address).toBeUndefined();
   });
 });
