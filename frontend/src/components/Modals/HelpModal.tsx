@@ -105,8 +105,8 @@ const GuideTab = () => (
         Le porte di un firewall si mettono in una zona: trust, untrust o dmz. Senza regole decide
         la politica delle zone: verso una zona più fidata il traffico è negato, il resto passa.
         Nella scheda «Regole» si scrivono le eccezioni, lette dall&apos;alto in basso: decide la
-        prima che corrisponde, per servizio (ping, web, email), origine e destinazione. La risposta
-        a un flusso permesso passa sempre.
+        prima che corrisponde, per servizio (ping, web, email, DNS), origine e destinazione. La
+        risposta a un flusso permesso passa sempre.
       </Step>
 
       <Step title="Esci su Internet con il NAT">
@@ -134,6 +134,25 @@ const GuideTab = () => (
         e la sua finestra dice perché. Un router non passa la richiesta a un&apos;altra rete: il
         relay non è simulato, e nemmeno le prenotazioni e le scadenze. Nella rete di esempio della
         schermata iniziale i due portatili prendono l&apos;indirizzo così, da Router-Core.
+      </Step>
+
+      <Step title="Chiama i dispositivi per nome con il DNS">
+        Un server può fare da server DNS: nella sua scheda «DNS» premi «Aggiungi record» e scrivi
+        un nome, per esempio <Mono>gestionale.azienda.example</Mono>, e l&apos;indirizzo a cui
+        corrisponde. A chi chiedere lo decide ogni dispositivo: nella scheda «Schede di rete» il
+        campo «Server DNS» contiene l&apos;indirizzo del server. Chi prende l&apos;indirizzo dal
+        DHCP riceve anche quello, se nel server DHCP è compilato «Server DNS consegnato
+        (opzionale)». Un nome si usa nel terminale al posto di un indirizzo:{' '}
+        <Mono>ping gestionale.azienda.example from PC-Vendite</Mono> chiede prima l&apos;indirizzo
+        al server DNS, con una domanda che attraversa la rete come ogni altro scambio e può
+        fermarsi allo stesso modo, e poi fa il ping;{' '}
+        <Mono>resolve gestionale.azienda.example from PC-Vendite</Mono> fa soltanto la domanda.
+        Per un firewall la domanda è il servizio «DNS», che si sceglie nelle regole e negli
+        inoltri. Nulla viene ricordato: il nome viene chiesto di nuovo ogni volta. Non sono
+        simulati un secondo server DNS di riserva, l&apos;inoltro ad altri server e la ricerca
+        inversa; la simulazione e la presentazione scelgono i dispositivi dai menu e non usano i
+        nomi. Nella rete di esempio della schermata iniziale Srv-Auth conosce tre nomi, gli uffici
+        e i portatili chiedono a lui, e Cliente-Remoto non ha nessuno a cui chiedere.
       </Step>
 
       <Step title="Chiedi se un dispositivo ne raggiunge un altro">
@@ -227,7 +246,9 @@ const CommandsTab = () => (
   <div className="settings-panel text-sm">
     <p className="mb-4 leading-relaxed text-[var(--text-color-light)]">
       Lo stesso elenco compare scrivendo <Mono>help</Mono> nel terminale. I nomi dei dispositivi non
-      distinguono maiuscole e minuscole e possono essere di più parole.
+      distinguono maiuscole e minuscole e possono essere di più parole. Dove un comando chiede una
+      destinazione si può scrivere anche un nome come <Mono>www.azienda.example</Mono>: il
+      dispositivo di partenza ne chiede prima l&apos;indirizzo al proprio server DNS.
     </p>
 
     <table className="w-full border-collapse">

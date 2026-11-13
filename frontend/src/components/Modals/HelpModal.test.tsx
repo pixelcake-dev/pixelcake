@@ -135,6 +135,9 @@ describe('HelpModal', () => {
       expect(intro).toHaveTextContent(
         'Lo stesso elenco compare scrivendo help nel terminale. I nomi dei dispositivi non distinguono maiuscole e minuscole e possono essere di più parole.'
       );
+      expect(intro).toHaveTextContent(
+        'Dove un comando chiede una destinazione si può scrivere anche un nome come www.azienda.example: il dispositivo di partenza ne chiede prima l\'indirizzo al proprio server DNS.'
+      );
     });
   });
 
