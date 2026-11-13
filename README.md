@@ -1,4 +1,9 @@
-# 🍰 PixelCake
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/logo/pixelcake-orizzontale-negativo.svg">
+    <img src="docs/logo/pixelcake-orizzontale-colore.svg" alt="PixelCake" width="300">
+  </picture>
+</h1>
 
 **Infrastructure, piece by piece.**
 
