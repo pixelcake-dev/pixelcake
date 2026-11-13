@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Removed
+- **The second colour theme**, "Modern Tech" (Impostazioni → Aspetto). The app has one set of colours, the two of its logo, in light and in dark; the settings keep that one choice, as a switch. A theme picked with an older version is not kept.
 - **The spanning tree settings of a device** ("STP attivo", "Modalità STP" and the bridge priority, in the Inspector). The engine does not simulate spanning tree, so they changed nothing. What a project file, a YAML file or a stored template carries about spanning tree is still read, left alone by every edit and written back as it was.
 - **The backend.** The FastAPI service, its database and admin panel, and the API client in the frontend are gone: the app runs entirely in the browser. Entries further down that mention the backend describe earlier versions.
 - **The login page.** It asked for nothing and checked nothing: the app now opens straight on the designer. The particle library it used (`@tsparticles/*`) is no longer a dependency.
@@ -16,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **More that did nothing**: the Inspector tab announcing Terraform fields, the terminal's Minimize and Maximize dots, two Terraform fields on custom templates, a click-to-connect mode and two windows nothing opened.
 
 ### Added
+- **A sample network of a small company**, loaded from the welcome screen and listed first under Aggiungi → Topologie: offices and Wi-Fi in two VLANs on one trunk, an access point, a switch of servers (authentication, database, management software, mail, storage), a public portal in a DMZ, a firewall with three rules, a customer outside. Twenty devices, every cable on its interface. What it answers, and what each failure does to it, is checked against the engine.
+- **The menu bar names the project that is open**, with the canvas on screen when the project has more than one and a dot while there are changes not saved to a file. A click opens the Explorer.
+- **The sidebar buttons show their names**, beside them, under the pointer or the keyboard.
 - **The drawing as a picture** (File → Esporta immagine…, and a button on the presentation bar). The whole board is drawn again from its data, not taken from the screen: a PNG at one, two or three times the size of the screen, or an SVG; light or dark whatever the screen shows; with or without the name of the project, with or without background; saved to a file or copied to the clipboard. Made from a presentation, the picture shows the ends of the question, the way of the answer and what is broken, and under the drawing it writes the question, the answer, the simulated failures and their effect on the rest of the network.
 - **Presentation mode** ("Presenta" on the menu bar, or Vista → Modalità presentazione). The editing tools are put away and the drawing can no longer be changed by clicking: a click on a device opens a small menu to start a question there or end it there, the packet goes by itself, and a panel says whether it arrives, through what, and where and why it stops. The way of the answer stays marked on the drawing. The bar has the pace of the packet, the terminal, full screen and the canvases of the project. Esc leaves.
 - **"What happens if this breaks".** In presentation mode a device or a cable can be taken as broken with a click. Nothing in the drawing changes, and the failure is gone when the presentation ends. The question on screen is asked again at once, and the panel counts, over every pair of end devices, how many exchanges stop working, how many take another way and how many do not notice; a click on one of them asks that question. The terminal sees the same failures while the presentation lasts.
@@ -50,6 +54,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Subtle 2px track line matching BulkAddDeviceModal design
 
 ### Changed
+- **Connection points show where they are needed**: on the device under the pointer, on a selected one, and on all of them while a cable is being dragged. At rest the drawing has none.
+- **Side panels.** A panel no longer repeats its title under it. In the simulation panel the fields come first and "Avvia Simulazione" is a button, the main one of the panel; the exchange it proposes goes from the first PC of the drawing to its first server.
+- **A sample network is brought whole into view** when it is loaded, wherever the board was.
 - **Esc closes the window on top**, as its X does: the device window, the settings, Import/Export, the guide and every other window. One window for each press; a list open inside a window (the icon picker) closes before the window does, a press on a drop-down field is spent on its list, and Esc in a text edited in place still cancels only the edit. While presenting, Esc with a window open closes the window and the presentation goes on. The terminal keeps its own keys.
 - **One name, one motto.** The browser tab is titled "PixelCake - Visual Network Designer", and the settings and the guide end with the motto of the welcome screen, in Italian. Name, descriptor and motto are written once, in `frontend/src/constants/brand.ts`.
 - **A button that cannot be pressed looks it.** Disabled buttons in the dialogs were drawn like the others.
@@ -71,7 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Two-part processing: configurable devices (with ports) + standard devices (with NICs)
 
 ### Fixed
-- **Dark theme: the zoom buttons and the small map are no longer white.** They take the colours of the theme, in light and dark and in both colour themes. The credit to React Flow is readable on a dark canvas and no longer runs under the zoom buttons.
+- **Dark theme: the zoom buttons and the small map are no longer white.** They take the colours of the theme, in light and in dark. The credit to React Flow is readable on a dark canvas and no longer runs under the zoom buttons.
 - **Import/Export: the icon of a button sat on a line of its own**, above its label. A button now keeps its icon next to its label, whoever uses it.
 - **Labels glued to the field above** in Impostazioni → Rete, in "Nuovo Progetto" and in "Modifica Connessione": the fields are spaced like those of the other windows.
 - **Cables follow a change of theme at once.** After switching between light and dark, each cable kept the grey of the old theme until it was drawn again.

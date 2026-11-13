@@ -4,7 +4,7 @@
 
 PixelCake is a browser-based designer for small networks. You draw the network, configure it, then ask it a question: does this PC reach that server? If it does not, you see where the traffic stops and why.
 
-![The sample network with the terminal: a ping that works, then the same ping with a wrong gateway, stopped at the PC with the reason](docs/screenshot.png)
+![The sample network of a small company with the terminal: a ping that works, then the same ping with a wrong gateway, stopped at the PC with the reason](docs/screenshot.png)
 
 **Status:** early prototype. It is good for exploring and explaining a small network. Do not use its answers to validate a real one: the [limits](#what-it-does-not-do) are listed below.
 
@@ -21,11 +21,11 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 
 The interface is in Italian. The terminal language is English.
 
-Three sample networks are bundled (Aggiungi → Topologie): a small office with two subnets and a router; a site with VLANs, a DMZ and a firewall; and two sites joined by a main line and a backup line, made for trying failures.
+Four sample networks are bundled. The welcome screen loads the first: a small company, with offices and Wi-Fi in two VLANs on one trunk, an access point, a switch of servers, a public portal in a DMZ and a firewall with three rules. It is also under Aggiungi → Topologie, with the other three: a small office with two subnets and a router; a site with VLANs, a DMZ and a firewall; and two sites joined by a main line and a backup line, made for trying failures.
 
 ### The terminal
 
-Output on the bundled sample network (two subnets, one router):
+Output on the small office sample (Aggiungi → Topologie → «Ufficio: due reti e un router»):
 
 ```text
 pixelcake> ping Web-01 from PC-1
@@ -143,7 +143,7 @@ The app's icons are bundled with it. Only an icon name typed by hand in a custom
 
 ```bash
 cd frontend
-pnpm test:run      # 1475 tests: engine, terminal, project files, import/export, pictures, screens
+pnpm test:run      # 1548 tests: engine, terminal, project files, import/export, pictures, screens
 pnpm type-check
 pnpm lint
 pnpm build

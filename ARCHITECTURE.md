@@ -59,6 +59,10 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 
 The panels React Flow draws by itself (zoom buttons, small map, credit) take the colours of the theme from `index.css`. React Flow's own style sheet is loaded after it, so those rules start with `.react-flow` to outrank it. The credit is never hidden.
 
+The connection points of a device (`.connect-point`) are hidden at rest: they show on the device under the pointer, on a selected one, and on every device while a cable is being dragged. Their hit area is always there.
+
+Bringing the whole drawing into view is a request (`fitViewRequest` in networkStore, raised by `triggerFitView`). The canvas answers each request once, after React Flow has measured the devices, so a drawing that has just been loaded (a sample network) is fitted too.
+
 While presenting, NetworkCanvas makes the drawing read-only (nothing is selected, moved, joined, deleted or pasted; dragging pans), a click on a device or a cable opens the presentation menu, the drawing is fitted to the window, and the view saved with the drawing is not touched. NetworkDevice and CustomEdge mark the ends of the question, a broken device, a cut cable and the way of the answer.
 
 ### Presentation (`frontend/src/components/Presentation/`)
@@ -102,6 +106,11 @@ While presenting, NetworkCanvas makes the drawing read-only (nothing is selected
 - **NICList** / **NICConfigPanel** - NIC list with custom scrollbar + configuration panel
 - **Input/Select** - Compact form controls (`py-1.5`, accent color on focus)
 
+### Sidebar (`frontend/src/components/Sidebar/`)
+- **Sidebar** - Six buttons. Each shows its name beside it under the pointer or the keyboard; the name is drawn on the page through a portal, because the panel a button opens covers the sidebar's own layer
+- **SimulationPanel** - From, to, what, then the button that sends it. It proposes an exchange from the first PC of the drawing to its first server, and proposes again when what was chosen leaves the drawing
+- **DevicePanel** - The device types to add and, under "Topologie", four sample networks (`utils/sample*.ts`). The first, `sampleCompany.ts`, is the one the welcome screen loads. A sample is fitted to the window when it is loaded
+
 ### Explorer Panel (`frontend/src/components/Sidebar/ExplorerPanel.tsx`)
 - Project name and description, editable in place (`components/ui/InlineEdit.tsx`); a hint shows when there are changes not yet saved to a file
 - Canvases list: click to switch, create and rename in place, delete (not the last one), device count
@@ -110,6 +119,7 @@ While presenting, NetworkCanvas makes the drawing read-only (nothing is selected
 ### Top Menu Bar (`frontend/src/components/Toolbar/TopMenuBar.tsx`)
 - File Menu: Nuovo progetto…, Apri…, Salva (Ctrl+S), Salva con nome…, Esporta immagine…
 - Aiuto Menu: Guida, Comandi del terminale, Mostra la schermata di benvenuto, Informazioni
+- In the middle of the bar, the project that is open: its name, the canvas on screen when there is more than one, a dot while there are changes not saved to a file. A click opens the Explorer
 - No entry is there to announce a feature: an entry that cannot act (nothing selected to copy) is disabled only for as long as that is true
 
 ## Reusable CSS Classes (`frontend/src/index.css`)
@@ -369,7 +379,7 @@ PixelCake has no server. A project lives in the browser while you work and is sa
 - `pixelcake-network-v2`: the canvas on screen (networkStore)
 - `pixelcake-project-v1`: project name, description and every canvas (projectStore)
 - `pixelcake-templates-v8`: device and connection templates
-- `pixelcake-ui-v1`: theme
+- `pixelcake-ui-v1`: light or dark
 - Every change is written at once: closing the tab loses nothing
 - A write that fails (storage full) does not crash the app: `utils/safeStorage.ts` shows one message asking to save the project to a file
 - Two tabs open on the same project do not see each other: the last one to write wins. The canvas id kept next to the canvas data prevents one canvas from being shown as another, not the loss of the other tab's edits
