@@ -25,7 +25,6 @@ import type {
 // ---------- what the caller gives ----------
 
 export type ImageTheme = 'light' | 'dark';
-export type AccentTheme = 'pixelcake' | 'modern-tech';
 
 export interface Size {
   width: number;
@@ -93,7 +92,6 @@ export interface ImageCaption {
 
 export interface ImageOptions {
   theme: ImageTheme;
-  accent?: AccentTheme;
   /** No background: the drawing alone, for a page that has its own */
   transparent?: boolean;
   title?: ImageTitle;
@@ -211,16 +209,10 @@ export const PALETTES: Record<ImageTheme, Palette> = {
   },
 };
 
-/** The two colours a theme of the app adds: where the question starts, where it ends */
-export const ACCENTS: Record<AccentTheme, Record<ImageTheme, { accent: string; secondary: string }>> = {
-  pixelcake: {
-    light: { accent: '#5B7C8D', secondary: '#F47920' },
-    dark: { accent: '#F47920', secondary: '#5B7C8D' },
-  },
-  'modern-tech': {
-    light: { accent: '#007aff', secondary: '#14B8A6' },
-    dark: { accent: '#0a84ff', secondary: '#2DD4BF' },
-  },
+/** The two colours of the app, in light and in dark: where the question starts, where it ends */
+export const ACCENTS: Record<ImageTheme, { accent: string; secondary: string }> = {
+  light: { accent: '#5B7C8D', secondary: '#F47920' },
+  dark: { accent: '#F47920', secondary: '#5B7C8D' },
 };
 
 // ---------- the scene: where everything is ----------
@@ -777,7 +769,7 @@ const PAGE = {
 export function renderDrawingImage(input: DrawingInput, options: ImageOptions): DrawingImage {
   const scene = layoutDrawing(input);
   const palette = PALETTES[options.theme];
-  const accents = ACCENTS[options.accent ?? 'pixelcake'][options.theme];
+  const accents = ACCENTS[options.theme];
   const measure = input.measureText;
   const { title, caption } = options;
 

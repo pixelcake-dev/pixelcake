@@ -29,16 +29,10 @@ import ExportImageModal from '@/components/Modals/ExportImageModal';
 import 'reactflow/dist/style.css';
 
 function App() {
-  const theme = useUIStore((state) => state.theme);
   const darkMode = useUIStore((state) => state.darkMode);
   const setShowWelcomeScreen = useUIStore((state) => state.setShowWelcomeScreen);
   // Presentation mode: the tools for building give way to the tools for showing
   const presenting = usePresentationStore((state) => state.active);
-
-  useEffect(() => {
-    // Apply theme to body element whenever it changes
-    document.body.setAttribute('data-theme', theme);
-  }, [theme]);
 
   useEffect(() => {
     // Welcome screen at start-up, unless the user chose not to see it again

@@ -53,14 +53,8 @@ const THEMED = [
   '.react-flow .react-flow__attribution a',
 ];
 
-/** The variables that change with light and dark, and those of the colour themes */
+/** Where the variables of the theme get their values: light, and dark */
 const LIGHT_AND_DARK = [':root', '.dark'];
-const COLOUR_THEMES = [
-  'body[data-theme="pixelcake"]',
-  '.dark body[data-theme="pixelcake"]',
-  'body[data-theme="modern-tech"]',
-  '.dark body[data-theme="modern-tech"]',
-];
 
 describe('the panels React Flow draws follow the theme (style sheet)', () => {
   it('React Flow colours them itself, in light colours only: that is what has to be outranked', () => {
@@ -86,7 +80,7 @@ describe('the panels React Flow draws follow the theme (style sheet)', () => {
     }
   });
 
-  it('every variable they use has a value in light and in dark, and in both colour themes', () => {
+  it('every variable they use has a value in light and in dark', () => {
     const used = new Set(
       THEMED.flatMap(selector => Object.values(rule(ours, selector)))
         .flatMap(value => [...value.matchAll(/var\((--[a-z-]+)\)/g)])
@@ -104,8 +98,7 @@ describe('the panels React Flow draws follow the theme (style sheet)', () => {
     ]);
 
     for (const variable of used) {
-      const blocks = variable.startsWith('--accent') ? COLOUR_THEMES : LIGHT_AND_DARK;
-      for (const block of blocks) {
+      for (const block of LIGHT_AND_DARK) {
         expect(rule(ours, block), `${variable} in ${block}`).toHaveProperty(variable);
       }
     }

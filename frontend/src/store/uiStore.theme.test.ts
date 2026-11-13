@@ -26,7 +26,7 @@ function systemPrefersDark(matches: boolean) {
 function saveChoice(darkMode: boolean) {
   localStorage.setItem(
     UI_KEY,
-    JSON.stringify({ state: { darkMode, theme: 'pixelcake' }, version: 0 })
+    JSON.stringify({ state: { darkMode }, version: 0 })
   );
 }
 
@@ -99,5 +99,56 @@ describe('dark mode at start-up', () => {
     const second = await loadStore();
     expect(second.getState().darkMode).toBe(false);
     expect(pageIsDark()).toBe(false);
+  });
+});
+
+describe('what an older version stored about a second colour theme', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    document.documentElement.classList.remove('dark');
+    document.body.removeAttribute('data-theme');
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('is not read back: the saved light or dark is, and nothing else', async () => {
+    systemPrefersDark(false);
+    localStorage.setItem(
+      UI_KEY,
+      JSON.stringify({ state: { darkMode: true, theme: 'modern-tech' }, version: 0 })
+    );
+
+    const store = await loadStore();
+
+    expect(store.getState().darkMode).toBe(true);
+    expect(pageIsDark()).toBe(true);
+    expect(store.getState()).not.toHaveProperty('theme');
+    expect(document.body.hasAttribute('data-theme')).toBe(false);
+  });
+
+  it('is not written again', async () => {
+    systemPrefersDark(false);
+    localStorage.setItem(
+      UI_KEY,
+      JSON.stringify({ state: { darkMode: false, theme: 'modern-tech' }, version: 0 })
+    );
+    const store = await loadStore();
+
+    store.getState().toggleDarkMode();
+
+    const stored = JSON.parse(localStorage.getItem(UI_KEY) ?? '{}');
+    expect(stored.state).toEqual({ darkMode: true });
+  });
+
+  it('a stored value that is not a choice between light and dark leaves the system preference', async () => {
+    systemPrefersDark(true);
+    localStorage.setItem(UI_KEY, JSON.stringify({ state: { darkMode: 'yes' }, version: 0 }));
+
+    const store = await loadStore();
+
+    expect(store.getState().darkMode).toBe(true);
+    expect(pageIsDark()).toBe(true);
   });
 });

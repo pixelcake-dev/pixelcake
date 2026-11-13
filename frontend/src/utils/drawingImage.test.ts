@@ -878,19 +878,14 @@ describe('renderDrawingImage — a presentation', () => {
     const asked = marks({ sourceId: 'a', targetId: 'c' });
 
     expect(badges(presented(asked))).toEqual([
-      ['DA', ACCENTS.pixelcake.light.accent],
+      ['DA', ACCENTS.light.accent],
       null,
-      ['A', ACCENTS.pixelcake.light.secondary],
+      ['A', ACCENTS.light.secondary],
     ]);
     expect(badges(presented(asked, { theme: 'dark' }))).toEqual([
-      ['DA', ACCENTS.pixelcake.dark.accent],
+      ['DA', ACCENTS.dark.accent],
       null,
-      ['A', ACCENTS.pixelcake.dark.secondary],
-    ]);
-    expect(badges(presented(asked, { theme: 'light', accent: 'modern-tech' }))).toEqual([
-      ['DA', ACCENTS['modern-tech'].light.accent],
-      null,
-      ['A', ACCENTS['modern-tech'].light.secondary],
+      ['A', ACCENTS.dark.secondary],
     ]);
     expect(badges(presented(marks()))).toEqual([null, null, null]);
   });
@@ -1072,15 +1067,15 @@ describe('the numbers repeated from the style sheet', () => {
     expect(value('.dark .presentation-verdict.tone-unknown', 'color')).toBe(PALETTES.dark.toneUnknown);
   });
 
-  it('the themes of the app have the accents of the picture', () => {
+  it('the app, in light and in dark, has the accents of the picture', () => {
     const check = (selector: string, colors: { accent: string; secondary: string }) => {
       expect(value(selector, '--accent-color')).toBe(colors.accent);
       expect(value(selector, '--secondary-color')).toBe(colors.secondary);
     };
-    check('body[data-theme="pixelcake"]', ACCENTS.pixelcake.light);
-    check('.dark body[data-theme="pixelcake"]', ACCENTS.pixelcake.dark);
-    check('body[data-theme="modern-tech"]', ACCENTS['modern-tech'].light);
-    check('.dark body[data-theme="modern-tech"]', ACCENTS['modern-tech'].dark);
+    check(':root', ACCENTS.light);
+    check('.dark', ACCENTS.dark);
+    // one set of colours, and nothing left that picks between sets
+    expect(css).not.toContain('data-theme');
     expect(value('.device-role-source', 'background-color')).toBe('var(--accent-color)');
     expect(value('.device-role-target', 'background-color')).toBe('var(--secondary-color)');
   });

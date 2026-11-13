@@ -16,7 +16,6 @@ export type HelpTab = 'guide' | 'commands' | 'about';
 interface UIStore {
   // State
   darkMode: boolean;
-  theme: 'pixelcake' | 'modern-tech';
   activeSidebarPanel: SidebarPanelId | null;
   modals: {
     addDevice: boolean;
@@ -58,7 +57,6 @@ interface UIStore {
   // Actions
   toggleDarkMode: () => void;
   setDarkMode: (isDark: boolean) => void;
-  setTheme: (theme: 'pixelcake' | 'modern-tech') => void;
   setActiveSidebarPanel: (panel: SidebarPanelId | null) => void;
   openModal: (modalName: keyof UIStore['modals']) => void;
   closeModal: (modalName: keyof UIStore['modals']) => void;
@@ -102,7 +100,6 @@ export const useUIStore = create<UIStore>()(
       // Until the user picks one, the theme follows the system. A saved
       // choice replaces this value when the store is read from storage
       darkMode: systemPrefersDark(),
-      theme: 'pixelcake',
       activeSidebarPanel: null,
       modals: {
         addDevice: false,
@@ -156,11 +153,6 @@ export const useUIStore = create<UIStore>()(
           document.documentElement.classList.remove('dark');
         }
         set({ darkMode: isDark });
-      },
-
-      setTheme: (theme) => {
-        document.body.setAttribute('data-theme', theme);
-        set({ theme });
       },
 
       setActiveSidebarPanel: (panel) => {
@@ -313,15 +305,18 @@ export const useUIStore = create<UIStore>()(
       name: 'pixelcake-ui-v1', // LocalStorage key
       partialize: (state) => ({
         darkMode: state.darkMode, // Persist darkMode preference
-        theme: state.theme, // Persist theme preference
       }),
+      // Light or dark is all that is kept. (A second colour theme existed
+      // once: what an older version stored about it is not read back.)
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as { darkMode?: unknown };
+        return typeof saved.darkMode === 'boolean'
+          ? { ...current, darkMode: saved.darkMode }
+          : current;
+      },
       onRehydrateStorage: () => (state, error) => {
         if (error) {
           console.warn('UI store hydration error (ignorato):', error);
-        }
-        // Apply theme on rehydration
-        if (state?.theme) {
-          document.body.setAttribute('data-theme', state.theme);
         }
         // Dark mode is a class on <html>: put the page in line with the
         // state once, here. Toggling at start-up instead (as an earlier

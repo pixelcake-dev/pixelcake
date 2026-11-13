@@ -73,7 +73,6 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
   const deviceTemplates = useTemplateStore((state) => state.templates);
   const connectionTemplates = useTemplateStore((state) => state.connectionTemplates);
   const darkMode = useUIStore((state) => state.darkMode);
-  const accent = useUIStore((state) => state.theme);
   const projectName = useProjectStore((state) => state.name);
   const canvases = useProjectStore((state) => state.canvases);
   const activeCanvasId = useProjectStore((state) => state.activeCanvasId);
@@ -168,7 +167,6 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
         },
         {
           theme,
-          accent,
           transparent,
           title: withTitle ? { name: projectName, detail: canvasName ?? undefined } : undefined,
           caption: withCaption && caption ? caption : undefined,
@@ -183,7 +181,6 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
       measureText,
       marks,
       theme,
-      accent,
       transparent,
       withTitle,
       projectName,

@@ -106,7 +106,6 @@ beforeEach(() => {
   });
   useSimulationStore.getState().resetSimulation();
   ui().setDarkMode(false);
-  ui().setTheme('pixelcake');
   createNewProject({ name: 'Due sedi' });
   const sample = createRedundancySample();
   network().loadTopology(sample.devices, sample.connections);
