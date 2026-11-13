@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **More that did nothing**: the Inspector tab announcing Terraform fields, the terminal's Minimize and Maximize dots, two Terraform fields on custom templates, a click-to-connect mode and two windows nothing opened.
 
 ### Added
+- **The drawing as a picture** (File → Esporta immagine…, and a button on the presentation bar). The whole board is drawn again from its data, not taken from the screen: a PNG at one, two or three times the size of the screen, or an SVG; light or dark whatever the screen shows; with or without the name of the project, with or without background; saved to a file or copied to the clipboard. Made from a presentation, the picture shows the ends of the question, the way of the answer and what is broken, and under the drawing it writes the question, the answer, the simulated failures and their effect on the rest of the network.
 - **Presentation mode** ("Presenta" on the menu bar, or Vista → Modalità presentazione). The editing tools are put away and the drawing can no longer be changed by clicking: a click on a device opens a small menu to start a question there or end it there, the packet goes by itself, and a panel says whether it arrives, through what, and where and why it stops. The way of the answer stays marked on the drawing. The bar has the pace of the packet, the terminal, full screen and the canvases of the project. Esc leaves.
 - **"What happens if this breaks".** In presentation mode a device or a cable can be taken as broken with a click. Nothing in the drawing changes, and the failure is gone when the presentation ends. The question on screen is asked again at once, and the panel counts, over every pair of end devices, how many exchanges stop working, how many take another way and how many do not notice; a click on one of them asks that question. The terminal sees the same failures while the presentation lasts.
 - **Failures in the engine.** A topology can carry devices that are down and cables that are cut. Between switches the shortest way that still works is taken. A router, or a host with two network cards, withdraws a route whose interface has no working cable left and takes the next route for that destination, saying so in a note.
@@ -48,6 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Subtle 2px track line matching BulkAddDeviceModal design
 
 ### Changed
+- **A button that cannot be pressed looks it.** Disabled buttons in the dialogs were drawn like the others.
 - **The packet animation is quicker and can be restarted.** A long exchange took about twenty seconds; cables now take between a third of a second and a second each. Starting a new animation, or stopping one, cancels the one in progress at once. The device the packet is stopping on is ringed.
 - **The engine follows the shortest way that works**, not the shortest on the drawing: a port that is down is gone round when there is another way. End devices no longer carry traffic for others, and a router with addressed ports no longer passes traffic between two devices addressed in one network.
 - **A router with more than one hop to go is checked**, no longer assumed. A router whose ports have no address still lets traffic through, with a note, so drawings made before this change give the answers they gave.
@@ -66,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Two-part processing: configurable devices (with ports) + standard devices (with NICs)
 
 ### Fixed
+- **Cables follow a change of theme at once.** After switching between light and dark, each cable kept the grey of the old theme until it was drawn again.
 - **The packet travels on the cable the engine took.** Between two devices joined by two cables the animation always ran on the first one drawn, even when the traffic was on the other.
 - Ctrl+V while typing in a field pasted a copy of the selected devices on the canvas; Ctrl+C took over copying text. The canvas shortcuts now leave text alone.
 - A link removed with the Delete key disappeared from the drawing but stayed in the network.

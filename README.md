@@ -16,6 +16,7 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 - **Type.** A built-in terminal with a small vendor-neutral command language: `ping`, `trace`, `browse`, `show routes`, `add route`, `add rule`, `interface 3 access 10` and more. Commands that change the network edit the same drawing you see.
 - **Present.** A presentation mode puts the editing tools away. Click two devices to ask a question, watch the packet go, read the answer hop by hop. Then break something, a device or a cable, and see at once whether the traffic finds another way and which exchanges between end devices stop working. Nothing in the drawing changes.
 - **Save.** A project, with all its boards, is kept in the browser while you work and saved as a single `.pixelcake.json` file that you can open again or pass on. There is no server and no account.
+- **Hand over.** The board as a picture, PNG or SVG, in the light or the dark theme, to a file or to the clipboard. Made from a presentation, it carries the question, the answer and what was broken.
 - **Export.** The topology as YAML, which can be loaded back. A Terraform-style export exists only as a sketch.
 
 The interface is in Italian. The terminal language is English.
@@ -94,6 +95,18 @@ Every link is attached to a port or a network card at both ends, chosen automati
 
 When the engine cannot verify something, it says so in a note instead of answering "it works": a router whose ports have no address (it still lets traffic through, so drawings made before routing existed keep working), the Internet symbol, NAT. The engine is plain TypeScript with no UI dependencies, in [frontend/src/engine](frontend/src/engine). The same network always gives the same answer.
 
+### The drawing as a picture
+
+![The screen above as an exported picture: the whole board, the way of the answer in green through the backup router, the cut line in red, and under the drawing the question, its answer, the simulated failure and the effect on the other exchanges](docs/export.png)
+
+**File → Esporta immagine…** draws the whole board again as a picture. It is not a screenshot: it is made from the same data as the canvas, so it shows every device whatever the zoom, and never a selection or a connection point.
+
+- **PNG**, at one, two or three times the size of the screen, for documents, slides and messages; or **SVG**, a vector file that stays sharp at any size, with its texts still texts.
+- Light or dark, whatever the screen shows. The name of the project can be written above the drawing, and the background left out.
+- To a file, or to the clipboard where the browser allows it.
+
+Opened from a presentation (the picture button on its bar), it shows what the presentation shows: the two ends of the question, the cables the answer travels on, what is broken. Under the drawing it writes the question, the answer, the simulated failures and what they do to the rest of the network. The picture above is the screen of the previous section, exported.
+
 ## What it does not do
 
 - **It is not a packet-level simulator.** There is no ARP, MAC learning, DHCP, DNS or dynamic routing. Ping times are derived from the number of hops.
@@ -104,7 +117,8 @@ When the engine cannot verify something, it says so in a note instead of answeri
 - **Spanning tree is not simulated.** A drawing with redundant links is walked without loops, but no port is blocked.
 - **NAT is not applied.** It can be ticked on a router port, and a trace that crosses that port says addresses were not translated.
 - **The Internet symbol is a stand-in.** It is assumed to carry traffic, with a note.
-- **No undo, no image export.** Neither exists yet.
+- **No undo.** It does not exist yet.
+- **A picture is one board.** A project with several boards is exported one board at a time. The SVG names the fonts of the interface without embedding them: on a computer that has none of them the texts are set in another typeface. A PNG of a very large drawing is reduced to what the browser can paint, and the dialog says so.
 - **The YAML format is PixelCake's own.** Device names that look like numbers or booleans, and duplicate names, do not survive an export and import.
 - **The Terraform export cannot be applied.** It uses placeholder resource types and no provider. Reading existing Terraform state is not implemented.
 - **No accounts, no sharing.** A project is a file on your disk. Two browser tabs open on the same project do not see each other's changes: the last one to write wins.
@@ -129,7 +143,7 @@ The app's icons are bundled with it. Only an icon name typed by hand in a custom
 
 ```bash
 cd frontend
-pnpm test:run      # 1252 tests: engine, terminal, project files, import/export, screens
+pnpm test:run      # 1399 tests: engine, terminal, project files, import/export, pictures, screens
 pnpm type-check
 pnpm lint
 pnpm build
@@ -143,7 +157,7 @@ frontend/src/
   terminal/     command parser and executor
   components/   canvas, panels, windows
   store/        application state (Zustand, persisted in the browser)
-  utils/        auto-layout, IP helpers, project files, import and export
+  utils/        auto-layout, IP helpers, project files, import and export, pictures
 docs/           terminal command reference, project file format
 ```
 
@@ -157,9 +171,8 @@ Today the first two exist in a basic form and the third is only a sketch. The st
 
 ## What is next
 
-1. Export the drawing as an image.
-2. Undo and redo.
-3. In the engine: NAT, DHCP and DNS, then spanning tree.
+1. Undo and redo.
+2. In the engine: NAT, DHCP and DNS, then spanning tree.
 
 ## License
 

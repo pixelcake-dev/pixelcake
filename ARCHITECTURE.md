@@ -60,10 +60,10 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 While presenting, NetworkCanvas makes the drawing read-only (nothing is selected, moved, joined, deleted or pasted; dragging pans), a click on a device or a cable opens the presentation menu, the drawing is fitted to the window, and the view saved with the drawing is not touched. NetworkDevice and CustomEdge mark the ends of the question, a broken device, a cut cable and the way of the answer.
 
 ### Presentation (`frontend/src/components/Presentation/`)
-- **PresentationBar** - Takes the place of the menu bar: project and canvases, pace of the packet, terminal, full screen, exit (also Esc)
+- **PresentationBar** - Takes the place of the menu bar: project and canvases, pace of the packet, terminal, the picture of what is on screen, full screen, exit (also Esc)
 - **PresentationPanel** - Question, answer, simulated failures with their effect on the rest of the network, and the way hop by hop. `usePresentationAnswer` works all of it out from the drawing, the question and the failures, marks the way on the canvas and sets the packet off at every change
 - **PresentationMenu** - The menu a click on a device or a cable opens: start here, arrive here, break, repair
-- `utils/presentation.ts` - Pure: the engine's answer turned into what is shown (Italian sentences, rows tied to the animation, exchanges grouped by device). The reasons and notes of the engine are shown as the engine wrote them
+- `utils/presentation.ts` - Pure: the engine's answer turned into what is shown (Italian sentences, rows tied to the animation, exchanges grouped by device, the caption of an exported picture). The reasons and notes of the engine are shown as the engine wrote them
 
 ### WelcomeScreen (`frontend/src/components/WelcomeScreen.tsx`)
 - Excalidraw-style minimalist transparent overlay on canvas (NOT popup)
@@ -77,6 +77,7 @@ While presenting, NetworkCanvas makes the drawing read-only (nothing is selected
 ### Modals (Enterprise Style)
 - **InspectorModal** - Device configuration in tabs: Generale, Porte (switch, router, firewall) or Schede di rete (end devices), Rotte (router, firewall: `ui/RoutesPanel`, with the routing table the engine would read from the form), Regole (firewall: `ui/FirewallRulesPanel`, ordered rules). Routes and rules are validated on save (`utils/networkConfigValidation.ts`)
 - **HelpModal** - The guide, in three tabs: how to use the app, the terminal commands (rendered from `COMMAND_REFERENCE`, the table the terminal's `help` prints), information
+- **ExportImageModal** - The board as a picture: preview, format (PNG, SVG), size, theme, title, background; save to a file or copy to the clipboard. It exists only while it is open, so every time it starts from the drawing and the theme on screen. See "The drawing as a picture" below
 - **ConnectionInspectorModal** - Connection properties editor
 - **SettingsModal** - App settings with tabbed interface
 - **BulkAddDeviceModal** - Bulk device creation with table-based interface
@@ -103,7 +104,7 @@ While presenting, NetworkCanvas makes the drawing read-only (nothing is selected
 - Buttons: "Salva su file", "Apri file…"
 
 ### Top Menu Bar (`frontend/src/components/Toolbar/TopMenuBar.tsx`)
-- File Menu: Nuovo progetto…, Apri…, Salva (Ctrl+S), Salva con nome…
+- File Menu: Nuovo progetto…, Apri…, Salva (Ctrl+S), Salva con nome…, Esporta immagine…
 - Aiuto Menu: Guida, Comandi del terminale, Mostra la schermata di benvenuto, Informazioni
 - No entry is there to announce a feature: an entry that cannot act (nothing selected to copy) is disabled only for as long as that is true
 
@@ -192,6 +193,42 @@ before routing existed gives the answers it gave.
   behind the guide.
 - The language is specified in `docs/terminal-commands.md`; a test parses every
   example of that document.
+
+### The drawing as a picture (`frontend/src/utils/drawingImage.ts`)
+
+The picture is not taken from the screen: the board is drawn again as one SVG
+document from the same data. That is what lets it be whole whatever the zoom,
+light or dark whatever the theme, a vector file, and a sharp PNG of any size.
+
+- `drawingImage.ts` — pure (no React, no stores, no DOM). `layoutDrawing()`
+  places devices and cables in canvas coordinates; `renderDrawingImage()`
+  writes the document, with an optional title above and caption below. The
+  caller gives the size each device has on screen, the shapes of the icons and
+  a way to measure text.
+- A cable is the path the screen draws (`getSmoothStepPath` between the same
+  two points, 12 px outside the boxes) carried on to the two boxes: a picture
+  has no connection points for it to stop at.
+- The numbers of a device (padding, border, line heights) and the colours of
+  the two themes are repeated from `index.css`. A test reads the style sheet
+  and fails when they drift apart. The colours of presentation mode
+  (`MARK_COLORS`) are shared with `CustomEdge`.
+- Everything the user typed is written as text (`escapeXml`). An icon fetched
+  by name for a custom template goes in only if it is a plain drawing
+  (`isPlainDrawing`): no script, no style, no reference outside the document.
+  Ids inside icons are prefixed per icon. The document refers to nothing
+  outside itself.
+- `drawingMeasure.ts` — what is asked of the browser: the size of each device
+  (`.react-flow__node[data-id]`, less the thicker border of a selected one),
+  the icon shapes Iconify has loaded, text widths from a canvas.
+- `imageExport.ts` — the ways out. `rasterizeSvg()` paints the document on a
+  canvas of the pixels it declares (`scaledSvg`); `fitScale()` keeps a PNG
+  within what browsers can paint. Saving asks where with the File System
+  Access API and downloads elsewhere; copying puts a PNG on the clipboard.
+  The PNG is made when the choices are made, not at the click: a browser lets
+  a page save or copy only straight from the click.
+- While presenting, the dialog hands over the marks of the presentation
+  (`DrawingMarks`) and asks the engine the questions of the panel again for
+  the caption (`captionOf` in `utils/presentation.ts`).
 
 ### Auto-Layout (`frontend/src/utils/autoLayout.ts`)
 - **Hierarchical layout** using dagre (top-down hierarchy)
