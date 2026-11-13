@@ -54,9 +54,12 @@ export function nextCanvasId(existingIds: string[]): string {
   return `canvas-${nextCanvasNumber(existingIds)}`;
 }
 
-/** File name suggested for a project: its name made filename-safe + extension */
-export function projectFileName(projectName: string): string {
-  const base = projectName
+/**
+ * A name made safe for a file name: lower case, plain letters and digits,
+ * hyphens in between. Empty when nothing of the name is left.
+ */
+export function fileSlug(name: string): string {
+  return name
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '') // accents: "Città" → "Citta"
     .toLowerCase()
@@ -64,7 +67,11 @@ export function projectFileName(projectName: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 80)
     .replace(/-+$/, '');
-  return `${base || 'progetto'}${PROJECT_FILE_EXTENSION}`;
+}
+
+/** File name suggested for a project: its name made filename-safe + extension */
+export function projectFileName(projectName: string): string {
+  return `${fileSlug(projectName) || 'progetto'}${PROJECT_FILE_EXTENSION}`;
 }
 
 // ---------- small helpers ----------

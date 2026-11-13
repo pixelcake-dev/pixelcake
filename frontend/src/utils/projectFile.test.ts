@@ -24,6 +24,7 @@ import formatReference from '../../../docs/project-file.md?raw';
 import {
   nextCanvasId,
   parseProjectFile,
+  fileSlug,
   projectFileName,
   serializeProject,
   type ParseProjectResult,
@@ -961,6 +962,23 @@ describe('project file', () => {
       const name = projectFileName('a'.repeat(300));
 
       expect(name).toBe(`${'a'.repeat(80)}.pixelcake.json`);
+    });
+  });
+
+  describe('fileSlug', () => {
+    it('is the name in plain lower-case letters and digits, hyphens in between', () => {
+      expect(fileSlug('Sede Milano')).toBe('sede-milano');
+      expect(fileSlug('  Rete: A/B\\C? "2026"  ')).toBe('rete-a-b-c-2026');
+      expect(fileSlug('Città più grande')).toBe('citta-piu-grande');
+      expect(fileSlug('a'.repeat(300))).toBe('a'.repeat(80));
+      // cut at 80, it does not end on a hyphen
+      expect(fileSlug(`${'a'.repeat(79)} b`)).toBe('a'.repeat(79));
+    });
+
+    it('is empty when nothing of the name can go in a file name', () => {
+      expect(fileSlug('')).toBe('');
+      expect(fileSlug('???')).toBe('');
+      expect(fileSlug('日本')).toBe('');
     });
   });
 

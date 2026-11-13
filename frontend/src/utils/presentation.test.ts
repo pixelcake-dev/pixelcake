@@ -10,9 +10,11 @@ import type { FlowModelType } from '@/types';
 import { createRedundancySample } from './sampleRedundancy';
 import {
   answerLegs,
+  captionOf,
   compareWithIntact,
   exchanges,
   groupBySource,
+  impactSentence,
   legTitle,
   listInWords,
   routeOf,
@@ -284,5 +286,143 @@ describe('exchanges', () => {
     expect(exchanges(1)).toBe('1 comunicazione');
     expect(exchanges(0)).toBe('0 comunicazioni');
     expect(exchanges(20)).toBe('20 comunicazioni');
+  });
+});
+
+describe('impactSentence', () => {
+  const impact = (failures: Failures, flow: FlowModelType = 'ping') =>
+    assessImpact(sample, failures, { flow });
+
+  it('counts what stops, what goes another way and what stays as it was', () => {
+    expect(impactSentence(impact(broken(['SW-Core'])), 'ping')).toBe(
+      'Sul resto della rete (Ping tra i 5 dispositivi finali): 16 comunicazioni su 20 si interrompono, 4 non cambiano.'
+    );
+    expect(impactSentence(impact(broken([], ['link-principale'])), 'ping')).toBe(
+      "Sul resto della rete (Ping tra i 5 dispositivi finali): nessuna delle 20 comunicazioni si interrompe, 12 passano da un'altra strada, 8 non cambiano."
+    );
+  });
+
+  it('names the exchange it measured', () => {
+    expect(impactSentence(impact(broken(['SW-Core']), 'web'), 'web')).toMatch(
+      /^Sul resto della rete \(Web tra i 5 dispositivi finali\): /
+    );
+  });
+
+  it('agrees in number', () => {
+    const report = impact(broken(['SW-Core']));
+    const one = (overrides: Partial<typeof report>) => impactSentence({ ...report, ...overrides }, 'ping');
+    const [first, second] = report.broken;
+
+    expect(one({ broken: [first], rerouted: [second], unchanged: 1, working: 3 })).toBe(
+      "Sul resto della rete (Ping tra i 5 dispositivi finali): 1 comunicazione su 3 si interrompe, 1 passa da un'altra strada, 1 non cambia."
+    );
+    // one exchange in all: no "1 su 1"
+    expect(one({ broken: [first], rerouted: [], unchanged: 0, working: 1 })).toBe(
+      "Sul resto della rete (Ping tra i 5 dispositivi finali): l'unica comunicazione si interrompe."
+    );
+    expect(one({ broken: [], rerouted: [], unchanged: 1, working: 1 })).toBe(
+      "Sul resto della rete (Ping tra i 5 dispositivi finali): l'unica comunicazione non si interrompe."
+    );
+  });
+
+  it('says nothing where there is nothing to measure it on', () => {
+    const report = impact(broken(['SW-Core']));
+    // one end device, or none
+    expect(impactSentence({ ...report, endpoints: report.endpoints.slice(0, 1) }, 'ping')).toBeUndefined();
+    // nothing worked before the failures either
+    expect(impactSentence({ ...report, working: 0 }, 'ping')).toBeUndefined();
+  });
+});
+
+describe('captionOf', () => {
+  const caption = (
+    question: [string, string] | null,
+    failures: Failures = broken(),
+    flow: 'ping' | 'web' | 'email' = 'ping'
+  ) => {
+    const isBroken = failures.devices.length + failures.connections.length > 0;
+    return captionOf({
+      flow,
+      question: question ? { sourceLabel: question[0], targetLabel: question[1] } : null,
+      answer: question ? ask(question[0], question[1], failures, flow) : null,
+      intactAnswer: question && isBroken ? ask(question[0], question[1], undefined, flow) : null,
+      failures: [
+        ...failures.devices.map(labelOf),
+        ...failures.connections.map(connection => `cavo ${connection}`),
+      ],
+      impact: isBroken ? assessImpact(sample, failures, { flow }) : null,
+      labelOf,
+    });
+  };
+
+  it('is nothing when the presentation shows neither a question nor a failure', () => {
+    expect(caption(null)).toBeNull();
+  });
+
+  it('a question that arrives: what was asked, and the answer in the words of the panel', () => {
+    expect(caption(['PC-Sede-1', 'Srv-File'])).toEqual({
+      tone: 'ok',
+      heading: 'Ping da PC-Sede-1 a Srv-File: arriva',
+      lines: ['Srv-File risponde a PC-Sede-1.'],
+    });
+    expect(caption(['PC-Sede-1', 'Srv-File'], broken(), 'web')).toMatchObject({
+      heading: 'Web da PC-Sede-1 a Srv-File: arriva',
+      lines: ['PC-Sede-1 apre la pagina di Srv-File.'],
+    });
+  });
+
+  it('a question and a failure it survives: the other way, the failure, the rest of the network', () => {
+    expect(caption(['PC-Filiale-1', 'Srv-File'], broken([], ['link-principale']))).toEqual({
+      tone: 'ok',
+      heading: 'Ping da PC-Filiale-1 a Srv-File: arriva',
+      lines: [
+        "Srv-File risponde a PC-Filiale-1. Arriva lo stesso, per un'altra strada: ora passa da R-Riserva.",
+        'Guasto simulato: cavo link-principale.',
+        "Sul resto della rete (Ping tra i 5 dispositivi finali): nessuna delle 20 comunicazioni si interrompe, 12 passano da un'altra strada, 8 non cambiano.",
+      ],
+    });
+  });
+
+  it('a question that a failure stops: where, why (as the engine says it), and what broke', () => {
+    const stopped = caption(['PC-Sede-1', 'Srv-File'], broken(['SW-Core', 'R-Riserva']));
+    expect(stopped?.tone).toBe('ko');
+    expect(stopped?.heading).toBe('Ping da PC-Sede-1 a Srv-File: non arriva');
+    expect(stopped?.lines).toEqual([
+      'Si ferma su SW-Piano-1 (andata). Senza guasti arrivava.',
+      'Motivo: SW-Core is down',
+      'Guasti simulati: SW-Core e R-Riserva.',
+      'Sul resto della rete (Ping tra i 5 dispositivi finali): 16 comunicazioni su 20 si interrompono, 4 non cambiano.',
+    ]);
+  });
+
+  it('a question that cannot be tried says so, in its own colour', () => {
+    const toItself = planAndEvaluateFlow('ping', id('PC-Sede-1'), id('PC-Sede-1'), sample);
+    expect(toItself.verdict).toBe('error');
+    const result = captionOf({
+      flow: 'ping',
+      question: { sourceLabel: 'PC-Sede-1', targetLabel: 'PC-Sede-1' },
+      answer: toItself,
+      intactAnswer: null,
+      failures: [],
+      impact: null,
+      labelOf,
+    });
+    expect(result?.tone).toBe('unknown');
+    expect(result?.heading).toBe('Ping da PC-Sede-1 a PC-Sede-1: non si può provare');
+    expect(result?.lines[0]).toBe('Manca qualcosa per fare la prova.');
+    expect(result?.lines[1]).toMatch(/^Motivo: /);
+  });
+
+  it('failures without a question: the failures are the heading', () => {
+    expect(caption(null, broken(['SW-Core']))).toEqual({
+      tone: null,
+      heading: 'Guasto simulato: SW-Core',
+      lines: [
+        'Sul resto della rete (Ping tra i 5 dispositivi finali): 16 comunicazioni su 20 si interrompono, 4 non cambiano.',
+      ],
+    });
+    expect(caption(null, broken(['SW-Core', 'R-Riserva'], ['link-principale']))?.heading).toBe(
+      'Guasti simulati: SW-Core, R-Riserva e cavo link-principale'
+    );
   });
 });

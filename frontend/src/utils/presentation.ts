@@ -5,7 +5,7 @@
  */
 
 import { sameWay } from '@/engine';
-import type { FlowResult, ImpactedFlow } from '@/engine';
+import type { FlowResult, ImpactReport, ImpactedFlow } from '@/engine';
 import type { PresentationFlow, PresentationRoute } from '@/store/presentationStore';
 
 export const FLOW_NAMES: Record<PresentationFlow, string> = {
@@ -259,4 +259,90 @@ export function groupBySource(
 /** `1 comunicazione` / `3 comunicazioni` */
 export function exchanges(count: number): string {
   return count === 1 ? '1 comunicazione' : `${count} comunicazioni`;
+}
+
+/**
+ * What the simulated failures do to the exchanges between end devices, in
+ * one sentence. Undefined when there is nothing to measure it on.
+ */
+export function impactSentence(impact: ImpactReport, flow: PresentationFlow): string | undefined {
+  if (impact.endpoints.length < 2 || impact.working === 0) return undefined;
+
+  const broken = impact.broken.length;
+  const rerouted = impact.rerouted.length;
+  const parts = [
+    broken === 0
+      ? impact.working === 1
+        ? "l'unica comunicazione non si interrompe"
+        : `nessuna delle ${impact.working} comunicazioni si interrompe`
+      : impact.working === 1
+        ? "l'unica comunicazione si interrompe"
+        : `${broken} ${broken === 1 ? 'comunicazione' : 'comunicazioni'} su ${impact.working} ${broken === 1 ? 'si interrompe' : 'si interrompono'}`,
+  ];
+  if (rerouted > 0) {
+    parts.push(`${rerouted} ${rerouted === 1 ? 'passa' : 'passano'} da un'altra strada`);
+  }
+  if (impact.unchanged > 0 && impact.working > 1) {
+    parts.push(`${impact.unchanged} ${impact.unchanged === 1 ? 'non cambia' : 'non cambiano'}`);
+  }
+  return `Sul resto della rete (${FLOW_NAMES[flow]} tra i ${impact.endpoints.length} dispositivi finali): ${parts.join(', ')}.`;
+}
+
+/** What a picture of the presentation says under the drawing */
+export interface PresentationCaption {
+  /** The colour of the answer; null when no question is asked */
+  tone: AnswerTone | null;
+  heading: string;
+  lines: string[];
+}
+
+export interface CaptionInput {
+  flow: PresentationFlow;
+  /** The two ends of the question, when both are chosen */
+  question: { sourceLabel: string; targetLabel: string } | null;
+  answer: FlowResult | null;
+  /** The answer with nothing broken; null with no failures */
+  intactAnswer: FlowResult | null;
+  /** The simulated failures, each as the panel names it ("R-Sede", "cavo A – B") */
+  failures: string[];
+  impact: ImpactReport | null;
+  labelOf: (deviceId: string) => string;
+}
+
+/**
+ * The question on screen, its answer and the simulated failures, in the
+ * words of the panel. Null when the presentation shows neither a question
+ * nor a failure: the drawing needs no caption then.
+ */
+export function captionOf(input: CaptionInput): PresentationCaption | null {
+  const { flow, question, answer, intactAnswer, failures, impact, labelOf } = input;
+
+  const failureLine =
+    failures.length === 0
+      ? undefined
+      : `${failures.length === 1 ? 'Guasto simulato' : 'Guasti simulati'}: ${listInWords(failures)}.`;
+  const impactLine = impact ? impactSentence(impact, flow) : undefined;
+
+  if (!question || !answer) {
+    if (!failureLine) return null;
+    return {
+      tone: null,
+      heading: failureLine.slice(0, -1),
+      lines: impactLine ? [impactLine] : [],
+    };
+  }
+
+  const summary = summarizeAnswer(answer, flow, question.sourceLabel, question.targetLabel);
+  const comparison = intactAnswer ? compareWithIntact(answer, intactAnswer, labelOf) : undefined;
+  const lines = [comparison ? `${summary.detail} ${comparison}` : summary.detail];
+  // The reason is the engine's own (English), as in the panel
+  if (summary.reason) lines.push(`Motivo: ${summary.reason}`);
+  if (failureLine) lines.push(failureLine);
+  if (impactLine) lines.push(impactLine);
+
+  return {
+    tone: summary.tone,
+    heading: `${FLOW_NAMES[flow]} da ${question.sourceLabel} a ${question.targetLabel}: ${summary.headline.toLowerCase()}`,
+    lines,
+  };
 }
