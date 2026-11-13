@@ -1,0 +1,543 @@
+/**
+ * Network Engine — DHCP
+ *
+ * Which address every card set to "automatic" has, and which server gave it.
+ * The engine has no clock, so a lease is not remembered: it is worked out
+ * from the drawing, the same way every time.
+ *
+ *  - CLIENT: a network card (NIC) with `dhcp` on, on a device that does not
+ *    route. Its own ip/subnet/gateway are not read.
+ *  - SERVER: one pool per interface, kept on the interface (`dhcpServer`): a
+ *    router or firewall port, or a card of a server. It hands out the
+ *    addresses from `start` to `end`, with the mask of the interface and a
+ *    gateway: the one written in the pool, else the interface's own address
+ *    on a router or firewall, else none.
+ *  - WHO ANSWERS WHOM: a card is served by a pool whose interface hears its
+ *    broadcast, that is, sits on the same layer 2 network (see broadcastReach
+ *    in ./l2). With more than one in reach, the first in drawing order that
+ *    has an address left answers, and a warning names them.
+ *  - WHICH ADDRESS: cards are served in drawing order (devices in order,
+ *    cards in order); each gets the lowest address of the range that is
+ *    free: not written by hand on any interface of the drawing, not the
+ *    network or broadcast address, not leased already.
+ *
+ * Simulated failures do not change leases: a lease is the one of the drawing
+ * with everything working, as a device keeps the address it had when
+ * something breaks.
+ *
+ * Not simulated: relay (a server giving addresses to another network through
+ * a router), reservations, lease times and renewal, router or firewall ports
+ * as clients.
+ *
+ * Pure and deterministic: no React, no Zustand, no side effects. The result
+ * for a drawing is kept for as long as the drawing is (see resolveDhcp).
+ */
+
+import type { DhcpPool, NetworkConnection, NetworkDevice } from '@/types';
+import { isValidIP } from '@/utils/ipHelpers';
+import type { Topology } from './types';
+import { listInterfaces } from './interfaces';
+import type { DeviceInterface } from './interfaces';
+import { isL3Capable, normalizeAddressing } from './topology';
+import {
+  DEFAULT_MASK,
+  formatNetwork,
+  ipToNumber,
+  networkContains,
+  networkOf,
+  numberToIp,
+  ownedAddresses,
+} from './addressing';
+import type { Network } from './addressing';
+import { broadcastReach } from './l2';
+
+/** A pool, by the interface it is on */
+export interface DhcpServerRef {
+  deviceId: string;
+  /** `port:2` / `nic:nic-1` (see DeviceInterface.key) */
+  interfaceKey: string;
+}
+
+/** The address a card was given */
+export interface DhcpLease {
+  deviceId: string;
+  nicId: string;
+  ip: string;
+  mask: string;
+  /** '' when the pool hands out none */
+  gateway: string;
+  server: DhcpServerRef;
+}
+
+/**
+ * Why a card on DHCP has no address:
+ *
+ *  - routes:     its device is a router or a firewall
+ *  - disabled:   the card is switched off
+ *  - no-cable:   nothing is plugged into it
+ *  - no-server:  no pool hears it
+ *  - unattached: a server hears it on a cable that is not attached to one of
+ *                its interfaces, so which pool answers is not known
+ *  - unusable:   the pool that hears it cannot work as written
+ *  - used-up:    the pool that hears it has no address left
+ */
+export type UnservedCause =
+  | 'routes'
+  | 'disabled'
+  | 'no-cable'
+  | 'no-server'
+  | 'unattached'
+  | 'unusable'
+  | 'used-up';
+
+/** A card on DHCP that got no address */
+export interface DhcpUnserved {
+  deviceId: string;
+  nicId: string;
+  cause: UnservedCause;
+  /** The cause in words, to follow "<device> has no address: " */
+  reason: string;
+  /** The pool the cause is about, when it is about one */
+  server?: DhcpServerRef;
+}
+
+/**
+ * Why a pool cannot work as written:
+ *
+ *  - no-address: its interface has no (valid) address, so no network
+ *  - client:     its card takes its own address from DHCP
+ *  - invalid:    `start`, `end` or `gateway` is not an address
+ *  - outside:    `start`, `end` or `gateway` is not in the network of the interface
+ *  - reversed:   the range ends before it starts
+ */
+export type PoolProblemCode = 'no-address' | 'client' | 'invalid' | 'outside' | 'reversed';
+
+export interface PoolProblem {
+  code: PoolProblemCode;
+  /** The value the problem is about, when it is about one */
+  value?: string;
+  /** `outside`: the network the value should have been in (`192.168.20.0/24`) */
+  network?: string;
+  text: string;
+}
+
+/** One pool of the drawing, with what became of it */
+export interface DhcpPoolState extends DhcpServerRef {
+  device: NetworkDevice;
+  iface: DeviceInterface;
+  pool: DhcpPool;
+  /** `Router-Core port 2` / `Srv-Auth eth0` */
+  name: string;
+  /** Set when the pool cannot work as written: it hands out nothing */
+  problem?: PoolProblem;
+  /** Mask and gateway handed out ('' for no gateway, and for a pool that cannot work) */
+  mask: string;
+  gateway: string;
+  /** How many addresses of the range can be handed out at all */
+  size: number;
+  /** How many of them nobody has: not written by hand, not leased */
+  free: number;
+  /** The addresses it handed out, in the order it did */
+  leases: DhcpLease[];
+}
+
+/** Everything DHCP does in one drawing */
+export interface DhcpResolution {
+  /**
+   * The drawing with every lease filled in: a card on DHCP carries the
+   * address, mask and gateway it was given (none when it got no lease), and
+   * the device-level fields of its device follow, as for any primary card.
+   * It is the SAME `devices` array when no card is on DHCP.
+   */
+  topology: Topology;
+  /** In the order they were given */
+  leases: DhcpLease[];
+  unserved: DhcpUnserved[];
+  /** In drawing order: devices in order, ports before cards */
+  pools: DhcpPoolState[];
+  /** Pools that answer on one and the same network, a group for each such network */
+  rivals: DhcpPoolState[][];
+  /** Non-fatal observations, in words: one for each group of `rivals` */
+  warnings: string[];
+}
+
+/** True when the device can hand out addresses: a router, a firewall or a server */
+export function servesDhcp(device: NetworkDevice): boolean {
+  return isL3Capable(device) || device.type.toLowerCase().includes('server');
+}
+
+/** True when the interface is a card that takes its address from a DHCP server */
+function isDhcpClient(iface: DeviceInterface): boolean {
+  return iface.kind === 'nic' && iface.nic.dhcp === true;
+}
+
+/** The pool kept on an interface, if any */
+export function poolOf(iface: DeviceInterface): DhcpPool | undefined {
+  return iface.kind === 'port' ? iface.port.dhcpServer : iface.nic.dhcpServer;
+}
+
+/** How a pool is named in messages: `Router-Core port 2` / `Srv-Auth eth0` */
+function poolName(device: NetworkDevice, iface: DeviceInterface): string {
+  return `${device.label} ${iface.label}`;
+}
+
+/** The network a pool hands out addresses of: the one of its interface */
+function poolNetwork(iface: DeviceInterface): { network: Network; mask: string } | undefined {
+  if (!isValidIP(iface.ip)) return undefined;
+  const mask = iface.subnet || DEFAULT_MASK;
+  return { network: networkOf(iface.ip, mask), mask };
+}
+
+/** First and last address of a network: its own address and its broadcast address */
+function networkEnds(network: Network): { first: number; last: number } {
+  const size = network.prefix === 0 ? 2 ** 32 : 2 ** (32 - network.prefix);
+  return { first: network.address, last: network.address + size - 1 };
+}
+
+/**
+ * Why a pool cannot work as written on `iface` of `device`; undefined when it
+ * can. A pool that cannot work hands out nothing.
+ */
+export function poolProblem(
+  device: NetworkDevice,
+  iface: DeviceInterface,
+  pool: DhcpPool
+): PoolProblem | undefined {
+  const where = `${iface.label} on ${device.label}`;
+  if (isDhcpClient(iface)) {
+    return {
+      code: 'client',
+      text: `${where} takes its own address from DHCP: it cannot hand out addresses too`,
+    };
+  }
+  const own = poolNetwork(iface);
+  if (!own) {
+    return { code: 'no-address', text: `${where} has no address: a pool hands out the network of its interface` };
+  }
+  const network = formatNetwork(own.network);
+  for (const value of [pool.start, pool.end, ...(pool.gateway ? [pool.gateway] : [])]) {
+    if (!isValidIP(value)) return { code: 'invalid', value, text: `"${value}" is not an address` };
+    if (!networkContains(own.network, value)) {
+      return { code: 'outside', value, network, text: `${value} is outside ${network}, the network of ${where}` };
+    }
+  }
+  if (ipToNumber(pool.start) > ipToNumber(pool.end)) {
+    return { code: 'reversed', text: `the range ends (${pool.end}) before it starts (${pool.start})` };
+  }
+  return undefined;
+}
+
+/** A pool while leases are being given */
+interface WorkingPool {
+  state: DhcpPoolState;
+  /** Lowest address not tried yet; past `end` once the range is used up */
+  cursor: number;
+  end: number;
+  /** Addresses of the range never handed out: the network's own two, the gateway */
+  never: Set<number>;
+}
+
+/** The pools of a drawing, in drawing order, each with its range worked out */
+function findPools(devices: NetworkDevice[]): WorkingPool[] {
+  const pools: WorkingPool[] = [];
+  for (const device of devices) {
+    if (!servesDhcp(device)) continue;
+    for (const iface of listInterfaces(device)) {
+      const pool = poolOf(iface);
+      if (!pool) continue;
+      const state: DhcpPoolState = {
+        deviceId: device.id,
+        interfaceKey: iface.key,
+        device,
+        iface,
+        pool,
+        name: poolName(device, iface),
+        mask: '',
+        gateway: '',
+        size: 0,
+        free: 0,
+        leases: [],
+      };
+      const problem = poolProblem(device, iface, pool);
+      const own = poolNetwork(iface);
+      if (problem || !own) {
+        if (problem) state.problem = problem;
+        pools.push({ state, cursor: 1, end: 0, never: new Set() });
+        continue;
+      }
+
+      state.mask = own.mask;
+      state.gateway = pool.gateway || (isL3Capable(device) ? iface.ip : '');
+      const start = ipToNumber(pool.start);
+      const end = ipToNumber(pool.end);
+      const never = new Set<number>();
+      // The first and the last address of a network are not for a device
+      // (a point-to-point /31 and a single /32 have no such two)
+      if (own.network.prefix < 31) {
+        const ends = networkEnds(own.network);
+        for (const address of [ends.first, ends.last]) {
+          if (address >= start && address <= end) never.add(address);
+        }
+      }
+      if (state.gateway) {
+        const gateway = ipToNumber(state.gateway);
+        if (gateway >= start && gateway <= end) never.add(gateway);
+      }
+      state.size = end - start + 1 - never.size;
+      pools.push({ state, cursor: start, end, never });
+    }
+  }
+  return pools;
+}
+
+/** `two DHCP servers on one network: A and B — …`, for the pools that hear one card */
+function rivalsWarning(pools: WorkingPool[]): string {
+  const names = pools.map(pool => pool.state.name);
+  const list = `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  const count = names.length === 2 ? 'two' : String(names.length);
+  return `${count} DHCP servers on one network: ${list} — the first that has an address left answers`;
+}
+
+/** `… is used up: 100 addresses, all taken`, to follow "<device> has no address: " */
+function usedUpReason(pool: DhcpPoolState): string {
+  if (pool.size === 0) return `the pool of ${pool.name} has no address to give`;
+  const what = pool.size === 1 ? 'its one address is taken' : `${pool.size} addresses, all taken`;
+  return `the pool of ${pool.name} is used up: ${what}`;
+}
+
+function resolve(drawing: NetworkDevice[], connections: NetworkConnection[]): DhcpResolution {
+  const hasClients = drawing.some(device => (device.nics ?? []).some(nic => nic.dhcp));
+  // What a card on DHCP carries of its own is not read
+  const devices = hasClients
+    ? drawing.map(device => ((device.nics ?? []).some(nic => nic.dhcp) ? normalizeAddressing(device) : device))
+    : drawing;
+  // (leases are those of the drawing with everything working: no failures)
+  const topo: Topology = { devices, connections };
+
+  const pools = findPools(devices);
+  const leases: DhcpLease[] = [];
+  const unserved: DhcpUnserved[] = [];
+  const rivals: DhcpPoolState[][] = [];
+  const warnings: string[] = [];
+
+  // Every address written by hand, wherever it is
+  const taken = new Set<number>();
+  for (const device of devices) {
+    for (const ip of ownedAddresses(device)) {
+      if (isValidIP(ip)) taken.add(ipToNumber(ip));
+    }
+  }
+
+  /** The lowest free address of a pool, taken; undefined when it has none left */
+  const take = (pool: WorkingPool): string | undefined => {
+    while (pool.cursor <= pool.end && (taken.has(pool.cursor) || pool.never.has(pool.cursor))) {
+      pool.cursor += 1;
+    }
+    if (pool.cursor > pool.end) return undefined;
+    const address = pool.cursor;
+    taken.add(address);
+    pool.cursor += 1;
+    return numberToIp(address);
+  };
+
+  for (const device of devices) {
+    for (const iface of listInterfaces(device)) {
+      if (iface.kind !== 'nic' || !iface.nic.dhcp) continue;
+      const card = { deviceId: device.id, nicId: iface.nic.id };
+      if (isL3Capable(device)) {
+        unserved.push({
+          ...card,
+          cause: 'routes',
+          reason: `a ${device.type.toLowerCase()} does not take its addresses from DHCP`,
+        });
+        continue;
+      }
+      if (!iface.enabled) {
+        unserved.push({ ...card, cause: 'disabled', reason: `interface ${iface.label} is disabled` });
+        continue;
+      }
+      const reach = broadcastReach(topo, device, iface);
+      if (!reach.cabled) {
+        unserved.push({
+          ...card,
+          cause: 'no-cable',
+          reason: `interface ${iface.label} has no cable attached`,
+        });
+        continue;
+      }
+
+      const hears = (pool: WorkingPool) =>
+        reach.listeners.some(
+          listener => listener.device.id === pool.state.deviceId && listener.arrival?.key === pool.state.interfaceKey
+        );
+      const inReach = pools.filter(hears);
+      if (inReach.length === 0) {
+        // A server is there, on a cable that says nothing about the interface
+        const loose = pools.find(pool =>
+          reach.listeners.some(
+            listener => listener.device.id === pool.state.deviceId && listener.arrival === undefined
+          )
+        );
+        unserved.push(
+          loose
+            ? {
+                ...card,
+                cause: 'unattached',
+                reason:
+                  `the cable to ${loose.state.device.label} is not attached to one of its interfaces: ` +
+                  `which pool answers is not known`,
+                server: { deviceId: loose.state.deviceId, interfaceKey: loose.state.interfaceKey },
+              }
+            : { ...card, cause: 'no-server', reason: 'no DHCP server answers on its network' }
+        );
+        continue;
+      }
+
+      const usable = inReach.filter(pool => pool.state.problem === undefined);
+      if (usable.length > 1) {
+        const warning = rivalsWarning(usable);
+        if (!warnings.includes(warning)) {
+          warnings.push(warning);
+          rivals.push(usable.map(pool => pool.state));
+        }
+      }
+      const [first] = usable.length > 0 ? usable : inReach;
+      const server: DhcpServerRef = { deviceId: first.state.deviceId, interfaceKey: first.state.interfaceKey };
+      if (usable.length === 0) {
+        unserved.push({
+          ...card,
+          cause: 'unusable',
+          reason: `the pool of ${first.state.name} cannot be used: ${first.state.problem?.text}`,
+          server,
+        });
+        continue;
+      }
+
+      let lease: DhcpLease | undefined;
+      for (const pool of usable) {
+        const ip = take(pool);
+        if (ip === undefined) continue;
+        lease = {
+          ...card,
+          ip,
+          mask: pool.state.mask,
+          gateway: pool.state.gateway,
+          server: { deviceId: pool.state.deviceId, interfaceKey: pool.state.interfaceKey },
+        };
+        pool.state.leases.push(lease);
+        break;
+      }
+      if (lease) {
+        leases.push(lease);
+      } else {
+        unserved.push({
+          ...card,
+          cause: 'used-up',
+          reason: usedUpReason(first.state),
+          server,
+        });
+      }
+    }
+  }
+
+  // How much of each range is left, once everybody has been served
+  for (const pool of pools) {
+    if (pool.state.problem) continue;
+    const start = ipToNumber(pool.state.pool.start);
+    let used = 0;
+    for (const address of taken) {
+      if (address >= start && address <= pool.end && !pool.never.has(address)) used += 1;
+    }
+    pool.state.free = pool.state.size - used;
+  }
+
+  const states = pools.map(pool => pool.state);
+  if (!hasClients) {
+    return { topology: topo, leases, unserved, pools: states, rivals, warnings };
+  }
+
+  const leaseOf = new Map(leases.map(lease => [`${lease.deviceId}|${lease.nicId}`, lease] as const));
+  const leased = devices.map(device => {
+    if (!(device.nics ?? []).some(nic => nic.dhcp)) return device;
+    const nics = (device.nics ?? []).map(nic => {
+      if (!nic.dhcp) return nic;
+      const lease = leaseOf.get(`${device.id}|${nic.id}`);
+      return { ...nic, ip: lease?.ip ?? '', subnet: lease?.mask ?? '', gateway: lease?.gateway ?? '' };
+    });
+    // The device-level fields follow the primary card, as they do when its
+    // address is written by hand
+    const [primary] = nics;
+    return primary.dhcp
+      ? { ...device, nics, ip: primary.ip, subnet: primary.subnet || device.subnet, gateway: primary.gateway }
+      : { ...device, nics };
+  });
+  return { topology: { devices: leased, connections }, leases, unserved, pools: states, rivals, warnings };
+}
+
+/** What was worked out for a drawing, for as long as the drawing is around */
+const known = new WeakMap<NetworkDevice[], { connections: NetworkConnection[]; resolution: DhcpResolution }>();
+
+/**
+ * Everything DHCP does in a drawing: leases, cards left without an address,
+ * pools, and the drawing with the leases filled in.
+ *
+ * Simulated failures in `topo` are not read (see the header). The result is
+ * kept by the identity of the two lists of the drawing, which the application
+ * never changes in place; asking again for the drawing a result came with
+ * gives that same result.
+ */
+export function resolveDhcp(topo: Topology): DhcpResolution {
+  const { devices, connections } = topo;
+  const kept = known.get(devices);
+  if (kept && kept.connections === connections) return kept.resolution;
+
+  const resolution = resolve(devices, connections);
+  known.set(devices, { connections, resolution });
+  known.set(resolution.topology.devices, { connections, resolution });
+  return resolution;
+}
+
+/**
+ * `topo` as the rest of the engine reads it: every card on DHCP carries the
+ * address it is leased. The SAME object when no card is on DHCP, or when the
+ * leases are filled in already; simulated failures are kept.
+ */
+export function withLeases(topo: Topology): Topology {
+  // (looked at every time: a drawing without DHCP costs one pass, and is
+  // never kept)
+  if (!topo.devices.some(device => (device.nics ?? []).some(nic => nic.dhcp))) return topo;
+  const { devices } = resolveDhcp(topo).topology;
+  return devices === topo.devices ? topo : { ...topo, devices };
+}
+
+/** The lease of a card, if it has one */
+export function leaseOf(resolution: DhcpResolution, deviceId: string, nicId: string): DhcpLease | undefined {
+  return resolution.leases.find(lease => lease.deviceId === deviceId && lease.nicId === nicId);
+}
+
+/** Why a card on DHCP has no address, if it has none */
+export function unservedOf(
+  resolution: DhcpResolution,
+  deviceId: string,
+  nicId: string
+): DhcpUnserved | undefined {
+  return resolution.unserved.find(entry => entry.deviceId === deviceId && entry.nicId === nicId);
+}
+
+/** The pool a lease came from, or a cause is about */
+export function poolAt(resolution: DhcpResolution, server: DhcpServerRef): DhcpPoolState | undefined {
+  return resolution.pools.find(
+    pool => pool.deviceId === server.deviceId && pool.interfaceKey === server.interfaceKey
+  );
+}
+
+/**
+ * `Portatile-1 has no address: no DHCP server answers on its network` — why a
+ * device that takes its address from DHCP has none. Undefined when DHCP is
+ * not the reason (no card of the device is waiting for a lease).
+ */
+export function noLeaseReason(topo: Topology, device: NetworkDevice): string | undefined {
+  if (!(device.nics ?? []).some(nic => nic.dhcp)) return undefined;
+  const waiting = resolveDhcp(topo).unserved.find(entry => entry.deviceId === device.id);
+  return waiting ? `${device.label} has no address: ${waiting.reason}` : undefined;
+}

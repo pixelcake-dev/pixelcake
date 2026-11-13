@@ -24,6 +24,10 @@
  * a new flow that leaves by a port with NAT takes the address of that port.
  * So the firewall of the same device sees real addresses on both sides.
  *
+ * A card that takes its address from a DHCP server has the address it is
+ * leased, worked out from the drawing before the packet starts (see ./dhcp);
+ * a card that got none has no address, and the error says why.
+ *
  * Simulated failures (see ./failures) are part of the topology: a device that
  * is down sends and takes nothing, a cable that is cut carries nothing. A
  * route whose interface has no working cable left is withdrawn, as a device
@@ -62,6 +66,7 @@ import { forwardAssumed, physicallyConnected, resolveOnLink } from './l2';
 import type { L2Request, L2Result, Unroutable } from './l2';
 import { doesNat, matchForward, natAddress } from './nat';
 import type { NatTranslation } from './nat';
+import { noLeaseReason, withLeases } from './dhcp';
 
 /** A packet that crosses more layer 3 devices than this is in a loop */
 const MAX_ROUTED_HOPS = 64;
@@ -240,9 +245,11 @@ function joined(notes: string[]): string | undefined {
 export function traceRoute(
   sourceId: string,
   targetId: string,
-  topo: Topology,
+  drawing: Topology,
   options: TraceOptions = {}
 ): TraceResult {
+  // A card on DHCP has the address it is leased (see ./dhcp)
+  const topo = withLeases(drawing);
   const devicesById = new Map(topo.devices.map(d => [d.id, d] as const));
   const source = devicesById.get(sourceId);
   const target = devicesById.get(targetId);
@@ -267,7 +274,8 @@ export function traceRoute(
       return {
         verdict: 'error',
         hops: [],
-        failureReason: `${device.label} has no IP address configured`,
+        // (a card waiting for an address says what it is waiting for)
+        failureReason: noLeaseReason(topo, device) ?? `${device.label} has no IP address configured`,
         notes,
       };
     }

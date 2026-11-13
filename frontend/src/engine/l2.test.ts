@@ -3,6 +3,8 @@ import type { NetworkDevice, Port } from '@/types';
 import { device, host, link, nic, port, switchWith, topo } from '@/test/networkFixtures';
 import type { Topology } from './types';
 import { forwardingRole } from './topology';
+import { listInterfaces } from './interfaces';
+import { broadcastReach } from './l2';
 import { traceRoute } from './trace';
 import { planAndEvaluateFlow } from './flows';
 
@@ -363,5 +365,134 @@ describe('the Internet symbol', () => {
     expect(result.verdict).toBe('success');
     expect(result.notes).toEqual([]);
     expect(result.hops.map(h => h.label)).toEqual(['PC-1', 'Router-1', 'Internet']);
+  });
+});
+
+// ---------- who hears a broadcast ----------
+
+describe('broadcastReach', () => {
+  const MASK = '255.255.255.0';
+  /** `B eth0`, `R port 1`, `X ?` (cable not attached), sorted */
+  const heard = (t: Topology, fromId: string, nicId = 'nic-1') => {
+    const from = t.devices.find(d => d.id === fromId) as NetworkDevice;
+    const egress = listInterfaces(from).find(iface => iface.key === `nic:${nicId}`);
+    const reach = broadcastReach(t, from, egress);
+    return {
+      cabled: reach.cabled,
+      who: reach.listeners.map(l => `${l.device.label} ${l.arrival?.label ?? '?'}`).sort(),
+    };
+  };
+  const router = (ports: Port[]) => device({ id: 'r', label: 'R', type: 'Router', ports });
+
+  /**
+   *   A ─┐
+   *   B ─┼─ SW ── port 1  R  port 2 ── Srv
+   */
+  function oneSwitch(switchPorts: Port[] = [port(1), port(2), port(3)]): Topology {
+    return topo(
+      [
+        host('a', '192.168.1.11', '', { label: 'A' }),
+        host('b', '192.168.1.12', '', { label: 'B' }),
+        switchWith('sw', switchPorts, { label: 'SW' }),
+        router([port(1, { ip: '192.168.1.1', subnet: MASK }), port(2, { ip: '10.0.0.1', subnet: MASK })]),
+        host('srv', '10.0.0.10', '', { label: 'Srv' }),
+      ],
+      [
+        link('a', 'sw', { sourceNic: 'nic-1', targetPort: 1 }),
+        link('b', 'sw', { sourceNic: 'nic-1', targetPort: 2 }),
+        link('sw', 'r', { sourcePort: 3, targetPort: 1 }),
+        link('r', 'srv', { sourcePort: 2, targetNic: 'nic-1' }),
+      ]
+    );
+  }
+
+  it('is heard by the devices and the router port of the same network, and stops at the router', () => {
+    expect(heard(oneSwitch(), 'a')).toEqual({ cabled: true, who: ['B eth0', 'R port 1'] });
+    expect(heard(oneSwitch(), 'srv')).toEqual({ cabled: true, who: ['R port 2'] });
+  });
+
+  it('never starts from an interface with no cable', () => {
+    const t = oneSwitch();
+    t.connections.splice(0, 1);
+    expect(heard(t, 'a')).toEqual({ cabled: false, who: [] });
+  });
+
+  it('is not heard through a port that is down, at either end', () => {
+    expect(heard(oneSwitch([port(1), port(2, { enabled: false }), port(3)]), 'a').who).toEqual(['R port 1']);
+    const t = oneSwitch();
+    t.devices[1] = host('b', '192.168.1.12', '', { label: 'B', nics: [nic({ ip: '192.168.1.12', enabled: false })] });
+    expect(heard(t, 'a').who).toEqual(['R port 1']);
+  });
+
+  it('stays in its VLAN', () => {
+    const t = oneSwitch([port(1, { vlan: 10 }), port(2, { vlan: 20 }), port(3, { vlan: 10 })]);
+    expect(heard(t, 'a').who).toEqual(['R port 1']);
+    expect(heard(t, 'b').who).toEqual([]);
+  });
+
+  it('is not heard by a device that does not expect the tag it arrives with', () => {
+    // port 3 is a trunk: what leaves towards the router is tagged VLAN 10
+    const t = oneSwitch([port(1, { vlan: 10 }), port(2, { vlan: 10 }), port(3, { portType: 'trunk', vlan: [10] })]);
+    expect(heard(t, 'a').who).toEqual(['B eth0']);
+  });
+
+  it('crosses switches and access points, and nothing else', () => {
+    //  X ── AP ── SW ...   and   Y ── T (router without addresses) ── SW
+    const t = oneSwitch([port(1), port(2), port(3), port(4), port(5)]);
+    t.devices.push(
+      host('x', '192.168.1.13', '', { label: 'X' }),
+      device({ id: 'ap', label: 'AP', type: 'AccessPoint', nics: [nic(), nic({ id: 'nic-2', name: 'wlan0' })] }),
+      host('y', '192.168.1.14', '', { label: 'Y' }),
+      device({ id: 't', label: 'T', type: 'Router', ports: [port(1), port(2)] })
+    );
+    t.connections.push(
+      link('x', 'ap', { sourceNic: 'nic-1', targetNic: 'nic-2' }),
+      link('ap', 'sw', { sourceNic: 'nic-1', targetPort: 4 }),
+      link('y', 't', { sourceNic: 'nic-1', targetPort: 1 }),
+      link('t', 'sw', { sourcePort: 2, targetPort: 5 })
+    );
+    expect(heard(t, 'x').who).toEqual(['A eth0', 'B eth0', 'R port 1']);
+    // Y is behind a router: nobody hears it, and it hears nobody
+    expect(heard(t, 'y').who).toEqual([]);
+    expect(heard(t, 'a').who).toEqual(['B eth0', 'R port 1', 'X eth0']);
+  });
+
+  it('does not cross a symbol that is not simulated', () => {
+    const cloud = device({ id: 'wan', label: 'Linea', type: 'Cloud', nics: [nic(), nic({ id: 'nic-2', name: 'eth1' })] });
+    const t = topo(
+      [host('a', '192.168.1.11', '', { label: 'A' }), cloud, host('b', '192.168.1.12', '', { label: 'B' })],
+      [link('a', 'wan', { sourceNic: 'nic-1', targetNic: 'nic-1' }), link('wan', 'b', { sourceNic: 'nic-2', targetNic: 'nic-1' })]
+    );
+    expect(heard(t, 'a')).toEqual({ cabled: true, who: [] });
+  });
+
+  it('is not heard by the sender itself on a second card', () => {
+    const t = oneSwitch([port(1), port(2), port(3), port(4)]);
+    t.devices[0] = host('a', '192.168.1.11', '', {
+      label: 'A',
+      nics: [nic({ ip: '192.168.1.11' }), nic({ id: 'nic-2', name: 'eth1' })],
+    });
+    t.connections.push(link('a', 'sw', { id: 'a--sw-2', sourceNic: 'nic-2', targetPort: 4 }));
+    expect(heard(t, 'a').who).toEqual(['B eth0', 'R port 1']);
+    expect(heard(t, 'a', 'nic-2').who).toEqual(['B eth0', 'R port 1']);
+  });
+
+  it('names each interface once, and says when a cable is not attached to one', () => {
+    //  A ── SW1 ══ SW2 ── H (two cables, neither attached on H)
+    const t = topo(
+      [
+        host('a', '192.168.1.11', '', { label: 'A' }),
+        switchWith('sw1', [port(1), port(2), port(3)], { label: 'SW1' }),
+        switchWith('sw2', [port(1), port(2), port(3)], { label: 'SW2' }),
+        host('h', '192.168.1.20', '', { label: 'H' }),
+      ],
+      [
+        link('a', 'sw1', { sourceNic: 'nic-1', targetPort: 1 }),
+        link('sw1', 'sw2', { sourcePort: 2, targetPort: 1 }),
+        link('sw1', 'h', { sourcePort: 3 }),
+        link('sw2', 'h', { sourcePort: 2 }),
+      ]
+    );
+    expect(heard(t, 'a').who).toEqual(['H ?']);
   });
 });

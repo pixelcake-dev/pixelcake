@@ -24,6 +24,7 @@ import { withFailures } from './failures';
 import { planAndEvaluateFlow } from './flows';
 import type { FlowResult } from './flows';
 import { forwardingRole, isInternetLike } from './topology';
+import { withLeases } from './dhcp';
 
 export interface ImpactOptions {
   /** The kind of exchange evaluated between every two end devices */
@@ -72,7 +73,8 @@ export function flowKey(sourceId: string, targetId: string): string {
  * for the outside world, as long as they have a usable address.
  */
 export function impactEndpoints(topo: Topology): NetworkDevice[] {
-  return topo.devices.filter(device => {
+  // (a card on DHCP counts with the address it is leased: see ./dhcp)
+  return withLeases(topo).devices.filter(device => {
     const isEndpoint = forwardingRole(device) === 'host' || isInternetLike(device);
     return isEndpoint && isValidIP(primaryAddress(device));
   });

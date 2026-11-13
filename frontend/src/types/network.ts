@@ -11,6 +11,20 @@ export type DeviceType = string;
 export type FlowModelType = 'ping' | 'email' | 'web' | 'download';
 
 /**
+ * DHCP server on one interface: the range of addresses it hands out to the
+ * devices on the network of that interface (a router or firewall port, or a
+ * card of a server). One pool per interface, as there is one network per
+ * interface. The mask handed out is the one of the interface.
+ */
+export interface DhcpPool {
+  start: string;           // First address of the range
+  end: string;             // Last address of the range
+  // Gateway handed out with the address. Empty: the interface's own address
+  // on a router or firewall, none on a server
+  gateway?: string;
+}
+
+/**
  * Network Interface Card (NIC)
  * Represents a network interface on end devices (PC, Server, Database, Cloud, etc.)
  */
@@ -24,6 +38,11 @@ export interface NetworkInterfaceCard {
   gateway: string;         // Gateway
   mac?: string;            // MAC address (auto-generated or custom)
   description?: string;    // Notes/comments
+  // The card takes its address from a DHCP server on its network. While this
+  // is on, ip/subnet/gateway above are not used (and are kept empty)
+  dhcp?: boolean;
+  // DHCP server on this card (a server): the addresses it hands out
+  dhcpServer?: DhcpPool;
 }
 
 /**
@@ -46,6 +65,9 @@ export interface Port {
   // Address translation (Router, Firewall): a new flow forwarded out of
   // this port leaves with the port's address instead of its own
   nat?: boolean;           // NAT enabled/disabled
+  // DHCP server on this port (Router, Firewall): the addresses it hands out
+  // to the devices of its network
+  dhcpServer?: DhcpPool;
   // Firewall-specific fields
   securityZone?: 'trust' | 'untrust' | 'dmz'; // Security zone assignment (firewall only)
   ips?: boolean;           // IPS/IDS enabled (firewall only)

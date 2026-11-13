@@ -13,6 +13,7 @@ export {
   primaryMask,
   primaryGateway,
   mirrorPrimaryNic,
+  normalizeAddressing,
   isL3Capable,
   isL3Type,
   isSwitchLike,
@@ -86,6 +87,27 @@ export {
 } from './nat';
 export type { NatTranslation, NumberedForward, Publication } from './nat';
 export type { Unroutable } from './l2';
+
+export {
+  leaseOf,
+  poolAt,
+  poolOf,
+  poolProblem,
+  resolveDhcp,
+  servesDhcp,
+  unservedOf,
+  withLeases,
+} from './dhcp';
+export type {
+  DhcpLease,
+  DhcpPoolState,
+  DhcpResolution,
+  DhcpServerRef,
+  DhcpUnserved,
+  PoolProblem,
+  PoolProblemCode,
+  UnservedCause,
+} from './dhcp';
 
 export { planAndEvaluateFlow, traceToDevice } from './flows';
 export type { FlowLeg, FlowResult } from './flows';

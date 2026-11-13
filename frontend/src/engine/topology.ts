@@ -157,11 +157,20 @@ export function primaryGateway(device: NetworkDevice): string {
  * NIC; labels, `show devices` and lookups by IP read the device-level fields,
  * so the two must not drift apart.
  *
+ * A primary NIC that takes its address from a DHCP server has none of its
+ * own to mirror: the device-level address and gateway are emptied, and the
+ * address the card is leased is filled in where leases are worked out (see
+ * ./dhcp).
+ *
  * Returns the device with the mirror up to date: the SAME object when it
  * already is, or when the device has no primary NIC carrying an IP.
  */
 export function mirrorPrimaryNic(device: NetworkDevice): NetworkDevice {
   const primary = device.nics?.[0];
+  if (primary?.dhcp) {
+    if (device.ip === '' && device.gateway === '') return device;
+    return { ...device, ip: '', gateway: '' };
+  }
   if (!primary?.ip) return device;
 
   const subnet = primary.subnet || device.subnet;
@@ -170,6 +179,28 @@ export function mirrorPrimaryNic(device: NetworkDevice): NetworkDevice {
     return device;
   }
   return { ...device, ip: primary.ip, subnet, gateway };
+}
+
+/**
+ * The addressing of a device as it is kept in a drawing: a card that takes
+ * its address from a DHCP server carries none of its own (whatever was typed
+ * before DHCP was switched on, or was read from a file, is dropped), and the
+ * device-level fields mirror the primary card (see mirrorPrimaryNic).
+ *
+ * So nothing that reads a drawing can mistake a stale address for the one a
+ * card has: that one is worked out from the drawing, in ./dhcp.
+ *
+ * Returns the SAME object when there is nothing to change.
+ */
+export function normalizeAddressing(device: NetworkDevice): NetworkDevice {
+  const stale = (device.nics ?? []).some(
+    nic => nic.dhcp && (nic.ip !== '' || nic.subnet !== '' || nic.gateway !== '')
+  );
+  if (!stale) return mirrorPrimaryNic(device);
+  return mirrorPrimaryNic({
+    ...device,
+    nics: device.nics?.map(nic => (nic.dhcp ? { ...nic, ip: '', subnet: '', gateway: '' } : nic)),
+  });
 }
 
 /** True when a device of this type routes between subnets (router or firewall) */

@@ -14,7 +14,7 @@ import type {
 import { applyHierarchicalLayout, applySubnetGroupedLayout, autoConnectDevices } from '@/utils/autoLayout';
 import { cleanupConnections } from '@/utils/cleanupConnections';
 import { safeJSONStorage } from '@/utils/safeStorage';
-import { bindConnection, mirrorPrimaryNic, normalizeBindings, sanitizeBindings } from '@/engine';
+import { bindConnection, normalizeAddressing, normalizeBindings, sanitizeBindings } from '@/engine';
 
 export { cleanupConnections };
 
@@ -177,7 +177,7 @@ export const useNetworkStore = create<NetworkStore>()(
       addDevice: (device) => {
         set((state) => {
           const id = `dev-${state.deviceCounter}`;
-          const newDevice: NetworkDevice = mirrorPrimaryNic({ ...device, id });
+          const newDevice: NetworkDevice = normalizeAddressing({ ...device, id });
           return {
             devices: [...state.devices, newDevice],
             deviceCounter: state.deviceCounter + 1,
@@ -189,9 +189,10 @@ export const useNetworkStore = create<NetworkStore>()(
       updateDevice: (id, updates) => {
         set((state) => {
           // A device with NICs is addressed through them: its device-level
-          // ip/subnet/gateway follow the primary NIC on every edit
+          // ip/subnet/gateway follow the primary NIC on every edit, and a
+          // card set to DHCP keeps no address of its own
           const devices = state.devices.map((dev) =>
-            dev.id === id ? mirrorPrimaryNic({ ...dev, ...updates }) : dev
+            dev.id === id ? normalizeAddressing({ ...dev, ...updates }) : dev
           );
           // Ports/NICs edited: a link must never keep pointing at an
           // interface that was removed
@@ -465,7 +466,7 @@ export const useNetworkStore = create<NetworkStore>()(
           let connCounter = state.connectionCounter;
 
           const devicesWithNewIds = devices.map((device) =>
-            mirrorPrimaryNic({
+            normalizeAddressing({
               ...device,
               id: `dev-${devCounter++}`,
             })
@@ -504,7 +505,7 @@ export const useNetworkStore = create<NetworkStore>()(
         // Same repairs as on rehydration: a canvas stored before interface
         // bindings (or with a stale address mirror) is brought in line in
         // memory, without counting as an edit
-        const devices = canvas.devices.map(mirrorPrimaryNic);
+        const devices = canvas.devices.map(normalizeAddressing);
         set((state) => ({
           canvasId,
           devices,
@@ -555,7 +556,7 @@ export const useNetworkStore = create<NetworkStore>()(
         // this rule may carry a stale mirror). Plain assignment, like the
         // binding migration below, so it neither persists nor counts as an edit
         if (state) {
-          state.devices = state.devices.map(mirrorPrimaryNic);
+          state.devices = state.devices.map(normalizeAddressing);
         }
 
         // Cleanup corrupted data from localStorage

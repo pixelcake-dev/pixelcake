@@ -861,6 +861,70 @@ export function resolveOnLink(request: L2Request): L2Result {
   return explain(request, outcome);
 }
 
+/** A broadcast is for whoever is on the network: no device has this address */
+const BROADCAST = '255.255.255.255';
+
+/** An interface a broadcast is heard on */
+export interface Listener {
+  device: NetworkDevice;
+  /** Its interface on the cable the frame arrived by (undefined: end not attached) */
+  arrival?: DeviceInterface;
+}
+
+export interface BroadcastReach {
+  /** False when no cable leaves the interface: the frame never starts */
+  cabled: boolean;
+  /** Who hears it, each interface once */
+  listeners: Listener[];
+}
+
+/**
+ * Who hears a broadcast sent by `from` out of `egress`: the end devices and
+ * the router interfaces on the same network, across switches VLAN by VLAN,
+ * through whatever port and cable are up. This is what "the same layer 2
+ * network" means in the engine: the search is the one that delivers a frame
+ * (see walk), asked for an address nobody has, so that it goes everywhere a
+ * frame can go.
+ *
+ * A broadcast stops where the network does: it does not cross a router or a
+ * firewall (not even one without interface addresses, which lets addressed
+ * traffic through), nor a device that is not simulated.
+ */
+export function broadcastReach(
+  topo: Topology,
+  from: NetworkDevice,
+  egress?: DeviceInterface
+): BroadcastReach {
+  const request: L2Request = {
+    topo,
+    from,
+    egress,
+    wantIp: BROADCAST,
+    purpose: 'deliver',
+    target: from,
+    packet: { sourceIp: '0.0.0.0', destinationIp: BROADCAST, service: 'ping', returnTraffic: false },
+    sender: { ip: '0.0.0.0', mask: '0.0.0.0', uses: `${from.label} broadcasts` },
+  };
+  if (startLinks(request).size === 0) return { cabled: false, listeners: [] };
+
+  const outcome = walk(request);
+  const senderVlans = declaredVlans(from);
+  const listeners: Listener[] = [];
+  const heard = new Set<string>();
+  for (const node of [...outcome.routers, ...outcome.hosts]) {
+    // (a second card of the sender, on the same network, is not somebody else)
+    if (node.device.id === from.id) continue;
+    const between = nodePath(node).slice(1, -1);
+    if (between.some(hop => forwardingRole(hop.device) !== 'bridge')) continue;
+    if (endpointVlanProblem(node, senderVlans, from) !== undefined) continue;
+    const key = `${node.device.id}|${node.arrival?.key ?? ''}`;
+    if (heard.has(key)) continue;
+    heard.add(key);
+    listeners.push({ device: node.device, arrival: node.arrival });
+  }
+  return { cabled: true, listeners };
+}
+
 /**
  * Forwarding by a device that cannot decide where the packet goes (a router
  * without interface addresses, the Internet symbol): the packet is assumed

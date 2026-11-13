@@ -24,6 +24,7 @@ import { traceRoute } from './trace';
 import type { TraceOptions } from './trace';
 import { isPrivateAddress, matchForward, publications } from './nat';
 import { ownedAddresses } from './addressing';
+import { withLeases } from './dhcp';
 
 /** One evaluated segment of a flow (e.g. the SMTP submit leg of an email) */
 export interface FlowLeg {
@@ -148,9 +149,11 @@ function flowError(failureReason: string): FlowResult {
 export function traceToDevice(
   fromId: string,
   toId: string,
-  topo: Topology,
+  drawing: Topology,
   options: TraceOptions = {}
 ): { trace: TraceResult; note?: string } {
+  // A card on DHCP has the address it is leased (see ./dhcp)
+  const topo = withLeases(drawing);
   const trace = traceRoute(fromId, toId, topo, options);
   if (options.targetIp !== undefined || trace.unroutable?.role !== 'destination') {
     return { trace };
@@ -436,12 +439,14 @@ export function planAndEvaluateFlow(
   model: FlowModelType,
   sourceId: string,
   targetId: string,
-  topo: Topology,
+  drawing: Topology,
   options?: { emailMode?: EmailMode; targetIp?: string }
 ): FlowResult {
   if (sourceId === targetId) {
     return flowError('source and target are the same device');
   }
+  // A card on DHCP has the address it is leased (see ./dhcp)
+  const topo = withLeases(drawing);
 
   switch (model) {
     case 'ping': {

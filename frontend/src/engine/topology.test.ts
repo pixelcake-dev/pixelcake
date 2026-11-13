@@ -7,6 +7,7 @@ import {
   suggestEndpoint,
   primaryIp,
   mirrorPrimaryNic,
+  normalizeAddressing,
   primaryMask,
   primaryGateway,
   isL3Capable,
@@ -215,6 +216,79 @@ describe('device helpers', () => {
     expect(mirrorPrimaryNic(inSync)).toBe(inSync);
     expect(mirrorPrimaryNic(noNics)).toBe(noNics);
     expect(mirrorPrimaryNic(nicWithoutIp)).toBe(nicWithoutIp);
+  });
+
+  it('mirrorPrimaryNic empties the mirror of a first card on DHCP: it has no address of its own', () => {
+    const onDhcp = device({
+      id: 'a',
+      ip: '192.168.1.10',
+      subnet: '255.255.255.0',
+      gateway: '192.168.1.1',
+      nics: [nic('nic-1', '', { dhcp: true })],
+    });
+    const mirrored = mirrorPrimaryNic(onDhcp);
+    expect(mirrored).toMatchObject({ ip: '', subnet: '255.255.255.0', gateway: '' });
+    expect(onDhcp.ip).toBe('192.168.1.10'); // input untouched
+    // nothing left to do the second time
+    expect(mirrorPrimaryNic(mirrored)).toBe(mirrored);
+    // one of the two still there is still stale
+    expect(mirrorPrimaryNic({ ...mirrored, gateway: '192.168.1.1' }).gateway).toBe('');
+    expect(mirrorPrimaryNic({ ...mirrored, ip: '192.168.1.10' }).ip).toBe('');
+  });
+
+  it('mirrorPrimaryNic looks at the first card only: a second card on DHCP changes nothing', () => {
+    const second = device({
+      id: 'a',
+      ip: '10.0.0.5',
+      subnet: '255.255.255.0',
+      nics: [nic('nic-1', '10.0.0.5'), nic('nic-2', '', { name: 'eth1', dhcp: true })],
+    });
+    expect(mirrorPrimaryNic(second)).toBe(second);
+  });
+
+  it('normalizeAddressing drops what a card on DHCP carries of its own, then mirrors', () => {
+    const stale = device({
+      id: 'a',
+      ip: '192.168.1.10',
+      gateway: '192.168.1.1',
+      nics: [
+        nic('nic-1', '192.168.1.10', { gateway: '192.168.1.1', dhcp: true }),
+        nic('nic-2', '10.0.0.5', { name: 'eth1', gateway: '10.0.0.1' }),
+      ],
+    });
+    const settled = normalizeAddressing(stale);
+    expect(settled.nics).toEqual([
+      { ...stale.nics![0], ip: '', subnet: '', gateway: '' },
+      stale.nics![1],
+    ]);
+    // the card written by hand is the very same object
+    expect(settled.nics![1]).toBe(stale.nics![1]);
+    expect(settled).toMatchObject({ ip: '', gateway: '' });
+    expect(stale.nics![0].ip).toBe('192.168.1.10'); // input untouched
+    expect(normalizeAddressing(settled)).toBe(settled);
+  });
+
+  it.each([
+    ['an address', { ip: '10.0.0.5', subnet: '', gateway: '' }],
+    ['a mask', { ip: '', subnet: '255.255.255.0', gateway: '' }],
+    ['a gateway', { ip: '', subnet: '', gateway: '10.0.0.1' }],
+  ])('normalizeAddressing drops %s left on a card on DHCP', (_what, fields) => {
+    const settled = normalizeAddressing(device({ id: 'a', nics: [nic('nic-1', '', { dhcp: true, ...fields })] }));
+    expect(settled.nics![0]).toMatchObject({ dhcp: true, ip: '', subnet: '', gateway: '' });
+  });
+
+  it('normalizeAddressing is the mirror alone for a device with no card on DHCP', () => {
+    const stale = device({
+      id: 'a',
+      ip: '192.168.1.10',
+      nics: [nic('nic-1', '10.0.0.5', { gateway: '10.0.0.1' })],
+    });
+    expect(normalizeAddressing(stale)).toEqual(mirrorPrimaryNic(stale));
+    expect(normalizeAddressing(stale).nics).toBe(stale.nics);
+    const inSync = device({ id: 'b', ip: '10.0.0.5', subnet: '255.255.255.0', nics: [nic('nic-1', '10.0.0.5')] });
+    expect(normalizeAddressing(inSync)).toBe(inSync);
+    const noNics = device({ id: 'c', type: 'Switch', ip: '10.0.0.2' });
+    expect(normalizeAddressing(noNics)).toBe(noNics);
   });
 
   it('isL3Capable and isSwitchLike match type case-insensitively', () => {
