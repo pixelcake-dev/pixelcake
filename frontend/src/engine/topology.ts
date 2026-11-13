@@ -200,6 +200,15 @@ export function isInternetLike(device: NetworkDevice): boolean {
 }
 
 /**
+ * True when the symbol is the public Internet itself: it is named so. Any
+ * other Cloud symbol (a carrier's network, a private cloud) is not, and is
+ * taken to carry whatever is sent across it.
+ */
+export function isPublicInternet(device: NetworkDevice): boolean {
+  return isInternetLike(device) && `${kindText(device)} ${device.label}`.toLowerCase().includes('internet');
+}
+
+/**
  * What a device does with traffic that is not addressed to it:
  *
  *  - router:      forwards between networks by its routing table (router,

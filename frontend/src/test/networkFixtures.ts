@@ -9,6 +9,7 @@ import type {
   NetworkDevice,
   NetworkInterfaceCard,
   Port,
+  PortForward,
   StaticRoute,
 } from '@/types';
 import type { Topology } from '@/engine';
@@ -91,4 +92,16 @@ export function rule(
 ): FirewallRule {
   ruleCounter += 1;
   return { id: `rule-${ruleCounter}`, action, service, source, destination, ...overrides };
+}
+
+let forwardCounter = 0;
+/** A port forward: `forward('web', 2, '192.168.1.20')` */
+export function forward(
+  service: PortForward['service'],
+  port: number,
+  to: string,
+  overrides: Partial<PortForward> = {}
+): PortForward {
+  forwardCounter += 1;
+  return { id: `forward-${forwardCounter}`, service, port, to, ...overrides };
 }

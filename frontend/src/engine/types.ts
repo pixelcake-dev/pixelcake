@@ -10,6 +10,8 @@
  */
 
 import type { NetworkDevice, NetworkConnection } from '@/types';
+import type { NatTranslation } from './nat';
+import type { Unroutable } from './l2';
 
 /**
  * What is taken as broken for one evaluation ("what happens if this fails?").
@@ -62,6 +64,17 @@ export interface TraceResult {
   sourceIp?: string;
   /** Address the packet was sent to (set once both endpoints are valid) */
   targetIp?: string;
+  /**
+   * The two addresses as they were where the packet stopped, when NAT changed
+   * them on the way: the source the destination saw, the destination the
+   * packet ended up with. A reply goes back to the first, from the second.
+   */
+  seenSourceIp?: string;
+  reachedIp?: string;
+  /** What the NAT devices on the way remember of this flow, in order */
+  translations?: NatTranslation[];
+  /** Set when the Internet refused the packet for one of its addresses */
+  unroutable?: Unroutable;
 }
 
 export interface PingResult extends TraceResult {

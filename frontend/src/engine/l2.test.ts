@@ -308,11 +308,11 @@ function withInternet(options: { routerGateway?: string; wan?: Partial<Port>; cl
 
 describe('the Internet symbol', () => {
   it('takes what is sent to a gateway that is not on the drawing, and says so', () => {
-    const result = traceRoute('pc1', 'vps', withInternet());
+    const result = traceRoute('pc1', 'vps', withInternet({ wan: { nat: true } }));
     expect(result.verdict).toBe('success');
     expect(result.hops.map(h => [h.label, h.note])).toEqual([
       ['PC-1', undefined],
-      ['Router-1', 'routed: default route via 203.0.113.1 (port 2)'],
+      ['Router-1', 'routed: default route via 203.0.113.1 (port 2); NAT: source 192.168.10.11 → 203.0.113.2'],
       ['Internet', undefined],
       ['VPS', undefined],
     ]);
@@ -323,12 +323,16 @@ describe('the Internet symbol', () => {
   });
 
   it('brings the answer back to the router, which routes it properly', () => {
-    const exchange = planAndEvaluateFlow('web', 'pc1', 'vps', withInternet());
+    const exchange = planAndEvaluateFlow('web', 'pc1', 'vps', withInternet({ wan: { nat: true } }));
     expect(exchange.verdict).toBe('success');
     expect(exchange.legs[1].trace.hops.map(h => [h.label, h.note])).toEqual([
       ['VPS', undefined],
       ['Internet', undefined],
-      ['Router-1', 'routed: 192.168.10.0/24 is on port 1'],
+      [
+        'Router-1',
+        'NAT: destination 203.0.113.2 → 192.168.10.11 (reply to a translated flow); ' +
+          'routed: 192.168.10.0/24 is on port 1',
+      ],
       ['PC-1', undefined],
     ]);
   });
@@ -339,12 +343,18 @@ describe('the Internet symbol', () => {
     expect(result.failureReason).toBe('Router-1 has no route to 198.51.100.10');
   });
 
-  it('notes that NAT is drawn but not applied', () => {
-    const result = traceRoute('pc1', 'vps', withInternet({ wan: { nat: true } }));
-    expect(result.verdict).toBe('success');
-    expect(result.notes).toContain(
-      'NAT on Router-1 port 2 is not simulated: addresses are not translated'
+  it('does not carry the private address of the PC: the router has to translate it (see nat.test)', () => {
+    const result = traceRoute('pc1', 'vps', withInternet());
+    expect(result.verdict).toBe('blocked');
+    expect(result.failureReason).toBe(
+      'Internet does not carry private addresses: 192.168.10.11 has to be translated before it ' +
+        'goes out, and NAT is off on port 2 on Router-1'
     );
+    expect(result.hops[result.hops.length - 1]).toMatchObject({ label: 'Internet', status: 'blocked' });
+    // nothing says any more that NAT is drawn and not applied
+    for (const t of [withInternet(), withInternet({ wan: { nat: true } })]) {
+      expect(traceRoute('pc1', 'vps', t).notes.join(' ')).not.toContain('not simulated: addresses');
+    }
   });
 
   it('is a destination like any other when it has an address', () => {

@@ -21,6 +21,9 @@ import type { EmailMode, FlowModelType, NetworkDevice, ServiceName } from '@/typ
 import type { Topology, TraceResult, Verdict } from './types';
 import { buildAdjacency } from './topology';
 import { traceRoute } from './trace';
+import type { TraceOptions } from './trace';
+import { isPrivateAddress, publications } from './nat';
+import { ownedAddresses } from './addressing';
 
 /** One evaluated segment of a flow (e.g. the SMTP submit leg of an email) */
 export interface FlowLeg {
@@ -143,15 +146,41 @@ function evaluateLegs(plans: LegPlan[], topo: Topology, planNotes: string[]): Fl
 
   let previous: TraceResult | undefined;
   for (const plan of plans) {
-    // A reply goes back to the address the request came from, and leaves
-    // from the address the request was sent to
+    // A reply goes back to the address the request was seen to come from,
+    // and leaves from the address the request ended up at: with NAT on the
+    // way these are not the two the request was sent with. The NAT devices
+    // translate it back by what they remember of the request
     const reply = plan.returnTraffic ? previous : undefined;
-    const trace = traceRoute(plan.fromId, plan.toId, topo, {
+    const options: TraceOptions = {
       returnTraffic: plan.returnTraffic,
       service: plan.service,
-      targetIp: reply ? reply.sourceIp : plan.targetIp,
-      sourceIp: reply?.targetIp,
-    });
+      targetIp: reply ? (reply.seenSourceIp ?? reply.sourceIp) : plan.targetIp,
+      sourceIp: reply ? (reply.reachedIp ?? reply.targetIp) : undefined,
+      natState: reply?.translations,
+    };
+    let trace = traceRoute(plan.fromId, plan.toId, topo, options);
+
+    // A device behind NAT is not reached from outside at its own address: who
+    // is outside aims at the address a port forward publishes it at. (An
+    // address typed by the user is the address aimed at, and nothing else.)
+    if (!reply && plan.targetIp === undefined && trace.unroutable?.role === 'destination') {
+      const target = topo.devices.find(d => d.id === plan.toId);
+      const name = target?.label ?? plan.toId;
+      // Its own public address, if it has one (a firewall named by the
+      // address it has inside), else the address it is published at
+      const own = target ? ownedAddresses(target).find(ip => !isPrivateAddress(ip)) : undefined;
+      const [published] = publications(topo, trace.unroutable.address, plan.service);
+      if (own) {
+        notes.push(`${plan.purpose}: ${name} is reached from outside at ${own}, its public address`);
+        trace = traceRoute(plan.fromId, plan.toId, topo, { ...options, targetIp: own });
+      } else if (published) {
+        notes.push(
+          `${plan.purpose}: ${name} is behind NAT: reached at ${published.address}, where ` +
+            `${published.device.label} publishes it (port forward ${published.number})`
+        );
+        trace = traceRoute(plan.fromId, plan.toId, topo, { ...options, targetIp: published.address });
+      }
+    }
     previous = trace;
     legs.push({ fromId: plan.fromId, toId: plan.toId, purpose: plan.purpose, trace });
 

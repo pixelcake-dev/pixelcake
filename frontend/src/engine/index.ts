@@ -17,6 +17,7 @@ export {
   isL3Type,
   isSwitchLike,
   isInternetLike,
+  isPublicInternet,
   forwardingRole,
 } from './topology';
 export type { AdjacencyEntry, ForwardingRole } from './topology';
@@ -72,6 +73,19 @@ export type {
 
 export { traceRoute, ping } from './trace';
 export type { TraceOptions } from './trace';
+
+export {
+  describeForward,
+  doesNat,
+  forwardAddress,
+  forwardProblem,
+  isPrivateAddress,
+  matchForward,
+  natAddress,
+  publications,
+} from './nat';
+export type { NatTranslation, NumberedForward, Publication } from './nat';
+export type { Unroutable } from './l2';
 
 export { planAndEvaluateFlow } from './flows';
 export type { FlowLeg, FlowResult } from './flows';

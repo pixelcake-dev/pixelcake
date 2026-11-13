@@ -43,8 +43,9 @@ export interface Port {
   // network point at. Optional: ports saved before this field have none.
   ip?: string;             // IP address
   subnet?: string;         // Subnet mask
-  // Router-specific fields
-  nat?: boolean;           // NAT enabled/disabled (router only)
+  // Address translation (Router, Firewall): a new flow forwarded out of
+  // this port leaves with the port's address instead of its own
+  nat?: boolean;           // NAT enabled/disabled
   // Firewall-specific fields
   securityZone?: 'trust' | 'untrust' | 'dmz'; // Security zone assignment (firewall only)
   ips?: boolean;           // IPS/IDS enabled (firewall only)
@@ -84,6 +85,21 @@ export interface FirewallRule {
 }
 
 /**
+ * Port forward of a router or firewall (destination NAT): what arrives for
+ * the address of `port`, for `service`, is sent on to `to`, an address
+ * inside. It is how a server behind NAT is reached from outside. Forwards
+ * are read top to bottom and the first that matches is taken.
+ */
+export interface PortForward {
+  id: string;              // Forward ID (forward-1, forward-2...)
+  service: ServiceName | 'any';
+  port: number;            // The port whose address is published
+  to: string;              // Address the traffic is sent on to
+  enabled?: boolean;       // A disabled forward is skipped (default: enabled)
+  description?: string;    // Notes/comments
+}
+
+/**
  * Network Device
  * Represents a single device in the network topology
  */
@@ -116,6 +132,9 @@ export interface NetworkDevice {
   routes?: StaticRoute[];
   // Filtering (Firewall): ordered rules, first match decides
   firewallRules?: FirewallRule[];
+  // Address translation (Router, Firewall): services published from a port
+  // to an address inside. Source NAT is a property of each port (`nat`).
+  portForwards?: PortForward[];
 }
 
 /**

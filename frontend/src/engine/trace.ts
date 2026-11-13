@@ -17,6 +17,13 @@
  * until the destination answers, something drops the packet, or the packet
  * comes back to a router it already crossed (routing loop).
  *
+ * A router or firewall may also change the addresses of the packet (see
+ * ./nat). Before step 1, a packet addressed to the device itself is sent on
+ * to whom the device stands for: the server a port forward publishes, or the
+ * sender of a flow it translated, when the packet is the reply. After step 2,
+ * a new flow that leaves by a port with NAT takes the address of that port.
+ * So the firewall of the same device sees real addresses on both sides.
+ *
  * Simulated failures (see ./failures) are part of the topology: a device that
  * is down sends and takes nothing, a cable that is cut carries nothing. A
  * route whose interface has no working cable left is withdrawn, as a device
@@ -30,7 +37,7 @@
  *
  * Whatever is NOT simulated says so in a note instead of passing silently:
  * a link end not attached to a port, a router without interface addresses
- * (it lets traffic through, nothing is verified), the Internet symbol, NAT.
+ * (it lets traffic through, nothing is verified), a Cloud symbol.
  */
 
 import type { NetworkDevice, ServiceName } from '@/types';
@@ -43,6 +50,7 @@ import {
   formatNetwork,
   hasInterfaceAddresses,
   lookupRoute,
+  ownedAddresses,
   primaryAddress,
   routingTable,
 } from './addressing';
@@ -51,7 +59,9 @@ import { evaluateFirewall } from './firewall';
 import type { Packet } from './firewall';
 import { deadInterfaces, isDeviceDown } from './failures';
 import { forwardAssumed, physicallyConnected, resolveOnLink } from './l2';
-import type { L2Request, L2Result } from './l2';
+import type { L2Request, L2Result, Unroutable } from './l2';
+import { doesNat, matchForward, natAddress } from './nat';
+import type { NatTranslation } from './nat';
 
 /** A packet that crosses more layer 3 devices than this is in a loop */
 const MAX_ROUTED_HOPS = 64;
@@ -77,6 +87,11 @@ export interface TraceOptions {
    * of the interface the source sends from.
    */
   sourceIp?: string;
+  /**
+   * For a reply: what the NAT devices remember of the flow it answers (the
+   * `translations` of the request). They translate the reply back.
+   */
+  natState?: NatTranslation[];
 }
 
 /** What a device decides to do with a packet */
@@ -241,7 +256,9 @@ export function traceRoute(
     return { verdict: 'error', hops: [], failureReason: `target device "${targetId}" not found`, notes };
   }
 
-  const targetIp = options.targetIp ?? primaryAddress(target);
+  let targetIp = options.targetIp ?? primaryAddress(target);
+  /** The address the packet is sent to, whatever it is translated into later */
+  const sentTo = targetIp;
   for (const [device, ip] of [
     [source, primaryAddress(source)],
     [target, targetIp],
@@ -295,6 +312,60 @@ export function traceRoute(
     return { verdict: 'success', hops: [makeHop(source, 'delivered')], notes, sourceIp, targetIp };
   }
 
+  const service = options.service ?? 'ping';
+  const isReply = options.returnTraffic ?? false;
+  const natState = options.natState ?? [];
+  /** What the NAT devices on the way will remember of this flow */
+  const translations: NatTranslation[] = [];
+  /** The address the packet is sent from, whatever it is translated into later */
+  let sentFrom = sourceIp;
+  /** The addresses of the packet, for the result: as sent, and as they ended up */
+  const addresses = (): Pick<
+    TraceResult,
+    'sourceIp' | 'targetIp' | 'seenSourceIp' | 'reachedIp' | 'translations'
+  > => ({
+    sourceIp: sentFrom,
+    targetIp: sentTo,
+    ...(sourceIp !== sentFrom ? { seenSourceIp: sourceIp } : {}),
+    ...(targetIp !== sentTo ? { reachedIp: targetIp } : {}),
+    ...(translations.length > 0 ? { translations } : {}),
+  });
+
+  /** The device that has an address, `target` first when it is one of its own */
+  const ownerOf = (ip: string): NetworkDevice | undefined =>
+    ownedAddresses(target).includes(ip)
+      ? target
+      : topo.devices.find(device => ownedAddresses(device).includes(ip));
+  /**
+   * The device the packet is addressed to at this point of the way. It is
+   * `target` unless the packet is aimed at an address of a NAT device that
+   * stands for it (a published address, or the address a flow went out with).
+   */
+  let addressee = ownerOf(targetIp) ?? target;
+
+  /**
+   * What a device does with a packet addressed to itself when it stands for
+   * somebody else: the address to send it on to, and why. Undefined when the
+   * packet is simply for the device.
+   */
+  const standsFor = (
+    device: NetworkDevice
+  ): { to: string; why: string; remember?: NatTranslation } | undefined => {
+    if (isReply) {
+      const known = natState.find(
+        entry => entry.deviceId === device.id && entry.kind === 'source' && entry.outside === targetIp
+      );
+      return known ? { to: known.inside, why: 'reply to a translated flow' } : undefined;
+    }
+    const match = matchForward(device, service, targetIp);
+    if (!match) return undefined;
+    return {
+      to: match.forward.to,
+      why: `port forward ${match.number}`,
+      remember: { deviceId: device.id, kind: 'forward', inside: match.forward.to, outside: targetIp },
+    };
+  };
+
   const addNotes = (extra: string[]) => {
     for (const note of extra) {
       // One "per-port rules skipped" is enough to say the trace is partial
@@ -313,10 +384,18 @@ export function traceRoute(
   const blocked = (
     device: NetworkDevice,
     reason: string,
-    via: string | undefined = arrivalLink
+    via: string | undefined = arrivalLink,
+    unroutable?: Unroutable
   ): TraceResult => {
     hops.push(makeHop(device, 'blocked', reason, via));
-    return { verdict: 'blocked', hops, failureReason: reason, notes, sourceIp, targetIp };
+    return {
+      verdict: 'blocked',
+      hops,
+      failureReason: reason,
+      notes,
+      ...addresses(),
+      ...(unroutable ? { unroutable } : {}),
+    };
   };
   /** Record what an L2 step went through; returns the failure, if any */
   const record = (
@@ -332,19 +411,38 @@ export function traceRoute(
       }
       return undefined;
     }
-    if (result.path.length === 0) return blocked(device, result.reason);
+    if (result.path.length === 0) {
+      return blocked(device, result.reason, arrivalLink, result.unroutable);
+    }
     hops.push(makeHop(device, 'forwarded', joined(hopNotes), arrivalLink));
     const dropAt = result.path[result.path.length - 1];
     for (const hop of result.path.slice(0, -1)) {
       hops.push(makeHop(hop.device, 'forwarded', joined(hop.notes), hop.link?.id));
     }
-    return blocked(dropAt.device, result.reason, dropAt.link?.id);
+    return blocked(dropAt.device, result.reason, dropAt.link?.id, result.unroutable);
   };
 
   for (let step = 0; step <= MAX_ROUTED_HOPS; step++) {
-    if (current.id === target.id) {
-      hops.push(makeHop(current, 'delivered', undefined, arrivalLink));
-      return { verdict: 'success', hops, notes, sourceIp, targetIp };
+    const hopNotes: string[] = [];
+    if (current.id === addressee.id) {
+      // The packet is for this device, unless the device stands for another
+      // (a device does not translate what it sends itself)
+      const onward = step > 0 ? standsFor(current) : undefined;
+      const next = onward ? ownerOf(onward.to) : undefined;
+      if (!onward || next?.id === current.id) {
+        hops.push(makeHop(current, 'delivered', undefined, arrivalLink));
+        return { verdict: 'success', hops, notes, ...addresses() };
+      }
+      if (!next) {
+        return blocked(
+          current,
+          `${current.label} sends ${targetIp} on to ${onward.to} (${onward.why}), an address no device has`
+        );
+      }
+      hopNotes.push(`NAT: destination ${targetIp} → ${onward.to} (${onward.why})`);
+      if (onward.remember) translations.push(onward.remember);
+      targetIp = onward.to;
+      addressee = next;
     }
     if (crossed.has(current.id) || step === MAX_ROUTED_HOPS) {
       return blocked(current, `routing loop: the packet comes back to ${current.label}`);
@@ -358,14 +456,16 @@ export function traceRoute(
 
     if (isSource && options.sourceIp === undefined && decision.kind !== 'assumed') {
       sourceIp = decision.out.ip;
+      sentFrom = sourceIp;
     }
+    // What a firewall on this device sees: the destination already translated
+    // (above), the source not yet (below)
     const packet: Packet = {
       sourceIp,
       destinationIp: targetIp,
-      service: options.service ?? 'ping',
-      returnTraffic: options.returnTraffic ?? false,
+      service,
+      returnTraffic: isReply,
     };
-    const hopNotes: string[] = [];
     if (!isSource && forwardingRole(current) === 'router') {
       const note = routeNote(decision);
       if (note) hopNotes.push(note);
@@ -382,42 +482,64 @@ export function traceRoute(
       addNotes([verdict.text]);
       return undefined;
     };
-    /** NAT is stored on router ports and not applied: say so when one is crossed */
-    const noteNat = (...ifaces: Array<DeviceInterface | undefined>) => {
-      for (const iface of ifaces) {
-        if (iface?.kind === 'port' && iface.port.nat) {
-          addNotes([`NAT on ${current.label} ${iface.label} is not simulated: addresses are not translated`]);
+    /**
+     * The source of the packet as it leaves a device in transit by `egress`:
+     * a reply to a flow the device forwarded takes back the address the flow
+     * was sent to; a new flow that leaves by a port with NAT takes the
+     * address of that port, and the device remembers it.
+     */
+    const translateSource = (egress: DeviceInterface | undefined) => {
+      if (isSource) return;
+      if (isReply) {
+        const known = natState.find(
+          entry => entry.deviceId === current.id && entry.kind === 'forward' && entry.inside === sourceIp
+        );
+        if (known) {
+          hopNotes.push(`NAT: source ${sourceIp} → ${known.outside} (reply to a forwarded flow)`);
+          sourceIp = known.outside;
         }
+        return;
       }
+      if (!egress || !doesNat(egress)) return;
+      const address = natAddress(egress);
+      if (!address) {
+        addNotes([`NAT on ${current.label} ${egress.label} has no address to translate to: not applied`]);
+        return;
+      }
+      if (address === sourceIp) return;
+      hopNotes.push(`NAT: source ${sourceIp} → ${address}`);
+      translations.push({ deviceId: current.id, kind: 'source', inside: sourceIp, outside: address });
+      sourceIp = address;
     };
 
-    const request: Omit<L2Request, 'egress' | 'wantIp' | 'purpose'> = {
+    const request = (): Omit<L2Request, 'egress' | 'wantIp' | 'purpose'> => ({
       topo,
       from: current,
-      target,
-      packet,
+      target: addressee,
+      // (with the source as it is on the cable: translated, if it was)
+      packet: { ...packet, sourceIp },
       sender: {
         ip: decision.kind === 'assumed' ? sourceIp : decision.out.ip,
         mask: decision.kind === 'assumed' ? '255.255.255.0' : decision.out.mask,
         uses: describeUse(current, decision),
       },
-    };
+    });
 
     let result: L2Result;
     if (decision.kind === 'assumed') {
       addNotes([decision.note]);
-      result = forwardAssumed({ ...request, wantIp: targetIp, purpose: 'deliver' });
+      result = forwardAssumed({ ...request(), wantIp: targetIp, purpose: 'deliver' });
       if (result.ok) {
         const denied = filter(result.departure);
         if (denied) return denied;
-        noteNat(arrival, result.departure);
+        translateSource(result.departure);
       }
     } else {
       const denied = filter(decision.out.iface);
       if (denied) return denied;
-      noteNat(arrival, decision.out.iface);
+      translateSource(decision.out.iface);
       result = resolveOnLink({
-        ...request,
+        ...request(),
         egress: decision.out.iface,
         wantIp: decision.kind === 'direct' ? targetIp : decision.nextHop,
         purpose: decision.kind === 'direct' ? 'deliver' : 'next-hop',
@@ -429,10 +551,10 @@ export function traceRoute(
     if (!result.ok) break; // unreachable: record() returns the failure
 
     // Somebody else answers for the destination address before the target does
-    if (decision.kind !== 'via' && result.match === 'address' && result.device.id !== target.id) {
+    if (decision.kind !== 'via' && result.match === 'address' && result.device.id !== addressee.id) {
       return blocked(
         result.device,
-        `${result.device.label} answers for ${targetIp} before ${target.label}: the address is used twice`
+        `${result.device.label} answers for ${targetIp} before ${addressee.label}: the address is used twice`
       );
     }
 

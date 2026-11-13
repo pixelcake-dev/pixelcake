@@ -32,11 +32,12 @@ import { areSameNetwork, getNetworkAddress, isValidIP } from '@/utils/ipHelpers'
 import type { Topology } from './types';
 import { boundInterface, interfacePhrase, listInterfaces } from './interfaces';
 import type { DeviceInterface } from './interfaces';
-import { buildAdjacency, forwardingRole, isInternetLike } from './topology';
+import { buildAdjacency, forwardingRole, isInternetLike, isPublicInternet } from './topology';
 import { hasInterfaceAddresses, ownedAddresses } from './addressing';
 import { evaluateFirewall } from './firewall';
 import type { Packet } from './firewall';
 import { isDeviceDown, isLinkCut, linkDownReason } from './failures';
+import { doesNat, isPrivateAddress, publications } from './nat';
 import { DEFAULT_VLAN, describePortVlan, isVlanAware, portVlanMode, trunkCarries } from './vlan';
 
 /** A frame travelling on a cable */
@@ -77,6 +78,15 @@ interface Node {
   unbound?: string;
 }
 
+/**
+ * The Internet does not carry a packet with a private address: which of its
+ * two addresses was the private one
+ */
+export interface Unroutable {
+  role: 'source' | 'destination';
+  address: string;
+}
+
 /** A place where the frame was dropped */
 interface Drop {
   /** The device that drops it: the last one of `node`'s path */
@@ -84,6 +94,8 @@ interface Drop {
   reason: string;
   /** The cable it was dropped on, or about to take */
   link?: NetworkConnection;
+  /** Set when the Internet refused the packet for one of its addresses */
+  unroutable?: Unroutable;
 }
 
 /** A device crossed on the way, with what to say about it */
@@ -155,6 +167,8 @@ export interface L2Failure {
    */
   path: L2Hop[];
   notes: string[];
+  /** Set when the Internet refused the packet for one of its addresses */
+  unroutable?: Unroutable;
 }
 
 export type L2Result = L2Success | L2Failure;
@@ -414,8 +428,8 @@ function walk(request: L2Request): WalkOutcome {
       const next = devicesById.get(neighborId);
       if (!next) continue;
 
-      const drop = (at: Node, reason: string) =>
-        outcome.drops.push({ node: at, reason, link: connection });
+      const drop = (at: Node, reason: string, unroutable?: Unroutable) =>
+        outcome.drops.push({ node: at, reason, link: connection, unroutable });
 
       // ── simulated failures: a cut cable, a device that is down ──────────
       const broken = linkDownReason(topo, connection, device, next);
@@ -558,6 +572,12 @@ function walk(request: L2Request): WalkOutcome {
         continue;
       }
       if (role === 'passthrough') {
+        // The Internet carries public addresses only
+        const refused = isPublicInternet(next) ? privateAddressProblem(request, next) : undefined;
+        if (refused) {
+          drop(child, refused.reason, refused.unroutable);
+          continue;
+        }
         if (isInternetLike(next)) {
           outcome.candidates.push({
             node: child,
@@ -572,6 +592,45 @@ function walk(request: L2Request): WalkOutcome {
     }
   }
   return outcome;
+}
+
+/**
+ * Why the Internet does not take the packet: its destination, or its source,
+ * is a private address. Undefined when both are public.
+ */
+function privateAddressProblem(
+  request: L2Request,
+  internet: NetworkDevice
+): { reason: string; unroutable: Unroutable } | undefined {
+  const { topo, from, egress, packet } = request;
+  const lead = `${internet.label} does not carry private addresses`;
+
+  if (isPrivateAddress(packet.destinationIp)) {
+    // Said with the way in, when there is one
+    const [published] = publications(topo, packet.destinationIp, packet.service);
+    const way = published
+      ? `is reached from outside at ${published.address}, where ${published.device.label} ` +
+        `publishes it (port forward ${published.number})`
+      : `is not reachable from outside: no port forward publishes it for ${packet.service}`;
+    return {
+      reason: `${lead}: ${packet.destinationIp} ${way}`,
+      unroutable: { role: 'destination', address: packet.destinationIp },
+    };
+  }
+  if (isPrivateAddress(packet.sourceIp)) {
+    // The device that sends it out is the one that should have translated it
+    const where =
+      forwardingRole(from) === 'router' && egress
+        ? doesNat(egress)
+          ? `NAT on ${interfaceOn(egress, from)} did not translate it`
+          : `NAT is off on ${interfaceOn(egress, from)}`
+        : `nothing between ${from.label} and ${internet.label} translates it (NAT)`;
+    return {
+      reason: `${lead}: ${packet.sourceIp} has to be translated before it goes out, and ${where}`,
+      unroutable: { role: 'source', address: packet.sourceIp },
+    };
+  }
+  return undefined;
 }
 
 /** Hops and notes of the way to `node`, sender excluded */
@@ -609,10 +668,12 @@ function success(node: Node, match: L2Success['match'], leadNotes: string[] = []
   };
 }
 
-function failure(reason: string, node: Node | undefined): L2Failure {
-  if (!node) return { ok: false, reason, path: [], notes: [] };
-  const { hops, notes } = describePath(node);
-  return { ok: false, reason, path: hops, notes };
+function failure(reason: string, node: Node | undefined, unroutable?: Unroutable): L2Failure {
+  const result: L2Failure = node
+    ? { ok: false, reason, path: describePath(node).hops, notes: describePath(node).notes }
+    : { ok: false, reason, path: [], notes: [] };
+  if (unroutable) result.unroutable = unroutable;
+  return result;
 }
 
 /** Shortest physical way from the sender to `targetId`, as device ids (sender first) */
@@ -719,7 +780,7 @@ function explain(request: L2Request, outcome: WalkOutcome): L2Failure {
     route,
     drop => drop.link !== undefined && ownerLinks.has(drop.link.id)
   );
-  if (dropped) return failure(dropped.reason, dropped.node);
+  if (dropped) return failure(dropped.reason, dropped.node, dropped.unroutable);
 
   // 2. An end device sits in the way
   const blockingHost = firstOnRoute(
@@ -763,7 +824,10 @@ function explain(request: L2Request, outcome: WalkOutcome): L2Failure {
   }
 
   // 5. Whatever was dropped anywhere, else nobody is there
-  if (outcome.drops.length > 0) return failure(outcome.drops[0].reason, outcome.drops[0].node);
+  if (outcome.drops.length > 0) {
+    const [first] = outcome.drops;
+    return failure(first.reason, first.node, first.unroutable);
+  }
   return failure(
     purpose === 'deliver'
       ? `${target.label} (${wantIp}) does not answer on the network of ${from.label}`
