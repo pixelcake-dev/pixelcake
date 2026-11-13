@@ -11,7 +11,7 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 ## What it does
 
 - **Draw.** Devices, links, ports and network cards on an interactive canvas. 20 device types and 5 link types are built in and can be customised. Auto-layout, multi-selection, copy and paste, and several boards per project.
-- **Configure.** Addresses on every router port and network card, static routes, VLANs port by port (access and trunk), firewall zones and ordered rules.
+- **Configure.** Addresses on every router port and network card, static routes, VLANs port by port (access and trunk), firewall zones and ordered rules, NAT towards the Internet and port forwards for what is reached from it.
 - **Test.** Ping, web, download and email flows are followed hop by hop and animated on the drawing. When a flow fails, the packet stops at the device that drops it and the reason names the port, the route or the rule.
 - **Type.** A built-in terminal with a small vendor-neutral command language: `ping`, `trace`, `browse`, `show routes`, `add route`, `add rule`, `interface 3 access 10` and more. Commands that change the network edit the same drawing you see.
 - **Present.** A presentation mode puts the editing tools away. Click two devices to ask a question, watch the packet go, read the answer hop by hop. Then break something, a device or a cable, and see at once whether the traffic finds another way and which exchanges between end devices stop working. Nothing in the drawing changes.
@@ -21,7 +21,7 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 
 The interface is in Italian. The terminal language is English.
 
-Four sample networks are bundled. The welcome screen loads the first: a small company, with offices and Wi-Fi in two VLANs on one trunk, an access point, a switch of servers, a public portal in a DMZ and a firewall with three rules. It is also under Aggiungi → Topologie, with the other three: a small office with two subnets and a router; a site with VLANs, a DMZ and a firewall; and two sites joined by a main line and a backup line, made for trying failures.
+Four sample networks are bundled. The welcome screen loads the first: a small company, with offices and Wi-Fi in two VLANs on one trunk, an access point, a switch of servers, a public portal in a DMZ and a firewall with three rules that does NAT towards the Internet. It is also under Aggiungi → Topologie, with the other three: a small office with two subnets and a router; a site with VLANs, a DMZ and a firewall; and two sites joined by a main line and a backup line, made for trying failures.
 
 ### The terminal
 
@@ -115,8 +115,8 @@ Opened from a presentation (the picture button on its bar), it shows what the pr
 - **Simulated failures are not saved.** They belong to the presentation and are gone when it ends.
 - **Firewall rules know three services**: ping, web and email. There are no port numbers, and traffic addressed to the firewall itself is not filtered.
 - **Spanning tree is not simulated.** A drawing with redundant links is walked without loops, but no port is blocked.
-- **NAT is not applied.** It can be ticked on a router port, and a trace that crosses that port says addresses were not translated.
-- **The Internet symbol is a stand-in.** It is assumed to carry traffic, with a note.
+- **NAT is by service, not by port number.** A port forward is "this service, arriving on this port": there are no TCP or UDP port numbers, and two flows never compete for a translation. A server reached from inside at its published address is not treated apart, and a device behind two layers of NAT is found by name only through the first.
+- **The Internet symbol is a stand-in.** It carries public addresses, with a note, and refuses private ones, as the Internet does. A Cloud symbol with any other name carries everything, with a note.
 - **No undo.** It does not exist yet.
 - **A picture is one board.** A project with several boards is exported one board at a time. The SVG names the fonts of the interface without embedding them: on a computer that has none of them the texts are set in another typeface. A PNG of a very large drawing is reduced to what the browser can paint, and the dialog says so.
 - **The YAML format is PixelCake's own.** Device names that look like numbers or booleans, and duplicate names, do not survive an export and import.
@@ -143,7 +143,7 @@ The app's icons are bundled with it. Only an icon name typed by hand in a custom
 
 ```bash
 cd frontend
-pnpm test:run      # 1542 tests: engine, terminal, project files, import/export, pictures, screens
+pnpm test:run      # 1694 tests: engine, terminal, project files, import/export, pictures, screens
 pnpm type-check
 pnpm lint
 pnpm build
@@ -172,7 +172,7 @@ Today the first two exist in a basic form and the third is only a sketch. The st
 ## What is next
 
 1. Undo and redo.
-2. In the engine: NAT, DHCP and DNS, then spanning tree.
+2. In the engine: DHCP and DNS, then spanning tree.
 
 ## License
 

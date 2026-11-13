@@ -81,7 +81,7 @@ While presenting, NetworkCanvas makes the drawing read-only (nothing is selected
 - State: `useUIStore.showWelcomeScreen`, the number of devices on screen and the number of canvases
 
 ### Modals (Enterprise Style)
-- **InspectorModal** - Device configuration in tabs: Generale, Porte (switch, router, firewall) or Schede di rete (end devices), Rotte (router, firewall: `ui/RoutesPanel`, with the routing table the engine would read from the form), Regole (firewall: `ui/FirewallRulesPanel`, ordered rules). Routes and rules are validated on save (`utils/networkConfigValidation.ts`)
+- **InspectorModal** - Device configuration in tabs: Generale, Porte (switch, router, firewall) or Schede di rete (end devices), Rotte (router, firewall: `ui/RoutesPanel`, with the routing table the engine would read from the form), Regole (firewall: `ui/FirewallRulesPanel`, ordered rules), NAT (router, firewall: `ui/NatPanel`, the ports that do NAT and the ordered port forwards). Routes, rules and forwards are validated on save (`utils/networkConfigValidation.ts`)
 - **HelpModal** - The guide, in three tabs: how to use the app, the terminal commands (rendered from `COMMAND_REFERENCE`, the table the terminal's `help` prints), information
 - **ExportImageModal** - The board as a picture: preview, format (PNG, SVG), size, theme, title, background; save to a file or copy to the clipboard. It exists only while it is open, so every time it starts from the drawing and the theme on screen. See "The drawing as a picture" below
 - **ConnectionInspectorModal** - Connection properties editor
@@ -141,7 +141,9 @@ The walk (`trace.ts`) alternates two steps until the destination answers or
 something drops the packet:
 
 1. **a layer 3 decision** at the device holding the packet: routing table
-   lookup, then the firewall;
+   lookup, then the firewall. Around it, a router or a firewall may
+   translate the addresses of the packet (`nat.ts`): the destination
+   before the lookup, the source after the firewall;
 2. **a layer 2 delivery** to the address that decision chose (the destination
    itself, or a next hop), across switches.
 
@@ -154,6 +156,10 @@ Modules:
 - `firewall.ts` — `evaluateFirewall`: ordered rules (first match decides), then
   the zone policy, with the reply to an allowed flow always passing. A rule
   naming a zone is skipped, with a note, when the link is not on a port.
+- `nat.ts` — address translation. Source NAT on a port (`doesNat`,
+  `natAddress`), port forwards (`matchForward`, `publications`), which
+  addresses are private (`isPrivateAddress`), and what a NAT device
+  remembers of a flow (`NatTranslation`), handed from a request to its reply.
 - `vlan.ts` — how a switch port treats frames (`portVlanMode`: access or
   trunk). A switch is VLAN-aware once one of its ports has a VLAN; the others
   are then access ports in VLAN 1.
@@ -161,12 +167,18 @@ Modules:
   for the device that answers for an address, crossing bridges VLAN by VLAN,
   routers and firewalls without interface addresses (transparent; a firewall
   still applies its policy) and devices that are not simulated (Internet
-  symbol, load balancer). The shortest way that works is the one taken. When
+  symbol, load balancer). A Cloud symbol named Internet (`isPublicInternet`)
+  refuses a packet with a private source or destination. The shortest way
+  that works is the one taken. When
   nobody answers, `explain` picks the most useful reason: what happened on the
   cables of the way to the device that should have answered.
 - `trace.ts` — the walk itself, loop detection, and the notes: whatever is not
   verified (a link end not on a port, a router without interface addresses,
-  the Internet symbol, NAT) is reported as a note, never as a silent success.
+  a Cloud symbol) is reported as a note, never as a silent success. A packet
+  addressed to a NAT device is sent on to whom the device stands for (the
+  server a forward publishes, the sender of a flow it translated); the
+  result carries the addresses as sent and as they ended up
+  (`seenSourceIp`, `reachedIp`) and the translations made on the way.
 - `flows.ts` — request/reply plans per flow model (ping, web, download, email)
   and the service each leg is to a firewall. A reply leg is the return traffic
   of an allowed flow, sent back to the address the request came from. The
@@ -303,6 +315,7 @@ interface FlowMap {
 - `nics?: NetworkInterfaceCard[]` - NICs for end devices
 - `routes?: StaticRoute[]` - Static routes (Router/Firewall): `{ id, destination, nextHop, description? }`, destination in CIDR form. `gateway` is the default route
 - `firewallRules?: FirewallRule[]` - Ordered rules (Firewall): `{ id, action: 'allow'|'deny', service: 'any'|'ping'|'web'|'email', source, destination, enabled?, description? }`; source and destination are `any`, a zone, an address or a network
+- `portForwards?: PortForward[]` - Ordered port forwards (Router/Firewall): `{ id, service: 'any'|'ping'|'web'|'email', port, to, enabled?, description? }`; what arrives for the address of `port`, for the service, is sent on to `to`. Source NAT is the `nat` flag of each port
 
 ### Port
 ```

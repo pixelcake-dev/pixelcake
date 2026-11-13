@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **More that did nothing**: the Inspector tab announcing Terraform fields, the terminal's Minimize and Maximize dots, two Terraform fields on custom templates, a click-to-connect mode and two windows nothing opened.
 
 ### Added
+- **Address translation (NAT).** The NAT option of a port, which did nothing, is applied, on routers and on firewalls: a new flow the device forwards out of a port with NAT leaves with the address of that port, and the reply, which comes back to that address, is sent on to the real sender. **Port forwards** publish a service inside at the address of a port (Inspector → NAT, an ordered list); the answer leaves with the address that was asked. A firewall filters between the two, so its rules keep naming real addresses. Asked for a device behind NAT from outside, a flow aims at the address that publishes it, or at the device's own public address, and says so.
+- **Terminal, NCL v0.3**: `interface <n> nat [off]`, `add forward <service> from interface <n> to <address>`, `remove forward <n>`, `show nat`. `ping`, `trace` and `browse` print the address the packet went to.
+- **Port forwards in files**: they travel in the project file (`portForwards`) and in the YAML export (`port_forwards`) and come back in the same order.
 - **A sample network of a small company**, loaded from the welcome screen and listed first under Aggiungi → Topologie: offices and Wi-Fi in two VLANs on one trunk, an access point, a switch of servers (authentication, database, management software, mail, storage), a public portal in a DMZ, a firewall with three rules, a customer outside. Twenty devices, every cable on its interface. What it answers, and what each failure does to it, is checked against the engine.
 - **The menu bar names the project that is open**, with the canvas on screen when the project has more than one and a dot while there are changes not saved to a file. A click opens the Explorer.
 - **The sidebar buttons show their names**, beside them, under the pointer or the keyboard.
@@ -53,6 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Subtle 2px track line matching BulkAddDeviceModal design
 
 ### Changed
+- **The Internet does not carry private addresses.** A Cloud symbol named Internet refuses a packet whose source or destination is in a private range, and the reason says which of the two and what should have translated it. A drawing that crossed it with private addresses needs NAT on the port that faces it, and a port forward for what is reached from outside. A Cloud symbol with any other name is unchanged.
+- **The two samples with an Internet** (the company, and the site with a DMZ) do NAT on the firewall port that faces it and publish there what is reached from outside. Their answers are the same; what cannot be reached from outside now stops at the Internet.
 - **Connection points show where they are needed**: on the device under the pointer, on a selected one, and on all of them while a cable is being dragged. At rest the drawing has none.
 - **Side panels.** A panel no longer repeats its title under it. In the simulation panel the fields come first and "Avvia Simulazione" is a button, the main one of the panel; the exchange it proposes goes from the first PC of the drawing to its first server.
 - **A sample network is brought whole into view** when it is loaded, wherever the board was.
@@ -63,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The engine follows the shortest way that works**, not the shortest on the drawing: a port that is down is gone round when there is another way. End devices no longer carry traffic for others, and a router with addressed ports no longer passes traffic between two devices addressed in one network.
 - **A router with more than one hop to go is checked**, no longer assumed. A router whose ports have no address still lets traffic through, with a note, so drawings made before this change give the answers they gave.
 - **New routers and firewalls start without a gateway**: on a router the gateway is its default route. New devices appear in the middle of the visible canvas.
-- **Inspector**: labels in Italian; a firewall port can be in no zone; the settings the engine does not simulate (NAT, IPS, STP) say so.
+- **Inspector**: labels in Italian; a firewall port can be in no zone; the settings the engine does not simulate (IPS, STP) say so.
 - **Help**: the outdated release notes are replaced by a guide in three tabs: how to use the app, the terminal commands (the same table the terminal prints with `help`) and information about the app. The Help menu opens it on each tab.
 - **Shortcut list** (Impostazioni → Avanzate): it now lists only what the canvas really does. Panning is with the right mouse button, multi-selection with Ctrl+click; the Ctrl+L line described a shortcut that never existed.
 - **Import/Export**: YAML is the default export format. The Terraform export is labelled as a draft and says that it cannot be applied.

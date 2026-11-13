@@ -109,6 +109,18 @@ const GuideTab = () => (
         a un flusso permesso passa sempre.
       </Step>
 
+      <Step title="Esci su Internet con il NAT">
+        Un simbolo Cloud chiamato «Internet» non trasporta gli indirizzi privati (10.x, 172.16-31.x,
+        192.168.x): chi sta dentro non esce e chi sta fuori non entra, finché un router o un
+        firewall non traduce gli indirizzi. Nella scheda «Porte» attiva «NAT Abilitato» sulla porta
+        rivolta a Internet: ciò che esce prende l&apos;indirizzo di quella porta, e la risposta
+        torna a chi aveva chiesto. Per raggiungere da fuori un server che sta dentro, nella scheda
+        «NAT» premi «Aggiungi inoltro»: servizio, porta su cui arriva, indirizzo interno. Chi è
+        fuori chiede all&apos;indirizzo della porta e la risposta gli torna da lì. Su un firewall
+        serve anche la regola che lo permette, nella scheda «Regole». La rete di esempio della
+        schermata iniziale è fatta così.
+      </Step>
+
       <Step title="Chiedi se un dispositivo ne raggiunge un altro">
         Apri «Simulazione» (il pulsante con il fulmine), scegli «Partenza», «Destinazione» e il
         «Modello di Flusso» (ping, email, pagina web o download), poi premi «Avvia Simulazione». Il

@@ -1,4 +1,4 @@
-# NCL — Network Command Language v0.2
+# NCL — Network Command Language v0.3
 
 **NCL (Network Command Language)** is a vendor-neutral command language in
 semi-natural English. Cisco, Juniper and Mikrotik each speak their own
@@ -13,6 +13,11 @@ terminal lists the same commands, and so does Aiuto → Comandi del terminale.
 The language is versioned independently of the app; until v1.0 canonical
 forms are stable but aliases and output formats may still be refined between
 minor versions.
+
+**New in v0.3:** address translation. Source NAT on an interface
+(`interface <n> nat`), port forwards (`add forward`, `remove forward`),
+`show nat`. The Internet symbol no longer carries private addresses, so a
+network needs them to reach it and to be reached from it.
 
 **New in v0.2:** static routes, firewall rules, per-interface settings
 (address, VLAN, security zone), whole exchanges (`browse`, `mail`,
@@ -41,9 +46,10 @@ service       ::= "ping" | "web" | "email"
 inspection    ::= "show" show-target [["of"] device]
 show-target   ::= "devices" | "interfaces" | "ports" | "vlans"
                 | "connections" | "config" | "neighbors" | "ip"
-                | "routes" | "rules"
+                | "routes" | "rules" | "nat"
 
 configuration ::= set-cmd | vlan-cmd | link-cmd | iface-cmd | route-cmd | rule-cmd
+                | forward-cmd
 set-cmd       ::= "set" ("ip" | "gateway" | "subnet" | "name")
                         ["of"] device ["to"] value
 vlan-cmd      ::= "add" "vlan" number ["to"] device
@@ -60,6 +66,7 @@ iface-setting ::= "up" | "down"
                 | "trunk" (vlan {"," vlan} | "all")    (* switch ports *)
                 | "default"                            (* switch ports: no VLAN of its own *)
                 | "zone" ("trust" | "untrust" | "dmz" | "none")   (* firewall ports *)
+                | "nat" ["on" | "off" | "none"]           (* router/firewall ports *)
 
 route-cmd     ::= "add" ["backup"] "route" network "via" next-hop [["on"] device]
                 | "remove" "route" network ["via" next-hop] [("from" | "on") device]
@@ -70,6 +77,10 @@ rule-cmd      ::= "add" "rule" [position] ("allow" | "deny") [service | "any"]
                         "from" endpoint "to" endpoint [["on"] device]
                 | "remove" "rule" position [("from" | "on") device]
 endpoint      ::= "any" | "trust" | "untrust" | "dmz" | ipv4 | network | device
+
+forward-cmd   ::= "add" "forward" [service | "any"] "from" ["interface"] number
+                        "to" (ipv4 | device) [["on"] device]
+                | "remove" "forward" position [("from" | "on") device]
 
 session       ::= "use" device | "exit" | "clear" | "help" [topic]
 
@@ -118,6 +129,10 @@ At every device that handles the packet at layer 3:
    trusted zone is denied (`untrust→trust`, `untrust→dmz`, `dmz→trust`), the
    rest is allowed. The reply to an allowed flow always passes. Traffic
    addressed to the firewall itself is not filtered.
+
+   A router or a firewall may also change the addresses of the packet: see
+   *Address translation* below. A firewall filters between the two changes,
+   so its rules always name real addresses.
 3. **Delivery.** The packet is carried to the next address — the destination,
    or the next hop — across switches, VLAN by VLAN, through whatever port and
    cable are up. The shortest way that works is taken: a port that is down is
@@ -130,6 +145,40 @@ Verdicts: `error` (an endpoint does not exist or has no usable address),
 `unreachable` (no cables join the two devices), `blocked` (dropped on the
 way: the reason names the device, the port, the route or the rule),
 `success`.
+
+#### Address translation (NAT)
+
+**The Internet does not carry private addresses.** A Cloud symbol named
+*Internet* refuses a packet whose source or destination is in a private
+range (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`),
+and the reason says which of the two and what should have translated it. A
+Cloud symbol with any other name (a carrier's network, a private line)
+carries whatever crosses it.
+
+- **Source NAT** (`interface <n> nat`). A new flow a router or a firewall
+  forwards out of a port with NAT leaves with the address of that port. The
+  hop says `NAT: source 192.168.10.12 → 203.0.113.1`. The device remembers
+  the flow: the reply comes back to that address and is sent on to the real
+  sender (`NAT: destination 203.0.113.1 → 192.168.10.12 (reply to a
+  translated flow)`). A reply is never translated as a flow of its own, and
+  what the device sends itself is not translated.
+- **Port forward** (`add forward`). A new flow addressed to a port of the
+  device, for a service the device forwards from that port, is sent on to
+  an address inside (`NAT: destination 203.0.113.1 → 172.16.0.10 (port
+  forward 1)`). The answer leaves with the address that was asked. Forwards
+  are read top to bottom: the first that matches is taken.
+- **A firewall on the same device** sees the packet with the destination
+  already translated and the source not yet: a rule for a published server
+  names its address inside. A forward says where the traffic goes; a rule
+  has to say that it may.
+
+**Which address is aimed at.** A device given by name is aimed at its own
+address. When that address is private and the Internet is in between, the
+sender aims instead at the device's own public address, if it has one, else
+at the address a forward publishes it at for that service, and a note says
+so (`Portale-Clienti is behind NAT: reached at 203.0.113.1, where FW-Edge
+publishes it (port forward 1)`). An address that is typed is the address
+aimed at, and nothing is tried in its place.
 
 #### Simulated failures
 
@@ -218,11 +267,12 @@ condition into a silent success; it adds a note to the result instead:
 | `show ports [of] <device>` | Port table (status, mode, VLAN, zone, IP, link) — specialized ports-only view |
 | `show vlans` | Every VLAN with where it lives: the ports of the switches that apply VLANs, and the devices that carry it in their own list |
 | `show connections [of <device>]` | Links, with the interface on each end: `[port 3 ↔ eth0]` (`?` for an end not attached to an interface) |
-| `show config [of] <device>` | IP/subnet/gateway, VLANs, STP, ports, NICs, number of routes and rules |
+| `show config [of] <device>` | IP/subnet/gateway, VLANs, STP, ports, NICs, number of routes and rules, NAT |
 | `show neighbors [of] <device>` | Directly connected devices |
 | `show ip [of] <device>` | Compact addressing summary: primary ip/mask/gateway + each NIC + each addressed port |
 | `show routes [of] <device>` | The routing table exactly as the engine reads it: destination, next hop, interface it leaves from, kind. A route whose next hop is on none of the device's networks is flagged |
 | `show rules [of] <device>` | The firewall rules in order, then what decides when none matches |
+| `show nat [of] <device>` | The interfaces that do source NAT with the address each gives, then the port forwards in order |
 
 Aliases: `sh` → `show` · `ls`, `list` → `show devices` ·
 `ipconfig`, `ifconfig` → `show ip`.
@@ -239,11 +289,14 @@ Aliases: `sh` → `show` · `ls`, `list` → `show devices` ·
 | `interface <n> trunk <vlan,vlan,…>\|all [on] <switch>` | The port becomes a trunk for those VLANs (`all`, or no list: every VLAN) |
 | `interface <n> default [on] <switch>` | The port has no VLAN of its own any more |
 | `interface <n> zone trust\|untrust\|dmz\|none [on] <firewall>` | Security zone of a firewall port |
+| `interface <n> nat [on] <device>` / `interface <n> nat off [on] <device>` | Source NAT on a port of a router or firewall: what the device forwards out of it takes its address. `nat none` is the same as `nat off` |
 | `add route <network>\|default via <next hop> [on] <device>` | Static route on a router or firewall. The network is written `192.168.30.0/24`; the next hop is an address, or a device with an address on a network the two share. Adding a route to a network that has one replaces its next hop |
 | `add backup route <network>\|default via <next hop> [on] <device>` | A second route to a network that has one. It is used when the interface of the first has no working link (a port switched off, or a failure simulated in presentation mode). `show routes` marks it `backup` |
 | `remove route <network>\|default [via <next hop>] [from] <device>` | Without `via`, every route to that network; with it, the one through that next hop |
 | `add rule [<position>] allow\|deny [<service>\|any] from <source> to <destination> [on] <firewall>` | Firewall rule, added last or at the given position. Source and destination are `any`, a zone, an address, a network, or a device (stored as its address). No service means any |
 | `remove rule <n> [from] <firewall>` | |
+| `add forward [<service>\|any] from interface <n> to <address> [on] <device>` | Port forward on a router or firewall: what arrives for the address of interface `<n>`, for the service, is sent on to the address, which may be given as a device. No service means any. `interface` may be left out |
+| `remove forward <n> [from] <device>` | |
 | `add vlan <id> [to] <device>` / `remove vlan <id> from <device>` | The VLAN list of a device (see *VLANs*) |
 | `connect <A> [to] <B>` / `disconnect <A> [from] <B>` | Create/remove a link. `connect` attaches each end to the first free interface and says which: `connected A (port 3) ↔ B (eth0)`. On a firewall with security zones the end stays unattached: choose the port, and with it the zone, in the connection editor |
 
@@ -351,6 +404,45 @@ pixelcake> ping Web-01 from Ext
 Ping failed (blocked): request: firewall FW-1: no rule matches, zone policy untrust → trust denied
 ```
 
+A firewall that does NAT towards the Internet (the sample of the welcome
+screen):
+
+```
+pixelcake> show nat FW-Edge
+NAT of FW-Edge
+  interface 3   what leaves by it takes the address 203.0.113.1
+FORWARDS (the first that matches is taken)
+   1  web    from interface 3   (203.0.113.1) to 172.16.0.10
+   2  email  from interface 3   (203.0.113.1) to 192.168.30.40
+pixelcake> trace Cliente-Remoto from PC-Vendite
+  1  ○ PC-Vendite (PC)
+  2  ○ SW-Uffici (Switch)  — VLAN 10
+  3  ○ SW-Core (Switch)  — VLAN 10
+  4  ○ Router-Core (Router)  — routed: default route via 10.0.0.2 (port 4)
+  5  ○ FW-Edge (Firewall)  — routed: 203.0.113.0/24 is on port 3; firewall FW-Edge: no rule matches, zone policy trust → untrust allowed; NAT: source 192.168.10.12 → 203.0.113.1
+  6  ○ Internet (Cloud)  — Internet is not simulated: traffic assumed to pass
+  7  ● Cliente-Remoto (PC)
+Trace complete: destination reached.
+pixelcake> browse Portale-Clienti from Cliente-Remoto
+Browsing Portale-Clienti (203.0.113.1) from Cliente-Remoto...
+  ✓ HTTP request: Cliente-Remoto → Portale-Clienti
+  ✓ HTTP response: Portale-Clienti → Cliente-Remoto
+Page received from Portale-Clienti
+  note: HTTP request: Portale-Clienti is behind NAT: reached at 203.0.113.1, where FW-Edge publishes it (port forward 1)
+pixelcake> ping Portale-Clienti from Cliente-Remoto
+Ping failed (blocked): request: Internet does not carry private addresses: 172.16.0.10 is not reachable from outside: no port forward publishes it for ping
+pixelcake> interface 3 nat off on FW-Edge
+port 3 on FW-Edge no longer does NAT: what leaves by it keeps its own address
+pixelcake> ping Cliente-Remoto from PC-Vendite
+Ping failed (blocked): request: Internet does not carry private addresses: 192.168.10.12 has to be translated before it goes out, and NAT is off on port 3 on FW-Edge
+pixelcake> interface 3 nat on FW-Edge
+port 3 on FW-Edge now does NAT: what leaves by it takes the address 203.0.113.1
+pixelcake> add forward web from interface 3 to Portale-Clienti on FW-Edge
+FW-Edge already has it: forward 1
+pixelcake> remove forward 2 from FW-Edge
+FW-Edge: forward 2 removed — forward email from interface 3 to 192.168.30.40
+```
+
 ## Design notes
 
 - The engine consumes only data the drawing holds; every field it reads
@@ -371,10 +463,15 @@ Ping failed (blocked): request: firewall FW-1: no rule matches, zone policy untr
 ## Not simulated
 
 ARP and MAC tables, spanning tree (a drawing with redundant links is walked
-without loops, but no port is blocked), NAT, DHCP, DNS, dynamic routing,
+without loops, but no port is blocked), DHCP, DNS, dynamic routing,
 gateway redundancy (a host has one gateway per network card), router
 sub-interfaces, TCP/UDP ports beyond the three services, link speed and ping
 times (the time printed is derived from the number of hops).
+
+Of NAT: port numbers (a forward is a service on an interface, and two flows
+never compete for a translation), a server reached from inside at its
+published address is not treated apart, and a device behind two layers of
+NAT is found by name only through the first.
 
 ## Language roadmap
 
@@ -386,4 +483,3 @@ principles above (verb-first, optional prepositions, neutral vocabulary):
   device or a link, and to list what stops working, are not in the language
   yet
 - **More services** — `ssh`, `dns`, and rules by port number
-- **NAT** — `translate`, evaluated by the diagnostics
