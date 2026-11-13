@@ -131,7 +131,8 @@ describe('parse — interface … pool', () => {
   });
 
   it('asks for the two ends when one is missing', () => {
-    const hint = 'try: interface <n> pool <first> to <last> [gateway <address>] [on] <device> — or "pool none" to stop';
+    const hint =
+      'try: interface <n> pool <first> to <last> [gateway <address>] [dns <address>] [on] <device> — or "pool none" to stop';
     expect(suggestion('interface 2 pool')).toBe(hint);
     expect(suggestion('interface 2 pool 192.168.20.100')).toBe(`a pool goes from its first address to its last — ${hint}`);
     expect(suggestion('interface 2 pool 192.168.20.100 to')).toBe(`a pool goes from its first address to its last — ${hint}`);

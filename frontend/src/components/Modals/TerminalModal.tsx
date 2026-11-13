@@ -32,6 +32,13 @@ interface LiveSession {
   finalLines: TerminalLine[];
   /** Number of hopLines already printed */
   printed: number;
+  /**
+   * Path index `hopLines[0]` belongs to: past the stretches of a name lookup
+   * that comes before the flow, 0 without one
+   */
+  offset: number;
+  /** What the lookup found, printed when the packet is back from it; emptied once printed */
+  lookupLines: TerminalLine[];
 }
 
 /** Fixed console palette — the pane stays dark regardless of app theme */
@@ -202,19 +209,26 @@ const TerminalModal = () => {
       const live = liveRef.current;
       if (!live) return;
       if (state.isRunning) {
-        const upTo = Math.min(state.currentHop, live.hopLines.length - 1);
+        // A lookup that came first: what it found, once the packet is back from it
+        const batch = state.currentHop >= live.offset ? live.lookupLines.splice(0) : [];
+        const upTo = Math.min(state.currentHop - live.offset, live.hopLines.length - 1);
         if (upTo >= live.printed) {
-          const batch = live.hopLines.slice(live.printed, upTo + 1);
+          batch.push(...live.hopLines.slice(live.printed, upTo + 1));
           live.printed = upTo + 1;
-          if (batch.length > 0) {
-            setLines((prev) => [...prev, ...batch]);
-          }
+        }
+        if (batch.length > 0) {
+          setLines((prev) => [...prev, ...batch]);
         }
       } else {
         // Animation finished (or was stopped): flush the rest + verdict,
         // then hand the prompt back
         liveRef.current = null;
-        setLines((prev) => [...prev, ...live.hopLines.slice(live.printed), ...live.finalLines]);
+        setLines((prev) => [
+          ...prev,
+          ...live.lookupLines,
+          ...live.hopLines.slice(live.printed),
+          ...live.finalLines,
+        ]);
         setIsBusy(false);
       }
     });
@@ -226,7 +240,12 @@ const TerminalModal = () => {
     const live = liveRef.current;
     if (!live) return;
     liveRef.current = null;
-    setLines((prev) => [...prev, ...live.hopLines.slice(live.printed), ...live.finalLines]);
+    setLines((prev) => [
+      ...prev,
+      ...live.lookupLines,
+      ...live.hopLines.slice(live.printed),
+      ...live.finalLines,
+    ]);
     setIsBusy(false);
   };
 
@@ -280,12 +299,18 @@ const TerminalModal = () => {
     // subscription above reveal the output hop by hop. The prompt stays
     // blocked (isBusy) until the run completes or Ctrl+C interrupts it.
     if (result.liveTrace) {
-      const { animationPath, animationLinks, flowModel, hopLines, finalLines } = result.liveTrace;
+      const { animationPath, animationLinks, flowModel, hopLines, finalLines, lookup } = result.liveTrace;
       const simulation = useSimulationStore.getState();
       if (simulation.isRunning) {
         simulation.stopSimulation();
       }
-      liveRef.current = { hopLines, finalLines, printed: 0 };
+      liveRef.current = {
+        hopLines,
+        finalLines,
+        printed: 0,
+        offset: lookup?.hops ?? 0,
+        lookupLines: [...(lookup?.lines ?? [])],
+      };
       setIsBusy(true);
       simulation.startSimulation(animationPath, flowModel, animationLinks);
     }

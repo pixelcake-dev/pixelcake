@@ -15,7 +15,7 @@ import type { DhcpPool, ServiceName } from '@/types';
  * docs/terminal-commands.md carries the same number in its title, and a test
  * holds the two together.
  */
-export const NCL_VERSION = '0.4';
+export const NCL_VERSION = '0.5';
 
 /** One rendered line of terminal output */
 export interface TerminalLine {
@@ -35,7 +35,8 @@ export type ShowTarget =
   | 'routes'
   | 'rules'
   | 'nat'
-  | 'dhcp';
+  | 'dhcp'
+  | 'dns';
 
 export type SetProperty = 'ip' | 'gateway' | 'subnet' | 'name';
 
@@ -58,7 +59,9 @@ export type InterfaceSetting =
   /** A network card takes its address from a DHCP server */
   | { what: 'dhcp'; on: boolean }
   /** DHCP server on the interface: the addresses it hands out; null stops it */
-  | { what: 'pool'; pool: DhcpPool | null };
+  | { what: 'pool'; pool: DhcpPool | null }
+  /** The DNS server a network card asks; null: none */
+  | { what: 'dns'; address: string | null };
 
 /**
  * Parsed command. Device arguments are RAW STRINGS (labels may be multi-word,
@@ -69,6 +72,8 @@ export type Command =
   | { kind: 'ping'; target: string; from?: string }
   | { kind: 'trace'; target: string; from?: string; service?: ServiceName }
   | { kind: 'flow'; model: 'web' | 'email' | 'download'; target: string; from?: string }
+  /** `resolve <name>`: ask the DNS server of a device for the address of a name */
+  | { kind: 'resolve'; name: string; from?: string }
   | { kind: 'show'; what: ShowTarget; device?: string }
   | { kind: 'set'; property: SetProperty; device?: string; value: string }
   | { kind: 'vlan-add'; vlanId: number; device?: string }
@@ -108,6 +113,10 @@ export type Command =
       device?: string;
     }
   | { kind: 'forward-remove'; position: number; device?: string }
+  /** `address`: an address — or a device name, resolved by the executor */
+  | { kind: 'record-add'; name: string; address: string; device?: string }
+  /** `record`: the place of a record in the list, or its name, as typed */
+  | { kind: 'record-remove'; record: string; device?: string }
   | { kind: 'use'; device: string }
   | { kind: 'exit' }
   | { kind: 'clear' }

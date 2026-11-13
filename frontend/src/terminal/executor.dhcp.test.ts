@@ -622,7 +622,7 @@ describe('the DHCP session of docs/terminal-commands.md', () => {
       'ping Web-Gestionale from PC-Vendite',
       'interface 1 pool none on Router-Core',
       'ping Web-Gestionale from PC-Vendite',
-      'interface 1 pool 192.168.10.100 to 192.168.10.149 on Router-Core',
+      'interface 1 pool 192.168.10.100 to 192.168.10.149 dns 192.168.30.10 on Router-Core',
       'show dhcp Router-Core',
     ]);
   });

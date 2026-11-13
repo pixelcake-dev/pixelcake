@@ -46,6 +46,12 @@ import {
   poolOf,
   poolProblem,
   servesDhcp,
+  lookup,
+  isHostName,
+  hostNameKey,
+  servesDns,
+  dnsRecordsOf,
+  dnsCardOf,
 } from '@/engine';
 import type {
   Topology,
@@ -63,6 +69,7 @@ import { NCL_VERSION } from './types';
 import type { Command, InterfaceSetting, TerminalLine, ShowTarget } from './types';
 import type {
   DhcpPool,
+  DnsRecord,
   FirewallRule,
   FlowModelType,
   NetworkDevice,
@@ -92,6 +99,13 @@ export interface LiveTrace {
   /** Aligned with animationPath indices (may be empty, e.g. for ping) */
   hopLines: TerminalLine[];
   finalLines: TerminalLine[];
+  /**
+   * A name was looked up first: the first `hops` stretches of `animationPath`
+   * are the way of the question to the DNS server and back. `lines` are
+   * printed when the packet has travelled them, and `hopLines[i]` then
+   * belongs to path index `hops + i`.
+   */
+  lookup?: { hops: number; lines: TerminalLine[] };
 }
 
 export interface ExecutionResult {
@@ -191,29 +205,10 @@ function hopLine(hop: TraceResult['hops'][number], index: number): TerminalLine 
   return line(` ${String(index + 1).padStart(2)}  ${icon} ${hop.label} (${hop.deviceType})${note}`, tone);
 }
 
-/** Source and target of a diagnostic, resolved, or the lines saying why not */
-function resolveEnds(
-  verb: string,
-  target: string,
-  from: string | undefined,
-  context: TerminalContext
-):
-  | { topo: Topology; source: NetworkDevice; destination: NetworkDevice; targetIp?: string }
-  | { errorLines: TerminalLine[] } {
-  const topo = view();
-  const sourceQuery = from ?? context.deviceLabel ?? undefined;
-  if (!sourceQuery) {
-    return {
-      errorLines: [
-        err(`specify a source: "${verb} ${target} from <device>" — or enter a device context with "use <device>"`),
-      ],
-    };
-  }
-  const src = resolveOrError(sourceQuery, topo);
-  if ('errorLines' in src) return src;
-  const dst = resolveOrError(target, topo);
-  if ('errorLines' in dst) return dst;
-  return { topo, source: src.device, destination: dst.device, targetIp: typedAddress(target) };
+/** What a command prints at once, and what it prints as the packet travels */
+interface Printed {
+  lines: TerminalLine[];
+  liveTrace?: LiveTrace;
 }
 
 /** The lines that close a failed flow: where it was dropped */
@@ -222,15 +217,171 @@ function droppedAt(flow: FlowResult): TerminalLine[] {
   return blocked ? [muted(`  dropped at: ${blocked.label}`)] : [];
 }
 
+/** One line per leg of an exchange: `  ✓ HTTP request: PC-1 → Web-01` */
+function legLines(flow: FlowResult, topo: Topology): TerminalLine[] {
+  const label = (id: string) => topo.devices.find((d) => d.id === id)?.label ?? id;
+  return flow.legs.map((leg) => {
+    const passed = leg.trace.verdict === 'success';
+    return line(
+      `  ${passed ? '✓' : '✗'} ${leg.purpose}: ${label(leg.fromId)} → ${label(leg.toId)}`,
+      passed ? 'normal' : 'error'
+    );
+  });
+}
+
+/* ── names ────────────────────────────────────────────────────────────── */
+
+/** A name looked up from a device: what is printed and animated, and what was found */
+interface NameLookup {
+  /** Printed at once: who is asked */
+  header: TerminalLine[];
+  /** Printed when the question is back: its legs, then the address or the reason */
+  lines: TerminalLine[];
+  /** The way of the request and of the reply ([] when nothing travelled) */
+  path: string[];
+  links: string[];
+  /** The address the name stands for; undefined when the lookup failed */
+  address?: string;
+}
+
+/** Ask the DNS server of `source` what address a name stands for (see lookup in the engine) */
+function lookUp(name: string, source: NetworkDevice, topo: Topology): NameLookup {
+  const found = lookup(topo, source.id, name);
+  const asked = found.serverIp ? ` (DNS server ${found.serverIp})` : '';
+  const header = [muted(`Looking up ${found.name} from ${source.label}${asked}...`)];
+
+  const lines = found.trip ? legLines(found.trip, topo) : [];
+  if (found.address !== undefined) {
+    // (a server that asks itself sends nothing)
+    const by = found.trip ? found.server?.label : `${source.label} itself`;
+    lines.push(ok(`${found.name} is ${found.address} (answered by ${by})`));
+  } else {
+    // The verdict of the trace, when it is the trip that failed
+    const verdict = found.trip && found.trip.verdict !== 'success' ? ` (${found.trip.verdict})` : '';
+    lines.push(err(`Lookup failed${verdict}: ${found.failureReason}`));
+    if (found.trip) lines.push(...droppedAt(found.trip));
+  }
+  for (const note of found.trip?.notes ?? []) lines.push(muted(`  note: ${note}`));
+
+  return {
+    header,
+    lines,
+    path: found.trip?.animationPath ?? [],
+    links: found.trip?.animationLinks ?? [],
+    address: found.address,
+  };
+}
+
+/**
+ * Put a lookup in front of what a command prints: the question to the DNS
+ * server is animated first, what it found is printed when it is back, and
+ * the command follows. `flowModel` is the colour of a lookup that travels
+ * alone.
+ */
+function afterLookup(found: NameLookup | undefined, rest: Printed, flowModel: FlowModelType): Printed {
+  if (!found) return rest;
+  // Nothing travelled: there is nothing to wait for
+  if (found.path.length < 2) {
+    return { ...rest, lines: [...found.header, ...found.lines, ...rest.lines] };
+  }
+  const after = [...found.lines, ...rest.lines];
+  const live = rest.liveTrace;
+  if (!live) {
+    return {
+      lines: found.header,
+      liveTrace: {
+        animationPath: found.path,
+        animationLinks: found.links,
+        flowModel,
+        hopLines: [],
+        finalLines: after,
+      },
+    };
+  }
+  return {
+    lines: found.header,
+    liveTrace: {
+      ...live,
+      // (the reply ends where the flow starts: on the device that asked)
+      animationPath: [...found.path, ...live.animationPath.slice(1)],
+      animationLinks: [...found.links, ...(live.animationLinks ?? [])],
+      lookup: { hops: found.path.length - 1, lines: after },
+    },
+  };
+}
+
+/** The device a diagnostic starts from: the one named, else the `use` context */
+function resolveSource(
+  usage: string,
+  from: string | undefined,
+  context: TerminalContext,
+  topo: Topology
+): { device: NetworkDevice } | { errorLines: TerminalLine[] } {
+  const sourceQuery = from ?? context.deviceLabel ?? undefined;
+  if (!sourceQuery) {
+    return {
+      errorLines: [
+        err(`specify a source: "${usage} from <device>" — or enter a device context with "use <device>"`),
+      ],
+    };
+  }
+  return resolveOrError(sourceQuery, topo);
+}
+
+/** Source and target of a diagnostic, resolved */
+interface Ends {
+  topo: Topology;
+  source: NetworkDevice;
+  destination: NetworkDevice;
+  targetIp?: string;
+}
+
+/**
+ * Source and target of a diagnostic, resolved, or the lines saying why not.
+ * A target that is neither a device nor an address, and reads as a host
+ * name, is looked up from the source first (`found`): the diagnostic then
+ * goes to the address it stands for, exactly as if it had been typed.
+ */
+function resolveEnds(
+  verb: string,
+  target: string,
+  from: string | undefined,
+  context: TerminalContext
+): (Ends | { errorLines: TerminalLine[] }) & { found?: NameLookup } {
+  const topo = view();
+  const src = resolveSource(`${verb} ${target}`, from, context, topo);
+  if ('errorLines' in src) return src;
+  const source = src.device;
+
+  let query = target;
+  let found: NameLookup | undefined;
+  if (!findDevice(target, topo) && isHostName(target)) {
+    found = lookUp(target, source, topo);
+    // (a name that finds no address stops the command: the lookup says why)
+    if (found.address === undefined) return { errorLines: [], found };
+    query = found.address;
+  }
+  const dst = resolveOrError(query, topo);
+  if ('errorLines' in dst) return { ...dst, found };
+  return { topo, source, destination: dst.device, targetIp: typedAddress(query), found };
+}
+
 function runDiagnostic(
   kind: 'ping' | 'trace',
   target: string,
   from: string | undefined,
   context: TerminalContext,
   service?: ServiceName
-): { lines: TerminalLine[]; liveTrace?: LiveTrace } {
+): Printed {
+  // A web or email trace travels in the colour of its flow
+  const flowModel: FlowModelType = service === 'web' || service === 'email' ? service : 'ping';
   const ends = resolveEnds(kind, target, from, context);
-  if ('errorLines' in ends) return { lines: ends.errorLines };
+  if ('errorLines' in ends) return afterLookup(ends.found, { lines: ends.errorLines }, flowModel);
+  return afterLookup(ends.found, diagnose(kind, ends, flowModel, service), flowModel);
+}
+
+/** `ping` and `trace` between two ends that were found */
+function diagnose(kind: 'ping' | 'trace', ends: Ends, flowModel: FlowModelType, service?: ServiceName): Printed {
   const { topo, source, destination, targetIp } = ends;
   const shownIp = targetIp ?? primaryAddress(destination);
   const lines: TerminalLine[] = [];
@@ -294,8 +445,6 @@ function runDiagnostic(
 
   const animationPath = result.hops.map((h) => h.deviceId);
   if (animationPath.length >= 2) {
-    // A web or email trace travels in the colour of its flow
-    const flowModel: FlowModelType = service === 'web' || service === 'email' ? service : 'ping';
     const animationLinks = result.hops.slice(1).map((h) => h.viaConnectionId ?? '');
     return { lines, liveTrace: { animationPath, animationLinks, flowModel, hopLines, finalLines } };
   }
@@ -314,10 +463,15 @@ function runFlow(
   target: string,
   from: string | undefined,
   context: TerminalContext
-): { lines: TerminalLine[]; liveTrace?: LiveTrace } {
+): Printed {
+  const ends = resolveEnds(FLOW_WORDS[model].verb, target, from, context);
+  if ('errorLines' in ends) return afterLookup(ends.found, { lines: ends.errorLines }, model);
+  return afterLookup(ends.found, exchange(model, ends), model);
+}
+
+/** A whole exchange between two ends that were found */
+function exchange(model: 'web' | 'email' | 'download', ends: Ends): Printed {
   const words = FLOW_WORDS[model];
-  const ends = resolveEnds(words.verb, target, from, context);
-  if ('errorLines' in ends) return { lines: ends.errorLines };
   const { topo, source, destination, targetIp } = ends;
   const shownIp = targetIp ?? primaryAddress(destination);
 
@@ -334,13 +488,7 @@ function runFlow(
   const answers = model === 'email' ? destination.label : label(flow.legs[0]?.toId ?? destination.id);
   const lines = [muted(`${words.doing} ${answers} (${aimedIp || 'no ip'}) from ${source.label}...`)];
 
-  const finalLines: TerminalLine[] = flow.legs.map((leg) => {
-    const passed = leg.trace.verdict === 'success';
-    return line(
-      `  ${passed ? '✓' : '✗'} ${leg.purpose}: ${label(leg.fromId)} → ${label(leg.toId)}`,
-      passed ? 'normal' : 'error'
-    );
-  });
+  const finalLines = legLines(flow, topo);
   if (flow.verdict === 'success') {
     finalLines.push(ok(`${words.done} ${answers}`));
   } else {
@@ -362,6 +510,20 @@ function runFlow(
     };
   }
   return { lines: [...lines, ...finalLines] };
+}
+
+/** `resolve <name>`: the lookup alone — the server asked, the legs, the address or the reason */
+function runResolve(name: string, from: string | undefined, context: TerminalContext): Printed {
+  const topo = view();
+  const src = resolveSource(`resolve ${name}`, from, context, topo);
+  if ('errorLines' in src) return { lines: src.errorLines };
+  if (!isHostName(name)) return { lines: [err(notAHostName(name))] };
+  return afterLookup(lookUp(name, src.device, topo), { lines: [] }, 'ping');
+}
+
+/** Said of what was typed where a host name was expected */
+function notAHostName(text: string): string {
+  return `"${text}" is not a host name: write it with a dot, as in www.azienda.example`;
 }
 
 /* ── show commands ────────────────────────────────────────────────────── */
@@ -476,21 +638,29 @@ function linkText(link: InterfaceLink | undefined): string {
   return link.peerInterface ? `${peer} (${link.peerInterface.label})` : peer;
 }
 
+/** ` dns 192.168.30.10` after the gateway of a card that asks a DNS server; '' for one that asks none */
+function dnsSuffix(dns: string | undefined): string {
+  return dns ? ` dns ${dns}` : '';
+}
+
 /**
- * What a card on DHCP says in place of its three fields:
+ * The addressing of a card on one line. Written by hand:
+ * `192.168.10.12 / 255.255.255.0 gw 192.168.10.1`. On DHCP:
  * `192.168.20.100 / 255.255.255.0 gw 192.168.20.1 (dhcp from Router-Core port 2)`,
- * or `no address (dhcp: no DHCP server answers on its network)`. Undefined
- * for a card whose address is written by hand.
+ * or `no address (dhcp: no DHCP server answers on its network)`. A card that
+ * asks a DNS server says which after its gateway (` dns 192.168.30.10`).
  */
-function leasedCard(dhcp: DhcpResolution, d: NetworkDevice, nic: NetworkInterfaceCard): string | undefined {
-  if (!nic.dhcp) return undefined;
+function cardAddress(dhcp: DhcpResolution, d: NetworkDevice, nic: NetworkInterfaceCard): string {
+  if (!nic.dhcp) {
+    return `${nic.ip || '-'} / ${nic.subnet || '-'} gw ${nic.gateway || '-'}${dnsSuffix(nic.dns)}`;
+  }
   const lease = leaseOf(dhcp, d.id, nic.id);
   if (!lease) {
     return `no address (dhcp: ${unservedOf(dhcp, d.id, nic.id)?.reason ?? 'no lease'})`;
   }
   const pool = poolAt(dhcp, lease.server);
   const from = pool ? ` from ${pool.name}` : '';
-  return `${lease.ip} / ${lease.mask} gw ${lease.gateway || '-'} (dhcp${from})`;
+  return `${lease.ip} / ${lease.mask} gw ${lease.gateway || '-'}${dnsSuffix(lease.dns)} (dhcp${from})`;
 }
 
 function showConfig(topo: Topology, d: NetworkDevice): TerminalLine[] {
@@ -509,8 +679,7 @@ function showConfig(topo: Topology, d: NetworkDevice): TerminalLine[] {
     lines.push(line(`  ports:    ${enabled}/${d.ports.length} enabled — "show ports ${d.label}" for detail`));
   }
   for (const nic of d.nics ?? []) {
-    const address = leasedCard(dhcp, d, nic) ?? `${nic.ip || '-'} / ${nic.subnet || '-'} gw ${nic.gateway || '-'}`;
-    lines.push(line(`  nic ${nic.name}: ${address} ${nic.enabled ? '' : '(disabled)'}`));
+    lines.push(line(`  nic ${nic.name}: ${cardAddress(dhcp, d, nic)} ${nic.enabled ? '' : '(disabled)'}`));
   }
   if (d.routes && d.routes.length > 0) {
     lines.push(line(`  routes:   ${d.routes.length} static — "show routes ${d.label}" for the whole table`));
@@ -529,6 +698,10 @@ function showConfig(topo: Topology, d: NetworkDevice): TerminalLine[] {
   if (pools.length > 0) {
     const where = pools.map((pool) => pool.iface.label).join(', ');
     lines.push(line(`  dhcp:     hands out addresses on ${where} — "show dhcp ${d.label}" for detail`));
+  }
+  const names = dnsRecordsOf(d).length;
+  if (names > 0) {
+    lines.push(line(`  dns:      answers for ${names} name${names === 1 ? '' : 's'} — "show dns ${d.label}" for detail`));
   }
   return lines;
 }
@@ -624,9 +797,11 @@ function showIp(topo: Topology, d: NetworkDevice): TerminalLine[] {
     );
   }
   for (const nic of d.nics ?? []) {
-    const address = leasedCard(dhcp, d, nic) ?? `${nic.ip || '-'} / ${nic.subnet || '-'} gw ${nic.gateway || '-'}`;
     lines.push(
-      line(`  ${nic.name}: ${address}${nic.enabled ? '' : ' (disabled)'}`, nic.enabled ? 'normal' : 'muted')
+      line(
+        `  ${nic.name}: ${cardAddress(dhcp, d, nic)}${nic.enabled ? '' : ' (disabled)'}`,
+        nic.enabled ? 'normal' : 'muted'
+      )
     );
   }
   return lines;
@@ -738,7 +913,8 @@ function poolLine(pool: DhcpPoolState): TerminalLine {
   const head = `  ${pool.name.padEnd(22)} ${pool.pool.start} – ${pool.pool.end}`;
   if (pool.problem) return err(`${head}  ✗ ${pool.problem.text}`);
   const gateway = pool.gateway ? `gateway ${pool.gateway}` : 'no gateway';
-  const row = `${head}  ${gateway}  ${pool.leases.length} leased, ${pool.free} free of ${pool.size}`;
+  const dns = pool.pool.dns ? `  dns ${pool.pool.dns}` : '';
+  const row = `${head}  ${gateway}${dns}  ${pool.leases.length} leased, ${pool.free} free of ${pool.size}`;
   return pool.iface.enabled ? line(row) : muted(`${row}  (interface down: it answers nobody)`);
 }
 
@@ -803,6 +979,108 @@ function showDhcp(topo: Topology, device?: NetworkDevice): TerminalLine[] {
   return lines;
 }
 
+/** The records of a server, numbered as `remove record <n>` counts them */
+function recordLines(d: NetworkDevice): TerminalLine[] {
+  const read = dnsRecordsOf(d);
+  return (d.dnsRecords ?? []).map((record, index) => {
+    const row = `  ${String(index + 1).padStart(2)}  ${record.name.padEnd(32)} ${record.address}`;
+    // A record the engine refuses: say so instead of hiding it
+    return read.includes(record) ? line(row) : err(`${row}  ✗ not a host name and an address: ignored`);
+  });
+}
+
+/**
+ * What a card says about names: the DNS server it asks and where that came
+ * from, or that it asks nobody. `d` is a device of `view()`, `used` the card
+ * the device asks through.
+ */
+function cardDnsLine(
+  topo: Topology,
+  dhcp: DhcpResolution,
+  d: NetworkDevice,
+  nic: NetworkInterfaceCard,
+  used: NetworkInterfaceCard | undefined
+): TerminalLine {
+  const lease = nic.dhcp ? leaseOf(dhcp, d.id, nic.id) : undefined;
+  const pool = lease ? poolAt(dhcp, lease.server) : undefined;
+  if (!nic.dns) {
+    const why = !nic.dhcp
+      ? ''
+      : lease
+        ? `: the pool of ${pool?.name ?? lease.server.deviceId} hands out no DNS server`
+        : ': it has no lease';
+    return muted(`  ${nic.name}: asks nobody${why}`);
+  }
+  const owner = topo.devices.find((other) => ownedAddresses(other).includes(nic.dns ?? ''));
+  const who = owner ? owner.label : 'no device has it';
+  const leased = lease ? `, handed out with its lease by ${pool?.name ?? lease.server.deviceId}` : '';
+  const row = `  ${nic.name}: asks ${nic.dns} (${who})${leased}`;
+  if (nic === used) return line(row);
+  return muted(`${row}  (not asked: ${nic.enabled ? `${used?.name} comes first` : 'the card is disabled'})`);
+}
+
+const DNS_LIMITS = '  a name is looked up each time it is used: no cache, no second server, no forwarding to another server';
+
+/**
+ * `show dns [<device>]` — the names a server answers for, and the DNS
+ * server each card asks. Of the whole drawing, or of one device.
+ */
+function showDns(topo: Topology, device?: NetworkDevice): TerminalLine[] {
+  const dhcp = resolveDhcp(topo);
+
+  if (device) {
+    const cards = device.nics ?? [];
+    const lines = [heading(`DNS of ${device.label}`)];
+    if (servesDns(device)) {
+      lines.push(heading('RECORDS (it answers for these names, and for no other)'));
+      const records = recordLines(device);
+      lines.push(...(records.length > 0 ? records : [muted(`  none yet: add record <name> <address> on ${device.label}`)]));
+    }
+    if (cards.length === 0) {
+      lines.push(muted(`  ${device.label} has no network card: it asks no DNS server`));
+      return lines;
+    }
+    const used = dnsCardOf(device);
+    lines.push(...cards.map((nic) => cardDnsLine(topo, dhcp, device, nic, used)));
+    const first = cards[0];
+    if (!used && !first.dhcp) {
+      lines.push(muted(`  name a DNS server: interface ${first.name} dns <address> on ${device.label}`));
+    }
+    lines.push(muted(DNS_LIMITS));
+    return lines;
+  }
+
+  const servers = topo.devices.filter((d) => servesDns(d) && (d.dnsRecords ?? []).length > 0);
+  // Every device that asks somebody, with the card it asks through
+  const asking = topo.devices.flatMap((d) => {
+    const card = dnsCardOf(d);
+    return card ? [{ d, card }] : [];
+  });
+  if (servers.length === 0 && asking.length === 0) {
+    return [
+      muted('no DNS in the drawing: no server keeps records, no card names a DNS server'),
+      muted('  keep a name:        add record <name> <address> on <server>'),
+      muted('  name a DNS server:  interface <name> dns <address> on <device>'),
+    ];
+  }
+  const count = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const records = servers.reduce((sum, d) => sum + (d.dnsRecords ?? []).length, 0);
+  const lines = [heading(`DNS — ${count(servers.length, 'server')}, ${count(records, 'record')}`)];
+  for (const server of servers) {
+    lines.push(heading(`RECORDS of ${server.label} (${primaryAddress(server) || 'no address'})`));
+    lines.push(...recordLines(server));
+  }
+  if (asking.length > 0) {
+    lines.push(heading('WHO ASKS WHOM'));
+    for (const { d, card } of asking) {
+      const leased = card.dhcp ? '  (with its lease)' : '';
+      lines.push(line(`  ${`${d.label} ${card.name}`.padEnd(24)} ${card.dns}${leased}`));
+    }
+  }
+  lines.push(muted(DNS_LIMITS));
+  return lines;
+}
+
 function runShow(what: ShowTarget, deviceQuery: string | undefined, context: TerminalContext): TerminalLine[] {
   const topo = view();
   if (what === 'devices') return showDevices(topo);
@@ -820,6 +1098,7 @@ function runShow(what: ShowTarget, deviceQuery: string | undefined, context: Ter
 
   if (what === 'connections') return showConnections(topo, device);
   if (what === 'dhcp') return showDhcp(topo, device);
+  if (what === 'dns') return showDns(topo, device);
   if (!device) return [err(`specify a device: "show ${what} <device>" — or enter a context with "use <device>"`)];
   if (what === 'config') return showConfig(topo, device);
   if (what === 'ports') return showPorts(topo, device);
@@ -1024,7 +1303,7 @@ function leaseLine(deviceId: string, nicId: string): TerminalLine {
     return muted(`  warning: no address yet: ${unservedOf(dhcp, deviceId, nicId)?.reason ?? 'no lease'}`);
   }
   const from = poolAt(dhcp, lease.server)?.name ?? lease.server.deviceId;
-  return muted(`  leased ${lease.ip} / ${lease.mask} gw ${lease.gateway || '-'} by ${from}`);
+  return muted(`  leased ${lease.ip} / ${lease.mask} gw ${lease.gateway || '-'}${dnsSuffix(lease.dns)} by ${from}`);
 }
 
 function runInterface(
@@ -1103,6 +1382,27 @@ function runInterface(
       if (!isValidIP(setting.address)) return [err(`"${setting.address}" is not a valid IPv4 address`)];
       saveNic(device, { ...iface.nic, gateway: setting.address });
       return [ok(`${name}: gateway ${setting.address}`)];
+    }
+
+    case 'dns': {
+      if (iface.kind === 'port') {
+        return [err(`${name} is a port: a DNS server is named on a network card`)];
+      }
+      if (iface.nic.dhcp) {
+        return [
+          err(`${name} takes its address from DHCP: the DNS server comes with the lease`),
+          muted('  it is the one of the pool: interface <n> pool <first> to <last> dns <address> on <server>'),
+        ];
+      }
+      if (setting.address === null) {
+        if (!iface.nic.dns) return [muted(`${name} asks no DNS server already`)];
+        saveNic(device, without(iface.nic, 'dns'));
+        return [ok(`${name} asks no DNS server now`)];
+      }
+      if (!isValidIP(setting.address)) return [err(`"${setting.address}" is not a valid IPv4 address`)];
+      if (iface.nic.dns === setting.address) return [muted(`${name} already asks ${setting.address}`)];
+      saveNic(device, { ...iface.nic, dns: setting.address });
+      return [ok(`${name}: DNS server ${setting.address}`)];
     }
 
     case 'access':
@@ -1241,14 +1541,22 @@ function runInterface(
       }
 
       const gateway = (setting.pool.gateway ?? '').trim();
+      const dns = (setting.pool.dns ?? '').trim();
       const pool: DhcpPool = {
         start: setting.pool.start.trim(),
         end: setting.pool.end.trim(),
         ...(gateway ? { gateway } : {}),
+        ...(dns ? { dns } : {}),
       };
       const problem = poolProblem(device, iface, pool);
       if (problem) return [err(problem.text)];
-      if (current && current.start === pool.start && current.end === pool.end && (current.gateway ?? '') === gateway) {
+      if (
+        current &&
+        current.start === pool.start &&
+        current.end === pool.end &&
+        (current.gateway ?? '') === gateway &&
+        (current.dns ?? '') === dns
+      ) {
         return [muted(`${name} already hands out ${pool.start} to ${pool.end}`)];
       }
       if (iface.kind === 'port') savePort(device, { ...iface.port, dhcpServer: pool });
@@ -1260,7 +1568,10 @@ function runInterface(
         ? `gateway ${state.gateway}`
         : 'no gateway: its clients talk inside their network only';
       const lines = [
-        ok(`${name} now hands out ${pool.start} to ${pool.end}: ${countAddresses(state?.size ?? 0)}, ${handed}`),
+        ok(
+          `${name} now hands out ${pool.start} to ${pool.end}: ${countAddresses(state?.size ?? 0)}, ` +
+            `${handed}${dns ? `, DNS server ${dns}` : ''}`
+        ),
       ];
       const leases = state?.leases ?? [];
       lines.push(
@@ -1628,19 +1939,118 @@ function runForwardRemove(
   return [ok(`${device.label}: forward ${position} removed — ${describeForward(forward)}`)];
 }
 
+/* ── DNS records ──────────────────────────────────────────────────────── */
+
+/** The server a record command acts on, or the lines saying why not */
+function recordServer(
+  deviceQuery: string | undefined,
+  context: TerminalContext,
+  usage: string
+): { device: NetworkDevice; topo: Topology } | { errorLines: TerminalLine[] } {
+  const found = targetDevice(deviceQuery, context, usage);
+  if ('errorLines' in found) return found;
+  if (!servesDns(found.device)) {
+    return {
+      errorLines: [err(`${found.device.label} is a ${found.device.type}: records are kept by servers`)],
+    };
+  }
+  return found;
+}
+
+function runRecordAdd(
+  command: Extract<Command, { kind: 'record-add' }>,
+  context: TerminalContext
+): TerminalLine[] {
+  const found = recordServer(command.device, context, `add record ${command.name} ${command.address} on <server>`);
+  if ('errorLines' in found) return found.errorLines;
+  const { device, topo } = found;
+  if (!isHostName(command.name)) return [err(notAHostName(command.name))];
+  const name = hostNameKey(command.name);
+
+  // The address, as typed; a device name becomes its address
+  let address = command.address.trim();
+  let note: string | undefined;
+  if (!isValidIP(address)) {
+    // (a device on DHCP is named by the address it is leased)
+    const named = resolveEndpoint(address, withLeases(topo))?.device;
+    const own = named ? primaryAddress(named) : '';
+    if (!named) return [err(`"${command.address}" is not an address or a device`)];
+    if (!isValidIP(own)) return [err(`${named.label} has no address for a name to stand for`)];
+    note = `${named.label} → ${own}${leasedNote(named, own)}`;
+    address = own;
+  }
+
+  const records = device.dnsRecords ?? [];
+  const at = records.findIndex((record) => hostNameKey(record.name) === name);
+  const existing = records[at];
+  if (existing && existing.address === address) {
+    return [muted(`${device.label} already has it: record ${at + 1}`)];
+  }
+  // One name, one address: a name that is there takes the new address
+  const next: DnsRecord[] = existing
+    ? records.map((record) => (record === existing ? { ...record, name, address } : record))
+    : [...records, { id: nextId('record', records), name, address }];
+  useNetworkStore.getState().updateDevice(device.id, { dnsRecords: next });
+
+  const lines = [
+    ok(
+      existing
+        ? `${device.label}: record ${at + 1} — ${name} is now ${address} (was ${existing.address})`
+        : `${device.label}: record ${next.length} added — ${name} is ${address}`
+    ),
+  ];
+  if (note) lines.push(muted(`  ${note}`));
+  return lines;
+}
+
+function runRecordRemove(
+  which: string,
+  deviceQuery: string | undefined,
+  context: TerminalContext
+): TerminalLine[] {
+  const found = recordServer(deviceQuery, context, `remove record ${which} from <server>`);
+  if ('errorLines' in found) return found.errorLines;
+  const { device } = found;
+  const records = device.dnsRecords ?? [];
+  if (records.length === 0) return [err(`${device.label} has no records`)];
+
+  // By its place in the list, or by its name
+  const byNumber = /^\d+$/.test(which);
+  const at = byNumber
+    ? parseInt(which, 10) - 1
+    : records.findIndex((record) => hostNameKey(record.name) === hostNameKey(which));
+  const record = records[at];
+  if (!record) {
+    return [
+      err(
+        byNumber
+          ? `${device.label} has no record ${which} (it has ${records.length})`
+          : `${device.label} has no record for ${hostNameKey(which)}`
+      ),
+    ];
+  }
+  const remaining = records.filter((entry) => entry !== record);
+  useNetworkStore.getState().updateDevice(device.id, {
+    dnsRecords: remaining.length > 0 ? remaining : undefined,
+  });
+  return [ok(`${device.label}: record ${at + 1} removed — ${record.name} is ${record.address}`)];
+}
+
 /**
  * The command reference: what `help` prints, and the list the in-app guide
  * shows. One table, so the two can never disagree.
  */
 export const COMMAND_REFERENCE: Array<[string, string]> = [
   ['ping <target> [from <device>]', 'does it answer? request and reply'],
-  ['trace <target> [from <device>] [as web|email]', 'one way, hop by hop, with what each device did'],
+  ['trace <target> [from <device>] [as web|email|dns]', 'one way, hop by hop, with what each device did'],
   ['browse | mail | download <target> [from <device>]', 'a whole web, email or download exchange'],
+  ['resolve <name> [from <device>]', 'ask the DNS server of a device what address a name stands for'],
   ['show devices | vlans | connections', 'topology overview'],
   ['show interfaces [of] <device>', 'unified ports + NICs table (the standard view)'],
   ['show ip [of] <device>', 'compact addressing summary (also ipconfig/ifconfig)'],
   ['show routes | rules | nat [of] <device>', 'routing table, firewall rules, address translation'],
   ['show dhcp [[of] <device>]', 'DHCP: who hands out addresses, who got which, who got none'],
+  ['show dns [[of] <device>]', 'DNS: the names a server answers for, the server each card asks'],
   ['show config | ports | neighbors <device>', 'device detail'],
   ['set ip|gateway|subnet|name of <device> to <value>', 'change device config'],
   ['interface <n> up|down on <device>', 'interface state (also enable|disable port <n>)'],
@@ -1650,10 +2060,12 @@ export const COMMAND_REFERENCE: Array<[string, string]> = [
   ['interface <n> nat [off] on <device>', 'source NAT on a router/firewall port: what leaves takes its address'],
   ['interface <name> dhcp [off] on <device>', 'a network card takes its address from a DHCP server'],
   ['interface <n> [dhcp] pool <first> to <last> on <device>', 'DHCP server on a router/firewall port or a server card (pool none)'],
+  ['interface <name> dns <address>|none on <device>', 'the DNS server a network card asks when a name is used'],
   ['add route <network>|default via <next hop> on <device>', 'static route (remove route <network> from <device>)'],
   ['add backup route <network> via <next hop> on <device>', 'second route to a network, used when the line of the first is down'],
   ['add rule allow|deny <service> from <src> to <dst> on <fw>', 'firewall rule (remove rule <n> from <fw>)'],
   ['add forward <svc> from interface <n> to <address> on <dev>', 'publish a service inside (remove forward <n> from <dev>)'],
+  ['add record <name> <address> on <server>', 'a name a DNS server answers for (remove record <n>|<name> from <server>)'],
   ['add vlan <id> to <device>', 'VLAN list of a device (remove vlan <id> from <device>)'],
   ['connect <A> to <B>', 'create a link (disconnect <A> from <B>)'],
   ['use <device> / exit', 'enter/leave device context (implies "from" and "on")'],
@@ -1675,6 +2087,7 @@ function runHelp(topic?: string): TerminalLine[] {
     heading(`PixelCake terminal — NCL v${NCL_VERSION} (Network Command Language, vendor-neutral)`),
     ...COMMAND_REFERENCE.map(([syntax, desc]) => line(`  ${syntax.padEnd(SYNTAX_WIDTH)} ${desc}`)),
     muted('  device names are case-insensitive and may be multi-word; IPs work anywhere a device is expected'),
+    muted('  a host name (www.azienda.example) works as a target: the source asks its DNS server for the address first'),
   ];
 }
 
@@ -1711,6 +2124,8 @@ export function executeCommand(rawInput: string, context: TerminalContext): Exec
       };
     case 'flow':
       return { ...runFlow(command.model, command.target, command.from, context), context };
+    case 'resolve':
+      return { ...runResolve(command.name, command.from, context), context };
     case 'show':
       return { lines: runShow(command.what, command.device, context), context };
     case 'set':
@@ -1747,6 +2162,10 @@ export function executeCommand(rawInput: string, context: TerminalContext): Exec
       return { lines: runForwardAdd(command, context), context };
     case 'forward-remove':
       return { lines: runForwardRemove(command.position, command.device, context), context };
+    case 'record-add':
+      return { lines: runRecordAdd(command, context), context };
+    case 'record-remove':
+      return { lines: runRecordRemove(command.record, command.device, context), context };
     case 'unknown': {
       const lines = [err(`unknown command: "${command.input}"`)];
       if (command.suggestion) lines.push(muted(`  ${command.suggestion}`));

@@ -123,8 +123,9 @@ describe('HelpModal', () => {
           !printed.some(text => text.includes(syntax) && text.includes(description))
       );
       expect(notPrinted).toEqual([]);
-      // heading + one line per command + the closing note on device names
-      expect(printed).toHaveLength(rows.length + 2);
+      // heading + one line per command + the two closing notes, on device
+      // names and on host names
+      expect(printed).toHaveLength(rows.length + 3);
     });
 
     it('says where else the list is and how device names are read', () => {

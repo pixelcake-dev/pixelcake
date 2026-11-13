@@ -38,6 +38,7 @@ const SHOW_TARGETS: readonly ShowTarget[] = [
   'rules',
   'nat',
   'dhcp',
+  'dns',
 ];
 
 const SET_PROPERTIES: readonly SetProperty[] = ['ip', 'gateway', 'subnet', 'name'];
@@ -76,9 +77,12 @@ const KNOWN_VERBS: readonly string[] = [
   'email',
   'curl',
   'wget',
+  'resolve',
+  'lookup',
+  'nslookup',
 ];
 
-/** Names a service goes by: the three NCL names plus the instinctive ones */
+/** Names a service goes by: the four NCL names plus the instinctive ones */
 const SERVICES: Record<string, ServiceName> = {
   ping: 'ping',
   icmp: 'ping',
@@ -88,6 +92,7 @@ const SERVICES: Record<string, ServiceName> = {
   email: 'email',
   mail: 'email',
   smtp: 'email',
+  dns: 'dns',
 };
 
 const ZONES: readonly ZoneName[] = ['trust', 'untrust', 'dmz'];
@@ -104,14 +109,16 @@ const ARTICLES: readonly string[] = ['the', 'a'];
 const DEVICE_NOISE: readonly string[] = ['device', 'host'];
 
 const SHOW_USAGE =
-  'try: show devices | interfaces | ports | vlans | connections | config | neighbors | ip | routes | rules | nat | dhcp';
+  'try: show devices | interfaces | ports | vlans | connections | config | neighbors | ip | routes | rules | nat | dhcp | dns';
 const ADD_USAGE =
   'try: add vlan <id> [to] <device> | add route <network> via <next hop> [on <device>] | ' +
   'add rule allow|deny <service> from <source> to <destination> [on <device>] | ' +
-  'add forward <service> from interface <n> to <address> [on <device>]';
+  'add forward <service> from interface <n> to <address> [on <device>] | ' +
+  'add record <name> <address> [on <server>]';
 const REMOVE_USAGE =
   'try: remove vlan <id> from <device> | remove route <network> [from <device>] | ' +
-  'remove rule <n> [from <device>] | remove forward <n> [from <device>]';
+  'remove rule <n> [from <device>] | remove forward <n> [from <device>] | ' +
+  'remove record <n>|<name> [from <server>]';
 const SET_USAGE = 'try: set ip|gateway|subnet|name [of] <device> [to] <value>';
 
 /** Split the input into tokens; double-quoted spans become single verbatim tokens. */
@@ -231,9 +238,9 @@ function parsePing(rest: Token[], raw: string): Command {
   return args ? { kind: 'ping', ...args } : unknown(raw, 'try: ping <target> [from <device>]');
 }
 
-/** `trace <target> [from <device>] [as ping|web|email]` */
+/** `trace <target> [from <device>] [as ping|web|email|dns]` */
 function parseTrace(rest: Token[], raw: string): Command {
-  const usage = 'try: trace <target> [from <device>] [as ping|web|email]';
+  const usage = 'try: trace <target> [from <device>] [as ping|web|email|dns]';
   let tokens = rest;
   let service: ServiceName | undefined;
 
@@ -262,6 +269,15 @@ function parseFlow(
 ): Command {
   const args = parseTargetFrom(rest);
   return args ? { kind: 'flow', model, ...args } : unknown(raw, `try: ${verb} <target> [from <device>]`);
+}
+
+/** `resolve <name> [from <device>]`: what a name stands for, asked of the DNS server of a device */
+function parseResolve(rest: Token[], raw: string): Command {
+  const args = parseTargetFrom(rest);
+  if (!args) return unknown(raw, 'try: resolve <name> [from <device>]');
+  return args.from !== undefined
+    ? { kind: 'resolve', name: args.target, from: args.from }
+    : { kind: 'resolve', name: args.target };
 }
 
 /** `show devices|interfaces|ports|vlans|connections|config|neighbors|ip [of] [device...]` */
@@ -364,16 +380,17 @@ function vlanId(text: string): number | undefined {
  *   zone trust|untrust|dmz|none     firewall port: security zone
  *   nat [on] | nat off|none         router/firewall port: source NAT
  *   dhcp [on] | dhcp off|none       network card: address from a DHCP server
- *   pool <first> to <last> [gateway <address>] | pool none
+ *   pool <first> to <last> [gateway <address>] [dns <address>] | pool none
  *                                   router/firewall port or server card:
  *                                   DHCP server for its network
+ *   dns <address> | none            network card: the DNS server it asks
  */
 function parseInterface(rest: Token[], raw: string): Command {
   const usage = 'try: interface <n> up|down [on] <device>';
   const more =
     'also: ip <address>[/<prefix>]|none, gateway <address>|none, access <vlan>, ' +
     'trunk <vlans>|all, default, zone trust|untrust|dmz|none, nat [off], dhcp [off], ' +
-    'pool <first> to <last>|none';
+    'pool <first> to <last>|none, dns <address>|none';
   const idToken = rest[0];
   if (idToken === undefined) return unknown(raw, `${usage} — ${more}`);
   const iface = idToken.text;
@@ -393,13 +410,14 @@ function parseInterface(rest: Token[], raw: string): Command {
     token !== undefined && !token.quoted && (token.lower === 'none' || token.lower === 'clear');
 
   /**
-   * `pool <first> to <last> [gateway <address>]`, `pool <first>-<last>`,
-   * `pool none`, from the token at `at`. Whether the two are addresses of
-   * the network of the interface is for the executor to say.
+   * `pool <first> to <last> [gateway <address>] [dns <address>]`,
+   * `pool <first>-<last>`, `pool none`, from the token at `at`. Whether the
+   * two are addresses of the network of the interface is for the executor to
+   * say.
    */
   const parsePool = (at: number): Command => {
     const hint =
-      'try: interface <n> pool <first> to <last> [gateway <address>] [on] <device> — or "pool none" to stop';
+      'try: interface <n> pool <first> to <last> [gateway <address>] [dns <address>] [on] <device> — or "pool none" to stop';
     const first = rest[at];
     if (first === undefined) return unknown(raw, hint);
     if (isNone(first) || (!first.quoted && first.lower === 'off')) {
@@ -419,16 +437,18 @@ function parseInterface(rest: Token[], raw: string): Command {
       end = rest[next]?.text;
       next++;
     }
-    if (end === undefined || ['on', 'of', 'gateway', 'gw'].includes(end.toLowerCase())) {
+    if (end === undefined || ['on', 'of', 'gateway', 'gw', 'dns'].includes(end.toLowerCase())) {
       return unknown(raw, `a pool goes from its first address to its last — ${hint}`);
     }
 
-    const pool: { start: string; end: string; gateway?: string } = { start, end };
-    const word = rest[next];
-    if (word !== undefined && !word.quoted && ['gateway', 'gw'].includes(word.lower)) {
-      const gateway = rest[next + 1];
-      if (gateway === undefined) return unknown(raw, hint);
-      pool.gateway = gateway.text;
+    // What is handed out with the address: a gateway, a DNS server, in either order
+    const pool: { start: string; end: string; gateway?: string; dns?: string } = { start, end };
+    for (;;) {
+      const word = rest[next];
+      if (word === undefined || word.quoted || !['gateway', 'gw', 'dns'].includes(word.lower)) break;
+      const address = rest[next + 1];
+      if (address === undefined) return unknown(raw, hint);
+      pool[word.lower === 'dns' ? 'dns' : 'gateway'] = address.text;
       next += 2;
     }
     return withDevice({ what: 'pool', pool }, next);
@@ -526,6 +546,12 @@ function parseInterface(rest: Token[], raw: string): Command {
     }
     case 'pool':
       return parsePool(2);
+    case 'dns': {
+      if (value === undefined) {
+        return unknown(raw, 'try: interface <name> dns <address> [on] <device> — or "dns none"');
+      }
+      return withDevice({ what: 'dns', address: isNone(value) ? null : value.text }, 3);
+    }
     default:
       return unknown(raw, `missing up|down — ${usage} — ${more}`);
   }
@@ -610,7 +636,7 @@ function parseRuleAdd(rest: Token[], raw: string): Command {
     } else {
       const named = SERVICES[serviceToken.lower];
       if (named === undefined) {
-        return unknown(raw, `unknown service "${serviceToken.text}" (ping, web, email or any) — ${usage}`);
+        return unknown(raw, `unknown service "${serviceToken.text}" (ping, web, email, dns or any) — ${usage}`);
       }
       service = named;
     }
@@ -678,7 +704,7 @@ function parseForwardAdd(rest: Token[], raw: string): Command {
     } else {
       const named = SERVICES[serviceToken.lower];
       if (named === undefined) {
-        return unknown(raw, `unknown service "${serviceToken.text}" (ping, web, email or any) — ${usage}`);
+        return unknown(raw, `unknown service "${serviceToken.text}" (ping, web, email, dns or any) — ${usage}`);
       }
       service = named;
     }
@@ -734,7 +760,41 @@ function parseForwardRemove(rest: Token[], raw: string): Command {
   return device ? { kind: 'forward-remove', position, device } : { kind: 'forward-remove', position };
 }
 
-/** `add vlan|route|rule|forward …` / `remove|delete vlan|route|rule|forward …` */
+/**
+ * `add record <name> [to] <address|device...> [on <server...>]` — the LAST
+ * `on` splits the address (or the device that has it) from the server.
+ */
+function parseRecordAdd(rest: Token[], raw: string): Command {
+  const usage = 'try: add record <name> <address> [on <server>]';
+  const nameToken = rest[0];
+  if (nameToken === undefined) return unknown(raw, usage);
+  const tail = stripLeadingNoise(rest.slice(1), ['to', 'is', 'at']);
+  let onIdx = -1;
+  for (let i = tail.length - 1; i >= 0; i--) {
+    if (!tail[i].quoted && tail[i].lower === 'on') {
+      onIdx = i;
+      break;
+    }
+  }
+  const address = joinTokens(onIdx === -1 ? tail : tail.slice(0, onIdx));
+  const device = onIdx === -1 ? '' : joinTokens(stripLeadingNoise(tail.slice(onIdx + 1), []));
+  if (!address || (onIdx !== -1 && !device)) return unknown(raw, usage);
+  return device
+    ? { kind: 'record-add', name: nameToken.text, address, device }
+    : { kind: 'record-add', name: nameToken.text, address };
+}
+
+/** `remove record <n>|<name> [from|on <server...>]` */
+function parseRecordRemove(rest: Token[], raw: string): Command {
+  const recordToken = rest[0];
+  if (recordToken === undefined) return unknown(raw, 'try: remove record <n>|<name> [from <server>]');
+  const device = joinTokens(stripLeadingNoise(rest.slice(1), ['from', 'on', 'of']));
+  return device
+    ? { kind: 'record-remove', record: recordToken.text, device }
+    : { kind: 'record-remove', record: recordToken.text };
+}
+
+/** `add vlan|route|rule|forward|record …` / `remove|delete vlan|route|rule|forward|record …` */
 function parseAddRemove(action: 'add' | 'remove', rest: Token[], raw: string): Command {
   const noun = rest[0] !== undefined && !rest[0].quoted ? rest[0].lower : '';
   if (noun === 'route') {
@@ -753,6 +813,9 @@ function parseAddRemove(action: 'add' | 'remove', rest: Token[], raw: string): C
     return action === 'add'
       ? parseForwardAdd(rest.slice(1), raw)
       : parseForwardRemove(rest.slice(1), raw);
+  }
+  if (noun === 'record') {
+    return action === 'add' ? parseRecordAdd(rest.slice(1), raw) : parseRecordRemove(rest.slice(1), raw);
   }
   if (noun === 'vlan') return parseVlan(action === 'add' ? 'vlan-add' : 'vlan-remove', rest, raw);
   return unknown(raw, action === 'add' ? ADD_USAGE : REMOVE_USAGE);
@@ -815,6 +878,10 @@ export function parse(input: string): Command {
     case 'download':
     case 'wget':
       return parseFlow('download', 'download', rest, raw);
+    case 'resolve':
+    case 'lookup':
+    case 'nslookup':
+      return parseResolve(rest, raw);
     case 'show':
     case 'sh':
       return parseShow(rest, raw);

@@ -335,6 +335,129 @@ describe('TerminalModal', () => {
     expect(screen.getByLabelText('Terminal input')).toBeInTheDocument();
   });
 
+  it('prints what a name lookup found when the packet is back from it, then the hops of the flow', () => {
+    const input = openTerminal();
+    executeCommandMock.mockImplementationOnce((_rawInput, context) => ({
+      lines: [{ text: 'Looking up...', tone: 'muted' }],
+      context,
+      liveTrace: {
+        // asker, DNS server, asker again, then the way of the trace
+        animationPath: ['dev-0', 'dev-9', 'dev-0', 'dev-1', 'dev-2'],
+        animationLinks: ['conn-9', 'conn-9', 'conn-1', 'conn-2'],
+        flowModel: 'ping',
+        lookup: {
+          hops: 2,
+          lines: [
+            { text: 'name is 10.0.0.2', tone: 'success' },
+            { text: 'Tracing route...', tone: 'muted' },
+          ],
+        },
+        hopLines: [
+          { text: 'hop 1 A', tone: 'normal' },
+          { text: 'hop 2 B', tone: 'normal' },
+          { text: 'hop 3 C', tone: 'success' },
+        ],
+        finalLines: [{ text: 'Trace complete.', tone: 'success' }],
+      },
+    }));
+
+    typeCommand(input, 'trace name from a');
+
+    // One animation for the lookup and the flow; while the question travels
+    // only the header is there
+    expect(useSimulationStore.getState().path).toEqual(['dev-0', 'dev-9', 'dev-0', 'dev-1', 'dev-2']);
+    expect(useSimulationStore.getState().links).toEqual(['conn-9', 'conn-9', 'conn-1', 'conn-2']);
+    expect(screen.getByText('Looking up...')).toBeInTheDocument();
+    expect(screen.queryByText('name is 10.0.0.2')).not.toBeInTheDocument();
+    expect(screen.queryByText('hop 1 A')).not.toBeInTheDocument();
+
+    // At the DNS server: still nothing
+    act(() => {
+      useSimulationStore.getState().setCurrentHop(1);
+    });
+    expect(screen.queryByText('name is 10.0.0.2')).not.toBeInTheDocument();
+    expect(screen.queryByText('hop 1 A')).not.toBeInTheDocument();
+
+    // Back on the device that asked: what was found, and the first hop of the flow
+    act(() => {
+      useSimulationStore.getState().setCurrentHop(2);
+    });
+    expect(screen.getByText('name is 10.0.0.2')).toBeInTheDocument();
+    expect(screen.getByText('Tracing route...')).toBeInTheDocument();
+    expect(screen.getByText('hop 1 A')).toBeInTheDocument();
+    expect(screen.queryByText('hop 2 B')).not.toBeInTheDocument();
+
+    // The same state again prints nothing twice
+    act(() => {
+      useSimulationStore.getState().setCurrentHop(2);
+    });
+    expect(screen.getAllByText('name is 10.0.0.2')).toHaveLength(1);
+
+    act(() => {
+      useSimulationStore.getState().setCurrentHop(3);
+    });
+    expect(screen.getByText('hop 2 B')).toBeInTheDocument();
+    expect(screen.queryByText('hop 3 C')).not.toBeInTheDocument();
+
+    act(() => {
+      useSimulationStore.getState().stopSimulation();
+    });
+    expect(screen.getByText('hop 3 C')).toBeInTheDocument();
+    expect(screen.getByText('Trace complete.')).toBeInTheDocument();
+    expect(screen.getAllByText('name is 10.0.0.2')).toHaveLength(1);
+    expect(screen.getByLabelText('Terminal input')).toBeInTheDocument();
+  });
+
+  it('an animation that ends before the lookup is back prints everything, in order', () => {
+    const input = openTerminal();
+    executeCommandMock.mockImplementationOnce((_rawInput, context) => ({
+      lines: [{ text: 'Looking up...', tone: 'muted' }],
+      context,
+      liveTrace: {
+        animationPath: ['dev-0', 'dev-9', 'dev-0', 'dev-1'],
+        flowModel: 'web',
+        lookup: { hops: 2, lines: [{ text: 'name is 10.0.0.2', tone: 'success' }] },
+        hopLines: [{ text: 'hop 1 A', tone: 'normal' }],
+        finalLines: [{ text: 'Page received.', tone: 'success' }],
+      },
+    }));
+
+    typeCommand(input, 'browse name from a');
+    act(() => {
+      useSimulationStore.getState().stopSimulation();
+    });
+    const texts = ['Looking up...', 'name is 10.0.0.2', 'hop 1 A', 'Page received.'];
+    const all = document.body.textContent ?? '';
+    const places = texts.map(text => all.indexOf(text));
+    expect(places.every(place => place >= 0)).toBe(true);
+    expect([...places].sort((a, b) => a - b)).toEqual(places);
+    expect(screen.queryByTestId('terminal-busy')).not.toBeInTheDocument();
+  });
+
+  it('Ctrl+C while the question travels drops what the lookup found, with the rest', () => {
+    const input = openTerminal();
+    executeCommandMock.mockImplementationOnce((_rawInput, context) => ({
+      lines: [],
+      context,
+      liveTrace: {
+        animationPath: ['dev-0', 'dev-9', 'dev-0', 'dev-1'],
+        flowModel: 'ping',
+        lookup: { hops: 2, lines: [{ text: 'name is 10.0.0.2', tone: 'success' }] },
+        hopLines: [],
+        finalLines: [{ text: 'Reply.', tone: 'success' }],
+      },
+    }));
+    typeCommand(input, 'ping name from a');
+    expect(screen.queryByText('name is 10.0.0.2')).not.toBeInTheDocument();
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'c', ctrlKey: true });
+    });
+    expect(screen.queryByText('name is 10.0.0.2')).not.toBeInTheDocument();
+    expect(screen.queryByText('Reply.')).not.toBeInTheDocument();
+    expect(screen.getByText('^C — interrupted')).toBeInTheDocument();
+  });
+
   it('sets the packet off on the cables the command names', () => {
     const input = openTerminal();
     executeCommandMock.mockImplementationOnce((_rawInput, context) => ({
