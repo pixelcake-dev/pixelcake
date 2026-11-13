@@ -234,6 +234,59 @@ html, body {
   stroke-width: 4.5;
 }
 
+/* React Flow's own panels — the zoom buttons, the small map, the credit —
+   take the colours of the theme. React Flow's style sheet is loaded after
+   this one and gives them fixed light colours, with one class in each
+   selector: the ancestor in front of these makes them win */
+.react-flow .react-flow__controls {
+  border: 1px solid var(--border-color);
+  box-shadow: 0 0 2px 1px var(--shadow-color);
+}
+
+.react-flow .react-flow__controls-button {
+  background: var(--bg-toolbar);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* (the frame of the panel is the line under the last button) */
+.react-flow .react-flow__controls-button:last-child {
+  border-bottom: none;
+}
+
+.react-flow .react-flow__controls-button svg {
+  fill: var(--text-color);
+}
+
+.react-flow .react-flow__controls-button:hover {
+  background: var(--accent-color-light);
+}
+
+.react-flow .react-flow__controls-button:hover svg {
+  fill: var(--accent-color);
+}
+
+.react-flow .react-flow__minimap {
+  background-color: var(--bg-toolbar);
+  border: 1px solid var(--border-color);
+}
+
+/* The veil over what is outside the view: the view itself stays clear */
+.react-flow .react-flow__minimap-mask {
+  fill: var(--shadow-color);
+}
+
+/* The credit sits in the corner under the zoom buttons, which start 15px
+   above it. With the line height of the page (1.5) it was 19px tall and
+   ran into them: one line of its own 10px text and its padding is 14px */
+.react-flow .react-flow__attribution {
+  background: var(--bg-canvas);
+  line-height: 1;
+}
+
+.react-flow .react-flow__attribution a {
+  color: var(--text-color-light);
+}
+
 /* Network Device Styles */
 .network-device {
   position: relative;

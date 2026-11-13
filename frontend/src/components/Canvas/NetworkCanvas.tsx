@@ -540,8 +540,10 @@ const NetworkCanvas = () => {
       >
         <Background color="#aaa" gap={16} />
         <Controls showInteractive={!presenting} />
-        {/* The small map is a tool for finding one's way while building */}
-        {!presenting && <MiniMap nodeColor={miniMapColor} maskColor="rgba(0, 0, 0, 0.1)" />}
+        {/* The small map is a tool for finding one's way while building. Its
+            background and the veil outside the view follow the theme: they
+            are in index.css, like those of the zoom buttons and the credit */}
+        {!presenting && <MiniMap nodeColor={miniMapColor} />}
         {/* Packet Animation Logic */}
         <PacketAnimation />
       </ReactFlow>
