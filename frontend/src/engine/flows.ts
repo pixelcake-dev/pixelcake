@@ -439,14 +439,12 @@ export function planAndEvaluateFlow(
   model: FlowModelType,
   sourceId: string,
   targetId: string,
-  drawing: Topology,
+  topo: Topology,
   options?: { emailMode?: EmailMode; targetIp?: string }
 ): FlowResult {
   if (sourceId === targetId) {
     return flowError('source and target are the same device');
   }
-  // A card on DHCP has the address it is leased (see ./dhcp)
-  const topo = withLeases(drawing);
 
   switch (model) {
     case 'ping': {

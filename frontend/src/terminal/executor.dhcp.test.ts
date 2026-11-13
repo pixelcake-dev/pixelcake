@@ -173,6 +173,17 @@ describe('interface … pool', () => {
     expect(output('interface 1 pool none on Router-1')).toEqual(['port 1 on Router-1 hands out no addresses already']);
   });
 
+  it('"pool none" does not name a card that another server now answers', () => {
+    run('interface 2 pool 192.168.20.100 to 192.168.20.110 on Router-1');
+    run('interface eth0 pool 192.168.20.50 to 192.168.20.59 on Web-01');
+    run('interface eth0 dhcp on Mail-01');
+    expect(leases()).toEqual(['Mail-01 192.168.20.100']);
+    expect(output('interface 2 pool none on Router-1')).toEqual([
+      'port 2 on Router-1 no longer hands out addresses',
+    ]);
+    expect(leases()).toEqual(['Mail-01 192.168.20.50']);
+  });
+
   it('"pool none" names nobody when nobody had an address from it', () => {
     run(OFFICE_POOL);
     expect(output('interface 1 pool none on Router-1')).toEqual(['port 1 on Router-1 no longer hands out addresses']);
@@ -357,6 +368,15 @@ describe('a device on DHCP in the other commands', () => {
     expect(card('Portatile')).toMatchObject({ dhcp: true, ip: '' });
   });
 
+  it('show devices is as wide as it always was while no address is leased', () => {
+    run('interface eth0 dhcp off on PC-1');
+    run('interface eth0 ip 192.168.10.11/24 on PC-1');
+    expect(output('show devices').slice(0, 2)).toEqual([
+      'DEVICE                   TYPE           IP               VLANS',
+      'Router-1                 Router         192.168.10.1     -',
+    ]);
+  });
+
   it('show devices and show neighbors mark the address that is leased', () => {
     run('interface eth0 dhcp on Mail-01');
     expect(output('show devices')).toEqual([
@@ -408,7 +428,7 @@ describe('a device on DHCP in the other commands', () => {
     expect(output('show ip Mail-01')).toEqual([
       'Mail-01 — addressing',
       '  ip:       - (dhcp)',
-      '  subnet:   255.255.255.0',
+      '  subnet:   -',
       '  gateway:  -',
       '  eth0: no address (dhcp: no DHCP server answers on its network)',
     ]);

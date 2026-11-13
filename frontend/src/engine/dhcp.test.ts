@@ -116,6 +116,12 @@ describe('a lease', () => {
     });
   });
 
+  it('carries /24 when the interface that serves has no mask written', () => {
+    const t = lab({ lan: { subnet: undefined } });
+    expect(leaseOf(resolveDhcp(t), 'a', 'nic-1')).toMatchObject({ ip: '192.168.1.100', mask: MASK });
+    expect(resolveDhcp(t).pools[0].mask).toBe(MASK);
+  });
+
   it('carries the gateway written in the pool instead, when one is', () => {
     const t = lab({ pool: { ...POOL, gateway: '192.168.1.254' } });
     expect(leaseOf(resolveDhcp(t), 'a', 'nic-1')?.gateway).toBe('192.168.1.254');
@@ -128,6 +134,32 @@ describe('a lease', () => {
     const again = lab();
     expect(resolveDhcp(again)).not.toBe(resolveDhcp(t));
     expect(resolveDhcp(again).leases).toEqual(resolveDhcp(t).leases);
+  });
+
+  it('is worked out again for the same devices with other cables', () => {
+    const t = lab();
+    expect(leasedIp(t, 'a')).toBe('192.168.1.100');
+    // A unplugged: same list of devices, another list of cables
+    const unplugged = { devices: t.devices, connections: t.connections.slice(1) };
+    expect(whyNot(unplugged, 'a')?.cause).toBe('no-cable');
+    expect(leasedIp(unplugged, 'b')).toBe('192.168.1.100');
+    // and back
+    expect(leasedIp(t, 'a')).toBe('192.168.1.100');
+  });
+
+  it('a drawing without DHCP is never kept: put on DHCP in place, it is read again', () => {
+    //  X (no address) ── R, asked a first time before anything is on DHCP
+    const r = device({ id: 'r', label: 'R', type: 'Router', ports: [port(1, { ip: '192.168.1.1', subnet: MASK })] });
+    const x = device({ id: 'x', label: 'X', nics: [nic({ subnet: '' })] });
+    const t = topo([x, r], [link('x', 'r', { sourceNic: 'nic-1', targetPort: 1 })]);
+    expect(withLeases(t)).toBe(t);
+    expect(traceRoute('x', 'r', t).failureReason).toBe('X has no IP address configured');
+
+    // the same objects, changed where they are (as a test does, and the application never)
+    x.nics![0].dhcp = true;
+    r.ports![0].dhcpServer = POOL;
+    expect(byId(withLeases(t), 'x').ip).toBe('192.168.1.100');
+    expect(traceRoute('x', 'r', t)).toMatchObject({ verdict: 'success', sourceIp: '192.168.1.100' });
   });
 
   it('moves when an address is written by hand in the range', () => {
@@ -169,6 +201,17 @@ describe('a lease', () => {
     expect(a).toMatchObject({ ip: '192.168.1.100', gateway: '192.168.1.1' });
     // and 10.9.9.9 is nobody's: it is not kept away from anything
     expect(traceRoute('c', 'a', t, { targetIp: '10.9.9.9' }).verdict).not.toBe('success');
+  });
+
+  it('an address left on a card set to DHCP is not one written by hand: it can be leased', () => {
+    // B still carries the first address of the range from before it went on DHCP
+    const t = lab();
+    Object.assign(byId(t, 'b'), { ip: '192.168.1.100' });
+    Object.assign(byId(t, 'b').nics![0], { ip: '192.168.1.100', subnet: MASK });
+    expect(resolveDhcp(t).leases.map(lease => `${lease.deviceId} ${lease.ip}`)).toEqual([
+      'a 192.168.1.100',
+      'b 192.168.1.102',
+    ]);
   });
 });
 
@@ -212,6 +255,50 @@ describe('the drawing with the leases filled in', () => {
     expect(byId(withLeases(t), 'a')).toMatchObject({ ip: '', gateway: '', nics: [{ ip: '', subnet: '', gateway: '' }] });
   });
 
+  it('a device with two cards on DHCP has a lease for each, or a reason for each', () => {
+    //  D: eth0 on the switch, eth1 with no cable
+    const two = device({
+      id: 'd',
+      label: 'D',
+      nics: [nic({ dhcp: true, subnet: '' }), nic({ id: 'nic-2', name: 'eth1', dhcp: true, subnet: '' })],
+    });
+    const t = lab({
+      pool: { start: '192.168.1.100', end: '192.168.1.110' },
+      more: [two],
+      moreLinks: [link('d', 'sw', { sourceNic: 'nic-1', targetPort: 5 })],
+    });
+    const resolution = resolveDhcp(t);
+    expect(leaseOf(resolution, 'd', 'nic-1')?.ip).toBe('192.168.1.103');
+    expect(leaseOf(resolution, 'd', 'nic-2')).toBeUndefined();
+    expect(unservedOf(resolution, 'd', 'nic-1')).toBeUndefined();
+    expect(unservedOf(resolution, 'd', 'nic-2')?.cause).toBe('no-cable');
+    // both on the switch: one address each, in the order of the cards
+    const both = lab({
+      pool: { start: '192.168.1.100', end: '192.168.1.110' },
+      more: [two],
+      moreLinks: [
+        link('d', 'sw', { sourceNic: 'nic-1', targetPort: 5 }),
+        link('d', 'sw', { id: 'd--sw-2', sourceNic: 'nic-2', targetPort: 6 }),
+      ],
+    });
+    expect(leaseOf(resolveDhcp(both), 'd', 'nic-1')?.ip).toBe('192.168.1.103');
+    expect(leaseOf(resolveDhcp(both), 'd', 'nic-2')?.ip).toBe('192.168.1.104');
+  });
+
+  it('a device whose first card has no address keeps the one it has at device level, whatever its second card', () => {
+    // (the shape of a device drawn before cards carried addresses)
+    const second = nic({ id: 'nic-2', name: 'eth1', dhcp: true, subnet: '' });
+    const more = [device({ id: 'd', label: 'D', ip: '10.0.0.20', gateway: '10.0.0.1', nics: [nic(), second] })];
+    const t = lab({
+      pool: { start: '192.168.1.100', end: '192.168.1.110' },
+      more,
+      moreLinks: [link('d', 'sw', { sourceNic: 'nic-2', targetPort: 5 })],
+    });
+    const d = byId(withLeases(t), 'd');
+    expect(d).toMatchObject({ ip: '10.0.0.20', gateway: '10.0.0.1' });
+    expect(d.nics![1].ip).toBe('192.168.1.103');
+  });
+
   it('follows the first card only: a second card on DHCP does not move the device-level address', () => {
     const second = nic({ id: 'nic-2', name: 'eth1', dhcp: true, subnet: '' });
     const more = [device({ id: 'd', label: 'D', ip: '10.0.0.20', gateway: '10.0.0.1', nics: [nic({ ip: '10.0.0.20', gateway: '10.0.0.1' }), second] })];
@@ -239,6 +326,41 @@ describe('the rest of the engine reads the lease', () => {
     expect(flow.verdict).toBe('success');
     expect(flow.legs[0].trace.targetIp).toBe('192.168.1.102');
     expect(traceToDevice('c', 'a', lab()).trace).toMatchObject({ verdict: 'success', targetIp: '192.168.1.100' });
+  });
+
+  it('a device behind the Internet is aimed at its public address, also when that one is leased', () => {
+    //  Ext ── Internet ── ISP (hands out 203.0.113.100–110) ── eth1 Srv eth0 192.168.1.20
+    //  Srv is named by its first address, a private one: from outside it is its second card that answers
+    const t = topo(
+      [
+        host('ext', '203.0.113.50', '203.0.113.1', { label: 'Ext' }),
+        device({ id: 'inet', label: 'Internet', type: 'Cloud', templateId: 'tpl-cloud', nics: [nic(), nic({ id: 'nic-2', name: 'eth1' })] }),
+        switchWith('sw', [port(1), port(2), port(3)], { label: 'SW' }),
+        device({
+          id: 'isp',
+          label: 'ISP',
+          type: 'Router',
+          ports: [port(1, { ip: '203.0.113.1', subnet: MASK, dhcpServer: { start: '203.0.113.100', end: '203.0.113.110' } })],
+        }),
+        device({
+          id: 'srv',
+          label: 'Srv',
+          type: 'Server',
+          ip: '192.168.1.20',
+          nics: [nic({ ip: '192.168.1.20' }), nic({ id: 'nic-2', name: 'eth1', dhcp: true, subnet: '' })],
+        }),
+      ],
+      [
+        link('ext', 'inet', { sourceNic: 'nic-1', targetNic: 'nic-1' }),
+        link('inet', 'sw', { sourceNic: 'nic-2', targetPort: 1 }),
+        link('sw', 'isp', { sourcePort: 2, targetPort: 1 }),
+        link('sw', 'srv', { sourcePort: 3, targetNic: 'nic-2' }),
+      ]
+    );
+    expect(leasedIp(t, 'srv', 'nic-2')).toBe('203.0.113.100');
+    const { trace, note } = traceToDevice('ext', 'srv', t);
+    expect(trace).toMatchObject({ verdict: 'success', targetIp: '203.0.113.100' });
+    expect(note).toBe('Srv is reached from outside at 203.0.113.100, its public address');
   });
 
   it('a pool without a gateway on a server leaves its clients inside their network', () => {

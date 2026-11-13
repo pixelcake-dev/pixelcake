@@ -280,7 +280,7 @@ describe('InspectorModal — a card on DHCP', () => {
     openTab('Generale');
     expect(screen.getByLabelText('Indirizzo IP (sola lettura)')).toHaveValue('');
     expect(
-      screen.getByText(/prende l'indirizzo dal DHCP: Nessun indirizzo: nessun server DHCP risponde sulla sua rete\./)
+      screen.getByText(/prende l'indirizzo dal DHCP\. Nessun indirizzo: nessun server DHCP risponde sulla sua rete\./)
     ).toBeInTheDocument();
     saveDevice();
     expect(toast.error).not.toHaveBeenCalled();
@@ -591,6 +591,10 @@ describe('InspectorModal — the «DHCP» tab', () => {
     openTab('DHCP (1)');
     expect(section('Avvisi')).toHaveTextContent(warning);
     expect(section('Indirizzi assegnati')).toHaveTextContent('Nessun indirizzo assegnato');
+    // a server that is not one of the two has nothing to be warned of
+    openInspector('Mail-01');
+    openTab('DHCP');
+    expect(screen.queryByRole('region', { name: 'Avvisi' })).not.toBeInTheDocument();
   });
 
   it('says what is not simulated', () => {

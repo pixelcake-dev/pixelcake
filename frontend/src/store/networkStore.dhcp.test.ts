@@ -6,7 +6,7 @@
  * the engine worked out is handed back to the store.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useNetworkStore } from './networkStore';
 import { resolveDhcp } from '@/engine';
 import { device, host, link, nic, port, switchWith } from '@/test/networkFixtures';
@@ -29,7 +29,7 @@ const EMPTY_CARD = { dhcp: true, ip: '', subnet: '', gateway: '' };
 
 function expectEmpty(label: string) {
   expect(named(label).nics?.[0]).toMatchObject(EMPTY_CARD);
-  expect(named(label)).toMatchObject({ ip: '', gateway: '' });
+  expect(named(label)).toMatchObject({ ip: '', subnet: '', gateway: '' });
 }
 
 beforeEach(() => {
@@ -102,5 +102,31 @@ describe('a card on DHCP in the store', () => {
     expect(resolveDhcp({ devices: again.devices, connections: again.connections }).leases).toMatchObject([
       { ip: '192.168.1.100' },
     ]);
+  });
+});
+
+describe('a card on DHCP in what the browser kept', () => {
+  it('is emptied when the page is opened again, without the project counting as changed', async () => {
+    localStorage.clear();
+    localStorage.setItem(
+      'pixelcake-network-v2',
+      JSON.stringify({
+        state: {
+          devices: [stale('PC')],
+          connections: [],
+          deviceCounter: 1,
+          connectionCounter: 0,
+          hasUnsavedChanges: false,
+        },
+        version: 0,
+      })
+    );
+    // the store as a page that has just been loaded makes it
+    vi.resetModules();
+    const { useNetworkStore: reopened } = await import('./networkStore');
+    const [pc] = reopened.getState().devices;
+    expect(pc.nics?.[0]).toMatchObject(EMPTY_CARD);
+    expect(pc).toMatchObject({ ip: '', subnet: '', gateway: '' });
+    expect(reopened.getState().hasUnsavedChanges).toBe(false);
   });
 });

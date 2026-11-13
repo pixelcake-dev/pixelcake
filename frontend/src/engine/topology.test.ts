@@ -227,12 +227,13 @@ describe('device helpers', () => {
       nics: [nic('nic-1', '', { dhcp: true })],
     });
     const mirrored = mirrorPrimaryNic(onDhcp);
-    expect(mirrored).toMatchObject({ ip: '', subnet: '255.255.255.0', gateway: '' });
+    expect(mirrored).toMatchObject({ ip: '', subnet: '', gateway: '' });
     expect(onDhcp.ip).toBe('192.168.1.10'); // input untouched
     // nothing left to do the second time
     expect(mirrorPrimaryNic(mirrored)).toBe(mirrored);
-    // one of the two still there is still stale
+    // one of the three still there is still stale
     expect(mirrorPrimaryNic({ ...mirrored, gateway: '192.168.1.1' }).gateway).toBe('');
+    expect(mirrorPrimaryNic({ ...mirrored, subnet: '255.255.255.0' }).subnet).toBe('');
     expect(mirrorPrimaryNic({ ...mirrored, ip: '192.168.1.10' }).ip).toBe('');
   });
 
@@ -263,7 +264,7 @@ describe('device helpers', () => {
     ]);
     // the card written by hand is the very same object
     expect(settled.nics![1]).toBe(stale.nics![1]);
-    expect(settled).toMatchObject({ ip: '', gateway: '' });
+    expect(settled).toMatchObject({ ip: '', subnet: '', gateway: '' });
     expect(stale.nics![0].ip).toBe('192.168.1.10'); // input untouched
     expect(normalizeAddressing(settled)).toBe(settled);
   });

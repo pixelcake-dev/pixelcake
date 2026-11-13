@@ -362,9 +362,10 @@ export function parseYamlTopology(content: string): ImportResult {
       device.nics = d.nics
         .filter((n): n is Record<string, unknown> => n !== null && typeof n === 'object')
         .map((n, idx) => parseNic(n, idx, name, warnings));
-      // A first card on DHCP: the device has no address of its own
+      // A first card on DHCP: the device has no addressing of its own
       if (device.nics[0]?.dhcp) {
         device.ip = '';
+        device.subnet = '';
         device.gateway = '';
       }
     }

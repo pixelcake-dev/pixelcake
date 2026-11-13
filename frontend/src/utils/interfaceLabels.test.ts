@@ -53,6 +53,16 @@ describe('interface labels (Italian UI)', () => {
     expect(listInterfaces(pc).map(interfaceOptionLabel)).toEqual(['eth0 (192.168.10.11)', 'eth1']);
   });
 
+  it('a card on DHCP says so in its entry, with the address it is leased when it comes with one', () => {
+    const card = { id: 'nic-1', name: 'eth0', enabled: true, speed: 'auto' as const, subnet: '', gateway: '', dhcp: true };
+    // as the drawing keeps it: no address
+    const kept = device({ id: 'pc2', nics: [{ ...card, ip: '' }] });
+    expect(listInterfaces(kept).map(interfaceOptionLabel)).toEqual(['eth0 (DHCP)']);
+    // as the engine hands it back, with the lease filled in
+    const leased = device({ id: 'pc2', nics: [{ ...card, ip: '192.168.20.100' }] });
+    expect(listInterfaces(leased).map(interfaceOptionLabel)).toEqual(['eth0 (192.168.20.100 · DHCP)']);
+  });
+
   it('names an interface inside a sentence', () => {
     expect(listInterfaces(router).map(interfaceShortLabel)).toEqual([
       'porta 1',

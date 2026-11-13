@@ -1197,9 +1197,10 @@ function runInterface(
           muted(`  give it one: interface ${ifaceId} ip <address>/<prefix> on ${device.label}`),
         ];
       }
-      // A card that asks for an address keeps none of its own, and hands out none
+      // A card that asks for an address hands out none (and keeps none of
+      // its own: the store empties it as it takes it in)
       const served = iface.nic.dhcpServer !== undefined;
-      saveNic(device, { ...without(iface.nic, 'dhcpServer'), dhcp: true, ip: '', subnet: '', gateway: '' });
+      saveNic(device, { ...without(iface.nic, 'dhcpServer'), dhcp: true });
       return [
         ok(`${name} now takes its address from DHCP`),
         leaseLine(device.id, iface.nic.id),

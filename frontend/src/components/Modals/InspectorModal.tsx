@@ -457,7 +457,8 @@ const InspectorModal = () => {
                     <p className="text-xs text-[var(--text-color-light)] mt-1">
                       {primaryNic?.dhcp ? (
                         <>
-                          La prima scheda di rete prende l&apos;indirizzo dal DHCP:{' '}
+                          La prima scheda di rete prende l&apos;indirizzo dal DHCP
+                          {primaryLease ? ': ' : '. '}
                           {cardLeaseText(dhcp, liveDevice.id, primaryNic.id).text}. Si cambia nella
                           scheda «Schede di rete».
                         </>

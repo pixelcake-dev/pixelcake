@@ -93,8 +93,6 @@ export function unservedText(entry: DhcpUnserved, dhcp: DhcpResolution): string 
   }
 }
 
-
-
 /**
  * What a card on DHCP shows in place of its three fields: the lease
  * (`192.168.20.100 da Router-Core, porta 2`), or why there is none.

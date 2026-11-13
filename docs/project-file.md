@@ -135,7 +135,7 @@ item never takes the id of an existing one.
 | `type` | string | Device type, e.g. `PC`, `Switch`, `Router`, `Server`, `Firewall`, `AccessPoint`, `LoadBalancer`, `Database`, `Cloud`. |
 | `templateId` | string | Optional. Template the device was created from (icon and display name). |
 | `label` | string | Name of the device. |
-| `ip`, `subnet`, `gateway` | string | Device-level address. For a device with NICs these mirror its first NIC; `ip` and `gateway` are empty when that NIC takes its address from DHCP. |
+| `ip`, `subnet`, `gateway` | string | Device-level address. For a device with NICs these mirror its first NIC, and are empty when that NIC takes its address from DHCP. |
 | `vendor`, `location` | string | Optional. |
 | `position` | object | `x`, `y` on the canvas. |
 | `vlan` | integer[] | Optional. VLAN ids the device carries. |

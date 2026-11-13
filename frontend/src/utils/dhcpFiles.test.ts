@@ -34,7 +34,7 @@ function lab(): Topology {
   server.nics![0].dhcpServer = SERVER_POOL;
   return topo(
     [
-      device({ id: 'a', label: 'A', nics: [automatic()] }),
+      device({ id: 'a', label: 'A', subnet: '', nics: [automatic()] }),
       host('b', '192.168.1.11', '192.168.1.1', { label: 'B' }),
       switchWith('sw', [port(1), port(2), port(3)], { label: 'SW' }),
       device({
@@ -49,7 +49,7 @@ function lab(): Topology {
       }),
       switchWith('sw2', [port(1), port(2), port(3)], { label: 'SW2' }),
       server,
-      device({ id: 'c', label: 'C', nics: [automatic()] }),
+      device({ id: 'c', label: 'C', subnet: '', nics: [automatic()] }),
     ],
     [
       link('a', 'sw', { sourceNic: 'nic-1', targetPort: 1 }),
@@ -209,6 +209,7 @@ describe('DHCP in a project file', () => {
     const [canvas] = result.project.canvases;
     expect(named(canvas.devices, 'A')).toMatchObject({
       ip: '',
+      subnet: '',
       gateway: '',
       nics: [{ dhcp: true, ip: '', subnet: '', gateway: '' }],
     });
@@ -248,6 +249,7 @@ describe('DHCP through YAML', () => {
     const { topology } = roundTrip(lab());
     expect(named(topology.devices, 'A')).toMatchObject({
       ip: '',
+      subnet: '',
       gateway: '',
       nics: [{ dhcp: true, ip: '', subnet: '', gateway: '' }],
     });
@@ -312,6 +314,7 @@ describe('DHCP through YAML', () => {
       '    - name: PC',
       '      type: PC',
       '      ip: 192.168.1.77',
+      '      subnet: 255.255.255.0',
       '      gateway: 192.168.1.1',
       '      nics:',
       '        - name: eth0',
@@ -333,7 +336,7 @@ describe('DHCP through YAML', () => {
     ].join('\n');
     const result = parseYamlTopology(yaml);
     expect(result.warnings).toEqual([]);
-    expect(result.devices[0]).toMatchObject({ ip: '', gateway: '' });
+    expect(result.devices[0]).toMatchObject({ ip: '', subnet: '', gateway: '' });
     expect(result.devices[0].nics?.[0]).toEqual({
       id: 'nic-1',
       name: 'eth0',

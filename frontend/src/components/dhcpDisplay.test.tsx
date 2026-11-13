@@ -159,7 +159,7 @@ describe('the window of a cable', () => {
     render(<ConnectionInspectorModal />);
 
     const cards = screen.getByLabelText<HTMLSelectElement>('Interfaccia su PC-1');
-    expect(Array.from(cards.options).map(option => option.textContent)).toContain('eth0 (192.168.10.100)');
+    expect(Array.from(cards.options).map(option => option.textContent)).toContain('eth0 (192.168.10.100 · DHCP)');
 
     // saving keeps the cable on the card: only its key is written
     fireEvent.click(screen.getByRole('button', { name: 'Salva' }));

@@ -11,13 +11,19 @@ export function interfaceShortLabel(iface: DeviceInterface): string {
   return iface.kind === 'port' ? `porta ${iface.port.id}` : iface.label;
 }
 
-/** Entry of an interface picker: "Porta 3 — Uplink" / "eth0 (192.168.10.11)" */
+/**
+ * Entry of an interface picker: "Porta 3 — Uplink" / "eth0 (192.168.10.11)".
+ * A card that takes its address from DHCP says so, with the address it is
+ * leased when the interface comes with it: "eth0 (192.168.20.100 · DHCP)",
+ * "eth0 (DHCP)".
+ */
 export function interfaceOptionLabel(iface: DeviceInterface): string {
   const address = iface.ip ? ` (${iface.ip})` : '';
   if (iface.kind === 'port') {
     const name = iface.port.name ? ` — ${iface.port.name}` : '';
     return `Porta ${iface.port.id}${name}${address}`;
   }
+  if (iface.nic.dhcp) return `${iface.label} (${iface.ip ? `${iface.ip} · DHCP` : 'DHCP'})`;
   return `${iface.label}${address}`;
 }
 

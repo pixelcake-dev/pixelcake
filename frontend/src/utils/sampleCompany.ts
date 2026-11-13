@@ -84,7 +84,7 @@ function dhcpClient(
     label,
     // No address of its own, at device level or on the card: it is leased
     ip: '',
-    subnet: MASK,
+    subnet: '',
     gateway: '',
     location,
     position,

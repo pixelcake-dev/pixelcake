@@ -158,8 +158,8 @@ export function primaryGateway(device: NetworkDevice): string {
  * so the two must not drift apart.
  *
  * A primary NIC that takes its address from a DHCP server has none of its
- * own to mirror: the device-level address and gateway are emptied, and the
- * address the card is leased is filled in where leases are worked out (see
+ * own to mirror: the device-level address, mask and gateway are emptied, and
+ * what the card is leased is filled in where leases are worked out (see
  * ./dhcp).
  *
  * Returns the device with the mirror up to date: the SAME object when it
@@ -168,8 +168,8 @@ export function primaryGateway(device: NetworkDevice): string {
 export function mirrorPrimaryNic(device: NetworkDevice): NetworkDevice {
   const primary = device.nics?.[0];
   if (primary?.dhcp) {
-    if (device.ip === '' && device.gateway === '') return device;
-    return { ...device, ip: '', gateway: '' };
+    if (device.ip === '' && device.subnet === '' && device.gateway === '') return device;
+    return { ...device, ip: '', subnet: '', gateway: '' };
   }
   if (!primary?.ip) return device;
 

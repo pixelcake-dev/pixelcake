@@ -230,7 +230,7 @@ export function poolProblem(
 /** A pool while leases are being given */
 interface WorkingPool {
   state: DhcpPoolState;
-  /** Lowest address not tried yet; past `end` once the range is used up */
+  /** Lowest address that may still be free; past `end` once the range is used up */
   cursor: number;
   end: number;
   /** Addresses of the range never handed out: the network's own two, the gateway */
@@ -334,10 +334,8 @@ function resolve(drawing: NetworkDevice[], connections: NetworkConnection[]): Dh
       pool.cursor += 1;
     }
     if (pool.cursor > pool.end) return undefined;
-    const address = pool.cursor;
-    taken.add(address);
-    pool.cursor += 1;
-    return numberToIp(address);
+    taken.add(pool.cursor);
+    return numberToIp(pool.cursor);
   };
 
   for (const device of devices) {
@@ -468,7 +466,7 @@ function resolve(drawing: NetworkDevice[], connections: NetworkConnection[]): Dh
     // address is written by hand
     const [primary] = nics;
     return primary.dhcp
-      ? { ...device, nics, ip: primary.ip, subnet: primary.subnet || device.subnet, gateway: primary.gateway }
+      ? { ...device, nics, ip: primary.ip, subnet: primary.subnet, gateway: primary.gateway }
       : { ...device, nics };
   });
   return { topology: { devices: leased, connections }, leases, unserved, pools: states, rivals, warnings };
