@@ -9,6 +9,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { useNetworkStore } from '@/store/networkStore';
 import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
+import { resolveDhcp } from '@/engine';
 import ImportExportModal from './ImportExportModal';
 
 vi.mock('sonner', () => ({
@@ -118,5 +119,116 @@ describe('ImportExportModal — the buttons at the bottom', () => {
     );
     expect(icon?.parentElement).toBe(button);
     expect(icon?.getAttribute('style')).toBeNull();
+  });
+});
+
+describe('ImportExportModal — importing a YAML file', () => {
+  const YAML_FILE = [
+    'pixelcake:',
+    '  devices:',
+    '    - name: FW',
+    '      type: Firewall',
+    '      ports:',
+    '        - id: 1',
+    '          ip: 192.168.50.1',
+    '          subnet: 255.255.255.0',
+    '          dhcp_server:',
+    '            start: 192.168.50.100',
+    '            end: 192.168.50.110',
+    '        - id: 2',
+    '          ip: 203.0.113.2',
+    '          nat: true',
+    '      routes:',
+    '        - destination: 10.0.0.0/8',
+    '          via: 192.168.50.254',
+    '      firewall_rules:',
+    '        - action: allow',
+    '          service: web',
+    '          from: any',
+    '          to: 192.168.50.20',
+    '      port_forwards:',
+    '        - service: web',
+    '          interface: 2',
+    '          to: 192.168.50.20',
+    '    - name: Portatile',
+    '      type: PC',
+    '      nics:',
+    '        - name: eth0',
+    '          dhcp: true',
+    '  connections:',
+    '    - source: Portatile',
+    '      target: FW',
+    '      source_nic: eth0',
+    '      target_port: 1',
+  ].join('\n');
+
+  const devices = () => useNetworkStore.getState().devices;
+  const named = (label: string) => devices().find(d => d.label === label);
+
+  /** Open the import tab and hand it the file, as choosing it in the file dialog does */
+  async function chooseFile() {
+    render(<ImportExportModal />);
+    fireEvent.click(screen.getByRole('button', { name: /Import$/ }));
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+    if (!input) throw new Error('no file input');
+    const file = new File([YAML_FILE], 'rete.yaml', { type: 'text/yaml' });
+    fireEvent.change(input, { target: { files: [file] } });
+    await screen.findByText('Dispositivi trovati');
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    createNewProject({ name: 'Sede Milano' });
+    useNetworkStore.getState().addDevice({
+      type: 'PC',
+      label: 'PC-1',
+      ip: '192.168.1.10',
+      subnet: '255.255.255.0',
+      gateway: '192.168.1.1',
+      position: { x: 0, y: 0 },
+    });
+    useUIStore.setState(state => ({ modals: { ...state.modals, importExport: true } }));
+    vi.clearAllMocks();
+  });
+
+  it('lists what it found: a device on DHCP says so in place of an address', async () => {
+    await chooseFile();
+    const rows = Array.from(document.querySelectorAll('.settings-content span'))
+      .map(span => span.textContent)
+      .filter(Boolean);
+    expect(rows).toEqual(expect.arrayContaining(['FW', 'Firewall', 'Portatile', 'PC', 'DHCP']));
+  });
+
+  it('replacing the drawing keeps routes, rules, forwards and DHCP', async () => {
+    await chooseFile();
+    fireEvent.click(screen.getByRole('button', { name: 'Importa' }));
+    expect(devices().map(d => d.label)).toEqual(['FW', 'Portatile']);
+    expect(named('FW')).toMatchObject({
+      routes: [{ destination: '10.0.0.0/8', nextHop: '192.168.50.254' }],
+      firewallRules: [{ action: 'allow', service: 'web', destination: '192.168.50.20' }],
+      portForwards: [{ service: 'web', port: 2, to: '192.168.50.20' }],
+    });
+    expect(named('FW')?.ports?.[0].dhcpServer).toEqual({ start: '192.168.50.100', end: '192.168.50.110' });
+    expect(named('Portatile')?.nics?.[0]).toMatchObject({ dhcp: true, ip: '' });
+  });
+
+  it('adding to the drawing keeps them too', async () => {
+    await chooseFile();
+    fireEvent.click(screen.getByLabelText('Aggiungi alla topologia'));
+    fireEvent.click(screen.getByRole('button', { name: 'Importa' }));
+    expect(devices().map(d => d.label)).toEqual(['PC-1', 'FW', 'Portatile']);
+    expect(named('FW')).toMatchObject({
+      routes: [{ destination: '10.0.0.0/8', nextHop: '192.168.50.254' }],
+      firewallRules: [{ action: 'allow', service: 'web', destination: '192.168.50.20' }],
+      portForwards: [{ service: 'web', port: 2, to: '192.168.50.20' }],
+    });
+    expect(named('FW')?.ports?.[0].dhcpServer).toEqual({ start: '192.168.50.100', end: '192.168.50.110' });
+    expect(named('FW')?.ports?.[1].nat).toBe(true);
+    expect(named('Portatile')?.nics?.[0]).toMatchObject({ dhcp: true, ip: '' });
+    // the cable came with its two ends, so the laptop is served at once
+    const { connections } = useNetworkStore.getState();
+    expect(resolveDhcp({ devices: devices(), connections }).leases.map(lease => lease.ip)).toEqual([
+      '192.168.50.100',
+    ]);
   });
 });

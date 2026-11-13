@@ -5,6 +5,7 @@
  */
 
 import type {
+  DhcpPool,
   FirewallRule,
   NetworkDevice,
   NetworkConnection,
@@ -34,6 +35,20 @@ function indent(level: number): string {
   return '  '.repeat(level);
 }
 
+/**
+ * The DHCP server of an interface (a port, or a card of a server) as YAML
+ * lines: the range it hands out, and the gateway when one is written
+ */
+function serializePool(pool: DhcpPool, level: number): string[] {
+  const lines = [
+    `${indent(level)}  dhcp_server:`,
+    `${indent(level)}    start: ${yamlValue(pool.start)}`,
+    `${indent(level)}    end: ${yamlValue(pool.end)}`,
+  ];
+  if (pool.gateway) lines.push(`${indent(level)}    gateway: ${yamlValue(pool.gateway)}`);
+  return lines;
+}
+
 /** Serialize a port to YAML lines */
 function serializePort(port: Port, level: number): string[] {
   const lines: string[] = [];
@@ -53,6 +68,7 @@ function serializePort(port: Port, level: number): string[] {
   }
   if (port.poe) lines.push(`${indent(level)}  poe: true`);
   if (port.nat) lines.push(`${indent(level)}  nat: true`);
+  if (port.dhcpServer) lines.push(...serializePool(port.dhcpServer, level));
   if (port.securityZone) lines.push(`${indent(level)}  security_zone: ${yamlValue(port.securityZone)}`);
   if (port.ips) lines.push(`${indent(level)}  ips: true`);
   if (port.description) lines.push(`${indent(level)}  description: ${yamlValue(port.description)}`);
@@ -64,9 +80,16 @@ function serializeNic(nic: NetworkInterfaceCard, level: number): string[] {
   const lines: string[] = [];
   lines.push(`${indent(level)}- name: ${yamlValue(nic.name)}`);
   lines.push(`${indent(level)}  enabled: ${nic.enabled}`);
-  if (nic.ip) lines.push(`${indent(level)}  ip: ${yamlValue(nic.ip)}`);
-  if (nic.subnet) lines.push(`${indent(level)}  subnet: ${yamlValue(nic.subnet)}`);
-  if (nic.gateway) lines.push(`${indent(level)}  gateway: ${yamlValue(nic.gateway)}`);
+  if (nic.dhcp) {
+    // The address comes from a DHCP server: the file says so, and never
+    // the address the card happens to be leased
+    lines.push(`${indent(level)}  dhcp: true`);
+  } else {
+    if (nic.ip) lines.push(`${indent(level)}  ip: ${yamlValue(nic.ip)}`);
+    if (nic.subnet) lines.push(`${indent(level)}  subnet: ${yamlValue(nic.subnet)}`);
+    if (nic.gateway) lines.push(`${indent(level)}  gateway: ${yamlValue(nic.gateway)}`);
+    if (nic.dhcpServer) lines.push(...serializePool(nic.dhcpServer, level));
+  }
   if (nic.speed) lines.push(`${indent(level)}  speed: ${yamlValue(nic.speed)}`);
   if (nic.mac) lines.push(`${indent(level)}  mac: ${yamlValue(nic.mac)}`);
   if (nic.description) lines.push(`${indent(level)}  description: ${yamlValue(nic.description)}`);
@@ -114,9 +137,12 @@ function serializeDevice(device: NetworkDevice, level: number): string[] {
   lines.push(`${indent(level)}  type: ${yamlValue(device.type)}`);
   // The template tells specializations of one type apart (Mail Server vs Server)
   if (device.templateId) lines.push(`${indent(level)}  template_id: ${yamlValue(device.templateId)}`);
-  if (device.ip) lines.push(`${indent(level)}  ip: ${yamlValue(device.ip)}`);
-  if (device.subnet) lines.push(`${indent(level)}  subnet: ${yamlValue(device.subnet)}`);
-  if (device.gateway) lines.push(`${indent(level)}  gateway: ${yamlValue(device.gateway)}`);
+  // (a device whose first card is on DHCP has no addressing of its own to write)
+  if (device.nics?.[0]?.dhcp !== true) {
+    if (device.ip) lines.push(`${indent(level)}  ip: ${yamlValue(device.ip)}`);
+    if (device.subnet) lines.push(`${indent(level)}  subnet: ${yamlValue(device.subnet)}`);
+    if (device.gateway) lines.push(`${indent(level)}  gateway: ${yamlValue(device.gateway)}`);
+  }
   if (device.vendor) lines.push(`${indent(level)}  vendor: ${yamlValue(device.vendor)}`);
   if (device.location) lines.push(`${indent(level)}  location: ${yamlValue(device.location)}`);
 

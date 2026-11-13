@@ -176,6 +176,9 @@ const ImportExportModal = () => {
           portCount: device.portCount,
           ports: device.ports,
           nics: device.nics,
+          routes: device.routes,
+          firewallRules: device.firewallRules,
+          portForwards: device.portForwards,
         });
         // Get the newly created device (last one in array)
         const newDevices = useNetworkStore.getState().devices;
@@ -567,7 +570,7 @@ const ImportTab = ({
                   <span style={{ color: 'var(--text-color)' }}>{d.label}</span>
                   <div style={{ display: 'flex', gap: '12px', color: 'var(--text-color-light)', fontSize: '0.9em' }}>
                     <span>{d.type}</span>
-                    {d.ip && <span>{d.ip}</span>}
+                    {d.nics?.[0]?.dhcp ? <span>DHCP</span> : d.ip && <span>{d.ip}</span>}
                   </div>
                 </div>
               ))}

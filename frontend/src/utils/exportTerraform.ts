@@ -61,6 +61,7 @@ function generatePortBlocks(device: NetworkDevice): string {
     if (port.portType) entries.push(['mode', port.portType]);
     if (port.poe) entries.push(['poe', true]);
     if (port.nat) entries.push(['nat', true]);
+    if (port.dhcpServer) entries.push(['dhcp_pool', `${port.dhcpServer.start}-${port.dhcpServer.end}`]);
     if (port.securityZone) entries.push(['security_zone', port.securityZone]);
     if (port.ips) entries.push(['ips_enabled', true]);
 
@@ -99,6 +100,9 @@ function generateNicBlocks(device: NetworkDevice): string {
       ['speed', nic.speed || 'auto'],
     ];
 
+    // A card on DHCP has no address of its own; a server's card may hand some out
+    if (nic.dhcp) entries.push(['dhcp', true]);
+    if (nic.dhcpServer) entries.push(['dhcp_pool', `${nic.dhcpServer.start}-${nic.dhcpServer.end}`]);
     if (nic.mac) entries.push(['mac_address', nic.mac]);
     if (nic.description) entries.push(['description', nic.description]);
 

@@ -5,6 +5,7 @@
 
 import YAML from 'yaml';
 import type {
+  DhcpPool,
   FirewallRule,
   NetworkDevice,
   NetworkConnection,
@@ -26,6 +27,28 @@ function isValidIP(ip: string): boolean {
   return /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip);
 }
 
+/**
+ * The DHCP server of an interface (`dhcp_server`: `start`, `end` and, when
+ * one is handed out, `gateway`). Without both ends of the range it is left
+ * out with a warning. `where` names the interface: `Port 2`, `FW: eth0`.
+ */
+function parsePool(value: unknown, where: string, warnings: string[]): DhcpPool | undefined {
+  if (value === undefined || value === null) return undefined;
+  const data = typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  // String(): YAML reads a bare number where an address was mistyped
+  const start = data.start === undefined || data.start === null ? '' : String(data.start);
+  const end = data.end === undefined || data.end === null ? '' : String(data.end);
+  if (!start || !end) {
+    warnings.push(`${where}: server DHCP senza primo o ultimo indirizzo, ignorato`);
+    return undefined;
+  }
+  const pool: DhcpPool = { start, end };
+  if (data.gateway !== undefined && data.gateway !== null && data.gateway !== '') {
+    pool.gateway = String(data.gateway);
+  }
+  return pool;
+}
+
 /** Parse a port from YAML data */
 function parsePort(data: Record<string, unknown>, warnings: string[]): Port {
   const port: Port = {
@@ -43,6 +66,8 @@ function parsePort(data: Record<string, unknown>, warnings: string[]): Port {
   if (typeof data.mode === 'string') port.portType = data.mode as Port['portType'];
   if (typeof data.poe === 'boolean') port.poe = data.poe;
   if (typeof data.nat === 'boolean') port.nat = data.nat;
+  const pool = parsePool(data.dhcp_server, `Port ${port.id}`, warnings);
+  if (pool) port.dhcpServer = pool;
   if (typeof data.security_zone === 'string') port.securityZone = data.security_zone as Port['securityZone'];
   if (typeof data.ips === 'boolean') port.ips = data.ips;
   if (typeof data.description === 'string') port.description = data.description;
@@ -60,19 +85,37 @@ function parsePort(data: Record<string, unknown>, warnings: string[]): Port {
   return port;
 }
 
-/** Parse a NIC from YAML data */
-function parseNic(data: Record<string, unknown>, index: number): NetworkInterfaceCard {
-  return {
+/**
+ * Parse a NIC from YAML data. A card with `dhcp: true` takes its address
+ * from a DHCP server: whatever address the file writes next to it is not
+ * read, and neither is a `dhcp_server` (a card cannot do both).
+ */
+function parseNic(
+  data: Record<string, unknown>,
+  index: number,
+  deviceName: string,
+  warnings: string[]
+): NetworkInterfaceCard {
+  const name = typeof data.name === 'string' ? data.name : `eth${index}`;
+  const automatic = data.dhcp === true;
+  const nic: NetworkInterfaceCard = {
     id: `nic-${index + 1}`,
-    name: typeof data.name === 'string' ? data.name : `eth${index}`,
+    name,
     enabled: data.enabled !== false,
     speed: (typeof data.speed === 'string' ? data.speed : 'auto') as NetworkInterfaceCard['speed'],
-    ip: typeof data.ip === 'string' ? data.ip : '',
-    subnet: typeof data.subnet === 'string' ? data.subnet : '',
-    gateway: typeof data.gateway === 'string' ? data.gateway : '',
+    ip: !automatic && typeof data.ip === 'string' ? data.ip : '',
+    subnet: !automatic && typeof data.subnet === 'string' ? data.subnet : '',
+    gateway: !automatic && typeof data.gateway === 'string' ? data.gateway : '',
     mac: typeof data.mac === 'string' ? data.mac : undefined,
     description: typeof data.description === 'string' ? data.description : undefined,
   };
+  if (automatic) {
+    nic.dhcp = true;
+    return nic;
+  }
+  const pool = parsePool(data.dhcp_server, `${deviceName}: ${name}`, warnings);
+  if (pool) nic.dhcpServer = pool;
+  return nic;
 }
 
 /**
@@ -318,7 +361,12 @@ export function parseYamlTopology(content: string): ImportResult {
     if (Array.isArray(d.nics)) {
       device.nics = d.nics
         .filter((n): n is Record<string, unknown> => n !== null && typeof n === 'object')
-        .map((n, idx) => parseNic(n, idx));
+        .map((n, idx) => parseNic(n, idx, name, warnings));
+      // A first card on DHCP: the device has no address of its own
+      if (device.nics[0]?.dhcp) {
+        device.ip = '';
+        device.gateway = '';
+      }
     }
 
     // Static routes, firewall rules and port forwards

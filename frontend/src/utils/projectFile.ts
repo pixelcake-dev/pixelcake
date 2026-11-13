@@ -17,7 +17,7 @@ import type {
   StoredCanvas,
 } from '@/types';
 import { PROJECT_FILE_FORMAT, PROJECT_FILE_VERSION } from '@/types';
-import { mirrorPrimaryNic, normalizeBindings } from '@/engine';
+import { normalizeAddressing, normalizeBindings } from '@/engine';
 import { cleanupConnections } from '@/utils/cleanupConnections';
 
 export const PROJECT_FILE_EXTENSION = '.pixelcake.json';
@@ -131,6 +131,7 @@ const DEVICE_KEYS = [
 const ROUTE_KEYS = ['id', 'destination', 'nextHop', 'description'];
 const RULE_KEYS = ['id', 'action', 'service', 'source', 'destination', 'enabled', 'description'];
 const FORWARD_KEYS = ['id', 'service', 'port', 'to', 'enabled', 'description'];
+const POOL_KEYS = ['start', 'end', 'gateway'];
 const PORT_KEYS = [
   'id',
   'name',
@@ -143,6 +144,7 @@ const PORT_KEYS = [
   'ip',
   'subnet',
   'nat',
+  'dhcpServer',
   'securityZone',
   'ips',
 ];
@@ -154,6 +156,8 @@ const NIC_KEYS = [
   'ip',
   'subnet',
   'gateway',
+  'dhcp',
+  'dhcpServer',
   'mac',
   'description',
 ];
@@ -240,10 +244,10 @@ function ordered(
   return out;
 }
 
-function each(keys: readonly string[]): Reorder {
+function each(keys: readonly string[], nested: Record<string, Reorder> = {}): Reorder {
   return value =>
     Array.isArray(value)
-      ? value.map(item => (isRecord(item) ? ordered(item, keys) : item))
+      ? value.map(item => (isRecord(item) ? ordered(item, keys, nested) : item))
       : sortDeep(value);
 }
 
@@ -251,11 +255,14 @@ function one(keys: readonly string[]): Reorder {
   return value => (isRecord(value) ? ordered(value, keys) : value);
 }
 
+/** The DHCP server of an interface, a port or a card: its range, then its gateway */
+const INTERFACE_NESTED: Record<string, Reorder> = { dhcpServer: one(POOL_KEYS) };
+
 const DEVICE_NESTED: Record<string, Reorder> = {
   position: one(['x', 'y']),
   stp: one(['enabled', 'mode', 'priority']),
-  ports: each(PORT_KEYS),
-  nics: each(NIC_KEYS),
+  ports: each(PORT_KEYS, INTERFACE_NESTED),
+  nics: each(NIC_KEYS, INTERFACE_NESTED),
   routes: each(ROUTE_KEYS),
   firewallRules: each(RULE_KEYS),
   portForwards: each(FORWARD_KEYS),
@@ -375,6 +382,37 @@ function isForward(value: unknown): boolean {
   );
 }
 
+/** A DHCP pool the engine can read: a first and a last address, and a gateway or none, all text */
+function isPool(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    isText(value.start) &&
+    isText(value.end) &&
+    (value.gateway === undefined || isText(value.gateway))
+  );
+}
+
+/**
+ * The ports or the cards of a device without what the engine could not read
+ * of DHCP: a pool that is not one, a `dhcp` that is not yes or no. The SAME
+ * list when there is nothing to drop.
+ */
+function withReadableDhcp(interfaces: unknown[]): unknown[] {
+  let changed = false;
+  const kept = interfaces.map(entry => {
+    if (!isRecord(entry)) return entry;
+    const badPool = entry.dhcpServer !== undefined && !isPool(entry.dhcpServer);
+    const badFlag = entry.dhcp !== undefined && typeof entry.dhcp !== 'boolean';
+    if (!badPool && !badFlag) return entry;
+    changed = true;
+    const copy: JsonObject = { ...entry };
+    if (badPool) delete copy.dhcpServer;
+    if (badFlag) delete copy.dhcp;
+    return copy;
+  });
+  return changed ? kept : interfaces;
+}
+
 function parseDevices(list: unknown[], where: string, warnings: string[]): NetworkDevice[] {
   const devices: NetworkDevice[] = [];
   const seen = new Set<string>();
@@ -417,6 +455,15 @@ function parseDevices(list: unknown[], where: string, warnings: string[]): Netwo
       else delete device[key];
       fixed = true;
     }
+    // DHCP on a port or on a card: what the engine could not read is dropped
+    for (const key of ['ports', 'nics'] as const) {
+      const interfaces = device[key];
+      if (!Array.isArray(interfaces)) continue;
+      const readable = withReadableDhcp(interfaces);
+      if (readable === interfaces) continue;
+      device[key] = readable;
+      fixed = true;
+    }
     // Routes, firewall rules and port forwards: an entry the engine could
     // not read is dropped
     for (const [key, isComplete] of [
@@ -448,8 +495,9 @@ function parseDevices(list: unknown[], where: string, warnings: string[]): Netwo
     );
   }
 
-  // A file written before interface addressing may carry a stale mirror
-  return devices.map(mirrorPrimaryNic);
+  // A file written before interface addressing may carry a stale mirror, and
+  // a card set to DHCP an address it does not use
+  return devices.map(normalizeAddressing);
 }
 
 function parseConnections(

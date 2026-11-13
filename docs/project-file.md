@@ -135,7 +135,7 @@ item never takes the id of an existing one.
 | `type` | string | Device type, e.g. `PC`, `Switch`, `Router`, `Server`, `Firewall`, `AccessPoint`, `LoadBalancer`, `Database`, `Cloud`. |
 | `templateId` | string | Optional. Template the device was created from (icon and display name). |
 | `label` | string | Name of the device. |
-| `ip`, `subnet`, `gateway` | string | Device-level address. For a device with NICs these mirror its first NIC. |
+| `ip`, `subnet`, `gateway` | string | Device-level address. For a device with NICs these mirror its first NIC; `ip` and `gateway` are empty when that NIC takes its address from DHCP. |
 | `vendor`, `location` | string | Optional. |
 | `position` | object | `x`, `y` on the canvas. |
 | `vlan` | integer[] | Optional. VLAN ids the device carries. |
@@ -161,6 +161,7 @@ Port:
 | `description` | string | Optional. |
 | `ip`, `subnet` | string | Optional. Layer 3 address of the port (routers, firewalls). |
 | `nat` | boolean | Optional (routers, firewalls). Source NAT: a new flow the device forwards out of this port leaves with the address of the port, and its reply is sent on to the real sender. |
+| `dhcpServer` | object | Optional (routers, firewalls). DHCP server for the network of this port: the pool it hands out, see below. |
 | `securityZone` | `trust`, `untrust`, `dmz` | Optional (firewalls). The zone the firewall policy and rules refer to. |
 | `ips` | boolean | Optional (firewalls). Kept as documentation. |
 
@@ -172,8 +173,24 @@ NIC:
 | `name` | string | Interface name, e.g. `eth0`. |
 | `enabled` | boolean | Administrative state. |
 | `speed` | `10M`, `100M`, `1G`, `2.5G`, `10G`, `auto` | Link speed. |
-| `ip`, `subnet`, `gateway` | string | Address of the interface. |
+| `ip`, `subnet`, `gateway` | string | Address of the interface. Empty while `dhcp` is `true`. |
+| `dhcp` | boolean | Optional. `true`: the card takes its address, mask and gateway from the DHCP server of its network, and keeps none of its own. |
+| `dhcpServer` | object | Optional (servers). DHCP server for the network of this card: the pool it hands out, see below. Not on a card whose `dhcp` is `true`. |
 | `mac`, `description` | string | Optional. |
+
+DHCP pool (`dhcpServer` of a port or of a NIC):
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `start` | string | First address of the range handed out. |
+| `end` | string | Last address of the range. Both must be in the network of the interface. |
+| `gateway` | string | Optional. Gateway handed out with the address. Without it: the address of the port itself on a router or firewall, none on a server. |
+
+The mask handed out is the one of the interface. **A lease is never written
+in the file**: which card gets which address is worked out from the drawing
+each time, in the order of the `devices` array and, within a device, of its
+`nics`. Each card gets the lowest address of the range that is not written on
+any port or NIC of the canvas and is not leased already.
 
 Route:
 
@@ -286,6 +303,7 @@ Everything else is repaired, and each repair is reported to the user:
 | A device that is not an object, has no `id` or `type`, or repeats an `id` | Dropped. |
 | A device without `label`, `ip`, `subnet`, `gateway` or `position`, or with invalid entries in `ports` / `nics` | Completed: `label` becomes the id, addresses become empty, `position` becomes `0, 0`, invalid interface entries are dropped. |
 | A route without `id`, `destination` or `nextHop`; a rule without `id`, with an `action` other than `allow` / `deny`, an unknown `service`, or no `source` / `destination`; a port forward without `id`, with an unknown `service`, a `port` that is not an integer, or no `to` | Dropped: the other routes, rules and forwards keep their order. |
+| A `dhcpServer` that is not an object, or without `start` or `end` as text, or with a `gateway` that is not text; a `dhcp` that is not a boolean | Dropped: the port or NIC keeps everything else. |
 | A connection that is not an object or has no `id`, `source` or `target` | Dropped. |
 | Connections sharing an `id` | The first one is kept. |
 | A connection whose `source` or `target` is not a device of the canvas | Dropped. |
@@ -293,8 +311,8 @@ Everything else is repaired, and each repair is reported to the user:
 | No `templates` | None. |
 | A template missing a required field | Dropped. |
 
-Two normalisations are applied silently, so that files written by earlier
-versions keep working:
+Three normalisations are applied silently, so that files written by earlier
+versions (or by hand) keep working:
 
 - a connection end attached to a port or NIC its device does not have, or to
   an interface already used by an earlier connection, is detached; then every
@@ -304,7 +322,10 @@ versions keep working:
   device has no free interface, or is a firewall whose ports carry security
   zones: choosing the port there is choosing a policy;
 - the device-level `ip`, `subnet` and `gateway` of a device with NICs are set
-  from its first NIC.
+  from its first NIC;
+- a NIC whose `dhcp` is `true` loses whatever `ip`, `subnet` and `gateway`
+  it carries: they are not used while it is on DHCP, and could be mistaken
+  for the address it is leased.
 
 A file that is already in this form is read back exactly as it was written.
 
