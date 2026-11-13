@@ -54,7 +54,12 @@ export const InlineEdit = ({
       onDoubleClick={e => e.stopPropagation()}
       onKeyDown={e => {
         if (e.key === 'Enter') finish(true);
-        if (e.key === 'Escape') finish(false);
+        if (e.key === 'Escape') {
+          // The press is used up here: it cancels the edit and nothing else
+          // (it does not also close a window, see useEscapeToClose)
+          e.preventDefault();
+          finish(false);
+        }
       }}
       onBlur={() => finish(true)}
     />

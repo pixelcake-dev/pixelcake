@@ -48,6 +48,15 @@ describe('InlineEdit', () => {
     expect(onCommit).not.toHaveBeenCalled();
   });
 
+  it('Escape is used up by the edit: the press is marked, Enter and other keys are not', () => {
+    const { input } = setup();
+
+    // fireEvent tells with `false` that the event was marked (preventDefault):
+    // that mark is what keeps a window from closing on the same press
+    expect(fireEvent.keyDown(input, { key: 'a' })).toBe(true);
+    expect(fireEvent.keyDown(input, { key: 'Escape' })).toBe(false);
+  });
+
   it('leaving the field confirms', () => {
     const { input, onCommit } = setup();
 

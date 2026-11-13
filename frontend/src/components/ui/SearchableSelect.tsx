@@ -2,6 +2,7 @@ import { useState, useEffect, useId, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Scrollbars } from 'react-custom-scrollbars-2';
 import { SearchInput } from './SearchInput';
+import { useEscapeToClose } from './useEscapeToClose';
 
 interface SearchableSelectProps {
   label?: string;
@@ -62,6 +63,12 @@ const SearchableSelect = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
+
+  // Esc closes the list, before the window the select is in (if it is in one)
+  useEscapeToClose(isOpen, () => {
+    setIsOpen(false);
+    setSearchTerm('');
+  });
 
   const handleSelect = (optionValue: string) => {
     onChange(optionValue);

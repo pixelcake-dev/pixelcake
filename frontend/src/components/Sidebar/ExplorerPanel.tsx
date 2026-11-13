@@ -251,6 +251,8 @@ const ExplorerPanel = () => {
               onKeyDown={e => {
                 if (e.key === 'Enter') handleCreateCanvas();
                 if (e.key === 'Escape') {
+                  // The press is used up here, as in an edit in place
+                  e.preventDefault();
                   setShowNewCanvasInput(false);
                   setNewCanvasName('');
                 }

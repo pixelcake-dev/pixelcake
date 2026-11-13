@@ -730,8 +730,8 @@ describe('ExportImageModal — while presenting', () => {
     expect(presentation().active).toBe(false);
   });
 
-  it('Esc with the dialog open never leaves the presentation, whoever hears the key first', async () => {
-    // the dialog listens before the bar does (the other order is the usual one, above)
+  it('Esc with the dialog open never leaves the presentation, whichever was on screen first', async () => {
+    // the dialog is open before the bar is there (the other order is the usual one, above)
     render(<ExportImageModal />);
     await openDialog();
     act(() => presentation().enter());

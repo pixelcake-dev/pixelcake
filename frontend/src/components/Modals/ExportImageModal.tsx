@@ -234,18 +234,6 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
     return () => clearTimeout(timer);
   }, [copied]);
 
-  // Esc closes the dialog, and nothing else (while presenting the same key
-  // leaves the presentation)
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      event.stopImmediatePropagation();
-      onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
-
   const handleSave = async () => {
     const content = format === 'svg' ? svgBlob(image.svg) : pngBlob;
     if (!content) return;

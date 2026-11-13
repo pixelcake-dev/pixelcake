@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { ChevronDown } from 'lucide-react';
 import { COMMON_NETWORK_ICONS } from '@/data/commonIcons';
+import { useEscapeToClose } from './useEscapeToClose';
 
 interface IconPickerProps {
   value: string;
@@ -57,6 +58,9 @@ const IconPicker = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
+
+  // Esc closes the list of icons, before the window the picker is in
+  useEscapeToClose(isOpen, () => setIsOpen(false));
 
   // Filter icons based on search query
   const filteredIcons = COMMON_NETWORK_ICONS.filter((icon) => {

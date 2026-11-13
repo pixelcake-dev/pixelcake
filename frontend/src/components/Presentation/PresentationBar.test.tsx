@@ -149,6 +149,35 @@ describe('PresentationBar', () => {
       expect(presentation().active).toBe(false);
     });
 
+    it('a press that something else already used is not ours', () => {
+      render(
+        <>
+          <PresentationBar />
+          {/* stands for whatever closes on Esc and marks the press as used */}
+          <div
+            data-testid="uses-esc"
+            onKeyDown={event => {
+              if (event.key === 'Escape') event.preventDefault();
+            }}
+          />
+        </>
+      );
+
+      fireEvent.keyDown(screen.getByTestId('uses-esc'), { key: 'Escape' });
+      expect(presentation().active).toBe(true);
+    });
+
+    it('a key held down is not a second press', () => {
+      render(<PresentationBar />);
+      act(() => presentation().openMenu({ kind: 'device', id: 'dev-0', x: 1, y: 1 }));
+
+      // the press closes the menu; holding the key does not go on to leave
+      fireEvent.keyDown(document.body, { key: 'Escape' });
+      fireEvent.keyDown(document.body, { key: 'Escape', repeat: true });
+      expect(presentation().menu).toBeNull();
+      expect(presentation().active).toBe(true);
+    });
+
     it('other keys do nothing', () => {
       render(<PresentationBar />);
       fireEvent.keyDown(document.body, { key: 'Enter' });

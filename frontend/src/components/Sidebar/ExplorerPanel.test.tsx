@@ -186,7 +186,11 @@ describe('ExplorerPanel', () => {
       expect(canvasNames()).toEqual(['Canvas 1']);
 
       fireEvent.change(screen.getByLabelText('Nome del nuovo canvas'), { target: { value: 'X' } });
-      fireEvent.keyDown(screen.getByLabelText('Nome del nuovo canvas'), { key: 'Escape' });
+      // the press is used up by the field (marked: `false`), so that it cancels
+      // the new canvas and nothing else
+      expect(
+        fireEvent.keyDown(screen.getByLabelText('Nome del nuovo canvas'), { key: 'Escape' })
+      ).toBe(false);
       expect(canvasNames()).toEqual(['Canvas 1']);
       expect(screen.queryByLabelText('Nome del nuovo canvas')).toBeNull();
       expect(screen.getByText('Nuovo Canvas')).toBeInTheDocument();

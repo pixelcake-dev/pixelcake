@@ -65,10 +65,12 @@ const PresentationBar = () => {
 
   // Esc: close the small menu if it is open, else leave the presentation.
   // While something else has the keyboard (a field, a window such as the
-  // terminal) the key is not ours.
+  // terminal) the key is not ours. Nor is a press that was already used (a
+  // window that closed on it), or the same press going on: a key held down
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
+      if (event.defaultPrevented || event.repeat) return;
       const presentation = usePresentationStore.getState();
       if (presentation.menu) {
         presentation.closeMenu();
