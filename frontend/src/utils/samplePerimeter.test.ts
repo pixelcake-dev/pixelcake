@@ -9,6 +9,7 @@ import { createPerimeterSample } from './samplePerimeter';
 import { isValidIP, isValidMAC } from './ipHelpers';
 import {
   boundInterface,
+  describeForward,
   formatNetwork,
   isVlanAware,
   normalizeBindings,
@@ -75,6 +76,11 @@ describe('createPerimeterSample — structure', () => {
     expect(isVlanAware(device('SW-DMZ'))).toBe(false);
     expect(device('FW-Edge').ports?.map(p => p.securityZone)).toEqual(['trust', 'dmz', 'untrust', undefined]);
     expect(device('FW-Edge').firewallRules).toHaveLength(1);
+    // NAT on the port that faces the Internet, and the public site published there
+    expect(device('FW-Edge').ports?.map(p => p.nat === true)).toEqual([false, false, true, false]);
+    expect(device('FW-Edge').portForwards?.map(describeForward)).toEqual([
+      'forward web from interface 3 to 172.16.0.10',
+    ]);
   });
 
   it('gives the two routing devices the tables a person would expect', () => {
@@ -153,11 +159,35 @@ describe('createPerimeterSample — the questions it answers', () => {
     );
   });
 
-  it('the outside cannot ping the public server: the rule is for web', () => {
+  it('the outside reaches the public site at the public address of the firewall', () => {
+    const result = ask('web', 'Remote-PC', 'Web-Public');
+    expect(result.legs[0].trace.targetIp).toBe('203.0.113.1');
+    expect(requestPath(result)).toEqual([
+      'Remote-PC',
+      'Internet (Internet is not simulated: traffic assumed to pass)',
+      'FW-Edge (NAT: destination 203.0.113.1 → 172.16.0.10 (port forward 1); ' +
+        'routed: 172.16.0.0/24 is on port 2; ' +
+        'firewall FW-Edge: allowed by rule 1 (allow web from untrust to 172.16.0.10))',
+      'SW-DMZ',
+      'Web-Public',
+    ]);
+    expect(result.notes[0]).toBe(
+      'HTTP request: Web-Public is behind NAT: reached at 203.0.113.1, where FW-Edge publishes it (port forward 1)'
+    );
+  });
+
+  it('the inside goes out with that same address', () => {
+    const result = ask('ping', 'PC-Uffici-1', 'Remote-PC');
+    expect(result.legs[0].trace.seenSourceIp).toBe('203.0.113.1');
+    expect(result.legs[1].trace.reachedIp).toBe('192.168.10.11');
+  });
+
+  it('the outside cannot ping the public server: only web is published', () => {
     const result = ask('ping', 'Remote-PC', 'Web-Public');
     expect(result.verdict).toBe('blocked');
     expect(result.failureReason).toBe(
-      'request: firewall FW-Edge: no rule matches, zone policy untrust → dmz denied'
+      'request: Internet does not carry private addresses: 172.16.0.10 is not reachable from ' +
+        'outside: no port forward publishes it for ping'
     );
   });
 
@@ -165,7 +195,9 @@ describe('createPerimeterSample — the questions it answers', () => {
     for (const model of ['ping', 'web'] as const) {
       const result = ask(model, 'Remote-PC', 'Srv-Interno');
       expect(result.verdict).toBe('blocked');
-      expect(result.failureReason).toContain('zone policy untrust → trust denied');
+      expect(result.failureReason).toContain(
+        `192.168.20.10 is not reachable from outside: no port forward publishes it for ${model}`
+      );
     }
   });
 

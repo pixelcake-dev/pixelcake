@@ -25,6 +25,8 @@
  *  - FW-Edge has a port per zone and ONE rule: web from outside to Web-Public.
  *    Everything else follows the zone policy (inside can go out, outside
  *    cannot come in, the DMZ cannot reach the inside)
+ *  - FW-Edge does NAT on the port that faces the Internet, and one port
+ *    forward publishes Web-Public (web) at its public address, 203.0.113.1
  *
  * Devices have the shape AddDeviceModal produces. Positions are hand-placed,
  * top-down. The data is fully deterministic (fixed MACs) so tests can rely
@@ -121,10 +123,20 @@ export function createPerimeterSample(): {
       ports: ports(4, 'lan', {
         1: { name: 'Interno', ip: '10.0.0.2', subnet: P2P_MASK, securityZone: 'trust' },
         2: { name: 'DMZ', portType: 'dmz', ip: '172.16.0.1', subnet: MASK, securityZone: 'dmz' },
-        3: { name: 'Internet', portType: 'wan', ip: '203.0.113.1', subnet: MASK, securityZone: 'untrust' },
+        3: {
+          name: 'Internet',
+          portType: 'wan',
+          ip: '203.0.113.1',
+          subnet: MASK,
+          securityZone: 'untrust',
+          nat: true,
+        },
       }),
       routes: [
         { id: 'route-1', destination: '192.168.0.0/16', nextHop: '10.0.0.1', description: 'reti interne' },
+      ],
+      portForwards: [
+        { id: 'forward-1', service: 'web', port: 3, to: '172.16.0.10', description: 'sito pubblico' },
       ],
       firewallRules: [
         {

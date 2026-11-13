@@ -21,6 +21,7 @@ import {
   sanitizeBindings,
   withFailures,
 } from '@/engine';
+import { describeForward, forwardProblem, isPrivateAddress } from '@/engine';
 import type { Failures, FlowResult } from '@/engine';
 import type { FlowModelType, NetworkDevice } from '@/types';
 
@@ -53,6 +54,12 @@ const way = (result: FlowResult, leg = 0) => result.legs[leg].trace.hops.map(h =
 
 const table = (label: string) =>
   routingTable(device(label)).map(e => [formatNetwork(e.network), e.kind, e.nextHop ?? '-', e.out?.iface?.label]);
+
+/** The public addresses a device has on its ports and cards */
+const ownedPublic = (d: NetworkDevice): string[] =>
+  [...(d.ports ?? []).map(p => p.ip ?? ''), ...(d.nics ?? []).map(n => n.ip)].filter(
+    ip => ip !== '' && !isPrivateAddress(ip)
+  );
 
 const OFFICES = ['PC-Contabilità', 'PC-Vendite', 'Stampante'];
 const WIFI = ['Portatile-1', 'Portatile-2'];
@@ -169,6 +176,23 @@ describe('createCompanySample — structure', () => {
       'allow email untrust > 192.168.30.40',
       'allow web 172.16.0.10 > 192.168.30.20',
     ]);
+  });
+
+  it('does NAT on the port that faces the Internet, and publishes there what is reached from outside', () => {
+    const firewall = device('FW-Edge');
+    expect(firewall.ports?.map(p => p.nat === true)).toEqual([false, false, true, false]);
+    expect(firewall.portForwards?.map(describeForward)).toEqual([
+      'forward web from interface 3 to 172.16.0.10',
+      'forward email from interface 3 to 192.168.30.40',
+    ]);
+    for (const forward of firewall.portForwards ?? []) {
+      expect(forwardProblem(firewall, forward), forward.id).toBeUndefined();
+    }
+    // a forward says where the traffic goes: for each there is the rule that says it may
+    const allowed = firewall.firewallRules?.filter(r => r.source === 'untrust').map(r => `${r.service} ${r.destination}`);
+    expect(firewall.portForwards?.map(f => `${f.service} ${f.to}`)).toEqual(allowed);
+    // the address everything is published at is the only public one inside the company
+    expect(sample.devices.flatMap(d => (d.id === 'cliente-remoto' ? [] : ownedPublic(d)))).toEqual(['203.0.113.1']);
   });
 
   it('the rules of the firewall name devices that are there', () => {
@@ -322,30 +346,74 @@ describe('createCompanySample — the questions it answers', () => {
     ]);
   });
 
-  it('the inside reaches the outside, across the Internet symbol, which says it is assumed', () => {
+  it('the inside reaches the outside with the public address of the firewall, and the reply finds the PC', () => {
     const result = ask('ping', 'PC-Vendite', 'Cliente-Remoto');
     expect(result.verdict).toBe('success');
     expect(way(result)).toBe(
       'PC-Vendite > SW-Uffici > SW-Core > Router-Core > FW-Edge > Internet > Cliente-Remoto'
     );
+    expect(path(result)[4]).toBe(
+      'FW-Edge (routed: 203.0.113.0/24 is on port 3; ' +
+        'firewall FW-Edge: no rule matches, zone policy trust → untrust allowed; ' +
+        'NAT: source 192.168.10.12 → 203.0.113.1)'
+    );
+    expect(result.legs[0].trace.seenSourceIp).toBe('203.0.113.1');
     expect(result.notes).toContain('request: Internet is not simulated: traffic assumed to pass');
+
+    // the customer answers the firewall, which knows whom the answer is for
+    expect(result.legs[1].trace.targetIp).toBe('203.0.113.1');
+    expect(path(result, 1)[2]).toBe(
+      'FW-Edge (NAT: destination 203.0.113.1 → 192.168.10.12 (reply to a translated flow); ' +
+        'routed: 192.168.0.0/16 via 10.0.0.1 (port 1); ' +
+        'firewall FW-Edge: no rule matches, zone policy untrust → trust allowed (reply to an allowed flow))'
+    );
+    expect(way(result, 1)).toBe(
+      'Cliente-Remoto > Internet > FW-Edge > Router-Core > SW-Core > SW-Uffici > PC-Vendite'
+    );
   });
 
-  it('a customer outside opens the portal: the first rule of the firewall', () => {
+  it('every device inside goes out the same way: the customer only ever sees one address', () => {
+    for (const from of [...OFFICES, ...WIFI, ...SERVERS, 'Portale-Clienti']) {
+      const result = ask('ping', from, 'Cliente-Remoto');
+      expect(result.verdict, from).toBe('success');
+      expect(result.legs[0].trace.seenSourceIp, from).toBe('203.0.113.1');
+    }
+  });
+
+  it('a customer outside opens the portal at the public address: the first forward, the first rule', () => {
     const result = ask('web', 'Cliente-Remoto', 'Portale-Clienti');
     expect(result.verdict).toBe('success');
     expect(way(result)).toBe('Cliente-Remoto > Internet > FW-Edge > SW-DMZ > Portale-Clienti');
-    expect(result.notes).toContain(
-      'HTTP request: firewall FW-Edge: allowed by rule 1 (allow web from untrust to 172.16.0.10)'
+    expect(result.legs[0].trace.targetIp).toBe('203.0.113.1');
+    expect(result.legs[0].trace.reachedIp).toBe('172.16.0.10');
+    expect(path(result)[2]).toBe(
+      'FW-Edge (NAT: destination 203.0.113.1 → 172.16.0.10 (port forward 1); ' +
+        'routed: 172.16.0.0/24 is on port 2; ' +
+        'firewall FW-Edge: allowed by rule 1 (allow web from untrust to 172.16.0.10))'
     );
+    expect(result.notes).toEqual([
+      'HTTP request: Portale-Clienti is behind NAT: reached at 203.0.113.1, where FW-Edge publishes it (port forward 1)',
+      'HTTP request: Internet is not simulated: traffic assumed to pass',
+      'HTTP request: firewall FW-Edge: allowed by rule 1 (allow web from untrust to 172.16.0.10)',
+      'HTTP response: firewall FW-Edge: no rule matches, zone policy dmz → untrust allowed',
+      'HTTP response: Internet is not simulated: traffic assumed to pass',
+    ]);
+    // the page comes back from the address the customer asked
+    expect(result.legs[1].trace.seenSourceIp).toBe('203.0.113.1');
   });
 
-  it('the customer cannot ping the portal: the rule is for web', () => {
+  it('the customer cannot ping the portal: only web is published', () => {
     const result = ask('ping', 'Cliente-Remoto', 'Portale-Clienti');
     expect(result.verdict).toBe('blocked');
     expect(result.failureReason).toBe(
-      'request: firewall FW-Edge: no rule matches, zone policy untrust → dmz denied'
+      'request: Internet does not carry private addresses: 172.16.0.10 is not reachable from ' +
+        'outside: no port forward publishes it for ping'
     );
+    expect(path(result)).toEqual([
+      'Cliente-Remoto',
+      'Internet (Internet does not carry private addresses: 172.16.0.10 is not reachable from ' +
+        'outside: no port forward publishes it for ping)',
+    ]);
   });
 
   it('the customer reaches nothing inside: not the database, not the management software', () => {
@@ -353,14 +421,31 @@ describe('createCompanySample — the questions it answers', () => {
       for (const model of ['ping', 'web'] as const) {
         const result = ask(model, 'Cliente-Remoto', to);
         expect(result.verdict, `${model} > ${to}`).toBe('blocked');
-        expect(result.failureReason, `${model} > ${to}`).toContain('zone policy untrust → trust denied');
+        expect(result.failureReason, `${model} > ${to}`).toContain(
+          `is not reachable from outside: no port forward publishes it for ${model}`
+        );
+        // it does not get as far as the firewall
+        expect(way(result), `${model} > ${to}`).toBe('Cliente-Remoto > Internet');
       }
     }
   });
 
-  it('mail from outside comes in to the mail server, by the second rule, and goes on to the PC', () => {
+  it('the firewall itself answers the customer at its public address', () => {
+    const result = ask('ping', 'Cliente-Remoto', 'FW-Edge');
+    expect(result.verdict).toBe('success');
+    expect(result.legs[0].trace.targetIp).toBe('203.0.113.1');
+    expect(result.notes[0]).toBe(
+      'request: FW-Edge is reached from outside at 203.0.113.1, its public address'
+    );
+  });
+
+  it('mail from outside comes in to the mail server, by the second forward and rule, and goes on to the PC', () => {
     const result = ask('email', 'Cliente-Remoto', 'PC-Contabilità');
     expect(result.verdict).toBe('success');
+    expect(result.legs[0].trace.targetIp).toBe('203.0.113.1');
+    expect(result.notes).toContain(
+      'SMTP submit: Mail is behind NAT: reached at 203.0.113.1, where FW-Edge publishes it (port forward 2)'
+    );
     expect(way(result, 0)).toBe('Cliente-Remoto > Internet > FW-Edge > Router-Core > SW-Server > Mail');
     expect(way(result, 1)).toBe('Mail > SW-Server > Router-Core > SW-Core > SW-Uffici > PC-Contabilità');
     expect(result.notes).toContain(

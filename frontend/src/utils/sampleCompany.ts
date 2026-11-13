@@ -29,6 +29,10 @@
  *    from outside, mail comes in from outside, the portal reads its database.
  *    Everything else follows the zone policy (inside can go out, outside
  *    cannot come in, the DMZ cannot reach the inside)
+ *  - FW-Edge does NAT on the port that faces the Internet: what goes out
+ *    leaves with its public address, 203.0.113.1. Two port forwards publish
+ *    the portal (web) and the mail server (email) at that address: it is the
+ *    only way in, the Internet does not carry the private addresses inside
  *
  * Devices have the shape AddDeviceModal produces. Positions are hand-placed.
  * The list goes from the desks outwards (offices, core, servers, DMZ, edge,
@@ -255,10 +259,23 @@ export function createCompanySample(): {
       ports: ports(4, 'lan', {
         1: { name: 'Interno', ip: '10.0.0.2', subnet: P2P_MASK, securityZone: 'trust' },
         2: { name: 'DMZ', portType: 'dmz', ip: '172.16.0.1', subnet: MASK, securityZone: 'dmz' },
-        3: { name: 'Internet', portType: 'wan', ip: '203.0.113.1', subnet: MASK, securityZone: 'untrust' },
+        3: {
+          name: 'Internet',
+          portType: 'wan',
+          ip: '203.0.113.1',
+          subnet: MASK,
+          securityZone: 'untrust',
+          nat: true,
+        },
       }),
       routes: [
         { id: 'route-1', destination: '192.168.0.0/16', nextHop: '10.0.0.1', description: 'reti interne' },
+      ],
+      // What is published at the public address: a forward says where the
+      // traffic goes, a rule below says that it may
+      portForwards: [
+        { id: 'forward-1', service: 'web', port: 3, to: '172.16.0.10', description: 'portale clienti' },
+        { id: 'forward-2', service: 'email', port: 3, to: '192.168.30.40', description: 'posta in arrivo' },
       ],
       firewallRules: [
         {
