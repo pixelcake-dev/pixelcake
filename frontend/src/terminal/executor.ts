@@ -38,13 +38,31 @@ import {
   forwardAddress,
   forwardProblem,
   DEFAULT_MASK,
+  withLeases,
+  resolveDhcp,
+  leaseOf,
+  unservedOf,
+  poolAt,
+  poolOf,
+  poolProblem,
+  servesDhcp,
 } from '@/engine';
-import type { Topology, TraceResult, InterfaceLink, DeviceInterface, FlowResult } from '@/engine';
+import type {
+  Topology,
+  TraceResult,
+  InterfaceLink,
+  DeviceInterface,
+  FlowResult,
+  DhcpPoolState,
+  DhcpResolution,
+} from '@/engine';
 import { isValidIP } from '@/utils/ipHelpers';
 import { liveTopology } from '@/utils/liveTopology';
 import { parse } from './parser';
+import { NCL_VERSION } from './types';
 import type { Command, InterfaceSetting, TerminalLine, ShowTarget } from './types';
 import type {
+  DhcpPool,
   FirewallRule,
   FlowModelType,
   NetworkDevice,
@@ -102,13 +120,33 @@ function snapshot(): Topology {
   return liveTopology();
 }
 
+/**
+ * What the commands that only read look at: the same drawing as the engine
+ * reads it, every card on DHCP carrying the address it is leased.
+ * Configuration commands work on `snapshot()`, the drawing as it is kept: a
+ * leased address must never be written back as one typed by hand.
+ */
+function view(): Topology {
+  return withLeases(snapshot());
+}
+
+/**
+ * The device a name or an address stands for, as `topo` has it. An address
+ * may be a leased one: it is looked for in the drawing with its leases, and
+ * the device is handed back as it is in `topo`.
+ */
+function findDevice(query: string, topo: Topology): NetworkDevice | undefined {
+  const found = resolveEndpoint(query, withLeases(topo))?.device;
+  return found ? (topo.devices.find((d) => d.id === found.id) ?? found) : undefined;
+}
+
 /** Resolve a raw name/IP to a device, with a "did you mean" error on miss */
 function resolveOrError(
   query: string,
   topo: Topology
 ): { device: NetworkDevice } | { errorLines: TerminalLine[] } {
-  const resolved = resolveEndpoint(query, topo);
-  if (resolved) return { device: resolved.device };
+  const device = findDevice(query, topo);
+  if (device) return { device };
   const suggestion = suggestEndpoint(query, topo);
   const errorLines = [err(`device not found: "${query}"`)];
   if (suggestion) errorLines.push(muted(`  did you mean "${suggestion}"?`));
@@ -117,7 +155,7 @@ function resolveOrError(
 
 function contextDevice(context: TerminalContext, topo: Topology): NetworkDevice | undefined {
   if (!context.deviceLabel) return undefined;
-  return resolveEndpoint(context.deviceLabel, topo)?.device;
+  return findDevice(context.deviceLabel, topo);
 }
 
 /**
@@ -162,7 +200,7 @@ function resolveEnds(
 ):
   | { topo: Topology; source: NetworkDevice; destination: NetworkDevice; targetIp?: string }
   | { errorLines: TerminalLine[] } {
-  const topo = snapshot();
+  const topo = view();
   const sourceQuery = from ?? context.deviceLabel ?? undefined;
   if (!sourceQuery) {
     return {
@@ -328,13 +366,28 @@ function runFlow(
 
 /* ── show commands ────────────────────────────────────────────────────── */
 
+/**
+ * The address a device is listed with, and whether it is a leased one: a
+ * device whose address comes from DHCP is marked `(dhcp)`, also while it has
+ * none (`- (dhcp)`). `d` is a device of `view()`.
+ */
+function addressCell(d: NetworkDevice): string {
+  const ip = primaryIp(d);
+  const card = (d.nics ?? []).find((nic) => nic.ip === ip && ip !== '');
+  const leased = ip ? card?.dhcp === true : (d.nics ?? []).some((nic) => nic.dhcp);
+  return leased ? `${ip || '-'} (dhcp)` : ip || '-';
+}
+
 function showDevices(topo: Topology): TerminalLine[] {
   if (topo.devices.length === 0) return [muted('no devices on the canvas')];
-  const lines = [heading(`${'DEVICE'.padEnd(24)} ${'TYPE'.padEnd(14)} ${'IP'.padEnd(16)} VLANS`)];
-  for (const d of topo.devices) {
+  // (the column is as wide as it always was until an address says where it comes from)
+  const cells = topo.devices.map(addressCell);
+  const width = cells.some((cell) => cell.endsWith('(dhcp)')) ? 22 : 16;
+  const lines = [heading(`${'DEVICE'.padEnd(24)} ${'TYPE'.padEnd(14)} ${'IP'.padEnd(width)} VLANS`)];
+  topo.devices.forEach((d, index) => {
     const vlans = d.vlan && d.vlan.length > 0 ? d.vlan.join(',') : '-';
-    lines.push(line(`${d.label.padEnd(24)} ${d.type.padEnd(14)} ${(primaryIp(d) || '-').padEnd(16)} ${vlans}`));
-  }
+    lines.push(line(`${d.label.padEnd(24)} ${d.type.padEnd(14)} ${cells[index].padEnd(width)} ${vlans}`));
+  });
   return lines;
 }
 
@@ -423,9 +476,27 @@ function linkText(link: InterfaceLink | undefined): string {
   return link.peerInterface ? `${peer} (${link.peerInterface.label})` : peer;
 }
 
-function showConfig(d: NetworkDevice): TerminalLine[] {
+/**
+ * What a card on DHCP says in place of its three fields:
+ * `192.168.20.100 / 255.255.255.0 gw 192.168.20.1 (dhcp from Router-Core port 2)`,
+ * or `no address (dhcp: no DHCP server answers on its network)`. Undefined
+ * for a card whose address is written by hand.
+ */
+function leasedCard(dhcp: DhcpResolution, d: NetworkDevice, nic: NetworkInterfaceCard): string | undefined {
+  if (!nic.dhcp) return undefined;
+  const lease = leaseOf(dhcp, d.id, nic.id);
+  if (!lease) {
+    return `no address (dhcp: ${unservedOf(dhcp, d.id, nic.id)?.reason ?? 'no lease'})`;
+  }
+  const pool = poolAt(dhcp, lease.server);
+  const from = pool ? ` from ${pool.name}` : '';
+  return `${lease.ip} / ${lease.mask} gw ${lease.gateway || '-'} (dhcp${from})`;
+}
+
+function showConfig(topo: Topology, d: NetworkDevice): TerminalLine[] {
+  const dhcp = resolveDhcp(topo);
   const lines = [heading(`${d.label} — ${d.type}${d.vendor ? ` (${d.vendor})` : ''}`)];
-  lines.push(line(`  ip:       ${d.ip || '-'}`));
+  lines.push(line(`  ip:       ${addressCell(d)}`));
   lines.push(line(`  subnet:   ${d.subnet || '-'}`));
   lines.push(line(`  gateway:  ${d.gateway || '-'}`));
   if (d.location) lines.push(line(`  location: ${d.location}`));
@@ -438,7 +509,8 @@ function showConfig(d: NetworkDevice): TerminalLine[] {
     lines.push(line(`  ports:    ${enabled}/${d.ports.length} enabled — "show ports ${d.label}" for detail`));
   }
   for (const nic of d.nics ?? []) {
-    lines.push(line(`  nic ${nic.name}: ${nic.ip || '-'} / ${nic.subnet || '-'} gw ${nic.gateway || '-'} ${nic.enabled ? '' : '(disabled)'}`));
+    const address = leasedCard(dhcp, d, nic) ?? `${nic.ip || '-'} / ${nic.subnet || '-'} gw ${nic.gateway || '-'}`;
+    lines.push(line(`  nic ${nic.name}: ${address} ${nic.enabled ? '' : '(disabled)'}`));
   }
   if (d.routes && d.routes.length > 0) {
     lines.push(line(`  routes:   ${d.routes.length} static — "show routes ${d.label}" for the whole table`));
@@ -452,6 +524,11 @@ function showConfig(d: NetworkDevice): TerminalLine[] {
     const where = natPorts.length > 0 ? `on interface ${natPorts.map((p) => p.id).join(', ')}` : 'off';
     const published = `${forwards.length} forward${forwards.length === 1 ? '' : 's'}`;
     lines.push(line(`  nat:      ${where}, ${published} — "show nat ${d.label}" for detail`));
+  }
+  const pools = dhcp.pools.filter((pool) => pool.deviceId === d.id);
+  if (pools.length > 0) {
+    const where = pools.map((pool) => pool.iface.label).join(', ');
+    lines.push(line(`  dhcp:     hands out addresses on ${where} — "show dhcp ${d.label}" for detail`));
   }
   return lines;
 }
@@ -516,9 +593,11 @@ function showInterfaces(topo: Topology, d: NetworkDevice): TerminalLine[] {
         )
       );
     } else {
+      // (a card whose address comes from a DHCP server says so where a port says its zone)
+      const mode = iface.nic.dhcp ? 'dhcp' : '-';
       lines.push(
         line(
-          `${iface.nic.name.padEnd(10)} ${'nic'.padEnd(6)} ${state} ${ip} ${'-'.padEnd(10)} ${'-'.padEnd(10)} ${link}`,
+          `${iface.nic.name.padEnd(10)} ${'nic'.padEnd(6)} ${state} ${ip} ${'-'.padEnd(10)} ${mode.padEnd(10)} ${link}`,
           iface.enabled ? 'normal' : 'muted'
         )
       );
@@ -528,9 +607,10 @@ function showInterfaces(topo: Topology, d: NetworkDevice): TerminalLine[] {
 }
 
 /** `show ip <device>` — compact addressing summary (also ipconfig/ifconfig). */
-function showIp(d: NetworkDevice): TerminalLine[] {
+function showIp(topo: Topology, d: NetworkDevice): TerminalLine[] {
+  const dhcp = resolveDhcp(topo);
   const lines = [heading(`${d.label} — addressing`)];
-  lines.push(line(`  ip:       ${d.ip || '-'}`));
+  lines.push(line(`  ip:       ${addressCell(d)}`));
   lines.push(line(`  subnet:   ${d.subnet || '-'}`));
   lines.push(line(`  gateway:  ${d.gateway || '-'}`));
   // Addressed ports (router/firewall interfaces): the gateways of their networks
@@ -544,11 +624,9 @@ function showIp(d: NetworkDevice): TerminalLine[] {
     );
   }
   for (const nic of d.nics ?? []) {
+    const address = leasedCard(dhcp, d, nic) ?? `${nic.ip || '-'} / ${nic.subnet || '-'} gw ${nic.gateway || '-'}`;
     lines.push(
-      line(
-        `  ${nic.name}: ${nic.ip || '-'} / ${nic.subnet || '-'} gw ${nic.gateway || '-'}${nic.enabled ? '' : ' (disabled)'}`,
-        nic.enabled ? 'normal' : 'muted'
-      )
+      line(`  ${nic.name}: ${address}${nic.enabled ? '' : ' (disabled)'}`, nic.enabled ? 'normal' : 'muted')
     );
   }
   return lines;
@@ -562,7 +640,7 @@ function showNeighbors(topo: Topology, d: NetworkDevice): TerminalLine[] {
   const lines = [heading(`NEIGHBORS of ${d.label} (${neighbors.length})`)];
   for (const n of neighbors) {
     const dev = byId.get(n.neighborId);
-    if (dev) lines.push(line(`  ${dev.label.padEnd(24)} ${dev.type.padEnd(14)} ${primaryIp(dev) || '-'}`));
+    if (dev) lines.push(line(`  ${dev.label.padEnd(24)} ${dev.type.padEnd(14)} ${addressCell(dev)}`));
   }
   return lines;
 }
@@ -655,8 +733,78 @@ function showNat(d: NetworkDevice): TerminalLine[] {
   return lines;
 }
 
+/** One pool on a line: where, its range, what it hands out with it, how much is left */
+function poolLine(pool: DhcpPoolState): TerminalLine {
+  const head = `  ${pool.name.padEnd(22)} ${pool.pool.start} – ${pool.pool.end}`;
+  if (pool.problem) return err(`${head}  ✗ ${pool.problem.text}`);
+  const gateway = pool.gateway ? `gateway ${pool.gateway}` : 'no gateway';
+  const row = `${head}  ${gateway}  ${pool.leases.length} leased, ${pool.free} free of ${pool.size}`;
+  return pool.iface.enabled ? line(row) : muted(`${row}  (interface down: it answers nobody)`);
+}
+
+/**
+ * `show dhcp [<device>]` — who hands out addresses, who got which, who got
+ * none and why. Of the whole drawing, or of what one device gives and takes.
+ */
+function showDhcp(topo: Topology, device?: NetworkDevice): TerminalLine[] {
+  const dhcp = resolveDhcp(topo);
+  const about = (deviceId: string | undefined) => device === undefined || deviceId === device.id;
+  const pools = dhcp.pools.filter((pool) => about(pool.deviceId));
+  const leases = dhcp.leases.filter((lease) => about(lease.deviceId) || about(lease.server.deviceId));
+  const waiting = dhcp.unserved.filter((entry) => about(entry.deviceId) || (entry.server && about(entry.server.deviceId)));
+  const warnings = dhcp.warnings.filter((_, index) => dhcp.rivals[index].some((pool) => about(pool.deviceId)));
+
+  if (pools.length === 0 && leases.length === 0 && waiting.length === 0) {
+    if (!device) {
+      return [
+        muted('no DHCP in the drawing: no interface hands out addresses, no card asks for one'),
+        muted('  hand out addresses: interface <n> pool <first> to <last> on <router>'),
+        muted('  ask for one:        interface <name> dhcp on <device>'),
+      ];
+    }
+    const lines = [muted(`${device.label} hands out no addresses and asks for none`)];
+    if (servesDhcp(device)) {
+      lines.push(muted(`  hand out addresses: interface <n> pool <first> to <last> on ${device.label}`));
+    }
+    const card = isL3Capable(device) ? undefined : device.nics?.[0];
+    if (card) lines.push(muted(`  ask for one:        interface ${card.name} dhcp on ${device.label}`));
+    return lines;
+  }
+
+  const card = (deviceId: string, nicId: string) => {
+    const owner = topo.devices.find((d) => d.id === deviceId);
+    return `${owner?.label ?? deviceId} ${owner?.nics?.find((nic) => nic.id === nicId)?.name ?? nicId}`;
+  };
+  const count = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const lines = [
+    heading(
+      device
+        ? `DHCP of ${device.label}`
+        : `DHCP — ${count(pools.length, 'pool')}, ${count(leases.length, 'lease')}`
+    ),
+  ];
+  if (pools.length > 0) {
+    lines.push(heading('POOLS'));
+    lines.push(...pools.map(poolLine));
+  }
+  if (leases.length > 0) {
+    lines.push(heading('LEASES'));
+    for (const lease of leases) {
+      const from = poolAt(dhcp, lease.server)?.name ?? lease.server.deviceId;
+      lines.push(line(`  ${lease.ip.padEnd(16)} ${card(lease.deviceId, lease.nicId).padEnd(24)} from ${from}`));
+    }
+  }
+  if (waiting.length > 0) {
+    lines.push(heading('WITHOUT AN ADDRESS'));
+    for (const entry of waiting) lines.push(err(`  ✗ ${card(entry.deviceId, entry.nicId)}: ${entry.reason}`));
+  }
+  for (const warning of warnings) lines.push(muted(`  warning: ${warning}`));
+  lines.push(muted('  leases are worked out from the drawing: nothing is renewed, nothing is relayed to another network'));
+  return lines;
+}
+
 function runShow(what: ShowTarget, deviceQuery: string | undefined, context: TerminalContext): TerminalLine[] {
-  const topo = snapshot();
+  const topo = view();
   if (what === 'devices') return showDevices(topo);
   if (what === 'vlans') return showVlans(topo);
 
@@ -671,11 +819,12 @@ function runShow(what: ShowTarget, deviceQuery: string | undefined, context: Ter
   }
 
   if (what === 'connections') return showConnections(topo, device);
+  if (what === 'dhcp') return showDhcp(topo, device);
   if (!device) return [err(`specify a device: "show ${what} <device>" — or enter a context with "use <device>"`)];
-  if (what === 'config') return showConfig(device);
+  if (what === 'config') return showConfig(topo, device);
   if (what === 'ports') return showPorts(topo, device);
   if (what === 'interfaces') return showInterfaces(topo, device);
-  if (what === 'ip') return showIp(device);
+  if (what === 'ip') return showIp(topo, device);
   if (what === 'routes') return showRoutes(device);
   if (what === 'rules') return showRules(device);
   if (what === 'nat') return showNat(device);
@@ -710,13 +859,29 @@ function runSet(property: 'ip' | 'gateway' | 'subnet' | 'name', deviceQuery: str
   // would not reach the simulation.
   const updates: Partial<NetworkDevice> = { [property]: value };
   const primaryNic = device.nics?.[0];
+  // A first card on DHCP: mask and gateway come with the lease, and an
+  // address written by hand takes the card off DHCP
+  const wasOnDhcp = primaryNic?.dhcp === true;
+  if (wasOnDhcp && property !== 'ip') {
+    return [
+      err(`${device.label} takes its address from DHCP: its ${property} comes with the lease`),
+      muted(`  to write its address by hand: set ip of ${device.label} to <address>`),
+    ];
+  }
   if (device.nics && primaryNic) {
-    updates.nics = device.nics.map((nic, index) =>
-      index === 0 ? { ...nic, [property]: value } : nic
-    );
+    updates.nics = device.nics.map((nic, index) => {
+      if (index !== 0) return nic;
+      // (a card that was on DHCP kept no mask of its own: /24 until one is set)
+      return wasOnDhcp
+        ? { ...without(nic, 'dhcp'), ip: value, subnet: DEFAULT_MASK }
+        : { ...nic, [property]: value };
+    });
   }
   useNetworkStore.getState().updateDevice(device.id, updates);
   const lines = [ok(`${device.label}: ${property} set to ${value}`)];
+  if (wasOnDhcp) {
+    lines.push(muted(`  ${device.label} no longer takes its address from DHCP: mask ${DEFAULT_MASK}, no gateway yet`));
+  }
   if (property === 'ip') lines.push(...duplicateAddressWarning(value, device, topo));
   if (property === 'gateway' && isL3Capable(device)) {
     lines.push(muted(`  the gateway of a router is its default route — "show routes ${device.label}"`));
@@ -846,6 +1011,22 @@ function saveNic(device: NetworkDevice, nic: NetworkInterfaceCard): void {
   useNetworkStore.getState().updateDevice(device.id, { nics });
 }
 
+/** `1 address` / `100 addresses` */
+function countAddresses(count: number): string {
+  return `${count} address${count === 1 ? '' : 'es'}`;
+}
+
+/** What a card on DHCP has right now in the drawing, on a line of its own */
+function leaseLine(deviceId: string, nicId: string): TerminalLine {
+  const dhcp = resolveDhcp(snapshot());
+  const lease = leaseOf(dhcp, deviceId, nicId);
+  if (!lease) {
+    return muted(`  warning: no address yet: ${unservedOf(dhcp, deviceId, nicId)?.reason ?? 'no lease'}`);
+  }
+  const from = poolAt(dhcp, lease.server)?.name ?? lease.server.deviceId;
+  return muted(`  leased ${lease.ip} / ${lease.mask} gw ${lease.gateway || '-'} by ${from}`);
+}
+
 function runInterface(
   ifaceId: string,
   setting: InterfaceSetting,
@@ -877,7 +1058,13 @@ function runInterface(
           muted(`  its own address is set with: set ip of ${device.label} to <address>`),
         ];
       }
+      // A card on DHCP has no address of its own to clear, and one written
+      // by hand takes it off DHCP
+      const wasOnDhcp = iface.kind === 'nic' && iface.nic.dhcp === true;
       if (setting.address === null) {
+        if (wasOnDhcp) {
+          return [muted(`${name} takes its address from DHCP: "interface ${ifaceId} dhcp off" to stop`)];
+        }
         if (iface.kind === 'port') savePort(device, without(iface.port, 'ip', 'subnet'));
         else saveNic(device, { ...iface.nic, ip: '' });
         return [ok(`${name} has no address now`)];
@@ -887,9 +1074,11 @@ function runInterface(
       const subnet =
         setting.prefix !== undefined ? prefixToMask(setting.prefix) : iface.subnet || DEFAULT_MASK;
       if (iface.kind === 'port') savePort(device, { ...iface.port, ip: setting.address, subnet });
+      else if (wasOnDhcp) saveNic(device, { ...without(iface.nic, 'dhcp'), ip: setting.address, subnet });
       else saveNic(device, { ...iface.nic, ip: setting.address, subnet });
       return [
         ok(`${name}: ${setting.address} / ${subnet}`),
+        ...(wasOnDhcp ? [muted(`  ${name} no longer takes its address from DHCP`)] : []),
         ...duplicateAddressWarning(setting.address, device, topo),
       ];
     }
@@ -899,6 +1088,12 @@ function runInterface(
         return [
           err(`${name} is a port: ports have no gateway`),
           muted(`  the default route of ${device.label} is: set gateway of ${device.label} to <address>`),
+        ];
+      }
+      if (iface.nic.dhcp) {
+        return [
+          err(`${name} takes its address from DHCP: the gateway comes with the lease`),
+          muted('  it is the one of the pool: interface <n> pool <first> to <last> gateway <address> on <server>'),
         ];
       }
       if (setting.address === null) {
@@ -978,6 +1173,105 @@ function runInterface(
         ];
       }
       return [ok(`${name} now does NAT: what leaves by it takes the address ${iface.ip}`)];
+    }
+
+    case 'dhcp': {
+      if (iface.kind !== 'nic' || isL3Capable(device)) {
+        return [
+          err(`DHCP gives an address to the network cards of end devices: ${name} gets its own by hand`),
+          ...(servesDhcp(device)
+            ? [muted(`  to hand out addresses from it: interface ${ifaceId} pool <first> to <last> on ${device.label}`)]
+            : []),
+        ];
+      }
+      const using = iface.nic.dhcp === true;
+      if (using === setting.on) {
+        return using
+          ? [muted(`${name} already takes its address from DHCP`), leaseLine(device.id, iface.nic.id)]
+          : [muted(`${name} does not take its address from DHCP`)];
+      }
+      if (!setting.on) {
+        saveNic(device, without(iface.nic, 'dhcp'));
+        return [
+          ok(`${name} no longer takes its address from DHCP: it has no address now`),
+          muted(`  give it one: interface ${ifaceId} ip <address>/<prefix> on ${device.label}`),
+        ];
+      }
+      // A card that asks for an address keeps none of its own, and hands out none
+      const served = iface.nic.dhcpServer !== undefined;
+      saveNic(device, { ...without(iface.nic, 'dhcpServer'), dhcp: true, ip: '', subnet: '', gateway: '' });
+      return [
+        ok(`${name} now takes its address from DHCP`),
+        leaseLine(device.id, iface.nic.id),
+        ...(served ? [muted(`  ${name} no longer hands out addresses itself: a card cannot do both`)] : []),
+      ];
+    }
+
+    case 'pool': {
+      // A router or a firewall serves from its ports, a server from its cards
+      const canServe = iface.kind === 'port' ? isL3Capable(device) : servesDhcp(device) && !isL3Capable(device);
+      if (!canServe) {
+        return [
+          err(
+            `addresses are handed out by a port of a router or a firewall, or by a card of a server: ` +
+              `${device.label} is a ${device.type}`
+          ),
+        ];
+      }
+      const labelOf = (deviceId: string) => topo.devices.find((d) => d.id === deviceId)?.label ?? deviceId;
+      const stateOf = (dhcp: DhcpResolution) =>
+        dhcp.pools.find((pool) => pool.deviceId === device.id && pool.interfaceKey === iface.key);
+      const current = poolOf(iface);
+
+      if (setting.pool === null) {
+        if (!current) return [muted(`${name} hands out no addresses already`)];
+        const served = stateOf(resolveDhcp(topo))?.leases ?? [];
+        if (iface.kind === 'port') savePort(device, without(iface.port, 'dhcpServer'));
+        else saveNic(device, without(iface.nic, 'dhcpServer'));
+        // Who had an address from it, and has none from anybody now
+        const after = resolveDhcp(snapshot());
+        const left = served
+          .filter((lease) => leaseOf(after, lease.deviceId, lease.nicId) === undefined)
+          .map((lease) => labelOf(lease.deviceId));
+        return [
+          ok(`${name} no longer hands out addresses`),
+          ...(left.length > 0 ? [muted(`  without an address now: ${left.join(', ')}`)] : []),
+        ];
+      }
+
+      const gateway = (setting.pool.gateway ?? '').trim();
+      const pool: DhcpPool = {
+        start: setting.pool.start.trim(),
+        end: setting.pool.end.trim(),
+        ...(gateway ? { gateway } : {}),
+      };
+      const problem = poolProblem(device, iface, pool);
+      if (problem) return [err(problem.text)];
+      if (current && current.start === pool.start && current.end === pool.end && (current.gateway ?? '') === gateway) {
+        return [muted(`${name} already hands out ${pool.start} to ${pool.end}`)];
+      }
+      if (iface.kind === 'port') savePort(device, { ...iface.port, dhcpServer: pool });
+      else saveNic(device, { ...iface.nic, dhcpServer: pool });
+
+      const after = resolveDhcp(snapshot());
+      const state = stateOf(after);
+      const handed = state?.gateway
+        ? `gateway ${state.gateway}`
+        : 'no gateway: its clients talk inside their network only';
+      const lines = [
+        ok(`${name} now hands out ${pool.start} to ${pool.end}: ${countAddresses(state?.size ?? 0)}, ${handed}`),
+      ];
+      const leases = state?.leases ?? [];
+      lines.push(
+        leases.length > 0
+          ? muted(`  leased now: ${leases.map((lease) => `${labelOf(lease.deviceId)} ${lease.ip}`).join(', ')}`)
+          : muted('  no card on its network asks for an address yet: interface <name> dhcp on <device>')
+      );
+      after.rivals.forEach((group, index) => {
+        if (group.some((rival) => rival === state)) lines.push(muted(`  warning: ${after.warnings[index]}`));
+      });
+      if (!iface.enabled) lines.push(muted(`  ${name} is down: it answers nobody until it is up`));
+      return lines;
     }
   }
 }
@@ -1113,6 +1407,15 @@ function runRoute(
 /* ── firewall rules ───────────────────────────────────────────────────── */
 
 /**
+ * ` (leased by DHCP: …)` when the address a device was named by is one it
+ * is leased: what is written with it holds for as long as the lease does
+ */
+function leasedNote(device: NetworkDevice, address: string): string {
+  const leased = (device.nics ?? []).some((nic) => nic.dhcp && nic.ip === address);
+  return leased ? ' (leased by DHCP: it changes if the drawing does)' : '';
+}
+
+/**
  * One side of a rule as it will be stored: `any`, a zone, an address or a
  * network as typed; a device name becomes its address.
  */
@@ -1127,9 +1430,12 @@ function ruleEndpoint(
     if (network && value.includes('/')) return { value: canonicalNetwork(network) };
     return { value: value === 'default' ? 'any' : value };
   }
-  const named = resolveEndpoint(text, topo)?.device;
+  // (a device on DHCP is named by the address it is leased)
+  const named = resolveEndpoint(text, withLeases(topo))?.device;
   const address = named ? primaryAddress(named) : '';
-  if (named && isValidIP(address)) return { value: address, note: `${named.label} → ${address}` };
+  if (named && isValidIP(address)) {
+    return { value: address, note: `${named.label} → ${address}${leasedNote(named, address)}` };
+  }
   if (named) return { error: `${named.label} has no address to write in a rule` };
   return {
     error: `"${text}" is not any, a zone (trust, untrust, dmz), an address, a network or a device`,
@@ -1241,11 +1547,12 @@ function runForwardAdd(
   let to = command.to.trim();
   let note: string | undefined;
   if (!isValidIP(to)) {
-    const named = resolveEndpoint(to, topo)?.device;
+    // (a device on DHCP is named by the address it is leased)
+    const named = resolveEndpoint(to, withLeases(topo))?.device;
     const address = named ? primaryAddress(named) : '';
     if (!named) return [err(`"${command.to}" is not an address or a device`)];
     if (!isValidIP(address)) return [err(`${named.label} has no address to forward to`)];
-    note = `${named.label} → ${address}`;
+    note = `${named.label} → ${address}${leasedNote(named, address)}`;
     to = address;
   }
 
@@ -1332,6 +1639,7 @@ export const COMMAND_REFERENCE: Array<[string, string]> = [
   ['show interfaces [of] <device>', 'unified ports + NICs table (the standard view)'],
   ['show ip [of] <device>', 'compact addressing summary (also ipconfig/ifconfig)'],
   ['show routes | rules | nat [of] <device>', 'routing table, firewall rules, address translation'],
+  ['show dhcp [[of] <device>]', 'DHCP: who hands out addresses, who got which, who got none'],
   ['show config | ports | neighbors <device>', 'device detail'],
   ['set ip|gateway|subnet|name of <device> to <value>', 'change device config'],
   ['interface <n> up|down on <device>', 'interface state (also enable|disable port <n>)'],
@@ -1339,6 +1647,8 @@ export const COMMAND_REFERENCE: Array<[string, string]> = [
   ['interface <n> access <vlan> | trunk <vlans>|all | default', 'VLAN of a switch port'],
   ['interface <n> zone trust|untrust|dmz|none on <device>', 'security zone of a firewall port'],
   ['interface <n> nat [off] on <device>', 'source NAT on a router/firewall port: what leaves takes its address'],
+  ['interface <name> dhcp [off] on <device>', 'a network card takes its address from a DHCP server'],
+  ['interface <n> [dhcp] pool <first> to <last> on <device>', 'DHCP server on a router/firewall port or a server card (pool none)'],
   ['add route <network>|default via <next hop> on <device>', 'static route (remove route <network> from <device>)'],
   ['add backup route <network> via <next hop> on <device>', 'second route to a network, used when the line of the first is down'],
   ['add rule allow|deny <service> from <src> to <dst> on <fw>', 'firewall rule (remove rule <n> from <fw>)'],
@@ -1361,7 +1671,7 @@ function runHelp(topic?: string): TerminalLine[] {
     return [err(`no help for "${topic}" — try "help" for the full list`)];
   }
   return [
-    heading('PixelCake terminal — NCL v0.2 (Network Command Language, vendor-neutral)'),
+    heading(`PixelCake terminal — NCL v${NCL_VERSION} (Network Command Language, vendor-neutral)`),
     ...COMMAND_REFERENCE.map(([syntax, desc]) => line(`  ${syntax.padEnd(SYNTAX_WIDTH)} ${desc}`)),
     muted('  device names are case-insensitive and may be multi-word; IPs work anywhere a device is expected'),
   ];

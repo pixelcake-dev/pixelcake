@@ -7,7 +7,15 @@
  * syntax, just plain verbs with optional prepositions.
  */
 
-import type { ServiceName } from '@/types';
+import type { DhcpPool, ServiceName } from '@/types';
+
+/**
+ * The version of the language the terminal speaks: NCL, Network Command
+ * Language. The one place it is written in the code; the reference in
+ * docs/terminal-commands.md carries the same number in its title, and a test
+ * holds the two together.
+ */
+export const NCL_VERSION = '0.4';
 
 /** One rendered line of terminal output */
 export interface TerminalLine {
@@ -26,7 +34,8 @@ export type ShowTarget =
   | 'ip'
   | 'routes'
   | 'rules'
-  | 'nat';
+  | 'nat'
+  | 'dhcp';
 
 export type SetProperty = 'ip' | 'gateway' | 'subnet' | 'name';
 
@@ -45,7 +54,11 @@ export type InterfaceSetting =
   | { what: 'no-vlan' }
   | { what: 'zone'; zone: ZoneName | null }
   /** Source NAT on a router or firewall port */
-  | { what: 'nat'; on: boolean };
+  | { what: 'nat'; on: boolean }
+  /** A network card takes its address from a DHCP server */
+  | { what: 'dhcp'; on: boolean }
+  /** DHCP server on the interface: the addresses it hands out; null stops it */
+  | { what: 'pool'; pool: DhcpPool | null };
 
 /**
  * Parsed command. Device arguments are RAW STRINGS (labels may be multi-word,

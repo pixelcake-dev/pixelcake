@@ -1,4 +1,4 @@
-# NCL — Network Command Language v0.3
+# NCL — Network Command Language v0.4
 
 **NCL (Network Command Language)** is a vendor-neutral command language in
 semi-natural English. Cisco, Juniper and Mikrotik each speak their own
@@ -13,6 +13,11 @@ terminal lists the same commands, and so does Aiuto → Comandi del terminale.
 The language is versioned independently of the app; until v1.0 canonical
 forms are stable but aliases and output formats may still be refined between
 minor versions.
+
+**New in v0.4:** DHCP. A network card takes its address from a server
+(`interface <name> dhcp`), an interface hands out a range of addresses
+(`interface <n> pool`), `show dhcp`. The `show` commands tell a leased
+address from one written by hand.
 
 **New in v0.3:** address translation. Source NAT on an interface
 (`interface <n> nat`), port forwards (`add forward`, `remove forward`),
@@ -46,7 +51,7 @@ service       ::= "ping" | "web" | "email"
 inspection    ::= "show" show-target [["of"] device]
 show-target   ::= "devices" | "interfaces" | "ports" | "vlans"
                 | "connections" | "config" | "neighbors" | "ip"
-                | "routes" | "rules" | "nat"
+                | "routes" | "rules" | "nat" | "dhcp"
 
 configuration ::= set-cmd | vlan-cmd | link-cmd | iface-cmd | route-cmd | rule-cmd
                 | forward-cmd
@@ -67,6 +72,9 @@ iface-setting ::= "up" | "down"
                 | "default"                            (* switch ports: no VLAN of its own *)
                 | "zone" ("trust" | "untrust" | "dmz" | "none")   (* firewall ports *)
                 | "nat" ["on" | "off" | "none"]           (* router/firewall ports *)
+                | "dhcp" ["on" | "off" | "none"]          (* network cards *)
+                | ["dhcp"] "pool" (ipv4 ["to"] ipv4 ["gateway" ipv4] | "none")
+                                                          (* router/firewall ports, server cards *)
 
 route-cmd     ::= "add" ["backup"] "route" network "via" next-hop [["on"] device]
                 | "remove" "route" network ["via" next-hop] [("from" | "on") device]
@@ -89,7 +97,8 @@ device        ::= word { word } | '"' text '"'      (* multi-word, quotable *)
 ```
 
 In a device context (`use …`) the `["from" device]`, `[["of"] device]` and
-`[["on"] device]` parts default to the context device.
+`[["on"] device]` parts default to the context device. `show dhcp` with no
+device, outside a context, is about the whole drawing.
 
 ## Commands
 
@@ -104,7 +113,8 @@ In a device context (`use …`) the `["from" device]`, `[["of"] device]` and
 | `download <target> [from <device>]` | Download request, then the data. To a firewall a download is web traffic. Alias: `wget`. |
 
 `<target>` = device label or IP. A device name stands for its primary address
-(the first network card of an end device, the management address of a router);
+(the first network card of an end device, leased or written by hand; the
+management address of a router);
 **an IP typed as target is the address aimed at**, so `ping 192.168.20.1`
 reaches that interface of the router and not its main address. In device
 context `from` is implied. Terminal output follows the packet animation in
@@ -180,6 +190,39 @@ so (`Portale-Clienti is behind NAT: reached at 203.0.113.1, where FW-Edge
 publishes it (port forward 1)`). An address that is typed is the address
 aimed at, and nothing is tried in its place.
 
+#### DHCP
+
+A network card can take its address from a DHCP server instead of having one
+written on it. The engine has no clock, so **a lease is not remembered: it is
+worked out from the drawing**, the same way every time.
+
+- **Client** (`interface <name> dhcp`). A network card of a device that does
+  not route. While it is on DHCP the card keeps no address of its own.
+- **Server** (`interface <n> pool <first> to <last>`). One pool per
+  interface, for the network of that interface: a port of a router or of a
+  firewall, or a card of a server. With the address the server hands out the
+  mask of its interface and a gateway: the one written in the pool, else the
+  address of the port itself on a router or firewall, else none (and the
+  clients then talk inside their network only).
+- **Who answers whom.** A card is served by a pool whose interface is on the
+  same network: reached across switches and access points, VLAN by VLAN,
+  through ports and cables that are up. A router does not pass the request on
+  to another network. With two servers on one network the first in the
+  drawing that has an address left answers, and a warning names them.
+- **Which address.** Cards are served in the order of the drawing; each gets
+  the lowest address of the range that nobody has: not written by hand on any
+  interface of the drawing, not leased already, not the first or the last
+  address of the network. So writing an address by hand inside a range moves
+  the lease that had it.
+- **A card that gets nothing has no address**, and a question from it or to it
+  says why: `Portatile-1 has no address: no DHCP server answers on its
+  network`, `… the pool of Router-Core port 2 is used up: 100 addresses, all
+  taken`, `… interface eth0 has no cable attached`.
+
+`show dhcp` lists pools, leases and the cards left without an address;
+`show ip`, `show config`, `show devices`, `show neighbors` and
+`show interfaces` mark an address that is leased with `dhcp`.
+
 #### Simulated failures
 
 In presentation mode a device or a cable can be taken as broken ("what
@@ -210,6 +253,8 @@ the terminal see the same failures for as long as the presentation lasts.
   broken link is the answer.
 - A next hop that dies behind a switch does not take the interface down: the
   route stays and the traffic is lost there, as with a plain static route.
+- A lease does not change: a device keeps the address it had, even when it is
+  its DHCP server that is down.
 
 #### VLANs
 
@@ -252,7 +297,6 @@ condition into a silent success; it adds a note to the result instead:
   a gateway that belongs to the outside world, with an Internet symbol on
   that network
 - `Internet is not simulated: traffic assumed to pass`
-- `NAT on Router-1 port 2 is not simulated: addresses are not translated`
 - `firewall FW-1 has no zone binding: allowed` — the firewall's links are not
   attached to zoned ports
 - `firewall FW-1: rule 2 names a zone and the link is not attached to a port:
@@ -262,17 +306,18 @@ condition into a silent success; it adds a note to the result instead:
 
 | Command | Meaning |
 |---|---|
-| `show devices` | All devices with type and IP |
+| `show devices` | All devices with type and IP (`(dhcp)` after an address that is leased) |
 | `show interfaces [of] <device>` | **Unified interface table** — ports + NICs in one view (the standard term), with the address and VLAN of each and the device it is linked to |
 | `show ports [of] <device>` | Port table (status, mode, VLAN, zone, IP, link) — specialized ports-only view |
 | `show vlans` | Every VLAN with where it lives: the ports of the switches that apply VLANs, and the devices that carry it in their own list |
 | `show connections [of <device>]` | Links, with the interface on each end: `[port 3 ↔ eth0]` (`?` for an end not attached to an interface) |
-| `show config [of] <device>` | IP/subnet/gateway, VLANs, STP, ports, NICs, number of routes and rules, NAT |
+| `show config [of] <device>` | IP/subnet/gateway, VLANs, STP, ports, NICs, number of routes and rules, NAT, DHCP |
 | `show neighbors [of] <device>` | Directly connected devices |
-| `show ip [of] <device>` | Compact addressing summary: primary ip/mask/gateway + each NIC + each addressed port |
+| `show ip [of] <device>` | Compact addressing summary: primary ip/mask/gateway + each NIC + each addressed port. A card on DHCP shows its lease and the pool it comes from, or why it has none |
 | `show routes [of] <device>` | The routing table exactly as the engine reads it: destination, next hop, interface it leaves from, kind. A route whose next hop is on none of the device's networks is flagged |
 | `show rules [of] <device>` | The firewall rules in order, then what decides when none matches |
 | `show nat [of] <device>` | The interfaces that do source NAT with the address each gives, then the port forwards in order |
+| `show dhcp [[of] <device>]` | The pools (range, gateway handed out, how many addresses are leased and free), the leases (address, card, pool) and the cards left without an address, each with the reason. Of the whole drawing, or of what one device hands out and is given |
 
 Aliases: `sh` → `show` · `ls`, `list` → `show devices` ·
 `ipconfig`, `ifconfig` → `show ip`.
@@ -281,15 +326,17 @@ Aliases: `sh` → `show` · `ls`, `list` → `show devices` ·
 
 | Command | Meaning |
 |---|---|
-| `set ip [of] <device> [to] <ip>` | Also `set gateway …`, `set subnet …`, `set name …`. On a device with network cards these write the first one. On a router `set gateway` sets the default route |
+| `set ip [of] <device> [to] <ip>` | Also `set gateway …`, `set subnet …`, `set name …`. On a device with network cards these write the first one. On a router `set gateway` sets the default route. On a device whose first card is on DHCP, `set ip` takes the card off DHCP; mask and gateway come with the lease and are refused |
 | `interface <id> up\|down [on] <device>` | Interface state — **canonical form**. `<id>` is a port number or the name of a network card (`eth0`). `enable\|disable port <n> on <device>` stays as an accepted variant |
-| `interface <id> ip <address>[/<prefix>] [on] <device>` | Address of a router/firewall port or of a network card (`ip none` clears it). Without a prefix the mask already there is kept, else /24 |
+| `interface <id> ip <address>[/<prefix>] [on] <device>` | Address of a router/firewall port or of a network card (`ip none` clears it). Without a prefix the mask already there is kept, else /24. An address written on a card that was on DHCP takes it off DHCP |
 | `interface <name> gateway <address> [on] <device>` | Default gateway of a network card (`gateway none` clears it) |
 | `interface <n> access <vlan> [on] <switch>` | The port becomes an access port in that VLAN |
 | `interface <n> trunk <vlan,vlan,…>\|all [on] <switch>` | The port becomes a trunk for those VLANs (`all`, or no list: every VLAN) |
 | `interface <n> default [on] <switch>` | The port has no VLAN of its own any more |
 | `interface <n> zone trust\|untrust\|dmz\|none [on] <firewall>` | Security zone of a firewall port |
 | `interface <n> nat [on] <device>` / `interface <n> nat off [on] <device>` | Source NAT on a port of a router or firewall: what the device forwards out of it takes its address. `nat none` is the same as `nat off` |
+| `interface <name> dhcp [on] <device>` / `interface <name> dhcp off [on] <device>` | A network card takes its address from the DHCP server of its network; the answer says which address it is leased, or why none. `dhcp off` leaves the card without an address (`dhcp none` is the same) |
+| `interface <id> pool <first> to <last> [gateway <address>] [on] <device>` | DHCP server on a port of a router or firewall, or on a card of a server: the range it hands out to its network, replacing the one it had. `pool none` stops it. `to` may be left out or written `-`; `interface <id> dhcp pool …` is an accepted variant |
 | `add route <network>\|default via <next hop> [on] <device>` | Static route on a router or firewall. The network is written `192.168.30.0/24`; the next hop is an address, or a device with an address on a network the two share. Adding a route to a network that has one replaces its next hop |
 | `add backup route <network>\|default via <next hop> [on] <device>` | A second route to a network that has one. It is used when the interface of the first has no working link (a port switched off, or a failure simulated in presentation mode). `show routes` marks it `backup` |
 | `remove route <network>\|default [via <next hop>] [from] <device>` | Without `via`, every route to that network; with it, the one through that next hop |
@@ -404,6 +451,52 @@ pixelcake> ping Web-01 from Ext
 Ping failed (blocked): request: firewall FW-1: no rule matches, zone policy untrust → trust denied
 ```
 
+DHCP on the same sample: the router hands out the offices and the Wi-Fi, and
+the two laptops take their address from it.
+
+```
+pixelcake> show dhcp
+DHCP — 2 pools, 2 leases
+POOLS
+  Router-Core port 1     192.168.10.100 – 192.168.10.199  gateway 192.168.10.1  0 leased, 100 free of 100
+  Router-Core port 2     192.168.20.100 – 192.168.20.199  gateway 192.168.20.1  2 leased, 98 free of 100
+LEASES
+  192.168.20.100   Portatile-1 eth0         from Router-Core port 2
+  192.168.20.101   Portatile-2 eth0         from Router-Core port 2
+  leases are worked out from the drawing: nothing is renewed, nothing is relayed to another network
+pixelcake> show ip Portatile-1
+Portatile-1 — addressing
+  ip:       192.168.20.100 (dhcp)
+  subnet:   255.255.255.0
+  gateway:  192.168.20.1
+  eth0: 192.168.20.100 / 255.255.255.0 gw 192.168.20.1 (dhcp from Router-Core port 2)
+pixelcake> interface eth0 dhcp on PC-Vendite
+interface eth0 on PC-Vendite now takes its address from DHCP
+  leased 192.168.10.100 / 255.255.255.0 gw 192.168.10.1 by Router-Core port 1
+pixelcake> ping Web-Gestionale from PC-Vendite
+Pinging Web-Gestionale (192.168.30.30) from PC-Vendite...
+Reply from 192.168.30.30: hops=6 time=9ms
+pixelcake> interface 1 pool none on Router-Core
+port 1 on Router-Core no longer hands out addresses
+  without an address now: PC-Vendite
+pixelcake> ping Web-Gestionale from PC-Vendite
+Pinging Web-Gestionale (192.168.30.30) from PC-Vendite...
+Ping failed (error): request: PC-Vendite has no address: no DHCP server answers on its network
+pixelcake> interface 1 pool 192.168.10.100 to 192.168.10.149 on Router-Core
+port 1 on Router-Core now hands out 192.168.10.100 to 192.168.10.149: 50 addresses, gateway 192.168.10.1
+  leased now: PC-Vendite 192.168.10.100
+pixelcake> show dhcp Router-Core
+DHCP of Router-Core
+POOLS
+  Router-Core port 1     192.168.10.100 – 192.168.10.149  gateway 192.168.10.1  1 leased, 49 free of 50
+  Router-Core port 2     192.168.20.100 – 192.168.20.199  gateway 192.168.20.1  2 leased, 98 free of 100
+LEASES
+  192.168.10.100   PC-Vendite eth0          from Router-Core port 1
+  192.168.20.100   Portatile-1 eth0         from Router-Core port 2
+  192.168.20.101   Portatile-2 eth0         from Router-Core port 2
+  leases are worked out from the drawing: nothing is renewed, nothing is relayed to another network
+```
+
 A firewall that does NAT towards the Internet (the sample of the welcome
 screen):
 
@@ -447,7 +540,9 @@ FW-Edge: forward 2 removed — forward email from interface 3 to 192.168.30.40
 
 - The engine consumes only data the drawing holds; every field it reads
   (addresses, routes, VLANs, port state, zones, rules, the interface
-  bindings) is in the project file and in the YAML export.
+  bindings, the pools and the cards on DHCP) is in the project file and in
+  the YAML export. A lease is not in any file: it is worked out again from
+  the drawing.
 - Every link end is attached to one interface of its device: a port
   (`sourcePort`/`targetPort`) or a NIC (`sourceNic`/`targetNic`). New links
   take the first free interface; drawings saved before bindings existed are
@@ -463,7 +558,7 @@ FW-Edge: forward 2 removed — forward email from interface 3 to 192.168.30.40
 ## Not simulated
 
 ARP and MAC tables, spanning tree (a drawing with redundant links is walked
-without loops, but no port is blocked), DHCP, DNS, dynamic routing,
+without loops, but no port is blocked), DNS, dynamic routing,
 gateway redundancy (a host has one gateway per network card), router
 sub-interfaces, TCP/UDP ports beyond the three services, link speed and ping
 times (the time printed is derived from the number of hops).
@@ -472,6 +567,11 @@ Of NAT: port numbers (a forward is a service on an interface, and two flows
 never compete for a translation), a server reached from inside at its
 published address is not treated apart, and a device behind two layers of
 NAT is found by name only through the first.
+
+Of DHCP: relay (a server giving addresses to another network through a
+router), reservations (the same address always to the same card), lease
+times and renewal, a router or a firewall port that takes its own address
+from DHCP. A lease is a function of the drawing, so there is no `renew`.
 
 ## Language roadmap
 

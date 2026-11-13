@@ -2,8 +2,9 @@
  * Terminal — semi-natural English command parser
  *
  * Pure TypeScript: turns a raw input line into a Command AST node (see
- * ./types). Implements NCL — Network Command Language v0.1 (vendor-neutral,
- * per docs/terminal-commands.md): verb-first, case-insensitive, optional
+ * ./types). Implements NCL — Network Command Language (vendor-neutral, per
+ * docs/terminal-commands.md; the version is NCL_VERSION in ./types):
+ * verb-first, case-insensitive, optional
  * prepositions, multi-word device names split by role keywords
  * (from/to/of/on), quoted names accepted. Leading "device"/"host" noise
  * nouns are stripped from unquoted name segments ("use device X" → use X);
@@ -36,6 +37,7 @@ const SHOW_TARGETS: readonly ShowTarget[] = [
   'routes',
   'rules',
   'nat',
+  'dhcp',
 ];
 
 const SET_PROPERTIES: readonly SetProperty[] = ['ip', 'gateway', 'subnet', 'name'];
@@ -102,7 +104,7 @@ const ARTICLES: readonly string[] = ['the', 'a'];
 const DEVICE_NOISE: readonly string[] = ['device', 'host'];
 
 const SHOW_USAGE =
-  'try: show devices | interfaces | ports | vlans | connections | config | neighbors | ip | routes | rules | nat';
+  'try: show devices | interfaces | ports | vlans | connections | config | neighbors | ip | routes | rules | nat | dhcp';
 const ADD_USAGE =
   'try: add vlan <id> [to] <device> | add route <network> via <next hop> [on <device>] | ' +
   'add rule allow|deny <service> from <source> to <destination> [on <device>] | ' +
@@ -361,12 +363,17 @@ function vlanId(text: string): number | undefined {
  *   default                         switch port: no VLAN of its own
  *   zone trust|untrust|dmz|none     firewall port: security zone
  *   nat [on] | nat off|none         router/firewall port: source NAT
+ *   dhcp [on] | dhcp off|none       network card: address from a DHCP server
+ *   pool <first> to <last> [gateway <address>] | pool none
+ *                                   router/firewall port or server card:
+ *                                   DHCP server for its network
  */
 function parseInterface(rest: Token[], raw: string): Command {
   const usage = 'try: interface <n> up|down [on] <device>';
   const more =
     'also: ip <address>[/<prefix>]|none, gateway <address>|none, access <vlan>, ' +
-    'trunk <vlans>|all, default, zone trust|untrust|dmz|none, nat [off]';
+    'trunk <vlans>|all, default, zone trust|untrust|dmz|none, nat [off], dhcp [off], ' +
+    'pool <first> to <last>|none';
   const idToken = rest[0];
   if (idToken === undefined) return unknown(raw, `${usage} — ${more}`);
   const iface = idToken.text;
@@ -384,6 +391,48 @@ function parseInterface(rest: Token[], raw: string): Command {
   const value = rest[2];
   const isNone = (token: Token | undefined) =>
     token !== undefined && !token.quoted && (token.lower === 'none' || token.lower === 'clear');
+
+  /**
+   * `pool <first> to <last> [gateway <address>]`, `pool <first>-<last>`,
+   * `pool none`, from the token at `at`. Whether the two are addresses of
+   * the network of the interface is for the executor to say.
+   */
+  const parsePool = (at: number): Command => {
+    const hint =
+      'try: interface <n> pool <first> to <last> [gateway <address>] [on] <device> — or "pool none" to stop';
+    const first = rest[at];
+    if (first === undefined) return unknown(raw, hint);
+    if (isNone(first) || (!first.quoted && first.lower === 'off')) {
+      return withDevice({ what: 'pool', pool: null }, at + 1);
+    }
+
+    let start = first.text;
+    let end: string | undefined;
+    let next = at + 1;
+    const dash = first.text.split('-');
+    if (dash.length === 2 && dash[0] && dash[1]) {
+      [start, end] = dash;
+    } else {
+      // `to` between the two may be left out
+      const joiner = rest[next];
+      if (joiner !== undefined && !joiner.quoted && ['to', '-'].includes(joiner.lower)) next++;
+      end = rest[next]?.text;
+      next++;
+    }
+    if (end === undefined || ['on', 'of', 'gateway', 'gw'].includes(end.toLowerCase())) {
+      return unknown(raw, `a pool goes from its first address to its last — ${hint}`);
+    }
+
+    const pool: { start: string; end: string; gateway?: string } = { start, end };
+    const word = rest[next];
+    if (word !== undefined && !word.quoted && ['gateway', 'gw'].includes(word.lower)) {
+      const gateway = rest[next + 1];
+      if (gateway === undefined) return unknown(raw, hint);
+      pool.gateway = gateway.text;
+      next += 2;
+    }
+    return withDevice({ what: 'pool', pool }, next);
+  };
 
   switch (word.lower) {
     case 'up':
@@ -463,6 +512,20 @@ function parseInterface(rest: Token[], raw: string): Command {
       }
       return withDevice({ what: 'nat', on: true }, 2);
     }
+    case 'dhcp': {
+      // `dhcp pool …` is the pool of the interface, said with one word more
+      if (value !== undefined && !value.quoted && ['pool', 'server'].includes(value.lower)) {
+        return parsePool(3);
+      }
+      // `dhcp` alone switches it on; `dhcp on <device>` reads the same
+      // whether "on" is the value or the word before the device (see nat)
+      if (value !== undefined && !value.quoted && ['off', 'none', 'no', 'disable'].includes(value.lower)) {
+        return withDevice({ what: 'dhcp', on: false }, 3);
+      }
+      return withDevice({ what: 'dhcp', on: true }, 2);
+    }
+    case 'pool':
+      return parsePool(2);
     default:
       return unknown(raw, `missing up|down — ${usage} — ${more}`);
   }

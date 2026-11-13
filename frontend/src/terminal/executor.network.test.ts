@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { COMMAND_REFERENCE, executeCommand } from './executor';
 import type { ExecutionResult, TerminalContext } from './executor';
+import { NCL_VERSION } from './types';
 import { useNetworkStore } from '@/store/networkStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
 import { createCompanySample } from '@/utils/sampleCompany';
@@ -983,7 +984,8 @@ describe('browse, mail, download', () => {
 describe('help', () => {
   it('prints every line of the command reference', () => {
     const printed = output('help');
-    expect(printed[0]).toBe('PixelCake terminal — NCL v0.2 (Network Command Language, vendor-neutral)');
+    // (the version is written once, in ./types: see executor.dhcp.test for what holds it to the reference)
+    expect(printed[0]).toBe(`PixelCake terminal — NCL v${NCL_VERSION} (Network Command Language, vendor-neutral)`);
     for (const [syntax, description] of COMMAND_REFERENCE) {
       expect(printed.some(row => row.includes(syntax) && row.includes(description))).toBe(true);
     }
