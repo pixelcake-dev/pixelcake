@@ -1,0 +1,15 @@
+/** The welcome screen */
+export const welcome = {
+  steps: {
+    draw: { title: 'Disegna', text: 'aggiungi i dispositivi e collegali' },
+    configure: { title: 'Configura', text: 'indirizzi, VLAN, rotte, regole del firewall' },
+    ask: { title: 'Chiedi', text: 'manda un pacchetto e guarda dove si ferma, e perché' },
+  },
+  newProject: 'Nuovo Progetto',
+  openProject: 'Apri Progetto',
+  loadSample: 'Carica la rete di esempio',
+  codeOnGitHub: 'Codice su GitHub',
+  guide: 'Guida',
+  reportProblem: 'Segnala un problema',
+  doNotShowAgain: 'Non mostrare più questa schermata',
+};
