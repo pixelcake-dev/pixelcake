@@ -25,11 +25,10 @@ import { useNetworkStore } from '@/store/networkStore';
 import { usePresentationStore, type PresentationFlow } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
 import {
-  FLOW_HINTS,
-  FLOW_NAMES,
   answerLegs,
   compareWithIntact,
-  exchanges,
+  flowHint,
+  flowName,
   groupBySource,
   summarizeAnswer,
   type AnswerLeg,
@@ -38,6 +37,8 @@ import {
 import { usePresentationAnswer } from './usePresentationAnswer';
 import { useDhcp } from '@/utils/useDhcp';
 import { shownAddress } from '@/utils/dhcpLabels';
+import { useLanguage, useT } from '@/i18n';
+import { Rich } from '@/i18n/Rich';
 
 const FLOWS: PresentationFlow[] = ['ping', 'web', 'email'];
 
@@ -59,6 +60,7 @@ const ImpactGroups = ({
   groups: ImpactGroup[];
   onAsk: (sourceId: string, targetId: string) => void;
 }) => {
+  const t = useT();
   const [showAll, setShowAll] = useState(false);
   const isLong =
     groups.length > MAX_GROUPS || groups.some((group) => group.targets.length > MAX_TARGETS);
@@ -79,20 +81,22 @@ const ImpactGroups = ({
                   key={target.id}
                   type="button"
                   className="presentation-chip"
-                  aria-label={`Mostra da ${group.label} a ${target.label}`}
-                  title={target.reason ?? `Mostra da ${group.label} a ${target.label}`}
+                  aria-label={t.presentation.impact.show(group.label, target.label)}
+                  title={target.reason ?? t.presentation.impact.show(group.label, target.label)}
                   onClick={() => onAsk(group.sourceId, target.id)}
                 >
                   {target.label}
                 </button>
               ))}
-              {hidden > 0 && <span className="presentation-impact-more">e altri {hidden}</span>}
+              {hidden > 0 && (
+                <span className="presentation-impact-more">{t.presentation.impact.andMore(hidden)}</span>
+              )}
             </li>
           );
         })}
         {!showAll && groups.length > MAX_GROUPS && (
           <li className="presentation-impact-more">
-            e altri {groups.length - MAX_GROUPS} dispositivi
+            {t.presentation.impact.andMoreDevices(groups.length - MAX_GROUPS)}
           </li>
         )}
       </ul>
@@ -103,7 +107,7 @@ const ImpactGroups = ({
           aria-expanded={showAll}
           onClick={() => setShowAll(!showAll)}
         >
-          {showAll ? 'Mostra meno' : 'Mostra tutto'}
+          {showAll ? t.presentation.impact.showLess : t.presentation.impact.showAll}
         </button>
       )}
     </>
@@ -132,6 +136,9 @@ const LegSteps = ({ leg, reached }: { leg: AnswerLeg; reached: number | null }) 
 );
 
 const PresentationPanel = () => {
+  // (the sentences of the answer come from utils/presentation, which reads
+  // the language when called: `useT` draws the panel again when it changes)
+  const t = useT();
   const devices = useNetworkStore((state) => state.devices);
   const connections = useNetworkStore((state) => state.connections);
 
@@ -164,16 +171,20 @@ const PresentationPanel = () => {
   }, [devices]);
 
   const dhcp = useDhcp();
+  const language = useLanguage();
   const deviceOptions = useMemo(
-    () =>
-      [...devices]
+    () => {
+      // (`shownAddress` writes «no address» in the language of the moment)
+      void language;
+      return [...devices]
         .sort((a, b) => a.label.localeCompare(b.label))
         .map((device) => {
           // (a device on DHCP shows the address it is leased)
           const address = shownAddress(device, dhcp);
           return { value: device.id, label: address ? `${device.label} (${address})` : device.label };
-        }),
-    [devices, dhcp]
+        });
+    },
+    [devices, dhcp, language]
   );
 
   const cableName = (connectionId: string) => {
@@ -183,12 +194,12 @@ const PresentationPanel = () => {
 
   if (!panelOpen) {
     return (
-      <aside className="presentation-panel collapsed" aria-label="Pannello della presentazione">
+      <aside className="presentation-panel collapsed" aria-label={t.presentation.panel.label}>
         <button
           type="button"
           className="presentation-icon-button"
-          title="Apri il pannello"
-          aria-label="Apri il pannello"
+          title={t.presentation.panel.open}
+          aria-label={t.presentation.panel.open}
           onClick={() => setPanelOpen(true)}
         >
           <PanelLeftOpen size={20} />
@@ -210,17 +221,17 @@ const PresentationPanel = () => {
   const reroutedGroups = impact ? groupBySource(impact.rerouted, impact.endpoints, labelOf) : [];
 
   return (
-    <aside className="presentation-panel" aria-label="Pannello della presentazione">
+    <aside className="presentation-panel" aria-label={t.presentation.panel.label}>
       <div className="presentation-panel-scroll overflow-y-auto">
         {/* ── Question ───────────────────────────────────────────────── */}
         <section className="presentation-section" aria-labelledby="presentation-question">
           <div className="presentation-section-head">
-            <h4 id="presentation-question">Domanda</h4>
+            <h4 id="presentation-question">{t.presentation.question.heading}</h4>
             <button
               type="button"
               className="presentation-icon-button"
-              title="Chiudi il pannello"
-              aria-label="Chiudi il pannello"
+              title={t.presentation.panel.close}
+              aria-label={t.presentation.panel.close}
               onClick={() => setPanelOpen(false)}
             >
               <PanelLeftClose size={18} />
@@ -230,31 +241,31 @@ const PresentationPanel = () => {
           <div className="presentation-ends">
             <div className="presentation-ends-fields">
               <div className="presentation-end">
-                <span id="presentation-from">Da</span>
+                <span id="presentation-from">{t.presentation.question.from}</span>
                 <SearchableSelect
                   labelledBy="presentation-from"
                   value={sourceId ?? ''}
                   onChange={(value) => setSource(value)}
                   options={deviceOptions}
-                  placeholder="Da dove parte…"
+                  placeholder={t.presentation.question.fromPlaceholder}
                 />
               </div>
               <div className="presentation-end">
-                <span id="presentation-to">A</span>
+                <span id="presentation-to">{t.presentation.question.to}</span>
                 <SearchableSelect
                   labelledBy="presentation-to"
                   value={targetId ?? ''}
                   onChange={(value) => setTarget(value)}
                   options={deviceOptions}
-                  placeholder="Dove arriva…"
+                  placeholder={t.presentation.question.toPlaceholder}
                 />
               </div>
             </div>
             <button
               type="button"
               className="presentation-icon-button"
-              title="Inverti partenza e arrivo"
-              aria-label="Inverti partenza e arrivo"
+              title={t.presentation.question.swapEnds}
+              aria-label={t.presentation.question.swapEnds}
               disabled={!sourceId && !targetId}
               onClick={swapEnds}
             >
@@ -262,24 +273,28 @@ const PresentationPanel = () => {
             </button>
           </div>
 
-          <div className="presentation-segmented" role="group" aria-label="Tipo di scambio">
+          <div
+            className="presentation-segmented"
+            role="group"
+            aria-label={t.presentation.question.exchangeType}
+          >
             {FLOWS.map((entry) => (
               <button
                 key={entry}
                 type="button"
                 className={flow === entry ? 'active' : ''}
                 aria-pressed={flow === entry}
-                title={FLOW_HINTS[entry]}
+                title={flowHint(entry)}
                 onClick={() => setFlow(entry)}
               >
-                {FLOW_NAMES[entry]}
+                {flowName(entry)}
               </button>
             ))}
           </div>
 
           {isRunning ? (
             <button type="button" className="presentation-primary" onClick={stopSimulation}>
-              <Square size={16} /> Ferma
+              <Square size={16} /> {t.presentation.question.stop}
             </button>
           ) : (
             <button
@@ -288,22 +303,22 @@ const PresentationPanel = () => {
               disabled={!answer || answer.animationPath.length < 2}
               onClick={replay}
             >
-              <Play size={16} /> Mostra di nuovo
+              <Play size={16} /> {t.presentation.question.showAgain}
             </button>
           )}
         </section>
 
         {/* ── Answer ─────────────────────────────────────────────────── */}
         <section className="presentation-section" aria-labelledby="presentation-answer">
-          <h4 id="presentation-answer">Risposta</h4>
+          <h4 id="presentation-answer">{t.presentation.answer.heading}</h4>
 
           {!summary || !ToneIcon ? (
             <p className="presentation-hint">
               {sourceId && !targetId
-                ? 'Ora scegli dove arriva.'
+                ? t.presentation.answer.chooseTarget
                 : !sourceId && targetId
-                  ? 'Ora scegli da dove parte.'
-                  : 'Scegli da dove parte e dove arriva: con i due menu qui sopra, oppure con un clic su un dispositivo del disegno.'}
+                  ? t.presentation.answer.chooseSource
+                  : t.presentation.answer.chooseBoth}
             </p>
           ) : (
             <>
@@ -315,7 +330,7 @@ const PresentationPanel = () => {
                 </div>
               </div>
               {summary.reason && (
-                <p className="presentation-reason" title="Il motivo, come lo dà il motore">
+                <p className="presentation-reason" title={t.presentation.answer.reasonHint}>
                   {summary.reason}
                 </p>
               )}
@@ -326,13 +341,10 @@ const PresentationPanel = () => {
 
         {/* ── Failures ───────────────────────────────────────────────── */}
         <section className="presentation-section" aria-labelledby="presentation-failures">
-          <h4 id="presentation-failures">Guasti simulati</h4>
+          <h4 id="presentation-failures">{t.presentation.failures.heading}</h4>
 
           {failureCount === 0 ? (
-            <p className="presentation-hint">
-              Cosa succede se si rompe? Clic su un dispositivo o su un cavo del disegno, poi «Simula
-              un guasto». Il disegno non viene modificato.
-            </p>
+            <p className="presentation-hint">{t.presentation.failures.hint}</p>
           ) : (
             <>
               <ul className="presentation-failures">
@@ -341,8 +353,8 @@ const PresentationPanel = () => {
                     <button
                       type="button"
                       className="presentation-chip failure"
-                      title="Ripara"
-                      aria-label={`Ripara ${labelOf(id)}`}
+                      title={t.presentation.failures.repair}
+                      aria-label={t.presentation.failures.repairDevice(labelOf(id))}
                       onClick={() => toggleDeviceFailure(id)}
                     >
                       <ZapOff size={14} aria-hidden="true" /> {labelOf(id)} <X size={14} aria-hidden="true" />
@@ -354,67 +366,53 @@ const PresentationPanel = () => {
                     <button
                       type="button"
                       className="presentation-chip failure"
-                      title="Ripara"
-                      aria-label={`Ripara il cavo ${cableName(id)}`}
+                      title={t.presentation.failures.repair}
+                      aria-label={t.presentation.failures.repairCable(cableName(id))}
                       onClick={() => toggleConnectionFailure(id)}
                     >
-                      <ZapOff size={14} aria-hidden="true" /> cavo {cableName(id)}{' '}
+                      <ZapOff size={14} aria-hidden="true" /> {t.presentation.failures.cable(cableName(id))}{' '}
                       <X size={14} aria-hidden="true" />
                     </button>
                   </li>
                 ))}
                 <li>
                   <button type="button" className="presentation-secondary" onClick={repairAll}>
-                    <Wrench size={14} aria-hidden="true" /> Ripara tutto
+                    <Wrench size={14} aria-hidden="true" /> {t.presentation.failures.repairAll}
                   </button>
                 </li>
               </ul>
 
               {impact && (
                 <div className="presentation-impact">
-                  <h5>Sul resto della rete</h5>
+                  <h5>{t.presentation.impact.heading}</h5>
                   {impact.endpoints.length < 2 ? (
-                    <p className="presentation-hint">
-                      Per misurare l&apos;effetto servono almeno due dispositivi finali (PC, server…)
-                      con un indirizzo.
-                    </p>
+                    <p className="presentation-hint">{t.presentation.impact.tooFewEndDevices}</p>
                   ) : impact.working === 0 ? (
-                    <p className="presentation-hint">
-                      Con {FLOW_NAMES[flow]} nessuna comunicazione tra i dispositivi finali funzionava
-                      già prima dei guasti.
-                    </p>
+                    <p className="presentation-hint">{t.presentation.impact.nothingWorked(flowName(flow))}</p>
                   ) : (
                     <>
                       <p className="presentation-impact-scope">
-                        {FLOW_NAMES[flow]} tra i {impact.endpoints.length} dispositivi finali:{' '}
-                        {exchanges(impact.working)} che senza guasti{' '}
-                        {impact.working === 1 ? 'funziona' : 'funzionano'}.
+                        {t.presentation.impact.scope(flowName(flow), impact.endpoints.length, impact.working)}
                       </p>
 
                       <p className={`presentation-impact-line ${impact.broken.length > 0 ? 'ko' : 'ok'}`}>
-                        {impact.broken.length === 0
-                          ? 'Nessuna si interrompe'
-                          : `${impact.broken.length} ${impact.broken.length === 1 ? 'si interrompe' : 'si interrompono'}`}
+                        {t.presentation.impact.stop(impact.broken.length)}
                       </p>
                       <ImpactGroups groups={brokenGroups} onAsk={ask} />
 
                       {impact.rerouted.length > 0 && (
                         <>
                           <p className="presentation-impact-line detour">
-                            {impact.rerouted.length}{' '}
-                            {impact.rerouted.length === 1 ? 'passa' : 'passano'} da un&apos;altra strada
+                            {t.presentation.impact.takeAnotherWay(impact.rerouted.length)}
                           </p>
                           <ImpactGroups groups={reroutedGroups} onAsk={ask} />
-                          <p className="presentation-small">
-                            Il motore prende la strada più corta che funziona; protocolli come lo
-                            spanning tree non sono simulati.
-                          </p>
+                          <p className="presentation-small">{t.presentation.impact.shortestWay}</p>
                         </>
                       )}
 
                       {impact.unchanged > 0 && (
                         <p className="presentation-impact-line same">
-                          {impact.unchanged} {impact.unchanged === 1 ? 'non cambia' : 'non cambiano'}
+                          {t.presentation.impact.doNotChange(impact.unchanged)}
                         </p>
                       )}
                     </>
@@ -428,7 +426,7 @@ const PresentationPanel = () => {
         {/* ── The way, hop by hop ────────────────────────────────────── */}
         {answer && legs.length > 0 && (
           <section className="presentation-section" aria-labelledby="presentation-way">
-            <h4 id="presentation-way">Percorso</h4>
+            <h4 id="presentation-way">{t.presentation.path.heading}</h4>
 
             {legs.map((leg, legIndex) =>
               leg.retracesPrevious ? (
@@ -436,7 +434,13 @@ const PresentationPanel = () => {
                 // opened on demand
                 <details key={`${leg.title}-${legIndex}`} className="presentation-leg">
                   <summary>
-                    <h5>{leg.title}</h5> <span>per la stessa strada</span>
+                    <Rich
+                      text={t.presentation.path.retraced}
+                      parts={{
+                        leg: () => <h5>{leg.title}</h5>,
+                        same: (words) => <span>{words}</span>,
+                      }}
+                    />
                   </summary>
                   <LegSteps leg={leg} reached={reached} />
                 </details>
@@ -450,7 +454,7 @@ const PresentationPanel = () => {
 
             {answer.notes.length > 0 && (
               <div className="presentation-notes">
-                <h5>Note del motore</h5>
+                <h5>{t.presentation.path.engineNotes}</h5>
                 <ul>
                   {answer.notes.map((note) => (
                     <li key={note}>{note}</li>

@@ -2,7 +2,8 @@
  * Project file (`.pixelcake.json`), version 1 — see docs/project-file.md.
  *
  * Pure module: text in, data out. No store, no DOM, no clock (the caller
- * supplies `savedAt`). Messages are for the user, hence in Italian.
+ * supplies `savedAt`). Messages are for the user: they are read from the
+ * dictionary, in the language of the moment.
  */
 
 import type {
@@ -24,9 +25,14 @@ import { isValidIP } from '@/utils/ipHelpers';
 import { tidyNotes } from '@/utils/deviceNotes';
 import { isVlanId, tidyVlanName, VLAN_NAME_MAX_LENGTH } from '@/utils/vlanNames';
 import { readAreas } from '@/utils/canvasAreas';
+import { getT } from '@/i18n';
 
 export const PROJECT_FILE_EXTENSION = '.pixelcake.json';
-export const DEFAULT_PROJECT_NAME = 'Progetto senza nome';
+
+/** The name of a project nobody named. Once given it is the project's own: it does not follow the language */
+export function defaultProjectName(): string {
+  return getT().project.defaultName;
+}
 
 export const DEFAULT_NETWORK_SETTINGS: GlobalNetworkSettings = {
   ipClass: '192.168.1.0',
@@ -76,7 +82,7 @@ export function fileSlug(name: string): string {
 
 /** File name suggested for a project: its name made filename-safe + extension */
 export function projectFileName(projectName: string): string {
-  return `${fileSlug(projectName) || 'progetto'}${PROJECT_FILE_EXTENSION}`;
+  return `${fileSlug(projectName) || getT().project.fileName}${PROJECT_FILE_EXTENSION}`;
 }
 
 // ---------- small helpers ----------
@@ -104,10 +110,6 @@ function highestIndex(ids: string[], prefix: string): number {
     if (match) highest = Math.max(highest, parseInt(match[1], 10));
   }
   return highest;
-}
-
-function plural(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
 }
 
 // ---------- serialising ----------
@@ -335,6 +337,9 @@ export type ParseProjectResult =
 /** Thrown inside the parser for a file that cannot be opened at all */
 class ProjectFileError extends Error {}
 
+/** The words of the errors and of the repairs, in the language of the moment */
+const words = () => getT().projectFile;
+
 /**
  * The names of the VLANs of the project: a number from 1 to 4094 and a name
  * each, one name for a number, lowest number first. What is not is left
@@ -342,7 +347,7 @@ class ProjectFileError extends Error {}
  */
 function parseVlans(value: unknown, warnings: string[]): ProjectVlan[] {
   if (!Array.isArray(value)) {
-    warnings.push('Elenco dei nomi delle VLAN non valido: ignorato.');
+    warnings.push(words().repairs.vlanListNotValid);
     return [];
   }
   const byId = new Map<number, ProjectVlan>();
@@ -357,22 +362,14 @@ function parseVlans(value: unknown, warnings: string[]): ProjectVlan[] {
     if (name.length > VLAN_NAME_MAX_LENGTH) cut++;
     byId.set(entry.id, { id: entry.id, name: tidyVlanName(name) });
   }
-  if (dropped > 0) {
-    warnings.push(
-      `${plural(dropped, 'nome di VLAN non valido o duplicato ignorato', 'nomi di VLAN non validi o duplicati ignorati')}.`
-    );
-  }
-  if (cut > 0) {
-    warnings.push(
-      `${plural(cut, 'nome di VLAN troppo lungo accorciato', 'nomi di VLAN troppo lunghi accorciati')} a ${VLAN_NAME_MAX_LENGTH} caratteri.`
-    );
-  }
+  if (dropped > 0) warnings.push(words().repairs.vlanNamesDropped(dropped));
+  if (cut > 0) warnings.push(words().repairs.vlanNamesCut(cut, VLAN_NAME_MAX_LENGTH));
   return [...byId.values()].sort((a, b) => a.id - b.id);
 }
 
 function parseSettings(value: unknown, warnings: string[]): GlobalNetworkSettings {
   if (!isRecord(value)) {
-    warnings.push('Impostazioni di rete mancanti: usati i valori predefiniti.');
+    warnings.push(words().repairs.noSettings);
     return { ...DEFAULT_NETWORK_SETTINGS };
   }
 
@@ -406,10 +403,10 @@ function parseSettings(value: unknown, warnings: string[]): GlobalNetworkSetting
   }
 
   if (repaired) {
-    warnings.push('Impostazioni di rete incomplete: completate con i valori predefiniti.');
+    warnings.push(words().repairs.incompleteSettings);
   }
   if (badDns) {
-    warnings.push('Server DNS predefinito non valido: ignorato.');
+    warnings.push(words().repairs.defaultDnsNotValid);
   }
   if (value.vlans !== undefined) {
     const vlans = parseVlans(value.vlans, warnings);
@@ -504,7 +501,7 @@ function withReadableDhcp(interfaces: unknown[]): unknown[] {
   return changed ? kept : interfaces;
 }
 
-function parseDevices(list: unknown[], where: string, warnings: string[]): NetworkDevice[] {
+function parseDevices(list: unknown[], canvasName: string, warnings: string[]): NetworkDevice[] {
   const devices: NetworkDevice[] = [];
   const seen = new Set<string>();
   let dropped = 0;
@@ -585,16 +582,8 @@ function parseDevices(list: unknown[], where: string, warnings: string[]): Netwo
     devices.push(device as unknown as NetworkDevice);
   }
 
-  if (dropped > 0) {
-    warnings.push(
-      `${where}: ${plural(dropped, 'dispositivo non valido o duplicato ignorato', 'dispositivi non validi o duplicati ignorati')}.`
-    );
-  }
-  if (repaired > 0) {
-    warnings.push(
-      `${where}: ${plural(repaired, 'dispositivo incompleto corretto', 'dispositivi incompleti corretti')}.`
-    );
-  }
+  if (dropped > 0) warnings.push(words().repairs.devicesDropped(canvasName, dropped));
+  if (repaired > 0) warnings.push(words().repairs.devicesRepaired(canvasName, repaired));
 
   // A file written before interface addressing may carry a stale mirror, and
   // a card set to DHCP an address it does not use
@@ -604,7 +593,7 @@ function parseDevices(list: unknown[], where: string, warnings: string[]): Netwo
 function parseConnections(
   list: unknown[],
   devices: NetworkDevice[],
-  where: string,
+  canvasName: string,
   warnings: string[]
 ): NetworkConnection[] {
   const valid = list.filter(
@@ -613,17 +602,13 @@ function parseConnections(
   ) as unknown as NetworkConnection[];
   if (valid.length !== list.length) {
     const count = list.length - valid.length;
-    warnings.push(
-      `${where}: ${plural(count, 'connessione non valida ignorata', 'connessioni non valide ignorate')}.`
-    );
+    warnings.push(words().repairs.connectionsDropped(canvasName, count));
   }
 
   const { cleanedConnections } = cleanupConnections(valid);
   if (cleanedConnections.length !== valid.length) {
     const count = valid.length - cleanedConnections.length;
-    warnings.push(
-      `${where}: ${plural(count, 'connessione con id duplicato rimossa', 'connessioni con id duplicato rimosse')}.`
-    );
+    warnings.push(words().repairs.connectionsDuplicate(canvasName, count));
   }
 
   const deviceIds = new Set(devices.map(device => device.id));
@@ -632,16 +617,14 @@ function parseConnections(
   );
   if (attached.length !== cleanedConnections.length) {
     const count = cleanedConnections.length - attached.length;
-    warnings.push(
-      `${where}: ${plural(count, 'connessione verso un dispositivo inesistente rimossa', 'connessioni verso dispositivi inesistenti rimosse')}.`
-    );
+    warnings.push(words().repairs.connectionsDetached(canvasName, count));
   }
 
   // A file written before interface bindings: every link gets its interfaces
   return normalizeBindings(devices, attached);
 }
 
-function parseViewport(value: unknown, where: string, warnings: string[]): CanvasViewport {
+function parseViewport(value: unknown, canvasName: string, warnings: string[]): CanvasViewport {
   if (
     isRecord(value) &&
     isFiniteNumber(value.x) &&
@@ -651,7 +634,7 @@ function parseViewport(value: unknown, where: string, warnings: string[]): Canva
   ) {
     return { x: value.x, y: value.y, zoom: value.zoom };
   }
-  warnings.push(`${where}: vista mancante o non valida, riportata alla posizione iniziale.`);
+  warnings.push(words().repairs.viewReset(canvasName));
   return { ...DEFAULT_VIEWPORT };
 }
 
@@ -669,40 +652,32 @@ function parseCounter(value: unknown, ids: string[], prefix: string): [number, b
 /** A canvas without its id: ids are settled once all canvases are read */
 function parseCanvas(value: unknown, index: number, warnings: string[]): StoredCanvas {
   if (!isRecord(value)) {
-    throw new ProjectFileError(`Il canvas n. ${index + 1} del file non è valido.`);
+    throw new ProjectFileError(words().errors.canvasNotValid(index + 1));
   }
 
-  let name = `Canvas ${index + 1}`;
+  // A canvas without a name is given one, in the language of the moment
+  let name = getT().project.canvasName(index + 1);
   if (isText(value.name)) {
     name = value.name;
   } else {
-    warnings.push(`Canvas n. ${index + 1} senza nome: chiamato "${name}".`);
+    warnings.push(words().repairs.canvasUnnamed(index + 1, name));
   }
-  const where = `Canvas "${name}"`;
 
   if (!Array.isArray(value.devices)) {
-    throw new ProjectFileError(`${where}: manca l'elenco dei dispositivi ("devices").`);
+    throw new ProjectFileError(words().errors.noDeviceList(name));
   }
   if (!Array.isArray(value.connections)) {
-    throw new ProjectFileError(`${where}: manca l'elenco delle connessioni ("connections").`);
+    throw new ProjectFileError(words().errors.noConnectionList(name));
   }
 
-  const devices = parseDevices(value.devices, where, warnings);
-  const connections = parseConnections(value.connections, devices, where, warnings);
+  const devices = parseDevices(value.devices, name, warnings);
+  const connections = parseConnections(value.connections, devices, name, warnings);
   // The areas behind the devices: one that cannot be drawn (no place, no
   // size) is left out, the rest of one is completed
   const drawn = readAreas(value.areas);
-  if (drawn.dropped > 0) {
-    warnings.push(
-      `${where}: ${plural(drawn.dropped, 'riquadro non valido ignorato', 'riquadri non validi ignorati')}.`
-    );
-  }
-  if (drawn.repaired > 0) {
-    warnings.push(
-      `${where}: ${plural(drawn.repaired, 'riquadro incompleto corretto', 'riquadri incompleti corretti')}.`
-    );
-  }
-  const viewport = parseViewport(value.viewport, where, warnings);
+  if (drawn.dropped > 0) warnings.push(words().repairs.areasDropped(name, drawn.dropped));
+  if (drawn.repaired > 0) warnings.push(words().repairs.areasRepaired(name, drawn.repaired));
+  const viewport = parseViewport(value.viewport, name, warnings);
 
   const [deviceCounter, deviceCounterRaised] = parseCounter(
     value.deviceCounter,
@@ -715,7 +690,7 @@ function parseCanvas(value: unknown, index: number, warnings: string[]): StoredC
     'conn'
   );
   if (deviceCounterRaised || connectionCounterRaised) {
-    warnings.push(`${where}: contatori degli id mancanti o troppo bassi, ricalcolati.`);
+    warnings.push(words().repairs.countersRaised(name));
   }
 
   return {
@@ -745,11 +720,7 @@ function settleCanvasIds(canvases: StoredCanvas[], warnings: string[]): void {
     taken.add(canvas.id);
   }
 
-  if (renamed > 0) {
-    warnings.push(
-      `${plural(renamed, 'canvas con id mancante o duplicato: assegnato un nuovo id', 'canvas con id mancante o duplicato: assegnati nuovi id')}.`
-    );
-  }
+  if (renamed > 0) warnings.push(words().repairs.canvasIdsGiven(renamed));
 }
 
 function isDeviceTemplate(value: unknown): value is DeviceTemplate {
@@ -781,7 +752,7 @@ function isConnectionTemplate(value: unknown): value is ConnectionTemplate {
 
 function parseTemplates(value: unknown, warnings: string[]): ProjectTemplates {
   if (!isRecord(value)) {
-    warnings.push('Elenco dei template personalizzati mancante: nessun template importato.');
+    warnings.push(words().repairs.noTemplateList);
     return { devices: [], connections: [] };
   }
 
@@ -798,11 +769,7 @@ function parseTemplates(value: unknown, warnings: string[]): ProjectTemplates {
     .map(template => ({ ...template, isCustom: true }));
 
   const ignored = given.length - devices.length - connections.length;
-  if (ignored > 0) {
-    warnings.push(
-      `${plural(ignored, 'template personalizzato non valido ignorato', 'template personalizzati non validi ignorati')}.`
-    );
-  }
+  if (ignored > 0) warnings.push(words().repairs.templatesDropped(ignored));
   return { devices, connections };
 }
 
@@ -811,46 +778,41 @@ function readProject(text: string, warnings: string[]): ProjectFile {
   try {
     data = JSON.parse(text);
   } catch {
-    throw new ProjectFileError('Il file non è un JSON valido.');
+    throw new ProjectFileError(words().errors.notJson);
   }
 
   if (!isRecord(data) || data.format !== PROJECT_FILE_FORMAT) {
-    throw new ProjectFileError(
-      'Il file non è un progetto PixelCake (campo "format" mancante o non riconosciuto).'
-    );
+    throw new ProjectFileError(words().errors.notProject);
   }
 
   if (data.version === undefined) {
-    warnings.push('Versione del formato non indicata: il file è stato letto come versione 1.');
+    warnings.push(words().repairs.noVersion);
   } else if (
     typeof data.version !== 'number' ||
     !Number.isInteger(data.version) ||
     data.version < 1
   ) {
-    throw new ProjectFileError('Il file indica una versione del formato non valida.');
+    throw new ProjectFileError(words().errors.versionNotValid);
   } else if (data.version > PROJECT_FILE_VERSION) {
-    throw new ProjectFileError(
-      `Il file è stato creato con una versione più recente di PixelCake (formato ${data.version}): ` +
-        "aggiorna l'applicazione per aprirlo."
-    );
+    throw new ProjectFileError(words().errors.newerVersion(data.version));
   }
 
   if (!Array.isArray(data.canvases) || data.canvases.length === 0) {
-    throw new ProjectFileError('Il progetto non contiene nessun canvas.');
+    throw new ProjectFileError(words().errors.noCanvases);
   }
 
-  let name = DEFAULT_PROJECT_NAME;
+  let name = defaultProjectName();
   if (isText(data.name)) {
     name = data.name;
   } else {
-    warnings.push(`Nome del progetto mancante: usato "${DEFAULT_PROJECT_NAME}".`);
+    warnings.push(words().repairs.noProjectName(name));
   }
 
   let description = '';
   if (typeof data.description === 'string') {
     description = data.description;
   } else {
-    warnings.push('Descrizione del progetto mancante: lasciata vuota.');
+    warnings.push(words().repairs.noDescription);
   }
 
   const settings = parseSettings(data.settings, warnings);
@@ -865,7 +827,7 @@ function readProject(text: string, warnings: string[]): ProjectFile {
   ) {
     activeCanvasId = data.activeCanvasId;
   } else {
-    warnings.push(`Canvas attivo non trovato: aperto "${canvases[0].name}".`);
+    warnings.push(words().repairs.activeCanvasNotFound(canvases[0].name));
   }
 
   const templates = parseTemplates(data.templates, warnings);
@@ -897,6 +859,6 @@ export function parseProjectFile(text: string): ParseProjectResult {
       return { ok: false, error: error.message };
     }
     // Content so malformed that reading it failed: still an answer, never a throw
-    return { ok: false, error: 'Il file non può essere letto: il contenuto non è valido.' };
+    return { ok: false, error: words().errors.unreadable };
   }
 }

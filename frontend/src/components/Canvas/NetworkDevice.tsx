@@ -10,6 +10,7 @@ import { useTemplateStore } from '@/store/templateStore';
 import { useUIStore } from '@/store/uiStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
+import { useT } from '@/i18n';
 
 interface NetworkDeviceData extends NetworkDeviceType {
   /**
@@ -44,6 +45,9 @@ function arePropsEqual(
 }
 
 const NetworkDevice = memo(({ data, id }: NodeProps<NetworkDeviceData>) => {
+  // (the comparator below knows nothing of the language: this hook is what
+  // draws the device again when the language changes)
+  const t = useT();
   const setHoveredDevice = useNetworkStore((state) => state.setHoveredDevice);
   const templates = useTemplateStore((state) => state.templates);
   const magnifiedDeviceTypes = useUIStore((state) => state.magnifiedDeviceTypes);
@@ -64,8 +68,8 @@ const NetworkDevice = memo(({ data, id }: NodeProps<NetworkDeviceData>) => {
 
   // Find template by ID (preferred) or fallback to type (backward compatibility)
   const template = data.templateId
-    ? templates.find((t) => t.id === data.templateId)
-    : templates.find((t) => t.type === data.type);
+    ? templates.find((entry) => entry.id === data.templateId)
+    : templates.find((entry) => entry.type === data.type);
 
   // Fallback to DEVICE_ICONS if template not found (backward compatibility)
   const deviceIcon = template?.icon || DEVICE_ICONS[data.type] || 'mdi:help-circle-outline';
@@ -167,13 +171,13 @@ const NetworkDevice = memo(({ data, id }: NodeProps<NetworkDeviceData>) => {
       {/* Presentation mode: the ends of the question, and a broken device */}
       {(isSource || isTarget) && (
         <span className={`device-role ${isSource ? 'device-role-source' : 'device-role-target'}`}>
-          {isSource ? 'Da' : 'A'}
+          {isSource ? t.canvas.device.from : t.canvas.device.to}
         </span>
       )}
       {isFailed && (
-        <span className="device-failed-badge" title="Guasto simulato">
+        <span className="device-failed-badge" title={t.canvas.device.failed}>
           <ZapOff size={14} aria-hidden="true" />
-          <span className="sr-only">Guasto simulato</span>
+          <span className="sr-only">{t.canvas.device.failed}</span>
         </span>
       )}
 

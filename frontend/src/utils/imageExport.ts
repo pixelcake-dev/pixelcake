@@ -9,6 +9,7 @@
 
 import { toast } from 'sonner';
 import { fileSlug } from './projectFile';
+import { getT } from '@/i18n';
 
 export type ImageFormat = 'png' | 'svg';
 
@@ -43,7 +44,7 @@ export function imageFileName(
   format: ImageFormat
 ): string {
   const parts = [fileSlug(projectName), canvasName ? fileSlug(canvasName) : ''].filter(Boolean);
-  return `${parts.join('-') || 'disegno'}.${format}`;
+  return `${parts.join('-') || getT().exportImage.fileName}.${format}`;
 }
 
 export function svgBlob(svg: string): Blob {
@@ -100,12 +101,11 @@ export async function copyImage(png: Blob): Promise<boolean> {
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
   } catch (error) {
     console.error('[Image] Copy failed:', error);
-    toast.error("Impossibile copiare l'immagine", {
-      description: 'Il browser non lo ha permesso. Puoi salvarla su file.',
-    });
+    const { notices } = getT().exportImage;
+    toast.error(notices.cannotCopy, { description: notices.cannotCopyDetail });
     return false;
   }
-  toast.success('Immagine copiata negli appunti');
+  toast.success(getT().exportImage.notices.copied);
   return true;
 }
 
@@ -124,10 +124,15 @@ interface SavePickerHost {
   }) => Promise<ImageFileHandle>;
 }
 
-const FILE_TYPES: Record<ImageFormat, { description: string; accept: Record<string, string[]> }> = {
-  png: { description: 'Immagine PNG', accept: { 'image/png': ['.png'] } },
-  svg: { description: 'Immagine SVG', accept: { 'image/svg+xml': ['.svg'] } },
+const FILE_ACCEPT: Record<ImageFormat, Record<string, string[]>> = {
+  png: { 'image/png': ['.png'] },
+  svg: { 'image/svg+xml': ['.svg'] },
 };
+
+/** Read when the picker opens: its words are in the language of that moment */
+function fileType(format: ImageFormat): { description: string; accept: Record<string, string[]> } {
+  return { description: getT().exportImage.fileTypes[format], accept: FILE_ACCEPT[format] };
+}
 
 /** A native picker is open: a second one would be refused by the browser */
 let pickerOpen = false;
@@ -172,7 +177,7 @@ export async function saveImage(
 
   if (typeof host.showSaveFilePicker !== 'function') {
     download(content, fileName);
-    toast.success(`Immagine scaricata come ${fileName}`);
+    toast.success(getT().exportImage.notices.downloaded(fileName));
     return 'downloaded';
   }
 
@@ -180,11 +185,11 @@ export async function saveImage(
   pickerOpen = true;
   let handle: ImageFileHandle;
   try {
-    handle = await host.showSaveFilePicker({ suggestedName: fileName, types: [FILE_TYPES[format]] });
+    handle = await host.showSaveFilePicker({ suggestedName: fileName, types: [fileType(format)] });
   } catch (error) {
     if (isAbort(error)) return 'cancelled';
     console.error('[Image] Save picker failed:', error);
-    toast.error("Impossibile scegliere dove salvare l'immagine", {
+    toast.error(getT().exportImage.notices.cannotChooseWhere, {
       description: error instanceof Error && error.message ? error.message : undefined,
     });
     return 'failed';
@@ -199,12 +204,11 @@ export async function saveImage(
   } catch (error) {
     if (isAbort(error)) return 'cancelled';
     console.error('[Image] Write failed:', error);
-    toast.error(`Impossibile salvare su "${handle.name}"`, {
-      description: 'Riprova scegliendo un altro file o un\'altra cartella.',
-    });
+    const { notices } = getT().exportImage;
+    toast.error(notices.cannotSaveTo(handle.name), { description: notices.tryElsewhere });
     return 'failed';
   }
 
-  toast.success('Immagine salvata', { description: handle.name });
+  toast.success(getT().exportImage.notices.saved, { description: handle.name });
   return 'saved';
 }

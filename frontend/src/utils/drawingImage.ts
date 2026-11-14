@@ -24,6 +24,8 @@ import type {
   NetworkDevice,
 } from '@/types/network';
 import { AREA_PALETTE, AREA_TINT } from '@/utils/canvasAreas';
+// (the few words written into the picture: plain data, read when it is drawn)
+import { getT } from '@/i18n';
 
 // ---------- what the caller gives ----------
 
@@ -686,7 +688,8 @@ function deviceSvg(
 
   // The end of the question this device is
   if (device.role) {
-    const text = device.role === 'source' ? 'DA' : 'A';
+    const words = getT().exportImage.picture;
+    const text = device.role === 'source' ? words.from : words.to;
     const spacing = ROLE_FONT.size * 0.04;
     const textWidth = measureText(text, ROLE_FONT) + spacing * text.length;
     const pillWidth = Math.round(textWidth + 16);
@@ -957,7 +960,7 @@ export function renderDrawingImage(input: DrawingInput, options: ImageOptions): 
   }
 
   const height = Math.ceil(cursor) + PAGE.margin;
-  const name = title?.name ?? 'Network';
+  const name = title?.name ?? getT().exportImage.picture.untitled;
   const svg = [
     `${SVG_OPEN} width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" font-family="${FONT_FAMILY}" role="img" aria-label="${escapeXml(name)}">`,
     `<title>${escapeXml(name)}</title>`,

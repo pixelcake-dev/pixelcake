@@ -26,6 +26,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useSimulationStore } from '@/store/simulationStore';
 import { executeCommand, type TerminalContext } from '@/terminal/executor';
 import type { TerminalLine } from '@/terminal/types';
+import { useT } from '@/i18n';
 
 /** Live diagnostic session: hop lines printed as the packet travels */
 interface LiveSession {
@@ -154,6 +155,9 @@ const SCROLLBAR_CSS = `
 `;
 
 const TerminalModal = () => {
+  // Only the window is in the language of the interface: what the terminal
+  // itself says (banner, prompt, hints, output) is English in every language
+  const t = useT();
   const isOpen = useUIStore((state) => state.modals.codeTerminal);
   const closeModal = useUIStore((state) => state.closeModal);
   const terminalContextDevice = useUIStore((state) => state.terminalContextDevice);
@@ -431,7 +435,7 @@ const TerminalModal = () => {
     <div
       data-testid="terminal-window"
       role="dialog"
-      aria-label="Terminal"
+      aria-label={t.terminal.title}
       style={{
         position: 'fixed',
         left: geometry.x,
@@ -462,7 +466,7 @@ const TerminalModal = () => {
       >
         {/* The title, set as a label */}
         <div className="flex-1 text-[12px] font-semibold uppercase tracking-[0.07em] text-[var(--terminal-title-color)]">
-          Terminal
+          {t.terminal.title}
         </div>
 
         {/* The way out (pointerdown stopped so a click does not start a drag) */}
@@ -470,8 +474,8 @@ const TerminalModal = () => {
           <button
             type="button"
             className="p-1 rounded text-[var(--terminal-title-color)] hover:text-[var(--text-color)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
-            title="Chiudi"
-            aria-label="Chiudi il terminale"
+            title={t.common.actions.close}
+            aria-label={t.terminal.close}
             onClick={handleClose}
           >
             <X size={16} aria-hidden="true" />
@@ -479,11 +483,11 @@ const TerminalModal = () => {
         </div>
       </div>
 
-      {/* Corpo del terminale: scrollback + input line in un unico pannello scrollabile */}
+      {/* The body of the terminal: scrollback and input line in one scrolling pane */}
       <div
         ref={scrollRef}
         data-testid="terminal-console"
-        aria-label="Terminal output"
+        aria-label={t.terminal.output}
         onClick={focusInput}
         className="terminal-body pc-terminal-scroll"
         style={{
@@ -534,7 +538,7 @@ const TerminalModal = () => {
             </span>
             <input
               ref={inputRef}
-              aria-label="Terminal input"
+              aria-label={t.terminal.input}
               value={input}
               onChange={handleChange}
               onKeyDown={handleKeyDown}

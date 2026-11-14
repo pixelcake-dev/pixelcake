@@ -10,11 +10,13 @@ import { useNetworkStore } from '@/store/networkStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useDhcp } from '@/utils/useDhcp';
 import { shownAddress } from '@/utils/dhcpLabels';
+import { useT } from '@/i18n';
 
 /** Distance kept from the edges of the window */
 const MARGIN = 8;
 
 const PresentationMenu = () => {
+  const t = useT();
   const menu = usePresentationStore((state) => state.menu);
   const sourceId = usePresentationStore((state) => state.sourceId);
   const targetId = usePresentationStore((state) => state.targetId);
@@ -89,7 +91,7 @@ const PresentationMenu = () => {
           disabled={sourceId === device.id}
           onClick={act(() => setSource(device.id))}
         >
-          <MapPin size={16} aria-hidden="true" /> Parti da qui
+          <MapPin size={16} aria-hidden="true" /> {t.presentation.menu.startHere}
         </button>
         <button
           type="button"
@@ -97,7 +99,7 @@ const PresentationMenu = () => {
           disabled={targetId === device.id}
           onClick={act(() => setTarget(device.id))}
         >
-          <Flag size={16} aria-hidden="true" /> Arriva qui
+          <Flag size={16} aria-hidden="true" /> {t.presentation.menu.arriveHere}
         </button>
         <hr />
         <button
@@ -108,11 +110,11 @@ const PresentationMenu = () => {
         >
           {isFailed ? (
             <>
-              <Wrench size={16} aria-hidden="true" /> Ripara
+              <Wrench size={16} aria-hidden="true" /> {t.presentation.menu.repair}
             </>
           ) : (
             <>
-              <ZapOff size={16} aria-hidden="true" /> Simula un guasto
+              <ZapOff size={16} aria-hidden="true" /> {t.presentation.menu.simulateFailure}
             </>
           )}
         </button>
@@ -124,11 +126,12 @@ const PresentationMenu = () => {
   if (!connection) return null;
   const labelOf = (id: string) => devices.find((entry) => entry.id === id)?.label ?? id;
   const name = `${labelOf(connection.source)} – ${labelOf(connection.target)}`;
+  const title = t.presentation.menu.cable(name);
   const isCut = failedConnections.includes(connection.id);
   return (
-    <div ref={ref} className="presentation-menu" role="menu" aria-label={`Cavo ${name}`} style={style}>
+    <div ref={ref} className="presentation-menu" role="menu" aria-label={title} style={style}>
       <div className="presentation-menu-title">
-        <strong>Cavo {name}</strong>
+        <strong>{title}</strong>
         {(connection.label || connection.bandwidth) && (
           <span>{[connection.label, connection.bandwidth].filter(Boolean).join(' · ')}</span>
         )}
@@ -141,11 +144,11 @@ const PresentationMenu = () => {
       >
         {isCut ? (
           <>
-            <Wrench size={16} aria-hidden="true" /> Ripara il cavo
+            <Wrench size={16} aria-hidden="true" /> {t.presentation.menu.repairCable}
           </>
         ) : (
           <>
-            <ZapOff size={16} aria-hidden="true" /> Simula un guasto
+            <ZapOff size={16} aria-hidden="true" /> {t.presentation.menu.simulateFailure}
           </>
         )}
       </button>

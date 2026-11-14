@@ -22,6 +22,7 @@ import { usePresentationStore } from '@/store/presentationStore';
 import type { NetworkConnection } from '@/types/network';
 import { FLOW_MODEL_COLORS } from '@/types/network';
 import { MARK_COLORS } from '@/utils/drawingImage';
+import { useT } from '@/i18n';
 
 /**
  * The colour of a simulated failure, readable on both themes. The picture of
@@ -40,6 +41,7 @@ const CustomEdge = ({
   data,
   selected,
 }: EdgeProps<NetworkConnection>) => {
+  const t = useT();
   const selectedDeviceId = useNetworkStore((state) => state.selectedDeviceId);
   const hoveredDeviceId = useNetworkStore((state) => state.hoveredDeviceId);
   const isSimulationRunning = useSimulationStore((state) => state.isRunning);
@@ -243,7 +245,7 @@ const CustomEdge = ({
               pointerEvents: 'all',
             }}
             className="edge-cut-mark nodrag nopan"
-            title="Guasto simulato: il cavo è interrotto"
+            title={t.canvas.cable.cut}
             onClick={openCableMenu}
           >
             ✕
