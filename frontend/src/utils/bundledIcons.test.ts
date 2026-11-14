@@ -8,7 +8,6 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { iconLoaded } from '@iconify/react';
 import { BUNDLED_ICON_COLLECTIONS, BUNDLED_ICON_SETS } from '@/data/bundledIcons';
 import { registerBundledIcons } from '@/utils/bundledIcons';
-import { COMMON_NETWORK_ICONS } from '@/data/commonIcons';
 import { useTemplateStore } from '@/store/templateStore';
 import { isDrawingId } from '@/utils/deviceDrawing';
 
@@ -50,8 +49,9 @@ describe('bundled icons', () => {
 
   it('finds icon names in the source (the scan itself works)', () => {
     const used = iconNamesInSource();
-    expect(used.size).toBeGreaterThan(50);
-    expect(used.has('mdi:router-network')).toBe(true);
+    expect(used.size).toBeGreaterThan(15);
+    expect(used.has('mdi:license')).toBe(true);
+    expect(used.has('lucide:folder')).toBe(true);
   });
 
   it('contains every icon name used in the source', () => {
@@ -62,20 +62,26 @@ describe('bundled icons', () => {
     expect(missing).toEqual([]);
   });
 
-  it('makes the icon of every built-in device template available offline', () => {
-    // (a template that names one of the drawings of the devices has no icon of a set)
-    const missing = useTemplateStore
-      .getState()
-      .templates.filter((template) => !isDrawingId(template.icon) && !iconLoaded(template.icon))
-      .map((template) => `${template.name}: ${template.icon}`);
-    expect(missing).toEqual([]);
+  it('no device is drawn with an icon of a set: every template the app comes with names its drawing', () => {
+    const named = useTemplateStore.getState().templates.map((template) => [template.id, template.icon]);
+    expect(named.filter(([, icon]) => !isDrawingId(icon))).toEqual([]);
   });
 
-  it('makes every icon offered by the icon picker available offline', () => {
-    const missing = COMMON_NETWORK_ICONS.filter((icon) => !iconLoaded(icon.name)).map(
-      (icon) => icon.name
-    );
-    expect(missing).toEqual([]);
+  it('bundles only the sets the source uses, every one of them', () => {
+    const used = new Set([...iconNamesInSource().keys()].map((name) => name.split(':')[0]));
+    expect([...used].sort()).toEqual([...BUNDLED_ICON_SETS].sort());
+    expect(BUNDLED_ICON_COLLECTIONS.map((collection) => collection.prefix)).toEqual(BUNDLED_ICON_SETS);
+  });
+
+  it('bundles no icon the source does not use, but what a used one is made from', () => {
+    const used = new Set(iconNamesInSource().keys());
+    // (a name can be another name of an icon: the icon it stands for comes with it)
+    for (const collection of BUNDLED_ICON_COLLECTIONS) {
+      for (const [name, alias] of Object.entries(collection.aliases ?? {})) {
+        if (used.has(`${collection.prefix}:${name}`)) used.add(`${collection.prefix}:${alias.parent}`);
+      }
+    }
+    expect([...bundledNames()].filter((name) => !used.has(name))).toEqual([]);
   });
 
   it('does not report an unknown icon as loaded', () => {

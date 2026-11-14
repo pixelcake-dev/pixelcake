@@ -10,7 +10,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { BaseModal } from './BaseModal';
 import { Modal } from './Modal';
 import { InlineEdit } from './InlineEdit';
-import IconPicker from './IconPicker';
 import SearchableSelect from './SearchableSelect';
 
 /** One press of Esc, wherever the keyboard is (nowhere in particular, by default) */
@@ -198,25 +197,6 @@ describe('what is open inside a window goes first', () => {
     expect(screen.queryByLabelText('Nome')).toBeNull();
 
     // the next press is for the window
-    esc();
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('Esc closes the list of an icon picker first, then the window', () => {
-    const onClose = vi.fn();
-    render(
-      <Modal isOpen onClose={onClose} title="Finestra">
-        <IconPicker label="Icona" value="mdi:server" onChange={vi.fn()} />
-      </Modal>
-    );
-    fireEvent.click(screen.getByRole('button', { name: /Server/ }));
-    expect(screen.getByPlaceholderText('Cerca icone...')).toBeInTheDocument();
-
-    // wherever the keyboard is: the list is what was opened last
-    esc();
-    expect(screen.queryByPlaceholderText('Cerca icone...')).toBeNull();
-    expect(onClose).not.toHaveBeenCalled();
-
     esc();
     expect(onClose).toHaveBeenCalledTimes(1);
   });

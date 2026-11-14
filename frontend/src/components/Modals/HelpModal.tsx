@@ -21,6 +21,8 @@ import { useUIStore, type HelpTab } from '@/store/uiStore';
 import { COMMAND_REFERENCE } from '@/terminal/executor';
 import { GITHUB_REPO } from '@/constants/links';
 import { APP_MOTTO, APP_NAME } from '@/constants/brand';
+import { BUNDLED_FONTS } from '@/constants/thirdParty';
+import { BUNDLED_ICON_SET_INFO } from '@/data/bundledIcons';
 
 const TABS: Array<{ id: HelpTab; label: string }> = [
   { id: 'guide', label: 'Come si usa' },
@@ -326,6 +328,26 @@ const AboutRow = ({
   </div>
 );
 
+/** `A (licence) e B (licence)`, each name a link to the text of its licence */
+const LicenceLinks = ({ items }: { items: ReadonlyArray<{ name: string; license: string; file: string }> }) => (
+  <>
+    {items.map((item, index) => (
+      <span key={item.file}>
+        {index > 0 && (index === items.length - 1 ? ' e ' : ', ')}
+        <a
+          href={`${import.meta.env.BASE_URL}${item.file}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[var(--accent-text)] underline"
+        >
+          {item.name}
+        </a>{' '}
+        ({item.license})
+      </span>
+    ))}
+  </>
+);
+
 const AboutTab = () => (
   <div className="settings-panel">
     <div className="space-y-3">
@@ -354,6 +376,12 @@ const AboutTab = () => (
 
       <AboutRow icon="mdi:code-tags" title="Tecnologie">
         React 19, TypeScript, Vite, Zustand, React Flow, Tailwind CSS
+      </AboutRow>
+
+      {/* What is bundled from others: each name opens the text of its licence, which travels with the app */}
+      <AboutRow icon="mdi:license" title="Licenze di terzi">
+        Caratteri <LicenceLinks items={BUNDLED_FONTS} />, icone{' '}
+        <LicenceLinks items={BUNDLED_ICON_SET_INFO} />
       </AboutRow>
     </div>
   </div>

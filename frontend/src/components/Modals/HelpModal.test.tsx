@@ -9,7 +9,14 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { useUIStore, type HelpTab } from '@/store/uiStore';
 import { COMMAND_REFERENCE, executeCommand } from '@/terminal/executor';
 import { GITHUB_REPO } from '@/constants/links';
+import { BUNDLED_FONTS } from '@/constants/thirdParty';
+import { BUNDLED_ICON_SET_INFO } from '@/data/bundledIcons';
 import HelpModal from './HelpModal';
+
+/** The texts of the licences that travel with the app, by the path the built app has them at */
+const shippedLicences = Object.keys(import.meta.glob('/public/licenses/*')).map((path) =>
+  path.replace('/public/', '')
+);
 
 function openOn(tab?: HelpTab) {
   useUIStore.getState().openHelp(tab);
@@ -151,9 +158,27 @@ describe('HelpModal', () => {
       expect(within(panel).getByText(`${packageVersion} (Beta)`)).toBeInTheDocument();
       expect(within(panel).getByText(/AGPL-3\.0/)).toBeInTheDocument();
       expect(within(panel).getByText(/React 19, TypeScript, Vite/)).toBeInTheDocument();
-      const link = within(panel).getByRole('link');
+      const link = within(panel).getByRole('link', { name: GITHUB_REPO.replace('https://', '') });
       expect(link).toHaveAttribute('href', GITHUB_REPO);
       expect(link).toHaveAttribute('target', '_blank');
+    });
+
+    it('names in one line what is bundled from others, each name opening the text of its licence', () => {
+      openOn('about');
+      const panel = screen.getByRole('tabpanel');
+      const row = within(panel).getByText('Licenze di terzi').nextElementSibling as HTMLElement;
+
+      expect(row.textContent).toBe(
+        'Caratteri Inter (SIL OFL 1.1) e JetBrains Mono (SIL OFL 1.1), icone Material Design Icons (Apache 2.0) e Lucide (ISC)'
+      );
+      const links = within(row).getAllByRole('link');
+      expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
+        ...BUNDLED_FONTS.map((font) => [font.name, `/${font.file}`]),
+        ...BUNDLED_ICON_SET_INFO.map((set) => [set.name, `/${set.file}`]),
+      ]);
+      for (const link of links) expect(link).toHaveAttribute('target', '_blank');
+      // the files are in public/: the build carries them as they are
+      for (const link of links) expect(shippedLicences).toContain(link.getAttribute('href')?.slice(1));
     });
 
     it('has no user profile to fill in', () => {

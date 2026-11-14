@@ -18,6 +18,7 @@
     "test:coverage": "vitest --coverage",
     "type-check": "tsc -b --noEmit",
     "icons:bundle": "node scripts/bundle-icons.mjs",
+    "licenses:fonts": "node scripts/font-licenses.mjs",
     "drawings:build": "node scripts/build-device-drawings.mjs"
   },
   "dependencies": {

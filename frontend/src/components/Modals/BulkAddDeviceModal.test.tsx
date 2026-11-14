@@ -176,12 +176,12 @@ describe('bulk add — a row adds devices made from its own template', () => {
       ['tpl-dnsserver', 'Server', 'DNS Server'],
       ['tpl-printer', 'PC', 'Printer'],
     ]);
-    // each is drawn with the icon of its template: the canvas finds it by this id
+    // each is drawn with the drawing of its template: the canvas finds it by this id
     expect(devices().map((d) => templateOf(d)?.icon)).toEqual([
-      'mdi:web',
-      'mdi:web',
-      'mdi:dns',
-      'mdi:printer-wireless',
+      'server-web',
+      'server-web',
+      'server-dns',
+      'stampante',
     ]);
     // and the window is closed
     expect(useUIStore.getState().modals.bulkAddDevice).toBe(false);

@@ -173,7 +173,7 @@ Open `http://localhost:5173`. Everything runs in the browser: there is nothing e
 
 Your work is kept in the browser's storage, so it is still there after a reload. To keep it for good, or to move it to another computer, save the project to a file with **File → Salva** (Ctrl+S). In Chrome and Edge the file is written in place; in other browsers it is downloaded. The format is described in [docs/project-file.md](docs/project-file.md).
 
-The app's icons are bundled with it. Only an icon name typed by hand in a custom device template is fetched from the Iconify API.
+The app's icons are bundled with it: nothing is fetched from the Iconify API.
 
 ## Development
 
@@ -216,7 +216,9 @@ Copyright © 2025–2026 [@Phil-pje](https://github.com/Phil-pje).
 
 PixelCake is released under the GNU Affero General Public License v3.0. See [LICENSE](LICENSE).
 
-The bundled icons keep their own licences: Material Design Icons (Apache 2.0), Lucide (ISC), Carbon (Apache 2.0) and Solar (CC BY 4.0, by 480 Design), obtained through [Iconify](https://iconify.design). So do the two typefaces of the interface, which travel with the app: Inter and JetBrains Mono, both under the SIL Open Font License 1.1.
+The drawings of the devices are PixelCake's own: Copyright © 2025–2026 [@Phil-pje](https://github.com/Phil-pje), under the same licence as the app.
+
+The bundled icons keep their own licences: Material Design Icons (Apache 2.0) and Lucide (ISC), obtained through [Iconify](https://iconify.design). So do the two typefaces of the interface: Inter and JetBrains Mono, both under the SIL Open Font License 1.1. The texts of these licences travel with the app, in [frontend/public/licenses](frontend/public/licenses), and the «Informazioni» tab of the guide links to them.
 
 ## Contact
 
