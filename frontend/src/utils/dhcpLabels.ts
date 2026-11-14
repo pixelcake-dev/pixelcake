@@ -1,8 +1,13 @@
 /**
- * Italian words for DHCP: the address shown for a device, where a lease comes
- * from, why a card has none, what is wrong with a pool as typed. (The engine's
- * own reasons are English: they go into terminal and trace messages.
- * Everything the windows and the drawing show goes through here.)
+ * The words for DHCP, in the language of the interface: the address shown for
+ * a device, where a lease comes from, why a card has none, what is wrong with
+ * a pool as typed. (The engine's own reasons are English: they go into
+ * terminal and trace messages. Everything the windows and the drawing show
+ * goes through here.)
+ *
+ * The language is read when a function is called: a component that shows
+ * what these give calls `useT()` too, so that it is drawn again when the
+ * language changes.
  */
 
 import {
@@ -23,102 +28,102 @@ import type {
   PoolProblem,
 } from '@/engine';
 import { interfaceShortLabel } from '@/utils/interfaceLabels';
+import { getT } from '@/i18n';
 import type { DhcpPool, NetworkDevice, NetworkInterfaceCard, Port } from '@/types';
 
 /** What stands for an address a card on DHCP did not get */
-export const NO_LEASE_LABEL = 'DHCP: nessun indirizzo';
+export function noLeaseLabel(): string {
+  return getT().dhcp.noLease;
+}
 
 /**
  * The address shown for a device, on the drawing and wherever devices are
  * listed: the one written by hand, or the one its first card is leased
- * (`192.168.20.100 · DHCP`), or `DHCP: nessun indirizzo`.
+ * (`192.168.20.100 · DHCP`), or the words that say it has none.
  */
 export function shownAddress(device: NetworkDevice, dhcp: DhcpResolution): string {
   const primary = device.nics?.[0];
   if (!primary?.dhcp) return device.ip;
   const lease = leaseOf(dhcp, device.id, primary.id);
-  return lease ? `${lease.ip} · DHCP` : NO_LEASE_LABEL;
+  return lease ? `${lease.ip} · DHCP` : noLeaseLabel();
 }
 
-/** `Router-Core, porta 2` / `Srv-Auth, eth0`: the interface a pool is on */
+/** `Router-Core, port 2` / `Srv-Auth, eth0`: the interface a pool is on */
 export function serverLabel(pool: Pick<DhcpPoolState, 'device' | 'iface'>): string {
   return `${pool.device.label}, ${interfaceShortLabel(pool.iface)}`;
 }
 
-/** `192.168.20.100 da Router-Core, porta 2` */
+/** `192.168.20.100 from Router-Core, port 2` */
 export function leaseText(lease: DhcpLease, dhcp: DhcpResolution): string {
   const pool = poolAt(dhcp, lease.server);
-  return pool ? `${lease.ip} da ${serverLabel(pool)}` : lease.ip;
+  return pool ? getT().dhcp.leaseFrom(lease.ip, serverLabel(pool)) : lease.ip;
 }
 
-/** What is wrong with a pool, as the engine found it, in Italian */
+/** What is wrong with a pool, as the engine found it, in the words of the interface */
 export function poolProblemLabel(problem: PoolProblem, iface: DeviceInterface, pool: DhcpPool): string {
-  const here = iface.kind === 'port' ? 'la porta' : 'la scheda';
+  const t = getT();
+  const kind = iface.kind === 'port' ? 'port' : 'card';
   switch (problem.code) {
     case 'client':
-      return 'la scheda prende il proprio indirizzo dal DHCP: non può anche assegnarne';
+      return t.dhcp.rangeProblem.client;
     case 'no-address':
-      return `${here} non ha un indirizzo: gli indirizzi da assegnare sono quelli della sua rete`;
+      return t.dhcp.rangeProblem.noAddress(kind);
     case 'invalid':
       return problem.value
-        ? `"${problem.value}" non è un indirizzo IPv4 valido`
-        : 'servono il primo e l\'ultimo indirizzo';
+        ? t.common.validation.notIPv4(problem.value)
+        : t.dhcp.rangeProblem.endsMissing;
     case 'outside':
-      // (`del` + `la porta`: «della porta»)
-      return `${problem.value} è fuori dalla rete del${here} (${problem.network})`;
+      return t.dhcp.rangeProblem.outside(problem.value ?? '', kind, problem.network ?? '');
     case 'reversed':
-      return `l'ultimo indirizzo (${pool.end}) viene prima del primo (${pool.start})`;
+      return t.dhcp.rangeProblem.reversed(pool.start, pool.end);
   }
 }
 
 /**
  * What a pool that works hands out, and how much of it is taken:
- * `Gateway consegnato 192.168.10.1 · 2 assegnati, 98 liberi su 100`
+ * `Gateway handed out 192.168.10.1 · 2 leased, 98 free of 100`
  */
 export function poolStatusText(state: DhcpPoolState): string {
-  const unit = state.iface.kind === 'port' ? 'porta' : 'scheda';
-  const given = state.leases.length;
-  return [
-    state.gateway ? `Gateway consegnato ${state.gateway}` : 'Nessun gateway consegnato',
-    ...(state.pool.dns ? [`server DNS consegnato ${state.pool.dns}`] : []),
-    `${given} ${given === 1 ? 'assegnato' : 'assegnati'}, ${state.free} ${state.free === 1 ? 'libero' : 'liberi'} su ${state.size}`,
-    ...(state.iface.enabled ? [] : [`${unit} disabilitata: non risponde`]),
-  ].join(' · ');
+  return getT().dhcp.rangeStatus({
+    gateway: state.gateway,
+    dns: state.pool.dns,
+    leased: state.leases.length,
+    free: state.free,
+    size: state.size,
+    disabled: state.iface.enabled ? undefined : state.iface.kind === 'port' ? 'port' : 'card',
+  });
 }
 
-/** Why a card on DHCP has no address, in Italian */
+/** Why a card on DHCP has no address, in the words of the interface */
 export function unservedText(entry: DhcpUnserved, dhcp: DhcpResolution): string {
+  const words = getT().dhcp.unserved;
   const pool = entry.server ? poolAt(dhcp, entry.server) : undefined;
   switch (entry.cause) {
     case 'routes':
-      return 'un router o un firewall non prende i propri indirizzi dal DHCP';
+      return words.routes;
     case 'disabled':
-      return 'la scheda è disabilitata';
+      return words.disabled;
     case 'no-cable':
-      return 'alla scheda non è collegato nessun cavo';
+      return words.noCable;
     case 'no-server':
-      return 'nessun server DHCP risponde sulla sua rete';
+      return words.noServer;
     case 'unattached':
-      return (
-        `il cavo verso ${pool?.device.label ?? 'il server'} non è assegnato a una delle sue ` +
-        `porte: non si sa quale intervallo risponde`
-      );
+      return words.unattached(pool?.device.label);
     case 'unusable':
       return pool?.problem
-        ? `l'intervallo di ${serverLabel(pool)} non è utilizzabile: ${poolProblemLabel(pool.problem, pool.iface, pool.pool)}`
-        : 'l\'intervallo che risponde non è utilizzabile';
+        ? words.unusable(serverLabel(pool), poolProblemLabel(pool.problem, pool.iface, pool.pool))
+        : words.unusableUnnamed;
     case 'used-up': {
-      if (!pool) return 'l\'intervallo che risponde è esaurito';
-      if (pool.size === 0) return `l'intervallo di ${serverLabel(pool)} non ha indirizzi da assegnare`;
-      const what = pool.size === 1 ? 'il suo unico indirizzo è già preso' : `${pool.size} indirizzi, tutti presi`;
-      return `l'intervallo di ${serverLabel(pool)} è esaurito: ${what}`;
+      if (!pool) return words.usedUpUnnamed;
+      if (pool.size === 0) return words.empty(serverLabel(pool));
+      return words.usedUp(serverLabel(pool), pool.size);
     }
   }
 }
 
 /**
  * What a card on DHCP shows in place of its three fields: the lease
- * (`192.168.20.100 da Router-Core, porta 2`), or why there is none.
+ * (`192.168.20.100 from Router-Core, port 2`), or why there is none.
  */
 export function cardLeaseText(
   dhcp: DhcpResolution,
@@ -130,7 +135,7 @@ export function cardLeaseText(
   const waiting = unservedOf(dhcp, deviceId, nicId);
   return {
     leased: false,
-    text: waiting ? `Nessun indirizzo: ${unservedText(waiting, dhcp)}` : 'Nessun indirizzo',
+    text: getT().dhcp.noAddress(waiting ? unservedText(waiting, dhcp) : undefined),
   };
 }
 
@@ -169,8 +174,9 @@ export function poolProblemText(
 }
 
 /** Said when the server is switched on and nothing was typed */
-export const BLANK_POOL_ERROR =
-  'Scrivi il primo e l\'ultimo indirizzo da assegnare, oppure togli la spunta al server DHCP';
+export function blankPoolError(): string {
+  return getT().dhcp.blankRangeError;
+}
 
 /** A device of one interface, to ask the engine about a pool that is still in a form */
 function standIn(type: string, interfaces: Pick<NetworkDevice, 'ports' | 'nics'>): NetworkDevice {
@@ -207,8 +213,8 @@ export function nicPoolProblemText(nic: NetworkInterfaceCard, pool: DhcpPool): s
 
 /**
  * The first pool of a device that cannot work as it is in the form, in the
- * words of the toast that refuses to save it (`Porta 2: …`); undefined when
- * every pool is fine
+ * words of the toast that refuses to save it (`Port 2, DHCP server: …`);
+ * undefined when every pool is fine
  */
 export function firstPoolProblem(device: NetworkDevice): string | undefined {
   for (const iface of listInterfaces(device)) {
@@ -216,8 +222,12 @@ export function firstPoolProblem(device: NetworkDevice): string | undefined {
     if (!pool) continue;
     const problem = poolProblemText(device, iface, pool);
     if (problem) {
-      const where = iface.kind === 'port' ? `Porta ${iface.port.id}` : `Scheda ${iface.label}`;
-      return `${where}, server DHCP: ${problem}`;
+      const t = getT();
+      const where =
+        iface.kind === 'port'
+          ? t.common.interfaces.port(iface.port.id)
+          : t.common.interfaces.card(iface.label);
+      return t.dhcp.rangeProblemOn(where, problem);
     }
   }
   return undefined;

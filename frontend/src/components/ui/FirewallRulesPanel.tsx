@@ -2,6 +2,8 @@ import React from 'react';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ruleProblem } from '@/utils/networkConfigValidation';
+import { useT } from '@/i18n';
+import { Rich } from '@/i18n/Rich';
 import type { FirewallRule, Port } from '@/types';
 
 interface FirewallRulesPanelProps {
@@ -35,6 +37,7 @@ const iconButton =
  * that matches decides, so each row can be moved up and down.
  */
 const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, onChange }) => {
+  const t = useT();
   const update = (id: string, patch: Partial<FirewallRule>) => {
     onChange(rules.map((rule) => (rule.id === id ? { ...rule, ...patch } : rule)));
   };
@@ -62,39 +65,36 @@ const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, o
   return (
     <div className="flex flex-col gap-4 text-sm">
       <p className="text-[var(--text-color-light)]">
-        Le regole si leggono dall&apos;alto in basso: decide la prima che corrisponde. In «Da» e «A»
-        si scrive <code className="font-mono">any</code> (qualsiasi), una zona (
-        <code className="font-mono">trust</code>, <code className="font-mono">untrust</code>,{' '}
-        <code className="font-mono">dmz</code>), un indirizzo o una rete come{' '}
-        <code className="font-mono">192.168.10.0/24</code>.
+        <Rich
+          text={t.firewall.intro}
+          code={(words) => <code className="font-mono">{words}</code>}
+        />
       </p>
 
-      <section aria-label="Regole del firewall">
+      <section aria-label={t.firewall.title}>
         {rules.length === 0 ? (
-          <p className="text-[var(--text-color-light)] mb-2">
-            Nessuna regola: decide soltanto la politica delle zone, qui sotto.
-          </p>
+          <p className="text-[var(--text-color-light)] mb-2">{t.firewall.none}</p>
         ) : (
           <table className="w-full border-collapse mb-2">
             <thead>
               <tr className="text-left text-xs text-[var(--text-color-light)]">
                 <th scope="col" className="font-medium pb-1 pr-2 w-6">
-                  N.
+                  {t.firewall.columns.number}
                 </th>
                 <th scope="col" className="font-medium pb-1 pr-2">
-                  Azione
+                  {t.firewall.columns.action}
                 </th>
                 <th scope="col" className="font-medium pb-1 pr-2">
-                  Servizio
+                  {t.firewall.columns.service}
                 </th>
                 <th scope="col" className="font-medium pb-1 pr-2">
-                  Da
+                  {t.firewall.columns.from}
                 </th>
                 <th scope="col" className="font-medium pb-1 pr-2">
-                  A
+                  {t.firewall.columns.to}
                 </th>
                 <th scope="col" className="font-medium pb-1 pr-2">
-                  Attiva
+                  {t.firewall.columns.enabled}
                 </th>
                 <th scope="col" className="pb-1" />
               </tr>
@@ -111,36 +111,36 @@ const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, o
                       </td>
                       <td className="pr-2 py-1 w-[16%]">
                         <select
-                          aria-label={`Azione della regola ${n}`}
+                          aria-label={t.firewall.actionOf(n)}
                           className={cell}
                           value={rule.action}
                           onChange={(e) =>
                             update(rule.id, { action: e.target.value as FirewallRule['action'] })
                           }
                         >
-                          <option value="allow">Permetti</option>
-                          <option value="deny">Nega</option>
+                          <option value="allow">{t.firewall.actions.allow}</option>
+                          <option value="deny">{t.firewall.actions.deny}</option>
                         </select>
                       </td>
                       <td className="pr-2 py-1 w-[16%]">
                         <select
-                          aria-label={`Servizio della regola ${n}`}
+                          aria-label={t.firewall.serviceOf(n)}
                           className={cell}
                           value={rule.service}
                           onChange={(e) =>
                             update(rule.id, { service: e.target.value as FirewallRule['service'] })
                           }
                         >
-                          <option value="any">Qualsiasi</option>
-                          <option value="ping">Ping</option>
-                          <option value="web">Web</option>
-                          <option value="email">Email</option>
-                          <option value="dns">DNS</option>
+                          <option value="any">{t.common.services.any}</option>
+                          <option value="ping">{t.common.services.ping}</option>
+                          <option value="web">{t.common.services.web}</option>
+                          <option value="email">{t.common.services.email}</option>
+                          <option value="dns">{t.common.services.dns}</option>
                         </select>
                       </td>
                       <td className="pr-2 py-1">
                         <input
-                          aria-label={`Origine della regola ${n}`}
+                          aria-label={t.firewall.sourceOf(n)}
                           className={`${cell} font-mono`}
                           list="firewall-rule-endpoints"
                           placeholder="any"
@@ -150,7 +150,7 @@ const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, o
                       </td>
                       <td className="pr-2 py-1">
                         <input
-                          aria-label={`Destinazione della regola ${n}`}
+                          aria-label={t.firewall.destinationOf(n)}
                           className={`${cell} font-mono`}
                           list="firewall-rule-endpoints"
                           placeholder="any"
@@ -161,7 +161,7 @@ const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, o
                       <td className="pr-2 py-1 text-center w-12">
                         <input
                           type="checkbox"
-                          aria-label={`Regola ${n} attiva`}
+                          aria-label={t.firewall.enabledOf(n)}
                           className="w-4 h-4 cursor-pointer"
                           checked={rule.enabled !== false}
                           onChange={(e) =>
@@ -172,8 +172,8 @@ const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, o
                       <td className="py-1 whitespace-nowrap text-right w-[84px]">
                         <button
                           type="button"
-                          aria-label={`Sposta in su la regola ${n}`}
-                          title="Sposta in su"
+                          aria-label={t.firewall.moveUpNumbered(n)}
+                          title={t.firewall.moveUp}
                           className={iconButton}
                           disabled={index === 0}
                           onClick={() => move(index, -1)}
@@ -182,8 +182,8 @@ const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, o
                         </button>
                         <button
                           type="button"
-                          aria-label={`Sposta in giù la regola ${n}`}
-                          title="Sposta in giù"
+                          aria-label={t.firewall.moveDownNumbered(n)}
+                          title={t.firewall.moveDown}
                           className={iconButton}
                           disabled={index === rules.length - 1}
                           onClick={() => move(index, 1)}
@@ -192,8 +192,8 @@ const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, o
                         </button>
                         <button
                           type="button"
-                          aria-label={`Elimina la regola ${n}`}
-                          title="Elimina la regola"
+                          aria-label={t.firewall.deleteNumbered(n)}
+                          title={t.firewall.delete}
                           className={`${iconButton} hover:text-[var(--danger-color)]`}
                           onClick={() => onChange(rules.filter((entry) => entry.id !== rule.id))}
                         >
@@ -238,31 +238,21 @@ const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, o
           }
         >
           <Plus size={14} />
-          Aggiungi regola
+          {t.firewall.add}
         </Button>
       </section>
 
       {unusedZones.length > 0 && (
         <div className="modal-info-box" role="note">
-          {unusedZones.length === 1
-            ? `Nessuna porta è nella zona ${unusedZones[0]}: le regole che la nominano non corrispondono mai.`
-            : `Nessuna porta è nelle zone ${unusedZones.join(', ')}: le regole che le nominano non corrispondono mai.`}{' '}
-          La zona di una porta si sceglie nella scheda «Porte».
+          {t.firewall.unusedZones(unusedZones)}
         </div>
       )}
 
-      <section
-        aria-label="Quando nessuna regola corrisponde"
-        className="text-[var(--text-color-light)]"
-      >
+      <section aria-label={t.firewall.noMatch.title} className="text-[var(--text-color-light)]">
         <h4 className="text-sm font-semibold text-[var(--text-color)] mb-1">
-          Quando nessuna regola corrisponde
+          {t.firewall.noMatch.title}
         </h4>
-        <p>
-          Decide la politica delle zone: il traffico verso una zona più fidata è negato (untrust →
-          trust, untrust → dmz, dmz → trust), tutto il resto è permesso. La risposta a un flusso
-          permesso passa sempre.
-        </p>
+        <p>{t.firewall.noMatch.text}</p>
       </section>
     </div>
   );

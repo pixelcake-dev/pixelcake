@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { formatNetwork, hasInterfaceAddresses, isBackupRoute, routingTable } from '@/engine';
 import type { RouteEntry } from '@/engine';
 import { routeProblem } from '@/utils/networkConfigValidation';
+import { useT, type Dictionary } from '@/i18n';
 import type { NetworkDevice, StaticRoute } from '@/types';
 
 interface RoutesPanelProps {
@@ -22,18 +23,12 @@ function nextRouteId(routes: StaticRoute[]): string {
 
 
 
-/** `porta 2` / `eth0`: the interface a route leaves from, as the rest of the interface names it */
-function interfaceName(entry: RouteEntry): string {
+/** `port 2` / `eth0`: the interface a route leaves from, as the rest of the interface names it */
+function interfaceName(entry: RouteEntry, t: Dictionary): string {
   const iface = entry.out?.iface;
   if (!iface) return '—';
-  return iface.kind === 'port' ? `porta ${iface.port.id}` : iface.label;
+  return iface.kind === 'port' ? t.common.interfaces.portInSentence(iface.port.id) : iface.label;
 }
-
-const KIND_LABELS: Record<RouteEntry['kind'], string> = {
-  connected: 'collegata',
-  static: 'statica',
-  default: 'predefinita',
-};
 
 const cellInput =
   'w-full px-2 py-1 text-sm font-mono bg-[var(--bg-canvas)] border border-[var(--border-color)] rounded ' +
@@ -47,6 +42,7 @@ const cellInput =
  * next hop can be reached.
  */
 const RoutesPanel: React.FC<RoutesPanelProps> = ({ device, routes, onChange }) => {
+  const t = useT();
   const table = routingTable(device);
   const addressed = hasInterfaceAddresses(device);
 
@@ -56,56 +52,46 @@ const RoutesPanel: React.FC<RoutesPanelProps> = ({ device, routes, onChange }) =
 
   return (
     <div className="flex flex-col gap-5 text-sm">
-      <p className="text-[var(--text-color-light)]">
-        Le reti a cui il dispositivo è collegato con una porta si raggiungono da sole. Qui si
-        scrivono le reti che stanno dietro un altro router: il traffico per quella rete viene
-        consegnato al prossimo salto. Il gateway della scheda «Generale» è la rotta predefinita, usata
-        quando nessun&apos;altra corrisponde.
-      </p>
-      <p className="text-[var(--text-color-light)] -mt-3">
-        Due rotte per la stessa rete: vale la prima. La seconda è di riserva e subentra quando la
-        porta da cui esce la prima è spenta, o quando la sua linea è guasta (lo puoi simulare in
-        modalità presentazione).
-      </p>
+      <p className="text-[var(--text-color-light)]">{t.routes.intro}</p>
+      <p className="text-[var(--text-color-light)] -mt-3">{t.routes.backup}</p>
 
       {!addressed && (
         <div className="modal-info-box" role="note">
-          Nessuna porta di questo dispositivo ha un indirizzo: lascia passare il traffico senza
-          instradarlo, e le rotte non vengono usate. Assegna un indirizzo alle porte nella scheda
-          «Porte».
+          {t.routes.noAddresses}
         </div>
       )}
 
       {/* Static routes */}
-      <section aria-label="Rotte statiche">
-        <h4 className="text-sm font-semibold mb-2">Rotte statiche</h4>
+      <section aria-label={t.routes.staticRoutes.title}>
+        <h4 className="text-sm font-semibold mb-2">{t.routes.staticRoutes.title}</h4>
         {routes.length === 0 ? (
-          <p className="text-[var(--text-color-light)] mb-2">Nessuna rotta statica.</p>
+          <p className="text-[var(--text-color-light)] mb-2">{t.routes.staticRoutes.none}</p>
         ) : (
           <table className="w-full border-collapse mb-2">
             <thead>
               <tr className="text-left text-xs text-[var(--text-color-light)]">
                 <th scope="col" className="font-medium pb-1 pr-2">
-                  Rete di destinazione
+                  {t.routes.staticRoutes.columns.destination}
                 </th>
                 <th scope="col" className="font-medium pb-1 pr-2">
-                  Prossimo salto
+                  {t.routes.staticRoutes.columns.nextHop}
                 </th>
                 <th scope="col" className="font-medium pb-1 pr-2">
-                  Nota
+                  {t.routes.staticRoutes.columns.note}
                 </th>
                 <th scope="col" className="pb-1" />
               </tr>
             </thead>
             <tbody>
               {routes.map((route, index) => {
+                const n = index + 1;
                 const problem = routeProblem(route);
                 return (
                   <React.Fragment key={route.id}>
                     <tr>
                       <td className="pr-2 py-1 w-[34%]">
                         <input
-                          aria-label={`Rete di destinazione della rotta ${index + 1}`}
+                          aria-label={t.routes.staticRoutes.destinationOf(n)}
                           className={cellInput}
                           placeholder="192.168.30.0/24"
                           value={route.destination}
@@ -114,7 +100,7 @@ const RoutesPanel: React.FC<RoutesPanelProps> = ({ device, routes, onChange }) =
                       </td>
                       <td className="pr-2 py-1 w-[26%]">
                         <input
-                          aria-label={`Prossimo salto della rotta ${index + 1}`}
+                          aria-label={t.routes.staticRoutes.nextHopOf(n)}
                           className={cellInput}
                           placeholder="10.0.0.2"
                           value={route.nextHop}
@@ -123,9 +109,9 @@ const RoutesPanel: React.FC<RoutesPanelProps> = ({ device, routes, onChange }) =
                       </td>
                       <td className="pr-2 py-1">
                         <input
-                          aria-label={`Nota della rotta ${index + 1}`}
+                          aria-label={t.routes.staticRoutes.noteOf(n)}
                           className={cellInput.replace('font-mono ', '')}
-                          placeholder="es. sede di Milano"
+                          placeholder={t.routes.staticRoutes.notePlaceholder}
                           value={route.description ?? ''}
                           onChange={(e) =>
                             update(route.id, { description: e.target.value || undefined })
@@ -135,8 +121,8 @@ const RoutesPanel: React.FC<RoutesPanelProps> = ({ device, routes, onChange }) =
                       <td className="py-1 w-8 text-right">
                         <button
                           type="button"
-                          aria-label={`Elimina la rotta ${index + 1}`}
-                          title="Elimina la rotta"
+                          aria-label={t.routes.staticRoutes.deleteNumbered(n)}
+                          title={t.routes.staticRoutes.delete}
                           className="p-1 rounded hover:bg-[var(--bg-canvas)] text-[var(--text-color-light)] hover:text-[var(--danger-color)]"
                           onClick={() => onChange(routes.filter((entry) => entry.id !== route.id))}
                         >
@@ -165,36 +151,31 @@ const RoutesPanel: React.FC<RoutesPanelProps> = ({ device, routes, onChange }) =
           }
         >
           <Plus size={14} />
-          Aggiungi rotta
+          {t.routes.staticRoutes.add}
         </Button>
       </section>
 
       {/* The table the engine reads */}
-      <section aria-label="Tabella di instradamento">
-        <h4 className="text-sm font-semibold mb-1">Tabella di instradamento</h4>
-        <p className="text-xs text-[var(--text-color-light)] mb-2">
-          È quella che il motore usa, con le modifiche di questa finestra non ancora salvate. Vince
-          la riga più specifica.
-        </p>
+      <section aria-label={t.routes.table.title}>
+        <h4 className="text-sm font-semibold mb-1">{t.routes.table.title}</h4>
+        <p className="text-xs text-[var(--text-color-light)] mb-2">{t.routes.table.explanation}</p>
         {table.length === 0 ? (
-          <p className="text-[var(--text-color-light)]">
-            Nessuna riga: il dispositivo non ha indirizzi.
-          </p>
+          <p className="text-[var(--text-color-light)]">{t.routes.table.empty}</p>
         ) : (
           <table className="w-full border-collapse font-mono text-xs">
             <thead>
               <tr className="text-left border-b border-[var(--border-color)] font-sans text-[var(--text-color-light)]">
                 <th scope="col" className="font-medium py-1 pr-3">
-                  Destinazione
+                  {t.routes.table.columns.destination}
                 </th>
                 <th scope="col" className="font-medium py-1 pr-3">
-                  Prossimo salto
+                  {t.routes.table.columns.nextHop}
                 </th>
                 <th scope="col" className="font-medium py-1 pr-3">
-                  Esce da
+                  {t.routes.table.columns.leavesBy}
                 </th>
                 <th scope="col" className="font-medium py-1">
-                  Tipo
+                  {t.routes.table.columns.kind}
                 </th>
               </tr>
             </thead>
@@ -211,13 +192,14 @@ const RoutesPanel: React.FC<RoutesPanelProps> = ({ device, routes, onChange }) =
                   >
                     <td className="py-1 pr-3">{formatNetwork(entry.network)}</td>
                     <td className="py-1 pr-3">{entry.nextHop ?? '—'}</td>
-                    <td className="py-1 pr-3">{unreachable ? '?' : interfaceName(entry)}</td>
+                    <td className="py-1 pr-3">{unreachable ? '?' : interfaceName(entry, t)}</td>
                     <td className="py-1 font-sans">
-                      {KIND_LABELS[entry.kind]}
-                      {entry.kind === 'default' && !entry.route ? ' (gateway)' : ''}
-                      {isBackupRoute(table, index) && ', di riserva'}
-                      {unreachable && ': il prossimo salto non è su nessuna rete del dispositivo'}
-                      {down && ' (interfaccia spenta)'}
+                      {t.routes.table.kind({
+                        kind: entry.kind,
+                        fromGateway: entry.kind === 'default' && !entry.route,
+                        backup: isBackupRoute(table, index),
+                        state: unreachable ? 'unreachable' : down ? 'down' : 'usable',
+                      })}
                     </td>
                   </tr>
                 );

@@ -2,6 +2,7 @@ import React from 'react';
 import { Icon } from '@iconify/react';
 import { portVlanText } from '@/utils/portSummary';
 import { useVlanNames } from '@/utils/useVlanNames';
+import { useT } from '@/i18n';
 import type { Port } from '@/types/network';
 
 interface PortGridProps {
@@ -22,6 +23,7 @@ interface PortGridProps {
  * project gave it) and what it is linked to
  */
 const PortGrid: React.FC<PortGridProps> = ({ ports, selectedPortId, onPortSelect, linkedPorts }) => {
+  const t = useT();
   const names = useVlanNames();
   const getPortStatusClass = (port: Port): string => {
     if (!port.enabled) return 'port-box-disabled';
@@ -39,16 +41,18 @@ const PortGrid: React.FC<PortGridProps> = ({ ports, selectedPortId, onPortSelect
     <div className="port-grid">
       {ports.map((port) => {
         const linkedTo = linkedPorts?.get(port.id);
-        const baseTitle = [port.name || `Port ${port.id}`, portVlanText(port, ports, names)]
-          .filter(Boolean)
-          .join(' — ');
+        const title = t.interfaces.grid.title(
+          port.name || t.interfaces.port.defaultName(port.id),
+          portVlanText(port, ports, names),
+          linkedTo
+        );
 
         return (
           <button
             key={port.id}
             className={`port-box ${getPortStatusClass(port)} ${selectedPortId === port.id ? 'port-box-selected' : ''}`}
             onClick={() => onPortSelect(port.id)}
-            title={linkedTo ? `${baseTitle} — collegata a ${linkedTo}` : baseTitle}
+            title={title}
           >
             {/* Port Number */}
             <div className="port-number" style={{ color: getPortStatusColor(port) }}>
@@ -71,7 +75,7 @@ const PortGrid: React.FC<PortGridProps> = ({ ports, selectedPortId, onPortSelect
                 {port.portType === 'lan' && 'L'}
                 {port.portType === 'dmz' && 'D'}
                 {port.poe && (
-                  <span className="port-poe-indicator" title="PoE Enabled">
+                  <span className="port-poe-indicator" title={t.interfaces.grid.poe}>
                     <Icon icon="mdi:lightning-bolt" width={10} height={10} />
                   </span>
                 )}
@@ -82,7 +86,7 @@ const PortGrid: React.FC<PortGridProps> = ({ ports, selectedPortId, onPortSelect
             {linkedTo && (
               <div
                 className="port-link-marker"
-                title={`Collegata a ${linkedTo}`}
+                title={t.interfaces.link.linkedToPeer(linkedTo)}
                 data-testid={`port-link-marker-${port.id}`}
               >
                 <Icon icon="mdi:link-variant" width={11} height={11} />

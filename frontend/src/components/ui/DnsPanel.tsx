@@ -2,6 +2,8 @@ import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { recordProblem } from '@/utils/networkConfigValidation';
+import { useT } from '@/i18n';
+import { Rich } from '@/i18n/Rich';
 import type { DnsRecord } from '@/types';
 
 interface DnsPanelProps {
@@ -31,39 +33,35 @@ const iconButton =
  * this server is written on their own cards, not here.
  */
 const DnsPanel: React.FC<DnsPanelProps> = ({ records, onChange, addresses }) => {
+  const t = useT();
+  const words = t.dns;
   const update = (id: string, patch: Partial<DnsRecord>) => {
     onChange(records.map((record) => (record.id === id ? { ...record, ...patch } : record)));
   };
+  const code = (text: string) => <code className="font-mono">{text}</code>;
 
   return (
     <div className="flex flex-col gap-4 text-sm">
       <p className="text-[var(--text-color-light)]">
-        Un server DNS dice a quale indirizzo corrisponde un nome. Risponde soltanto per i nomi
-        scritti qui sotto. Un nome si usa nel terminale al posto di un indirizzo, per esempio{' '}
-        <code className="font-mono">ping www.azienda.example from PC-1</code>: prima parte la
-        domanda al server DNS, che attraversa la rete come ogni altro scambio e può fermarsi
-        allo stesso modo, poi il ping va all&apos;indirizzo ricevuto.
+        <Rich text={words.intro} code={code} />
       </p>
 
-      <section aria-label="Record DNS">
-        <h4 className="text-sm font-semibold text-[var(--text-color)] mb-1">Nomi conosciuti</h4>
+      <section aria-label={words.records.label}>
+        <h4 className="text-sm font-semibold text-[var(--text-color)] mb-1">{words.records.title}</h4>
         {records.length === 0 ? (
-          <p className="text-[var(--text-color-light)] mb-2">
-            Nessun nome: finché non ne ha almeno uno, questo dispositivo non risponde come server
-            DNS.
-          </p>
+          <p className="text-[var(--text-color-light)] mb-2">{words.records.none}</p>
         ) : (
           <table className="w-full border-collapse mb-2">
             <thead>
               <tr className="text-left text-xs text-[var(--text-color-light)]">
                 <th scope="col" className="font-medium pb-1 pr-2 w-6">
-                  N.
+                  {words.records.number}
                 </th>
                 <th scope="col" className="font-medium pb-1 pr-2">
-                  Nome
+                  {words.records.name}
                 </th>
                 <th scope="col" className="font-medium pb-1 pr-2">
-                  Indirizzo
+                  {words.records.address}
                 </th>
                 <th scope="col" className="pb-1" />
               </tr>
@@ -80,7 +78,7 @@ const DnsPanel: React.FC<DnsPanelProps> = ({ records, onChange, addresses }) => 
                       </td>
                       <td className="pr-2 py-1">
                         <input
-                          aria-label={`Nome del record ${n}`}
+                          aria-label={words.records.nameOf(n)}
                           className={`${cell} font-mono`}
                           placeholder="www.azienda.example"
                           value={record.name}
@@ -89,7 +87,7 @@ const DnsPanel: React.FC<DnsPanelProps> = ({ records, onChange, addresses }) => 
                       </td>
                       <td className="pr-2 py-1 w-[32%]">
                         <input
-                          aria-label={`Indirizzo del record ${n}`}
+                          aria-label={words.records.addressOf(n)}
                           className={`${cell} font-mono`}
                           placeholder="192.168.30.30"
                           value={record.address}
@@ -99,8 +97,8 @@ const DnsPanel: React.FC<DnsPanelProps> = ({ records, onChange, addresses }) => 
                       <td className="py-1 whitespace-nowrap text-right w-[32px]">
                         <button
                           type="button"
-                          aria-label={`Elimina il record ${n}`}
-                          title="Elimina il record"
+                          aria-label={words.records.deleteRow(n)}
+                          title={words.records.delete}
                           className={iconButton}
                           onClick={() => onChange(records.filter((entry) => entry.id !== record.id))}
                         >
@@ -128,33 +126,22 @@ const DnsPanel: React.FC<DnsPanelProps> = ({ records, onChange, addresses }) => 
           onClick={() => onChange([...records, { id: nextRecordId(records), name: '', address: '' }])}
         >
           <Plus size={14} />
-          Aggiungi record
+          {words.records.add}
         </Button>
       </section>
 
-      <section aria-label="Chi chiede a questo server" className="text-[var(--text-color-light)]">
+      <section aria-label={words.asking.label} className="text-[var(--text-color-light)]">
         <p>
-          A chi chiedere lo decide ogni dispositivo, sulla propria scheda di rete: il campo «Server
-          DNS» con l&apos;indirizzo scritto a mano, oppure «Server DNS consegnato» nel server DHCP
-          che gli dà l&apos;indirizzo.{' '}
+          {words.asking.how}{' '}
           {addresses.length > 0 ? (
-            <>
-              L&apos;indirizzo di questo server è{' '}
-              <code className="font-mono">{addresses.join(', ')}</code>.
-            </>
+            <Rich text={words.asking.address} parts={{ address: () => code(addresses.join(', ')) }} />
           ) : (
             <span className="text-[var(--danger-color)]" role="alert">
-              Questo server non ha un indirizzo: nessuno può chiedergli nulla.
+              {words.asking.noAddress}
             </span>
           )}
         </p>
-        <p className="mt-2">
-          Maiuscole e minuscole nei nomi non contano, e un nome ha un solo indirizzo. Non sono
-          simulati: un secondo server DNS di riserva, l&apos;inoltro della domanda ad altri server
-          (il server risponde solo per i propri nomi), la memoria delle risposte e le scadenze, la
-          ricerca inversa, gli alias e i nomi jolly. La simulazione e la presentazione scelgono i
-          dispositivi dai menu e non usano i nomi.
-        </p>
+        <p className="mt-2">{words.asking.limits}</p>
       </section>
     </div>
   );

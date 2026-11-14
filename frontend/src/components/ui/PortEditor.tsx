@@ -12,6 +12,7 @@ import {
 } from '@/utils/interfaceProblems';
 import { vlanLabel, vlanName, vlanShort } from '@/utils/vlanNames';
 import { useVlanNames } from '@/utils/useVlanNames';
+import { useT } from '@/i18n';
 import type { Port } from '@/types/network';
 
 interface PortEditorProps {
@@ -40,38 +41,41 @@ const VlanField: React.FC<{
   vlan: Port['vlan'];
   onChange: (vlan: Port['vlan']) => void;
 }> = ({ mode, vlan, onChange }) => {
+  const t = useT();
+  const say = t.interfaces.port.vlan;
   const [text, setText] = useState(() => vlanText(vlan));
-  const [error, setError] = useState<string>();
+  // What is wrong is said once something was typed: the VLAN the port came
+  // with is not judged here. (Whether, not what: the words are read again at
+  // each drawing, so they follow the language of the interface)
+  const [edited, setEdited] = useState(false);
   const names = useVlanNames();
   // What is typed, as far as it reads: the VLANs whose names are said
-  const read = readVlanText(mode, text).vlan;
+  const reading = readVlanText(mode, text);
+  const read = reading.vlan;
   const typed = read === undefined ? [] : Array.isArray(read) ? read : [read];
   const named = typed.some((vlan) => vlanName(vlan, names) !== undefined);
   return (
     <TextField
-      label={mode === 'access' ? 'VLAN (singola)' : 'VLANs (separati da virgola)'}
+      label={mode === 'access' ? say.labelAccess : say.labelTrunk}
       span={2}
-      placeholder={mode === 'access' ? 'es. 10' : 'es. 10, 20, 30'}
+      placeholder={t.interfaces.example(mode === 'access' ? '10' : '10, 20, 30')}
       value={text}
-      error={error}
+      error={edited ? reading.error : undefined}
       onChange={(e) => {
         const typed = e.target.value;
         setText(typed);
+        setEdited(true);
         const read = readVlanText(mode, typed);
-        setError(read.error);
         if (!read.error) onChange(read.vlan);
       }}
       hint={
         <>
-          {mode === 'access'
-            ? 'La porta appartiene a questa VLAN (numero da 1 a 4094). Vuoto: nessuna VLAN propria.'
-            : 'Le VLAN che la porta trasporta con etichetta (numeri da 1 a 4094). Vuoto: tutte.'}{' '}
-          Appena una porta dello switch ha una VLAN, quelle senza sono nella VLAN 1.
+          {mode === 'access' ? say.hintAccess : say.hintTrunk}
           {named && (
             <span className="block text-[var(--text-color)]" data-testid="vlan-names">
               {typed.length === 1
                 ? vlanLabel(typed[0], names)
-                : `VLAN ${typed.map((vlan) => vlanShort(vlan, names)).join(', ')}`}
+                : say.typedList(typed.map((vlan) => vlanShort(vlan, names)))}
             </span>
           )}
         </>
@@ -90,11 +94,15 @@ const VlanField: React.FC<{
  * said under the field as it is typed.
  */
 const PortEditor: React.FC<PortEditorProps> = ({ port, deviceType, onChange, connectedTo, poolStatus }) => {
+  const t = useT();
+  const say = t.interfaces.port;
+  const fields = t.interfaces.fields;
   const isSwitch = deviceType === 'Switch';
   const isFirewall = deviceType === 'Firewall';
   const addressed = portsCarryAddress(deviceType);
   const mode: PortType = port.portType ?? (isSwitch ? 'access' : 'lan');
   const problems = portProblems(deviceType, port);
+  const name = port.name?.trim();
 
   /**
    * Switching between access and trunk keeps what was typed: the single VLAN
@@ -112,21 +120,20 @@ const PortEditor: React.FC<PortEditorProps> = ({ port, deviceType, onChange, con
     <div className="port-editor flex flex-col gap-3" data-testid={`port-editor-${port.id}`}>
       <div className="flex items-baseline justify-between gap-4">
         <h4 className="text-sm font-semibold text-[var(--text-color)]">
-          Porta {port.id}
-          {port.name?.trim() ? ` «${port.name.trim()}»` : ''}
+          {name ? t.common.interfaces.portNamed(port.id, name) : t.common.interfaces.port(port.id)}
         </h4>
         <span className="text-xs text-[var(--text-color-light)]">
           {connectedTo ? (
             <>
               <span id={`port-${port.id}-link`} className={labelClass}>
-                Collegata a
+                {t.interfaces.link.linkedTo}
               </span>{' '}
               <output aria-labelledby={`port-${port.id}-link`} className="text-[var(--text-color)]">
                 {connectedTo}
               </output>
             </>
           ) : (
-            'Nessun cavo collegato'
+            t.interfaces.link.noCable
           )}
         </span>
       </div>
@@ -134,44 +141,38 @@ const PortEditor: React.FC<PortEditorProps> = ({ port, deviceType, onChange, con
       <FieldRow>
         <CheckField
           id="port-enabled"
-          label="Porta Abilitata"
+          label={say.enabled}
           inRow
           checked={port.enabled !== false}
           onChange={(enabled) => onChange({ enabled })}
         />
         <TextField
-          label="Nome Porta (opzionale)"
-          placeholder={`Port ${port.id}`}
+          label={say.name}
+          placeholder={say.defaultName(port.id)}
           value={port.name ?? ''}
           onChange={(e) => onChange({ name: e.target.value })}
         />
         <SelectField
-          label="Modalità Porta"
+          label={say.mode}
           value={mode}
           onChange={(e) => changeMode(e.target.value as PortType)}
-          hint={
-            isSwitch
-              ? undefined
-              : `Solo descrittiva: non cambia il comportamento della porta.${
-                  isFirewall ? ' Per il firewall conta la zona di sicurezza.' : ''
-                }`
-          }
+          hint={isSwitch ? undefined : isFirewall ? say.modeHintFirewall : say.modeHint}
         >
           {isSwitch ? (
             <>
-              <option value="access">Access (dispositivo finale)</option>
-              <option value="trunk">Trunk (link tra switch)</option>
+              <option value="access">{say.modes.access}</option>
+              <option value="trunk">{say.modes.trunk}</option>
             </>
           ) : (
             <>
-              <option value="wan">WAN (Wide Area Network)</option>
-              <option value="lan">LAN (Local Area Network)</option>
-              <option value="dmz">DMZ (Demilitarized Zone)</option>
+              <option value="wan">{say.modes.wan}</option>
+              <option value="lan">{say.modes.lan}</option>
+              <option value="dmz">{say.modes.dmz}</option>
             </>
           )}
         </SelectField>
         <SelectField
-          label="Velocità Link"
+          label={fields.linkSpeed}
           value={port.speed ?? 'auto'}
           onChange={(e) => onChange({ speed: e.target.value as Speed })}
         >
@@ -195,7 +196,7 @@ const PortEditor: React.FC<PortEditorProps> = ({ port, deviceType, onChange, con
           />
           <CheckField
             id="port-poe"
-            label="PoE Abilitato (Power over Ethernet)"
+            label={say.poe}
             inRow
             span={2}
             checked={port.poe === true}
@@ -214,24 +215,24 @@ const PortEditor: React.FC<PortEditorProps> = ({ port, deviceType, onChange, con
         <FieldRow>
           <TextField
             id="port-ip"
-            label="Indirizzo IP"
+            label={fields.ipAddress}
             mono
-            placeholder="es. 192.168.10.1"
+            placeholder={t.interfaces.example('192.168.10.1')}
             value={port.ip ?? ''}
             error={problems.address}
             onChange={(e) => onChange({ ip: e.target.value })}
           />
           <TextField
             id="port-subnet"
-            label="Subnet Mask"
+            label={fields.subnetMask}
             mono
-            placeholder={`es. ${DEFAULT_PORT_SUBNET}`}
+            placeholder={t.interfaces.example(DEFAULT_PORT_SUBNET)}
             value={port.subnet ?? ''}
             onChange={(e) => onChange({ subnet: e.target.value })}
           />
           {isFirewall && (
             <SelectField
-              label="Zona di Sicurezza"
+              label={say.zone}
               value={port.securityZone ?? ''}
               onChange={(e) =>
                 onChange({
@@ -240,31 +241,26 @@ const PortEditor: React.FC<PortEditorProps> = ({ port, deviceType, onChange, con
                 })
               }
             >
-              <option value="">Nessuna</option>
-              <option value="trust">Trust (Rete Fidata)</option>
-              <option value="untrust">Untrust (Rete Non Fidata)</option>
-              <option value="dmz">DMZ (Zona Demilitarizzata)</option>
+              <option value="">{say.zones.none}</option>
+              <option value="trust">{say.zones.trust}</option>
+              <option value="untrust">{say.zones.untrust}</option>
+              <option value="dmz">{say.zones.dmz}</option>
             </SelectField>
           )}
           <CheckField
             id="port-nat"
-            label="NAT Abilitato"
+            label={say.nat}
             inRow
             span={isFirewall ? 1 : 2}
             checked={port.nat === true}
             onChange={(nat) => onChange({ nat })}
           />
+          <span className={`col-span-2 ${hintClass}`}>{say.addressHint(DEFAULT_PORT_SUBNET)}</span>
           <span className={`col-span-2 ${hintClass}`}>
-            È il gateway dei dispositivi collegati a questa porta. Lascia vuoto se la porta non ha
-            indirizzo; senza subnet mask vale {DEFAULT_PORT_SUBNET}.
-          </span>
-          <span className={`col-span-2 ${hintClass}`}>
-            Con il NAT ciò che esce da questa porta prende il suo indirizzo: serve verso Internet,
-            che non trasporta gli indirizzi privati. I servizi da raggiungere da fuori si
-            pubblicano nella scheda «NAT».
+            {say.natHint}
             {port.nat && !(port.ip ?? '').trim() && (
               <span className="block text-[var(--danger-color)]" role="alert">
-                La porta non ha un indirizzo: finché non ne ha uno il NAT non traduce nulla.
+                {say.natWithoutAddress}
               </span>
             )}
           </span>
@@ -277,7 +273,7 @@ const PortEditor: React.FC<PortEditorProps> = ({ port, deviceType, onChange, con
           pool={port.dhcpServer}
           onChange={(dhcpServer) => onChange({ dhcpServer })}
           suggestion={portSuggestedPool(deviceType, port)}
-          gatewayHint="Vuoto: l'indirizzo di questa porta."
+          gatewayHint={say.dhcpGatewayHint}
           error={problems.pool}
           status={poolStatus}
         />
@@ -286,22 +282,22 @@ const PortEditor: React.FC<PortEditorProps> = ({ port, deviceType, onChange, con
       {isFirewall && (
         <CheckField
           id="port-ips"
-          label="IPS/IDS Abilitato (Intrusion Prevention/Detection)"
+          label={say.ips}
           checked={port.ips === true}
           onChange={(ips) => onChange({ ips })}
-          hint="Resta come documentazione: il motore non lo simula."
+          hint={say.ipsHint}
         />
       )}
 
       <div className="flex flex-col gap-0.5">
         <label htmlFor="port-description" className={labelClass}>
-          Note / Descrizione
+          {fields.notes}
         </label>
         <textarea
           id="port-description"
           className={cellClass}
           rows={2}
-          placeholder="es. Uplink a core switch, Server VLAN 10..."
+          placeholder={say.notesPlaceholder}
           value={port.description ?? ''}
           onChange={(e) => onChange({ description: e.target.value })}
         />

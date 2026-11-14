@@ -15,8 +15,14 @@ import { FieldRow, TextField } from '@/components/ui/compact';
 import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
 import { isValidIP } from '@/utils/ipHelpers';
+import { useT } from '@/i18n';
+
+/** Why the project was not created (kept as what it is: its words follow the language) */
+type Problem = { kind: 'nameMissing' } | { kind: 'dnsNotAnAddress'; value: string };
 
 const NewProjectModal = () => {
+  const t = useT();
+  const words = t.newProject;
   const isOpen = useUIStore((state) => state.modals.newProject);
   const closeModal = useUIStore((state) => state.closeModal);
 
@@ -26,7 +32,7 @@ const NewProjectModal = () => {
   const [subnet, setSubnet] = useState('255.255.255.0');
   const [gateway, setGateway] = useState('192.168.1.1');
   const [dns, setDns] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Problem | null>(null);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -43,14 +49,14 @@ const NewProjectModal = () => {
 
   const handleCreate = () => {
     if (!name.trim()) {
-      setError('Il nome del progetto è obbligatorio');
+      setError({ kind: 'nameMissing' });
       return;
     }
     // The DNS server is written on the card of every new device: it is
     // taken only when it is an address (or left empty: none)
     const server = dns.trim();
     if (server && !isValidIP(server)) {
-      setError(`Server DNS: "${server}" non è un indirizzo IPv4 valido`);
+      setError({ kind: 'dnsNotAnAddress', value: server });
       return;
     }
 
@@ -66,41 +72,47 @@ const NewProjectModal = () => {
     closeModal('newProject');
   };
 
+  const errorText =
+    error &&
+    (error.kind === 'nameMissing'
+      ? words.problems.nameMissing
+      : words.problems.dnsNotAnAddress(error.value));
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleCancel}
-      title="Nuovo Progetto"
+      title={words.title}
       size="sm"
       minHeight="550px"
       footer={
         <div className="modal-actions px-6 pb-6 pt-4">
           <Button variant="secondary" onClick={handleCancel}>
-            Annulla
+            {t.common.actions.cancel}
           </Button>
           <Button variant="primary" onClick={handleCreate}>
-            Crea Progetto
+            {words.create}
           </Button>
         </div>
       }
     >
       <FormContainer>
         {/* Project Info */}
-        <FormFieldset legend="Informazioni Progetto">
+        <FormFieldset legend={words.info.legend}>
           <FormContainer gap="3">
             <Input
-              label="Nome Progetto *"
+              label={words.info.name}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="es. Infrastructure HQ"
+              placeholder={words.info.namePlaceholder}
               fullWidth
               required
             />
             <Input
-              label="Descrizione"
+              label={words.info.description}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Breve descrizione del progetto..."
+              placeholder={words.info.descriptionPlaceholder}
               fullWidth
             />
           </FormContainer>
@@ -108,10 +120,10 @@ const NewProjectModal = () => {
 
         {/* Global Network Settings: four short values, two to a row (the
             window is a narrow one) */}
-        <FormFieldset legend="Impostazioni di Rete Globali">
+        <FormFieldset legend={words.network.legend}>
           <FieldRow>
             <TextField
-              label="Classe IP"
+              label={words.network.network}
               span={2}
               mono
               value={ipClass}
@@ -119,7 +131,7 @@ const NewProjectModal = () => {
               placeholder="192.168.1.0"
             />
             <TextField
-              label="Subnet Mask"
+              label={words.network.mask}
               span={2}
               mono
               value={subnet}
@@ -135,20 +147,20 @@ const NewProjectModal = () => {
               placeholder="192.168.1.1"
             />
             <TextField
-              label="Server DNS (facoltativo)"
+              label={words.network.dns}
               span={2}
               mono
               value={dns}
               onChange={(e) => setDns(e.target.value)}
-              placeholder="es. 192.168.1.53"
+              placeholder={words.network.dnsPlaceholder}
             />
           </FieldRow>
         </FormFieldset>
 
         {/* Error Message */}
-        {error && (
+        {errorText && (
           <div className="modal-error-box">
-            ⚠️ {error}
+            ⚠️ {errorText}
           </div>
         )}
       </FormContainer>

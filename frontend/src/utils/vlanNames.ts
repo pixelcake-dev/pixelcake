@@ -4,11 +4,14 @@
  * («10 = Uffici», Impostazioni → Rete), and the interface writes the name
  * next to the number wherever it shows one.
  *
- * Pure: no React, no stores.
+ * No React, and nothing of the drawing is read from a store. What is written
+ * for a person (a VLAN with its name, what is wrong with a row) is in the
+ * language of the interface, read when the function is called.
  */
 
 import type { NetworkConnection, NetworkDevice, ProjectVlan } from '@/types';
 import { isSwitchLike, isVlanAware, portVlanMode } from '@/engine';
+import { getT } from '@/i18n';
 
 /** How long the name of a VLAN can be (what most switches allow) */
 export const VLAN_NAME_MAX_LENGTH = 32;
@@ -43,13 +46,13 @@ export function vlanName(id: number, vlans: readonly ProjectVlan[] | undefined):
   return vlans?.find((entry) => entry.id === id)?.name;
 }
 
-/** A VLAN in a list of numbers: `10 «Uffici»`, or `10` when it has no name */
+/** A VLAN in a list of numbers: `10 “Offices”`, or `10` when it has no name */
 export function vlanShort(id: number, vlans: readonly ProjectVlan[] | undefined): string {
   const name = vlanName(id, vlans);
-  return name ? `${id} «${name}»` : String(id);
+  return name ? getT().vlan.numberAndName(id, name) : String(id);
 }
 
-/** A VLAN by itself: `VLAN 10 «Uffici»`, or `VLAN 10` when it has no name */
+/** A VLAN by itself: `VLAN 10 “Offices”`, or `VLAN 10` when it has no name */
 export function vlanLabel(id: number, vlans: readonly ProjectVlan[] | undefined): string {
   return `VLAN ${vlanShort(id, vlans)}`;
 }
@@ -104,17 +107,18 @@ function rowNumber(row: VlanRow): number | undefined {
  * a number was typed for it by hand.
  */
 export function vlanRowProblem(row: VlanRow, rows: readonly VlanRow[]): string | undefined {
+  const words = getT().vlan.names.problems;
   const typedId = row.id.trim();
   const name = row.name.trim();
   if (row.fixed && name === '') return undefined;
   if (typedId === '' && name === '') return undefined;
-  if (typedId === '') return `Manca il numero della VLAN «${name}»`;
+  if (typedId === '') return words.numberMissing(name);
   const id = rowNumber(row);
-  if (id === undefined) return `"${typedId}" non è una VLAN: il numero va da 1 a 4094`;
-  if (name === '') return `Manca il nome della VLAN ${id}`;
+  if (id === undefined) return words.notAVlan(typedId);
+  if (name === '') return words.nameMissing(id);
   // (the row refused is the second one that carries the number)
   const first = rows.find((other) => rowNumber(other) === id);
-  if (first !== undefined && first !== row) return `La VLAN ${id} è già nell'elenco`;
+  if (first !== undefined && first !== row) return words.duplicate(id);
   return undefined;
 }
 

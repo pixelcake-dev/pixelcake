@@ -3,6 +3,8 @@ import { linkClass } from '@/components/ui/compactStyles';
 import { isPortInUse, portAddressText, portRanges, summariseSwitch } from '@/utils/portSummary';
 import { vlanLabel, vlanShort } from '@/utils/vlanNames';
 import { useVlanNames } from '@/utils/useVlanNames';
+import { useT, type Dictionary } from '@/i18n';
+import { Rich } from '@/i18n/Rich';
 import type { Port } from '@/types';
 
 const ZONE_NAMES: Record<NonNullable<Port['securityZone']>, string> = {
@@ -12,8 +14,9 @@ const ZONE_NAMES: Record<NonNullable<Port['securityZone']>, string> = {
 };
 
 /** `Porta 3 «Internet»` */
-function portName(port: Port): string {
-  return port.name?.trim() ? `Porta ${port.id} «${port.name.trim()}»` : `Porta ${port.id}`;
+function portName(port: Port, t: Dictionary): string {
+  const name = port.name?.trim();
+  return name ? t.common.interfaces.portNamed(port.id, name) : t.common.interfaces.port(port.id);
 }
 
 interface RoutedPortsOverviewProps {
@@ -40,16 +43,17 @@ export const RoutedPortsOverview: React.FC<RoutedPortsOverviewProps> = ({
   linkedPorts,
   onOpenPort,
 }) => {
+  const t = useT();
+  const say = t.interfaces.overview;
   const used = ports.filter((port) => isPortInUse(port, linkedPorts));
   const spare = ports.length - used.length;
 
   if (used.length === 0) {
     return (
       <p className="text-sm text-[var(--text-color-light)]">
-        Nessuna delle {ports.length} porte ha un indirizzo o un cavo: il dispositivo non è ancora
-        collegato a nessuna rete.{' '}
+        {say.noneInUse(ports.length)}{' '}
         <button type="button" className={linkClass} onClick={() => onOpenPort()}>
-          Apri la scheda «Porte»
+          {say.openPortsTab}
         </button>
       </p>
     );
@@ -61,21 +65,21 @@ export const RoutedPortsOverview: React.FC<RoutedPortsOverviewProps> = ({
         <thead>
           <tr className="text-left text-xs text-[var(--text-color-light)]">
             <th scope="col" className="font-medium pb-1 pr-3">
-              Porta
+              {say.columns.port}
             </th>
             <th scope="col" className="font-medium pb-1 pr-3">
-              Indirizzo
+              {say.columns.address}
             </th>
             {showZone && (
               <th scope="col" className="font-medium pb-1 pr-3">
-                Zona
+                {say.columns.zone}
               </th>
             )}
             <th scope="col" className="font-medium pb-1 pr-3">
-              Collegata a
+              {say.columns.linkedTo}
             </th>
             <th scope="col" className="font-medium pb-1">
-              Fa
+              {say.columns.does}
             </th>
           </tr>
         </thead>
@@ -83,14 +87,14 @@ export const RoutedPortsOverview: React.FC<RoutedPortsOverviewProps> = ({
           {used.map((port) => {
             const does = [
               ...(port.nat ? ['NAT'] : []),
-              ...(port.dhcpServer ? ['server DHCP'] : []),
-              ...(port.enabled === false ? ['disabilitata'] : []),
+              ...(port.dhcpServer ? [say.does.dhcpServer] : []),
+              ...(port.enabled === false ? [say.does.disabled] : []),
             ];
             return (
               <tr key={port.id} className={port.enabled === false ? 'opacity-60' : ''}>
                 <td className="pr-3 py-0.5">
                   <button type="button" className={linkClass} onClick={() => onOpenPort(port.id)}>
-                    {portName(port)}
+                    {portName(port, t)}
                   </button>
                 </td>
                 <td className="pr-3 py-0.5 font-mono">{portAddressText(port) || '—'}</td>
@@ -105,10 +109,7 @@ export const RoutedPortsOverview: React.FC<RoutedPortsOverviewProps> = ({
         </tbody>
       </table>
       {spare > 0 && (
-        <p className="text-xs text-[var(--text-color-light)] mt-2">
-          {spare === 1 ? 'Un\'altra porta è libera' : `Altre ${spare} porte sono libere`}: senza
-          indirizzo e senza cavo.
-        </p>
+        <p className="text-xs text-[var(--text-color-light)] mt-2">{say.spare(spare)}</p>
       )}
     </div>
   );
@@ -130,45 +131,47 @@ interface SwitchPortsOverviewProps {
  * written with it.
  */
 export const SwitchPortsOverview: React.FC<SwitchPortsOverviewProps> = ({ ports, linkedPorts, onOpenPort }) => {
+  const t = useT();
+  const say = t.interfaces.overview;
   const summary = summariseSwitch(ports, linkedPorts);
   const names = useVlanNames();
-  const counts = [
-    `${summary.total} porte`,
-    `${summary.linked} ${summary.linked === 1 ? 'collegata' : 'collegate'}`,
-    ...(summary.disabled > 0
-      ? [`${summary.disabled} ${summary.disabled === 1 ? 'disabilitata' : 'disabilitate'}`]
-      : []),
-  ];
 
   return (
     <div className="text-sm flex flex-col gap-1">
       <p>
-        {counts.join(' · ')}.{' '}
+        {say.switchCounts(summary.total, summary.linked, summary.disabled)}{' '}
         <button type="button" className={linkClass} onClick={() => onOpenPort()}>
-          Apri la scheda «Porte»
+          {say.openPortsTab}
         </button>
       </p>
       {summary.vlanAware ? (
         <ul className="flex flex-col gap-0.5">
           {summary.vlans.map(({ vlan, ports: ids }) => (
             <li key={vlan}>
-              <span className="font-medium">{vlanLabel(vlan, names)}</span>: {ids.length === 1 ? 'porta' : 'porte'}{' '}
-              <span className="font-mono">{portRanges(ids)}</span>
+              <Rich
+                text={say.vlanPorts(ids.length)}
+                parts={{
+                  vlan: () => <span className="font-medium">{vlanLabel(vlan, names)}</span>,
+                  ports: () => <span className="font-mono">{portRanges(ids)}</span>,
+                }}
+              />
             </li>
           ))}
           {summary.trunks.map(({ port, vlans }) => (
             <li key={`trunk-${port}`}>
-              <span className="font-medium">Trunk</span>: porta <span className="font-mono">{port}</span>
-              {vlans.length > 0
-                ? `, porta le VLAN ${vlans.map((vlan) => vlanShort(vlan, names)).join(', ')}`
-                : ', porta tutte le VLAN'}
+              <Rich
+                text={say.trunk(vlans.length)}
+                parts={{
+                  trunk: (words) => <span className="font-medium">{words}</span>,
+                  port: () => <span className="font-mono">{port}</span>,
+                  vlans: () => vlans.map((vlan) => vlanShort(vlan, names)).join(', '),
+                }}
+              />
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-[var(--text-color-light)]">
-          Nessuna porta ha una VLAN: tutte le porte sono nella stessa rete.
-        </p>
+        <p className="text-[var(--text-color-light)]">{say.noVlans}</p>
       )}
     </div>
   );

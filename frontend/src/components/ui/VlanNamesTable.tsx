@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cellClass, errorClass, hintClass } from '@/components/ui/compactStyles';
 import { VLAN_NAME_MAX_LENGTH, vlanRowProblem, type VlanRow } from '@/utils/vlanNames';
+import { useT } from '@/i18n';
 
 interface VlanNamesTableProps {
   /** The rows as they are typed (see vlanRows in utils/vlanNames) */
@@ -21,6 +22,7 @@ interface VlanNamesTableProps {
  * is saved by itself: the rows go to the form of the settings.
  */
 const VlanNamesTable: React.FC<VlanNamesTableProps> = ({ rows, onChange, showProblems }) => {
+  const words = useT().vlan.names;
   // (a row added by hand has no number to be told by)
   const added = useRef(0);
 
@@ -39,20 +41,20 @@ const VlanNamesTable: React.FC<VlanNamesTableProps> = ({ rows, onChange, showPro
   return (
     <div className="flex flex-col gap-2">
       {rows.length > 0 ? (
-        <table className="w-full border-collapse text-sm" aria-label="VLAN del progetto">
+        <table className="w-full border-collapse text-sm" aria-label={words.title}>
           <thead>
             <tr className="text-left text-xs text-[var(--text-color-light)]">
               <th scope="col" className="font-medium pb-1 pr-3 w-[84px]">
                 VLAN
               </th>
               <th scope="col" className="font-medium pb-1 pr-3">
-                Nome
+                {words.name}
               </th>
               <th scope="col" className="font-medium pb-1 pr-3 w-[150px]">
-                Su questo canvas
+                {words.onThisCanvas}
               </th>
               <th scope="col" className="pb-1 w-[28px]">
-                <span className="sr-only">Togli</span>
+                <span className="sr-only">{words.remove}</span>
               </th>
             </tr>
           </thead>
@@ -73,8 +75,8 @@ const VlanNamesTable: React.FC<VlanNamesTableProps> = ({ rows, onChange, showPro
                           type="text"
                           inputMode="numeric"
                           className={`${cellClass} font-mono`}
-                          aria-label="Numero della nuova VLAN"
-                          placeholder="es. 30"
+                          aria-label={words.newNumber}
+                          placeholder={words.numberPlaceholder}
                           value={row.id}
                           autoFocus
                           onChange={(e) => change(row.key, { id: e.target.value })}
@@ -85,25 +87,23 @@ const VlanNamesTable: React.FC<VlanNamesTableProps> = ({ rows, onChange, showPro
                       <input
                         type="text"
                         className={cellClass}
-                        aria-label={row.fixed ? `Nome della VLAN ${number}` : 'Nome della nuova VLAN'}
+                        aria-label={row.fixed ? words.nameOf(number) : words.newName}
                         aria-invalid={problem ? true : undefined}
-                        placeholder={row.fixed && row.inUse ? 'senza nome' : 'es. Uffici'}
+                        placeholder={row.fixed && row.inUse ? words.unnamed : words.namePlaceholder}
                         maxLength={VLAN_NAME_MAX_LENGTH}
                         value={row.name}
                         onChange={(e) => change(row.key, { name: e.target.value })}
                       />
                     </td>
                     <td className="pr-3 py-0.5 text-xs text-[var(--text-color-light)]">
-                      {row.inUse ? 'in uso' : row.fixed ? 'non usata' : ''}
+                      {row.inUse ? words.inUse : row.fixed ? words.notUsed : ''}
                     </td>
                     <td className="py-0.5">
                       {removable && (
                         <button
                           type="button"
                           className="p-1 rounded text-[var(--text-color-light)] hover:text-[var(--text-color)] hover:bg-[var(--bg-hover)]"
-                          aria-label={
-                            row.fixed ? `Togli il nome della VLAN ${number}` : 'Togli la nuova VLAN'
-                          }
+                          aria-label={row.fixed ? words.removeNameOf(number) : words.removeNew}
                           onClick={() => remove(row)}
                         >
                           <X size={14} />
@@ -125,11 +125,11 @@ const VlanNamesTable: React.FC<VlanNamesTableProps> = ({ rows, onChange, showPro
           </tbody>
         </table>
       ) : (
-        <p className={hintClass}>Nessuna VLAN ha un nome, e questo canvas non ne usa.</p>
+        <p className={hintClass}>{words.none}</p>
       )}
       <div>
         <Button variant="secondary" size="sm" onClick={add}>
-          Aggiungi VLAN
+          {words.add}
         </Button>
       </div>
     </div>
