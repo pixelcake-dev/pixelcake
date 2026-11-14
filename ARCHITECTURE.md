@@ -69,6 +69,8 @@ The list of React Flow nodes is made anew from the store at every change. A devi
 
 Bringing the whole drawing into view is a request (`fitViewRequest` in networkStore, raised by `triggerFitView`). The canvas answers each request once, after React Flow has measured the devices, so a drawing that has just been loaded (a sample network) is fitted too.
 
+The view on screen is kept with the canvas (`viewport` in networkStore, which is not an edit): it is what a reload of the page and the way out of a presentation come back to. A move made with the pointer or the wheel is stored at its end (`onMoveEnd`). A move the app makes (the drawing fitted, the zoom and fit buttons of the canvas, the view that follows a device dragged to the border) has no end React Flow tells of: it reaches the canvas as `onMove` with no event, and the view is stored once it has stood still for 150 ms. Nothing is stored while presenting.
+
 While presenting, NetworkCanvas makes the drawing read-only (nothing is selected, moved, joined, deleted or pasted; dragging pans), a click on a device or a cable opens the presentation menu, the drawing is fitted to the window, and the view saved with the drawing is not touched. NetworkDevice and CustomEdge mark the ends of the question, a broken device and a cut cable. The way of the answer is not painted: the packet shows it, and a cable lights up in the colour of its kind while the packet is on it, as while building.
 
 ### Areas («riquadri»)

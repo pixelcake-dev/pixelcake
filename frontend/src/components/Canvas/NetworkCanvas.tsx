@@ -65,6 +65,9 @@ const miniMapNodeColour = (node: Node): string =>
     ? miniMapAreaColour((node.data as CanvasArea | undefined)?.color)
     : miniMapColour((node.data as NetworkDeviceType | undefined)?.type);
 
+/** How long the view has to stand still to be taken as come to rest (ms) */
+const VIEW_AT_REST_AFTER = 150;
+
 /**
  * True once React Flow knows the size of every device on screen, which is
  * what fitting the view needs. A device that has just come on the canvas
@@ -499,6 +502,23 @@ const NetworkCanvas = () => {
     setViewport(currentViewport);
   }, [reactFlowInstance, setViewport]);
 
+  // A move the app makes (the drawing fitted to the window, the zoom buttons
+  // of the canvas, the view that follows a device dragged to the border) has
+  // no end React Flow tells of, as one made with the pointer or the wheel
+  // has. It is over when the view has stood still for a moment, and the view
+  // is stored then: it is the one a reload of the page comes back to
+  const viewAtRest = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const handleMove = useCallback(
+    (event: MouseEvent | TouchEvent | null) => {
+      // (made with the pointer or the wheel: stored at its end, above)
+      if (event) return;
+      clearTimeout(viewAtRest.current);
+      viewAtRest.current = setTimeout(handleMoveEnd, VIEW_AT_REST_AFTER);
+    },
+    [handleMoveEnd]
+  );
+  useEffect(() => () => clearTimeout(viewAtRest.current), []);
+
   // Keyboard shortcuts: Ctrl+C (copy), Ctrl+V (paste)
   useEffect(() => {
     const handleKeyboardShortcuts = (e: KeyboardEvent) => {
@@ -582,6 +602,7 @@ const NetworkCanvas = () => {
         onSelectionStart={presenting ? undefined : deselectArea}
         onMoveStart={presenting ? closePresentationMenu : undefined}
         onError={handleError}
+        onMove={handleMove}
         onMoveEnd={handleMoveEnd}
         nodeTypes={memoizedNodeTypes}
         edgeTypes={memoizedEdgeTypes}
