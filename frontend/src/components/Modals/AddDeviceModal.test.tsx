@@ -6,6 +6,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { toast } from 'sonner';
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
@@ -30,6 +31,7 @@ function add(type: string, templateId: string) {
 
 beforeEach(() => {
   localStorage.clear();
+  vi.mocked(toast.error).mockClear();
   useNetworkStore.getState().clearAllDevices();
   useNetworkStore.getState().setGlobalNetworkSettings({
     ipClass: '192.168.1.0',
@@ -142,5 +144,89 @@ describe('bulk add — the gateway of new routers and firewalls', () => {
       Switch: '192.168.1.1',
       PC: '192.168.1.1',
     });
+  });
+});
+
+describe('AddDeviceModal — the address of a new end device is typed where it is added', () => {
+  const open = (type: string, templateId: string) => {
+    useUIStore.getState().setAddDeviceType(type, templateId);
+    useUIStore.getState().openModal('addDevice');
+    return render(<AddDeviceModal />);
+  };
+  const last = () => {
+    const devices = useNetworkStore.getState().devices;
+    return devices[devices.length - 1];
+  };
+  const confirm = () => fireEvent.click(screen.getByRole('button', { name: 'Aggiungi' }));
+
+  it('shows the address proposed for its card, with the mask and the gateway of the project, to be changed', () => {
+    open('PC', 'tpl-pc');
+    const network = screen.getByRole('group', { name: 'Rete · eth0' });
+    expect(screen.getByLabelText('Indirizzo')).toHaveValue('manual');
+    expect(screen.getByLabelText('Indirizzo IP')).toHaveValue('192.168.1.2');
+    expect(screen.getByLabelText('Subnet Mask')).toHaveValue('255.255.255.0');
+    expect(screen.getByLabelText('Gateway')).toHaveValue('192.168.1.1');
+    expect(network).toHaveTextContent("L'indirizzo è proposto: il primo libero della rete del progetto.");
+
+    fireEvent.change(screen.getByLabelText('Indirizzo IP'), { target: { value: ' 192.168.1.50 ' } });
+    fireEvent.change(screen.getByLabelText('Server DNS'), { target: { value: '192.168.1.53' } });
+    confirm();
+    expect(last()).toMatchObject({ ip: '192.168.1.50', subnet: '255.255.255.0', gateway: '192.168.1.1' });
+    expect(last().nics?.[0]).toMatchObject({ ip: '192.168.1.50', dns: '192.168.1.53', name: 'eth0' });
+  });
+
+  it('can be left to DHCP: the device is added with no address of its own', () => {
+    open('PC', 'tpl-pc');
+    // (even with the address that was proposed taken away: on DHCP none is asked for)
+    fireEvent.change(screen.getByLabelText('Indirizzo IP'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Indirizzo'), { target: { value: 'dhcp' } });
+    expect(screen.queryByLabelText('Indirizzo IP')).not.toBeInTheDocument();
+    expect(screen.getByTestId('nic-lease')).toHaveTextContent(
+      "L'indirizzo arriva dal server DHCP della rete a cui la scheda è collegata."
+    );
+    confirm();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(last()).toMatchObject({ ip: '', gateway: '' });
+    expect(last().nics?.[0]).toMatchObject({ dhcp: true, ip: '', subnet: '', gateway: '' });
+  });
+
+  it('by hand an address is asked for, and a DNS server that is not an address is refused', () => {
+    open('PC', 'tpl-pc');
+    const before = useNetworkStore.getState().devices.length;
+    fireEvent.change(screen.getByLabelText('Indirizzo IP'), { target: { value: '  ' } });
+    confirm();
+    expect(toast.error).toHaveBeenLastCalledWith('Nome e IP sono obbligatori');
+
+    fireEvent.change(screen.getByLabelText('Indirizzo IP'), { target: { value: '192.168.1.50' } });
+    fireEvent.change(screen.getByLabelText('Server DNS'), { target: { value: 'srv-auth' } });
+    expect(screen.getByRole('alert')).toHaveTextContent('"srv-auth" non è un indirizzo IPv4 valido');
+    confirm();
+    expect(toast.error).toHaveBeenLastCalledWith(
+      '"srv-auth" non è un indirizzo IPv4 valido: il server DNS si indica con il suo indirizzo'
+    );
+    expect(useNetworkStore.getState().devices).toHaveLength(before);
+  });
+
+  it('a switch is asked its own address, and how many ports it has', () => {
+    open('Switch', 'tpl-switch');
+    expect(screen.getByRole('group', { name: 'Rete' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Indirizzo IP')).toHaveValue('192.168.1.2');
+    expect(screen.getByLabelText('Subnet Mask')).toHaveAttribute('readonly');
+    expect(screen.getByLabelText('Numero di Porte')).toHaveValue('24');
+    fireEvent.change(screen.getByLabelText('Numero di Porte'), { target: { value: '8' } });
+    confirm();
+    expect(last().ports).toHaveLength(8);
+    expect(last().portCount).toBe(8);
+  });
+
+  it('says what the device is, and asks a PC neither who made it nor where it is', () => {
+    const pc = open('PC', 'tpl-pc');
+    expect(screen.getByLabelText('Tipo')).toHaveTextContent('PC');
+    expect(screen.queryByLabelText('Vendor')).not.toBeInTheDocument();
+    pc.unmount();
+    open('Server', 'tpl-mailserver');
+    expect(screen.getByLabelText('Tipo')).toHaveTextContent(/Mail/);
+    expect(screen.getByLabelText('Vendor')).toBeInTheDocument();
+    expect(screen.getByLabelText('Posizione')).toBeInTheDocument();
   });
 });

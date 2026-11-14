@@ -1,16 +1,26 @@
 /**
  * Network Settings Tab
- * Manages global network configuration (IP range, subnet, gateway)
+ * The network of the project: what a new device starts from (the network its
+ * addresses are proposed in, the mask, the gateway), and how emails travel in
+ * a simulation.
  */
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
-import { FormContainer } from '@/components/ui/FormContainer';
+import { FormFieldset } from '@/components/ui/FormContainer';
+import { FieldRow, SelectField, TextField } from '@/components/ui/compact';
+import { hintClass } from '@/components/ui/compactStyles';
 import { useNetworkStore } from '@/store/networkStore';
+import { isValidIP } from '@/utils/ipHelpers';
 import { type EmailMode } from '@/types';
+
+/** What is wrong with an address field of the project; undefined when it is fine */
+function addressProblem(value: string): string | undefined {
+  const text = value.trim();
+  if (!text) return 'Obbligatorio';
+  return isValidIP(text) ? undefined : `"${text}" non è un indirizzo IPv4 valido`;
+}
 
 const NetworkSettingsTab = () => {
   const globalSettings = useNetworkStore((state) => state.globalNetworkSettings);
@@ -20,6 +30,8 @@ const NetworkSettingsTab = () => {
   const [subnet, setSubnet] = useState('');
   const [gateway, setGateway] = useState('');
   const [emailMode, setEmailMode] = useState<EmailMode>('auto');
+  // What is wrong is said once the user has tried to save, then as it is typed
+  const [checked, setChecked] = useState(false);
 
   // Load current settings when component mounts or settings change
   useEffect(() => {
@@ -29,18 +41,32 @@ const NetworkSettingsTab = () => {
     setEmailMode(globalSettings.emailMode ?? 'auto');
   }, [globalSettings]);
 
+  const problems = {
+    ipClass: addressProblem(ipClass),
+    subnet: addressProblem(subnet),
+    gateway: addressProblem(gateway),
+  };
+
   const handleSave = () => {
     if (!ipClass.trim() || !subnet.trim() || !gateway.trim()) {
+      setChecked(true);
       toast.error('Tutti i campi sono obbligatori');
+      return;
+    }
+    const wrong = problems.ipClass ?? problems.subnet ?? problems.gateway;
+    if (wrong) {
+      setChecked(true);
+      toast.error(wrong);
       return;
     }
 
     setGlobalSettings({
-      ipClass,
-      subnet,
-      gateway,
+      ipClass: ipClass.trim(),
+      subnet: subnet.trim(),
+      gateway: gateway.trim(),
       emailMode,
     });
+    setChecked(false);
 
     toast.success('Impostazioni di rete salvate');
   };
@@ -48,61 +74,67 @@ const NetworkSettingsTab = () => {
   return (
     <div className="settings-panel">
       <h3>Impostazioni Rete Globale</h3>
-      <p className="text-sm text-[var(--text-color-light)] mb-4">
-        Questi valori verranno usati come default per i nuovi dispositivi.
+      <p className="text-sm text-[var(--text-color-light)]">
+        Valgono per tutto il progetto. Cambiarle non tocca i dispositivi che ci sono già.
       </p>
 
-      {/* A field has no space of its own around it: the gap between one field
-          and the label of the next comes from the container, as in the other
-          windows */}
-      <FormContainer gap="4">
-        <Input
-          label="Classe IP di Partenza"
-          value={ipClass}
-          onChange={(e) => setIpClass(e.target.value)}
-          placeholder="es. 192.168.1.0"
-          size="sm"
-          required
-        />
+      <FormFieldset legend="Nuovi dispositivi">
+        <FieldRow>
+          <TextField
+            label="Classe IP di Partenza"
+            mono
+            value={ipClass}
+            onChange={(e) => setIpClass(e.target.value)}
+            placeholder="es. 192.168.1.0"
+            error={checked ? problems.ipClass : undefined}
+            required
+          />
+          <TextField
+            label="Subnet Mask di Default"
+            mono
+            value={subnet}
+            onChange={(e) => setSubnet(e.target.value)}
+            placeholder="es. 255.255.255.0"
+            error={checked ? problems.subnet : undefined}
+            required
+          />
+          <TextField
+            label="Gateway di Default"
+            mono
+            value={gateway}
+            onChange={(e) => setGateway(e.target.value)}
+            placeholder="es. 192.168.1.1"
+            error={checked ? problems.gateway : undefined}
+            required
+          />
+          <span className={`col-span-4 ${hintClass}`}>
+            A un dispositivo nuovo viene proposto il primo indirizzo libero di questa rete, con
+            questa subnet mask e questo gateway. Un router o un firewall nasce senza gateway: la
+            sua rotta predefinita si sceglie nella sua scheda.
+          </span>
+        </FieldRow>
+      </FormFieldset>
 
-        <Input
-          label="Subnet Mask di Default"
-          value={subnet}
-          onChange={(e) => setSubnet(e.target.value)}
-          placeholder="es. 255.255.255.0"
-          size="sm"
-          required
-        />
-
-        <Input
-          label="Gateway di Default"
-          value={gateway}
-          onChange={(e) => setGateway(e.target.value)}
-          placeholder="es. 192.168.1.1"
-          size="sm"
-          required
-        />
-
-        {/* The select and the line that explains it are one field */}
-        <div>
-          <Select
+      <FormFieldset legend="Simulazione">
+        <FieldRow>
+          <SelectField
             label="Modalità Email (SMTP)"
+            span={2}
             value={emailMode}
             onChange={(e) => setEmailMode(e.target.value as EmailMode)}
-            size="md"
           >
             <option value="auto">Auto (rileva automaticamente)</option>
             <option value="internal">Mail server interno</option>
             <option value="cloud">Cloud (M365, Gmail...)</option>
-          </Select>
-          <p className="text-xs text-[var(--text-color-light)] -mt-2 mb-4">
+          </SelectField>
+          <span className={`col-span-2 pt-[18px] ${hintClass}`}>
             Determina come viaggiano le email in simulazione: tramite un Mail Server interno o
             attraverso l&apos;uscita internet.
-          </p>
-        </div>
-      </FormContainer>
+          </span>
+        </FieldRow>
+      </FormFieldset>
 
-      <div className="mt-4">
+      <div className="mt-5">
         <Button variant="primary" onClick={handleSave}>
           Salva Impostazioni Rete
         </Button>

@@ -12,9 +12,10 @@ interface PortGridProps {
 
 /**
  * PortGrid Component
- * Displays network device ports in an 8-column grid with visual status indicators
+ * Displays the ports of a device as a row of boxes that wraps, each with its
+ * number, its name and its marks
  * Color coding: green (enabled/access), purple (trunk), gray (disabled)
- * A link marker on the right edge flags ports that have a connection attached
+ * A link marker in the corner flags ports that have a connection attached
  */
 const PortGrid: React.FC<PortGridProps> = ({ ports, selectedPortId, onPortSelect, linkedPorts }) => {
   const getPortStatusClass = (port: Port): string => {
@@ -54,28 +55,26 @@ const PortGrid: React.FC<PortGridProps> = ({ ports, selectedPortId, onPortSelect
               </div>
             )}
 
-            {/* PoE Indicator */}
-            {port.poe && port.enabled && (
-              <div className="port-poe-indicator" title="PoE Enabled">
-                <Icon icon="mdi:lightning-bolt" width={14} height={14} />
-              </div>
-            )}
-
-            {/* Port Type Badge */}
-            {port.enabled && port.portType && (
+            {/* Port Type Badge, and power over the cable next to it */}
+            {port.enabled && (port.portType || port.poe) && (
               <div className="port-type-badge">
                 {port.portType === 'trunk' && 'T'}
                 {port.portType === 'access' && 'A'}
                 {port.portType === 'wan' && 'W'}
                 {port.portType === 'lan' && 'L'}
                 {port.portType === 'dmz' && 'D'}
+                {port.poe && (
+                  <span className="port-poe-indicator" title="PoE Enabled">
+                    <Icon icon="mdi:lightning-bolt" width={10} height={10} />
+                  </span>
+                )}
               </div>
             )}
 
             {/* Link Marker: a connection is attached to this port */}
             {linkedTo && (
               <div
-                className="absolute top-1/2 -right-2 -translate-y-1/2 flex items-center justify-center w-4 h-4 rounded-full bg-[var(--accent-color)] text-[var(--on-accent)]"
+                className="port-link-marker"
                 title={`Collegata a ${linkedTo}`}
                 data-testid={`port-link-marker-${port.id}`}
               >

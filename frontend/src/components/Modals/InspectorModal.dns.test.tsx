@@ -49,12 +49,8 @@ const tabNames = () =>
 const openTab = (name: string | RegExp) => fireEvent.click(screen.getByRole('button', { name }));
 const type = (label: string, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
-/** The two «Salva» of the window: the one of the panel on the right, the one of the device */
-const savePanel = () => fireEvent.click(screen.getAllByRole('button', { name: 'Salva' })[0]);
-const saveDevice = () => {
-  const buttons = screen.getAllByRole('button', { name: 'Salva' });
-  fireEvent.click(buttons[buttons.length - 1]);
-};
+/** The one «Salva» of the window: ports and cards are typed straight into its form */
+const saveDevice = () => fireEvent.click(screen.getByRole('button', { name: 'Salva' }));
 const selectPort = (id: number) => fireEvent.click(screen.getByText(String(id), { selector: '.port-number' }));
 const selectCard = (name: string) => fireEvent.click(screen.getByText(name, { selector: '.nic-name' }));
 const section = (name: string) => screen.getByRole('region', { name });
@@ -274,11 +270,10 @@ describe('InspectorModal — the DNS server a card asks', () => {
     openTab(/^Schede di rete/);
     selectCard('eth0');
     expect(screen.getByLabelText('Server DNS')).toHaveValue('');
-    const labels = Array.from(document.querySelectorAll('.nic-config-panel label')).map(label => label.textContent);
+    const labels = Array.from(document.querySelectorAll('.nic-editor label')).map(label => label.textContent);
     expect(labels.indexOf('Server DNS')).toBe(labels.indexOf('Gateway') + 1);
 
     type('Server DNS', ` ${WEB} `);
-    savePanel();
     expect(device('PC-1').nics?.[0].dns).toBeUndefined();
     saveDevice();
     expect(toast.error).not.toHaveBeenCalled();
@@ -292,24 +287,26 @@ describe('InspectorModal — the DNS server a card asks', () => {
     selectCard('eth0');
     expect(screen.getByLabelText('Server DNS')).toHaveValue(WEB);
     type('Server DNS', '  ');
-    savePanel();
     saveDevice();
     expect(device('PC-1').nics?.[0].dns).toBeUndefined();
     expect(device('PC-1').nics?.[0].ip).toBe('192.168.10.11');
   });
 
-  it('has to be an address: a name is refused, and the card stays open with what was typed', () => {
+  it('has to be an address: a name is said so while it is typed, and the device is not saved with it', () => {
     openInspector('PC-1');
     openTab(/^Schede di rete/);
     selectCard('eth0');
     type('Server DNS', 'web-01');
-    savePanel();
     expect(alerts()).toEqual(['"web-01" non è un indirizzo IPv4 valido: il server DNS si indica con il suo indirizzo']);
+    saveDevice();
+    expect(toast.error).toHaveBeenCalledWith(
+      'Scheda eth0: "web-01" non è un indirizzo IPv4 valido: il server DNS si indica con il suo indirizzo'
+    );
+    expect(device('PC-1').nics?.[0].dns).toBeUndefined();
     expect(screen.getByLabelText('Server DNS')).toHaveValue('web-01');
     // the error goes away with the next keystroke
     type('Server DNS', WEB);
     expect(alerts()).toEqual([]);
-    savePanel();
     saveDevice();
     expect(device('PC-1').nics?.[0].dns).toBe(WEB);
   });
@@ -346,7 +343,6 @@ describe('InspectorModal — the DNS server a card asks', () => {
     fireEvent.change(screen.getByLabelText('Indirizzo'), { target: { value: 'manual' } });
     expect(screen.getByLabelText('Indirizzo IP')).toHaveValue('192.168.10.100');
     expect(screen.getByLabelText('Server DNS')).toHaveValue(WEB);
-    savePanel();
     saveDevice();
     expect(device('PC-1').nics?.[0]).toMatchObject({ ip: '192.168.10.100', dns: WEB });
     expect(device('PC-1').nics?.[0].dhcp).toBeUndefined();
@@ -370,7 +366,6 @@ describe('InspectorModal — the DNS server a card asks', () => {
     selectCard('eth0');
     type('Server DNS', 'not even an address');
     fireEvent.change(screen.getByLabelText('Indirizzo'), { target: { value: 'dhcp' } });
-    savePanel();
     expect(alerts()).toEqual([]);
     saveDevice();
     expect(device('PC-1').nics?.[0]).toMatchObject({ dhcp: true, ip: '' });
@@ -394,7 +389,6 @@ describe('InspectorModal — the DNS server a pool hands out', () => {
   it('is typed with the range, may be on another network, and is saved with the pool', () => {
     openPool();
     type('Server DNS consegnato (opzionale)', ` ${WEB} `);
-    savePanel();
     expect(alerts()).toEqual([]);
     openTab(/^DHCP/);
     expect(section('Intervalli di indirizzi')).toHaveTextContent(
@@ -413,7 +407,6 @@ describe('InspectorModal — the DNS server a pool hands out', () => {
 
   it('is kept only when one is typed, and shown again when the port is opened', () => {
     openPool();
-    savePanel();
     saveDevice();
     expect(device('Router-1').ports?.[0].dhcpServer).toEqual(OFFICE);
 
@@ -424,7 +417,6 @@ describe('InspectorModal — the DNS server a pool hands out', () => {
     selectPort(1);
     expect(screen.getByLabelText('Server DNS consegnato (opzionale)')).toHaveValue(WEB);
     type('Server DNS consegnato (opzionale)', '');
-    savePanel();
     saveDevice();
     expect(device('Router-1').ports?.[0].dhcpServer).toEqual(OFFICE);
   });
@@ -432,7 +424,6 @@ describe('InspectorModal — the DNS server a pool hands out', () => {
   it('has to be an address', () => {
     openPool();
     type('Server DNS consegnato (opzionale)', 'web-01.azienda.example');
-    savePanel();
     expect(alerts()).toEqual(['"web-01.azienda.example" non è un indirizzo IPv4 valido']);
     expect(screen.getByLabelText('Primo indirizzo')).toHaveValue(OFFICE.start);
   });
@@ -442,8 +433,9 @@ describe('InspectorModal — the DNS server a pool hands out', () => {
     openTab(/^Porte/);
     selectPort(1);
     fireEvent.click(screen.getByLabelText(/^Server DHCP Abilitato/));
+    type('Primo indirizzo', '');
+    type('Ultimo indirizzo', '');
     type('Server DNS consegnato (opzionale)', WEB);
-    savePanel();
     expect(alerts()).toEqual(['servono il primo e l\'ultimo indirizzo']);
   });
 
@@ -455,7 +447,6 @@ describe('InspectorModal — the DNS server a pool hands out', () => {
     type('Primo indirizzo', '192.168.20.100');
     type('Ultimo indirizzo', '192.168.20.110');
     type('Server DNS consegnato (opzionale)', WEB);
-    savePanel();
     saveDevice();
     expect(device('Web-01').nics?.[0].dhcpServer).toEqual({
       start: '192.168.20.100',

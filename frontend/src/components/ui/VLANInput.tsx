@@ -64,7 +64,7 @@ export const VLANInput = ({ label, value, onChange, placeholder = 'es. 10, 20, 3
   return (
     <div className="vlan-input-container">
       {label && (
-        <label className="block text-sm font-semibold text-[var(--text-color-light)] mb-1.5">
+        <label htmlFor="vlan-input" className="block text-xs text-[var(--text-color-light)] mb-0.5">
           {label}
         </label>
       )}
@@ -73,11 +73,11 @@ export const VLANInput = ({ label, value, onChange, placeholder = 'es. 10, 20, 3
         style={{
           border: '1px solid var(--border-color)',
           borderRadius: 'var(--radius)',
-          padding: '6px 8px',
-          minHeight: '38px',
+          padding: '2px 6px',
+          minHeight: '30px',
           display: 'flex',
           flexWrap: 'wrap',
-          gap: '6px',
+          gap: '4px',
           alignItems: 'center',
           backgroundColor: disabled ? 'var(--bg-toolbar)' : 'var(--bg-canvas)',
           cursor: disabled ? 'not-allowed' : 'text',
@@ -92,7 +92,7 @@ export const VLANInput = ({ label, value, onChange, placeholder = 'es. 10, 20, 3
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
-              padding: '2px 8px',
+              padding: '0 6px',
               backgroundColor: 'var(--bg-component)',
               color: 'var(--text-color)',
               border: '1px solid var(--border-color)',
@@ -116,8 +116,9 @@ export const VLANInput = ({ label, value, onChange, placeholder = 'es. 10, 20, 3
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  color: 'white',
+                  color: 'var(--text-color-light)',
                 }}
+                aria-label={`Togli la VLAN ${vlan}`}
               >
                 <X size={14} />
               </button>
@@ -129,6 +130,7 @@ export const VLANInput = ({ label, value, onChange, placeholder = 'es. 10, 20, 3
         <input
           id="vlan-input"
           type="text"
+          aria-label={label ?? 'VLAN'}
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}

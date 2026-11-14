@@ -12,7 +12,6 @@ import { toast } from 'sonner';
 import { useNetworkStore } from '@/store/networkStore';
 import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
-import { expectSpacedApart } from '@/test/formLayout';
 import SettingsModal from './SettingsModal';
 
 vi.mock('sonner', () => ({
@@ -117,21 +116,48 @@ describe('SettingsModal', () => {
   });
 
   describe('Rete', () => {
-    it('no label is glued to the field above it', () => {
+    it('the three values of a new device are in one row, the email mode in its own group with its note', () => {
       render(<SettingsModal />);
 
-      expectSpacedApart(
-        [
-          'Classe IP di Partenza',
-          'Subnet Mask di Default',
-          'Gateway di Default',
-          'Modalità Email (SMTP)',
-        ].map(label => screen.getByLabelText(label))
-      );
+      const [network, mask, gateway] = [
+        'Classe IP di Partenza',
+        'Subnet Mask di Default',
+        'Gateway di Default',
+      ].map(label => screen.getByLabelText(label));
+      const row = network.closest('.grid');
+      expect(row).not.toBeNull();
+      expect(mask.closest('.grid')).toBe(row);
+      expect(gateway.closest('.grid')).toBe(row);
+      // a row of fields keeps them apart, across and down
+      expect(row?.className).toContain('gap-x-3');
+      expect(row?.className).toContain('gap-y-2');
+      expect(screen.getByRole('group', { name: 'Nuovi dispositivi' })).toContainElement(network);
+
       // the line that explains the last field stays with it
       const select = screen.getByLabelText('Modalità Email (SMTP)');
       const hint = screen.getByText(/Determina come viaggiano le email/);
-      expect(select.closest('.form-group')?.parentElement).toBe(hint.parentElement);
+      expect(select.closest('.grid')).toBe(hint.parentElement);
+      expect(screen.getByRole('group', { name: 'Simulazione' })).toContainElement(select);
+    });
+
+    it('an address that is not one is said under its field, and nothing is saved', () => {
+      render(<SettingsModal />);
+      const before = useNetworkStore.getState().globalNetworkSettings;
+
+      fireEvent.change(screen.getByLabelText('Gateway di Default'), { target: { value: '192.168.1' } });
+      // nothing is said before the user asks to save
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Salva Impostazioni Rete' }));
+
+      expect(screen.getByRole('alert')).toHaveTextContent('"192.168.1" non è un indirizzo IPv4 valido');
+      expect(toast.error as Mock).toHaveBeenCalledWith('"192.168.1" non è un indirizzo IPv4 valido');
+      expect(useNetworkStore.getState().globalNetworkSettings).toEqual(before);
+
+      // put right, it goes away as it is typed, and the save goes through, trimmed
+      fireEvent.change(screen.getByLabelText('Gateway di Default'), { target: { value: ' 192.168.1.254 ' } });
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Salva Impostazioni Rete' }));
+      expect(useNetworkStore.getState().globalNetworkSettings.gateway).toBe('192.168.1.254');
     });
 
     it('confirms a save with a toast, not with a native alert', () => {

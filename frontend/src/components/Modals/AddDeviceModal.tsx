@@ -1,18 +1,28 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { Icon } from '@iconify/react';
 import { Modal } from '@/components/ui/Modal';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
-import { FormContainer, FormFieldset } from '@/components/ui/FormContainer';
+import { FormFieldset } from '@/components/ui/FormContainer';
+import { FieldRow, ReadOnlyField, SelectField, TextField } from '@/components/ui/compact';
+import { hintClass } from '@/components/ui/compactStyles';
+import { NicAddressFields } from '@/components/ui/NicEditor';
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { findNextAvailableIP, generateMacAddress } from '@/utils/ipHelpers';
 import { firstFreePlace } from '@/utils/placeDevice';
+import { nicProblems, tidyNic } from '@/utils/interfaceProblems';
 import { isL3Type, withLeases } from '@/engine';
 import type { DeviceType, Port, NetworkInterfaceCard } from '@/types/network';
 
+/**
+ * AddDeviceModal
+ * A new device, of the type picked in the panel: its name, and how it is
+ * addressed. An end device is addressed through its card, and the address is
+ * typed (or left to DHCP) here, with the same fields its window has; the
+ * rest of a device is set in its window once it is on the canvas.
+ */
 const AddDeviceModal = () => {
   const isOpen = useUIStore((state) => state.modals.addDevice);
   const addDeviceType = useUIStore((state) => state.addDeviceType);
@@ -77,9 +87,20 @@ const AddDeviceModal = () => {
     }
   }, [isOpen, addDeviceType, addDeviceTemplateId, devices, globalSettings, templates]);
 
+  // An end device is addressed through its card: what is typed here is the card
+  const card = nics?.[0];
+
   const handleSave = () => {
-    if (!addDeviceType || !name.trim() || !ip.trim()) {
+    if (!addDeviceType) return;
+    // A card on DHCP needs no address; any other device is asked for one
+    const address = card ? (card.dhcp ? 'dhcp' : (card.ip ?? '').trim()) : ip.trim();
+    if (!name.trim() || !address) {
       toast.error('Nome e IP sono obbligatori');
+      return;
+    }
+    const cardProblem = card ? nicProblems(card).dns : undefined;
+    if (cardProblem) {
+      toast.error(cardProblem);
       return;
     }
 
@@ -117,20 +138,21 @@ const AddDeviceModal = () => {
         }))
       : undefined;
 
+    // The device is named by its first card: its own three fields follow it
+    const keptCard = card ? tidyNic(card) : undefined;
     const newId = addDevice({
       type: addDeviceType as DeviceType,
       templateId: addDeviceTemplateId || undefined, // Store template ID for icon lookup
       label: name,
-      ip,
-      subnet: globalSettings.subnet,
-      gateway: routesTraffic ? '' : globalSettings.gateway,
+      ip: keptCard ? keptCard.ip : ip,
+      subnet: keptCard ? keptCard.subnet : globalSettings.subnet,
+      gateway: keptCard ? keptCard.gateway : routesTraffic ? '' : globalSettings.gateway,
       vendor: addDeviceType !== 'PC' ? vendor : undefined,
       location: addDeviceType !== 'PC' ? position : undefined,
       position: place,
       portCount: portCount,
       ports: ports,
-      // The IP typed in this form is the address of the first NIC
-      nics: nics?.map((nic, index) => (index === 0 ? { ...nic, ip } : nic)),
+      nics: keptCard ? [keptCard] : undefined,
     });
     // The new device is the selected one: it stands out, and is found at once
     useNetworkStore.getState().selectMultipleDevices([newId]);
@@ -156,12 +178,15 @@ const AddDeviceModal = () => {
     : templates.find((t) => t.type === addDeviceType);
 
   const deviceTypeName = template?.name || addDeviceType;
+  const isPC = addDeviceType === 'PC';
+  const routesTraffic = isL3Type(addDeviceType);
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
       title={`Aggiungi Nuovo ${deviceTypeName}`}
+      size="md"
       autoHeight={true}
       footer={
         <div className="modal-actions px-6 pb-6 pt-4">
@@ -174,117 +199,97 @@ const AddDeviceModal = () => {
         </div>
       }
     >
-      <FormContainer gap="4">
-        {/* Vendor field - hidden for PC */}
-        {addDeviceType !== 'PC' && (
-          <Input
-            label="Vendor"
-            value={vendor}
-            onChange={(e) => setVendor(e.target.value)}
-            placeholder="es. Cisco, HP, Ubiquiti..."
-            size="md"
-          />
-        )}
-
-        {/* Device Name */}
-        <Input
-          label="Nome Dispositivo"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={`es. ${addDeviceType}-Ufficio-01`}
-          size="md"
-          required
-        />
-
-        {/* Position field - hidden for PC */}
-        {addDeviceType !== 'PC' && (
-          <Input
-            label="Posizione"
-            value={position}
-            onChange={(e) => setPosition(e.target.value)}
-            placeholder="es. Rack 01, Ufficio 102..."
-            size="lg"
-          />
-        )}
-
-        {/* Port Count Selector - only for devices with port support (Switch) */}
-        {template?.supportsPorts && template.portOptions && (
-          <Select
-            label="Numero di Porte"
-            value={portCount?.toString() || ''}
-            onChange={(e) => setPortCount(Number(e.target.value))}
-            size="md"
-            required
-          >
-            {template.portOptions.map((count) => (
-              <option key={count} value={count}>
-                {count} porte
-              </option>
-            ))}
-          </Select>
-        )}
-
-        {/* Network Configuration */}
-        <FormFieldset legend="Configurazione Rete">
-          <FormContainer gap="3">
-            {nics && nics.length > 0 ? (
-              <>
-                <Input
-                  label="Indirizzo IP (Gestito tramite NICs)"
-                  value={nics[0].ip}
-                  size="sm"
-                  readOnly
-                />
-
-                <Input
-                  label="Subnet Mask (Gestito tramite NICs)"
-                  value={nics[0].subnet}
-                  size="sm"
-                  readOnly
-                />
-
-                <Input
-                  label="Gateway (Gestito tramite NICs)"
-                  value={nics[0].gateway}
-                  size="sm"
-                  readOnly
-                />
-
-                <p className="text-xs text-[var(--text-color-light)] mt-1">
-                  Configurazione di rete gestita tramite schede di rete (NICs).
-                  Modifica disponibile dopo la creazione del dispositivo.
-                </p>
-              </>
-            ) : (
-              <>
-                <Input
-                  label="Indirizzo IP (Auto-assegnato)"
-                  value={ip}
-                  onChange={(e) => setIp(e.target.value)}
-                  size="sm"
-                  required
-                />
-
-                <Input
-                  label="Subnet Mask"
-                  value={globalSettings.subnet}
-                  size="sm"
-                  readOnly
-                />
-
-                {isL3Type(addDeviceType) ? (
-                  <p className="text-xs text-[var(--text-color-light)] mt-1">
-                    Gli indirizzi delle porte, le rotte e la rotta predefinita si impostano dopo,
-                    nella scheda del dispositivo.
-                  </p>
-                ) : (
-                  <Input label="Gateway" value={globalSettings.gateway} size="sm" readOnly />
-                )}
-              </>
+      <div className="flex flex-col">
+        <FormFieldset legend="Identità" className="first:mt-0">
+          <FieldRow>
+            <ReadOnlyField label="Tipo">
+              <Icon
+                icon={template?.icon || 'mdi:help-circle'}
+                width={18}
+                height={18}
+                className="text-[var(--accent-text)] shrink-0"
+              />
+              <span className="font-medium truncate">{deviceTypeName}</span>
+            </ReadOnlyField>
+            <TextField
+              label="Nome Dispositivo"
+              span={isPC ? 3 : 1}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={`es. ${addDeviceType}-Ufficio-01`}
+              required
+            />
+            {/* Who made it and where it is: not asked of a PC */}
+            {!isPC && (
+              <TextField
+                label="Vendor"
+                value={vendor}
+                onChange={(e) => setVendor(e.target.value)}
+                placeholder="es. Cisco, HP..."
+              />
             )}
-          </FormContainer>
+            {!isPC && (
+              <TextField
+                label="Posizione"
+                value={position}
+                onChange={(e) => setPosition(e.target.value)}
+                placeholder="es. Rack 01..."
+              />
+            )}
+            {/* How many ports: only for the devices that are made with ports */}
+            {template?.supportsPorts && template.portOptions && (
+              <SelectField
+                label="Numero di Porte"
+                value={portCount?.toString() || ''}
+                onChange={(e) => setPortCount(Number(e.target.value))}
+                required
+                hint="Si può cambiare anche dopo."
+              >
+                {template.portOptions.map((count) => (
+                  <option key={count} value={count}>
+                    {count} porte
+                  </option>
+                ))}
+              </SelectField>
+            )}
+          </FieldRow>
         </FormFieldset>
-      </FormContainer>
+
+        {card ? (
+          /* An end device: the address of its card, typed here or left to DHCP */
+          <FormFieldset legend={`Rete · ${card.name}`}>
+            <NicAddressFields
+              nic={card}
+              onChange={(patch) => setNics([{ ...card, ...patch }])}
+            />
+            <p className={`${hintClass} mt-2`}>
+              L&apos;indirizzo è proposto: il primo libero della rete del progetto. Subnet mask e
+              gateway sono quelli delle Impostazioni → Rete.
+            </p>
+          </FormFieldset>
+        ) : (
+          <FormFieldset legend="Rete">
+            <FieldRow>
+              <TextField
+                label="Indirizzo IP"
+                mono
+                value={ip}
+                onChange={(e) => setIp(e.target.value)}
+                required
+                hint="Proposto: il primo libero."
+              />
+              <TextField label="Subnet Mask" mono value={globalSettings.subnet} readOnly />
+              {!routesTraffic && <TextField label="Gateway" mono value={globalSettings.gateway} readOnly />}
+              {routesTraffic && (
+                <span className={`col-span-2 pt-[18px] ${hintClass}`}>
+                  Gli indirizzi delle porte, le rotte e la rotta predefinita si impostano dopo,
+                  nella scheda del dispositivo.
+                </span>
+              )}
+            </FieldRow>
+          </FormFieldset>
+        )}
+      </div>
     </Modal>
   );
 };

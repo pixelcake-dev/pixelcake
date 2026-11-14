@@ -53,7 +53,7 @@ const GuideTab = () => (
       <Step title="Aggiungi i dispositivi">
         Nella barra a sinistra apri «Aggiungi Dispositivo» (il pulsante +) e scegli un tipo
         dall&apos;elenco: controlla il nome e conferma, l&apos;indirizzo IP viene proposto in
-        automatico. Il dispositivo compare al centro della parte di canvas che stai guardando
+        automatico e si può cambiare, o lasciare al DHCP. Il dispositivo compare al centro della parte di canvas che stai guardando
         (o nel primo posto libero lì accanto) ed è già selezionato.
         «Aggiungi in Blocco» ne crea molti in una volta. Nella scheda
         «Topologie» dello stesso pannello ci sono quattro reti di esempio già pronte: quella di
@@ -80,10 +80,14 @@ const GuideTab = () => (
 
       <Step title="Configurali">
         Un doppio clic su un dispositivo ne apre la scheda (la stessa di clic destro → «Dettagli
-        (Modifica)»): nome, indirizzo IP, subnet mask e gateway. Switch, router e firewall hanno
-        anche la scheda «Porte», dove si configura ogni singola porta. Gli altri dispositivi hanno
-        «Schede di rete», ed è lì che se ne cambia l&apos;indirizzo. Le modifiche valgono solo dopo
-        aver premuto «Salva».
+        (Modifica)»). La prima schermata, «Generale», è fatta per il dispositivo: di un PC o di un
+        server mostra nome e indirizzo, che si scrive lì; di uno switch le VLAN e come sono divise
+        le porte; di un router o di un firewall le porte in uso, ciascuna con indirizzo,
+        collegamento e cosa fa. Switch, router e firewall hanno anche la scheda «Porte»: scegli una
+        porta e sotto compaiono le sue impostazioni; lì si cambia anche il «Numero di porte». Gli
+        altri dispositivi hanno «Schede di rete», con nome, velocità e MAC di ogni scheda. Quello
+        che non va viene detto sotto il campo mentre scrivi; le modifiche valgono solo dopo aver
+        premuto «Salva».
       </Step>
 
       <Step title="Instrada tra le reti">

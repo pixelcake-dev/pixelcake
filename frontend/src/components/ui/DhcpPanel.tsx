@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { poolOf, suggestedPool } from '@/engine';
 import type { DeviceInterface, DhcpResolution } from '@/engine';
-import { isBlankPool, poolProblemLabel, serverLabel, unservedText } from '@/utils/dhcpLabels';
+import {
+  isBlankPool,
+  poolProblemLabel,
+  poolStatusText,
+  serverLabel,
+  unservedText,
+} from '@/utils/dhcpLabels';
 import { interfaceShortLabel } from '@/utils/interfaceLabels';
 import { isValidIP } from '@/utils/ipHelpers';
 import type { DhcpPool, NetworkDevice } from '@/types';
@@ -90,6 +96,9 @@ const DhcpPanel: React.FC<DhcpPanelProps> = ({
 
   const pools = dhcp.pools.filter((pool) => pool.deviceId === deviceId);
   const unit = setIn === 'Porte' ? 'porta' : 'scheda';
+  /** The pool of an interface: a card that takes its own address from DHCP has none */
+  const poolOn = (iface: DeviceInterface): DhcpPool | undefined =>
+    iface.kind === 'nic' && iface.nic.dhcp === true ? undefined : poolOf(iface);
   const devices = new Map(dhcp.topology.devices.map((device) => [device.id, device] as const));
   const leases = pools.flatMap((pool) => pool.leases.map((lease) => ({ pool, lease })));
   const waiting = dhcp.unserved.filter((entry) => entry.server?.deviceId === deviceId);
@@ -99,16 +108,16 @@ const DhcpPanel: React.FC<DhcpPanelProps> = ({
   // address are listed (and one that has a pool without, to be put right);
   // the cards of a server are few, and all listed
   const listed = interfaces.filter(
-    (iface) => iface.kind === 'nic' || isValidIP(iface.ip) || poolOf(iface) !== undefined
+    (iface) => iface.kind === 'nic' || isValidIP(iface.ip) || poolOn(iface) !== undefined
   );
-  const serving = interfaces.filter((iface) => poolOf(iface) !== undefined);
+  const serving = interfaces.filter((iface) => poolOn(iface) !== undefined);
 
   const toggle = (iface: DeviceInterface, on: boolean) => {
     if (on) {
       onPoolChange(iface, parked[iface.key] ?? suggestedPool(iface) ?? { start: '', end: '' });
       return;
     }
-    const pool = poolOf(iface);
+    const pool = poolOn(iface);
     if (pool) setParked({ ...parked, [iface.key]: pool });
     onPoolChange(iface, undefined);
   };
@@ -143,7 +152,7 @@ const DhcpPanel: React.FC<DhcpPanelProps> = ({
             )}
             <ul className="flex flex-col gap-3">
               {listed.map((iface) => {
-                const pool = poolOf(iface);
+                const pool = poolOn(iface);
                 const state = pools.find((entry) => entry.interfaceKey === iface.key);
                 const of = told(iface);
                 const isClient = iface.kind === 'nic' && iface.nic.dhcp === true;
@@ -230,12 +239,7 @@ const DhcpPanel: React.FC<DhcpPanelProps> = ({
                     )}
                     {pool && state && !state.problem && (
                       <span className="pl-6 text-xs text-[var(--text-color-light)]">
-                        {state.gateway ? `Gateway consegnato ${state.gateway}` : 'Nessun gateway consegnato'}
-                        {state.pool.dns ? ` · server DNS consegnato ${state.pool.dns}` : ''}
-                        {' · '}
-                        {state.leases.length} {state.leases.length === 1 ? 'assegnato' : 'assegnati'},{' '}
-                        {state.free} {state.free === 1 ? 'libero' : 'liberi'} su {state.size}
-                        {!state.iface.enabled && ` · ${unit} disabilitata: non risponde`}
+                        {poolStatusText(state)}
                       </span>
                     )}
                     {!pool && isClient && (

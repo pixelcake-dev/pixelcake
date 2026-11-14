@@ -467,7 +467,6 @@ describe('InspectorModal — NAT', () => {
     expect(screen.getByLabelText(/^NAT Abilitato/)).toBeChecked();
     // and back: off on the port, off in the tab
     fireEvent.click(screen.getByLabelText(/^NAT Abilitato/));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Salva' })[0]);
     openTab('NAT');
     expect(screen.getByLabelText('NAT sulla porta 2')).not.toBeChecked();
   });
@@ -479,9 +478,8 @@ describe('InspectorModal — NAT', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Dagliene uno' }));
 
     expect(openedTab()).toHaveTextContent(/^Porte/);
-    expect(screen.getByRole('heading', { name: 'Configurazione Porta 3' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Porta 3/ })).toBeInTheDocument();
     type('Indirizzo IP', '203.0.113.2');
-    fireEvent.click(screen.getAllByRole('button', { name: 'Salva' })[0]);
     openTab('NAT');
     const natPorts = screen.getByRole('region', { name: 'Porte con NAT' });
     expect(within(natPorts).queryByRole('alert')).toBeNull();

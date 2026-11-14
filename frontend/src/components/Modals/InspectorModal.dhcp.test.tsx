@@ -48,12 +48,8 @@ const tabNames = () =>
 const openTab = (name: string | RegExp) => fireEvent.click(screen.getByRole('button', { name }));
 const type = (label: string, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
-/** The two «Salva» of the window: the one of the panel on the right, the one of the device */
-const savePanel = () => fireEvent.click(screen.getAllByRole('button', { name: 'Salva' })[0]);
-const saveDevice = () => {
-  const buttons = screen.getAllByRole('button', { name: 'Salva' });
-  fireEvent.click(buttons[buttons.length - 1]);
-};
+/** The one «Salva» of the window: ports and cards are typed straight into its form */
+const saveDevice = () => fireEvent.click(screen.getByRole('button', { name: 'Salva' }));
 const selectPort = (id: number) => fireEvent.click(screen.getByText(String(id), { selector: '.port-number' }));
 const selectCard = (name: string) => fireEvent.click(screen.getByText(name, { selector: '.nic-name' }));
 const section = (name: string) => screen.getByRole('region', { name });
@@ -113,7 +109,6 @@ describe('InspectorModal — the DHCP server of a port', () => {
     fireEvent.click(screen.getByLabelText(/^Server DHCP Abilitato/));
     type('Primo indirizzo', ' 192.168.10.100 ');
     type('Ultimo indirizzo', '192.168.10.199');
-    savePanel();
     expect(screen.getByRole('button', { name: 'DHCP (1)' })).toBeInTheDocument();
     // nothing reaches the drawing before the device is saved
     expect(device('Router-1').ports?.[0].dhcpServer).toBeUndefined();
@@ -131,7 +126,6 @@ describe('InspectorModal — the DHCP server of a port', () => {
     type('Primo indirizzo', '192.168.10.100');
     type('Ultimo indirizzo', '192.168.10.199');
     type('Gateway consegnato (opzionale)', '192.168.10.254');
-    savePanel();
     saveDevice();
     expect(device('Router-1').ports?.[0].dhcpServer).toEqual({ ...OFFICE, gateway: '192.168.10.254' });
   });
@@ -147,30 +141,50 @@ describe('InspectorModal — the DHCP server of a port', () => {
     expect(screen.getByLabelText('Gateway consegnato (opzionale)')).toHaveValue('192.168.10.254');
 
     fireEvent.click(screen.getByLabelText(/^Server DHCP Abilitato/));
-    savePanel();
     saveDevice();
     expect(device('Router-1').ports?.[0].dhcpServer).toBeUndefined();
     expect(device('Router-1').ports?.[0]).toMatchObject({ ip: '192.168.10.1', subnet: '255.255.255.0' });
   });
 
   it.each([
-    ['', '', 'Scrivi il primo e l\'ultimo indirizzo da assegnare, oppure togli la spunta al server DHCP'],
     ['192.168.10.100', '', 'servono il primo e l\'ultimo indirizzo'],
     ['192.168.10.100', 'dieci', '"dieci" non è un indirizzo IPv4 valido'],
     ['192.168.20.100', '192.168.20.199', '192.168.20.100 è fuori dalla rete della porta (192.168.10.0/24)'],
     ['192.168.10.199', '192.168.10.100', 'l\'ultimo indirizzo (192.168.10.100) viene prima del primo (192.168.10.199)'],
-  ])('refuses the range %s – %s and says why', (first, last, message) => {
+  ])('says why the range %s – %s cannot work while it is typed, and does not save it', (first, last, message) => {
     openInspector('Router-1');
     openTab(/^Porte/);
     selectPort(1);
     fireEvent.click(screen.getByLabelText(/^Server DHCP Abilitato/));
     type('Primo indirizzo', first);
     type('Ultimo indirizzo', last);
-    savePanel();
     expect(screen.getByRole('alert')).toHaveTextContent(message);
-    // the panel stays open on the port, with what was typed
+
+    saveDevice();
+    expect(toast.error).toHaveBeenCalledWith(`Porta 1, server DHCP: ${message}`);
+    expect(device('Router-1').ports?.[0].dhcpServer).toBeUndefined();
+    // the window stays open on the port, with what was typed
     expect(screen.getByLabelText('Primo indirizzo')).toHaveValue(first);
+  });
+
+  it('ticked, starts from a range of the network of the port; emptied, it is not kept and is not an error', () => {
+    openInspector('Router-1');
+    openTab(/^Porte/);
+    selectPort(1);
+    fireEvent.click(screen.getByLabelText(/^Server DHCP Abilitato/));
+    expect(screen.getByLabelText('Primo indirizzo')).toHaveValue('192.168.10.100');
+    expect(screen.getByLabelText('Ultimo indirizzo')).toHaveValue('192.168.10.199');
+    // what it gives out is said under the fields, as in the «DHCP» tab
+    expect(screen.getByText('Gateway consegnato 192.168.10.1 · 0 assegnati, 100 liberi su 100')).toBeInTheDocument();
+
+    type('Primo indirizzo', '');
+    type('Ultimo indirizzo', '');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByText(/un intervallo lasciato vuoto non viene salvato/)).toBeInTheDocument();
     expect(tabNames()).toContain('DHCP');
+    saveDevice();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(device('Router-1').ports?.[0].dhcpServer).toBeUndefined();
   });
 
   it('refuses a gateway outside the network, and a range on a port without an address', () => {
@@ -181,7 +195,6 @@ describe('InspectorModal — the DHCP server of a port', () => {
     type('Primo indirizzo', '192.168.10.100');
     type('Ultimo indirizzo', '192.168.10.199');
     type('Gateway consegnato (opzionale)', '10.0.0.1');
-    savePanel();
     expect(screen.getByRole('alert')).toHaveTextContent('10.0.0.1 è fuori dalla rete della porta (192.168.10.0/24)');
 
     // the error goes away with the next keystroke
@@ -189,7 +202,6 @@ describe('InspectorModal — the DHCP server of a port', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     type('Indirizzo IP', '');
     type('Subnet Mask', '');
-    savePanel();
     expect(screen.getByRole('alert')).toHaveTextContent(
       'la porta non ha un indirizzo: gli indirizzi da assegnare sono quelli della sua rete'
     );
@@ -203,7 +215,6 @@ describe('InspectorModal — the DHCP server of a port', () => {
     fireEvent.click(screen.getByLabelText(/^Server DHCP Abilitato/));
     type('Primo indirizzo', '172.16.5.10');
     type('Ultimo indirizzo', '172.16.5.20');
-    savePanel();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     saveDevice();
     expect(device('Router-1').ports?.[0]).toMatchObject({
@@ -255,20 +266,17 @@ describe('InspectorModal — a card on DHCP', () => {
       expect(screen.queryByLabelText(label)).not.toBeInTheDocument();
     }
     const lease = screen.getByTestId('nic-lease');
-    expect(lease).toHaveTextContent('Indirizzo assegnato: 192.168.10.100 da Router-1, porta 1');
+    expect(lease).toHaveTextContent('192.168.10.100 da Router-1, porta 1');
     expect(lease).toHaveTextContent('Subnet mask 255.255.255.0 · gateway 192.168.10.1');
-    expect(lease).toHaveClass('modal-info-box');
+    expect(lease.style.borderLeft).toContain('--ok-color');
 
-    savePanel();
-    // the list of the cards and the first tab show the leased address
+    // the row of the card and the first screen show the leased address
     expect(screen.getByText('192.168.10.100 · DHCP')).toBeInTheDocument();
     openTab('Generale');
-    expect(screen.getByLabelText('Indirizzo IP (sola lettura)')).toHaveValue('192.168.10.100');
-    expect(screen.getByLabelText('Subnet Mask (sola lettura)')).toHaveValue('255.255.255.0');
-    expect(screen.getByLabelText('Gateway (sola lettura)')).toHaveValue('192.168.10.1');
-    expect(
-      screen.getByText(/La prima scheda di rete prende l'indirizzo dal DHCP: 192\.168\.10\.100 da Router-1, porta 1\./)
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Indirizzo')).toHaveValue('dhcp');
+    expect(screen.queryByLabelText('Indirizzo IP')).not.toBeInTheDocument();
+    expect(screen.getByTestId('nic-lease')).toHaveTextContent('192.168.10.100 da Router-1, porta 1');
+    expect(screen.getByTestId('nic-lease')).toHaveTextContent('Subnet mask 255.255.255.0 · gateway 192.168.10.1');
 
     saveDevice();
     expect(toast.error).not.toHaveBeenCalled();
@@ -290,16 +298,14 @@ describe('InspectorModal — a card on DHCP', () => {
     fireEvent.change(screen.getByLabelText('Indirizzo'), { target: { value: 'dhcp' } });
     const lease = screen.getByTestId('nic-lease');
     expect(lease).toHaveTextContent('Nessun indirizzo: nessun server DHCP risponde sulla sua rete');
-    expect(lease).not.toHaveTextContent('Indirizzo assegnato');
-    expect(lease).toHaveClass('modal-error-box');
+    expect(lease).not.toHaveTextContent('Subnet mask');
+    expect(lease.style.borderLeft).toContain('--danger-color');
 
-    savePanel();
     expect(screen.getByText('DHCP: nessun indirizzo')).toBeInTheDocument();
     openTab('Generale');
-    expect(screen.getByLabelText('Indirizzo IP (sola lettura)')).toHaveValue('');
-    expect(
-      screen.getByText(/prende l'indirizzo dal DHCP\. Nessun indirizzo: nessun server DHCP risponde sulla sua rete\./)
-    ).toBeInTheDocument();
+    expect(screen.getByTestId('nic-lease')).toHaveTextContent(
+      'Nessun indirizzo: nessun server DHCP risponde sulla sua rete'
+    );
     saveDevice();
     expect(toast.error).not.toHaveBeenCalled();
     expect(device('PC-1').nics?.[0].dhcp).toBe(true);
@@ -328,7 +334,6 @@ describe('InspectorModal — a card on DHCP', () => {
     expect(screen.getByLabelText('Subnet Mask')).toHaveValue('255.255.255.0');
     expect(screen.getByLabelText('Gateway')).toHaveValue('192.168.10.1');
 
-    savePanel();
     saveDevice();
     const card = device('PC-1').nics?.[0];
     expect(card).toMatchObject({ ip: '192.168.10.100', subnet: '255.255.255.0', gateway: '192.168.10.1' });
@@ -419,7 +424,6 @@ describe('InspectorModal — the DHCP server of a server', () => {
     type('Primo indirizzo', '192.168.20.50');
     type('Ultimo indirizzo', '192.168.20.59');
     type('Gateway consegnato (opzionale)', '192.168.20.1');
-    savePanel();
 
     openTab('DHCP (1)');
     expect(poolRows()).toEqual([
@@ -476,7 +480,6 @@ describe('InspectorModal — the DHCP server of a server', () => {
     expect(screen.getByLabelText(/^Server DHCP Abilitato/)).toBeChecked();
     fireEvent.change(screen.getByLabelText('Indirizzo'), { target: { value: 'dhcp' } });
     expect(screen.queryByLabelText(/^Server DHCP Abilitato/)).not.toBeInTheDocument();
-    savePanel();
     saveDevice();
     const card = device('Web-01').nics?.[0];
     expect(card?.dhcp).toBe(true);
@@ -490,19 +493,17 @@ describe('InspectorModal — the DHCP server of a server', () => {
     fireEvent.click(screen.getByLabelText(/^Server DHCP Abilitato/));
     type('Primo indirizzo', '192.168.10.50');
     type('Ultimo indirizzo', '192.168.10.59');
-    savePanel();
     expect(screen.getByRole('alert')).toHaveTextContent(
       '192.168.10.50 è fuori dalla rete della scheda (192.168.20.0/24)'
     );
     // an empty range too, and a card with no address
     type('Primo indirizzo', '');
     type('Ultimo indirizzo', '');
-    savePanel();
-    expect(screen.getByRole('alert')).toHaveTextContent('Scrivi il primo e l\'ultimo indirizzo da assegnare');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByText(/un intervallo lasciato vuoto non viene salvato/)).toBeInTheDocument();
     type('Primo indirizzo', '192.168.20.50');
     type('Ultimo indirizzo', '192.168.20.59');
     type('Indirizzo IP', '');
-    savePanel();
     expect(screen.getByRole('alert')).toHaveTextContent('la scheda non ha un indirizzo');
   });
 });
@@ -564,7 +565,6 @@ describe('InspectorModal — the «DHCP» tab', () => {
     fireEvent.click(screen.getByLabelText(/^Server DHCP Abilitato/));
     type('Primo indirizzo', '192.168.10.100');
     type('Ultimo indirizzo', '192.168.10.199');
-    savePanel();
     openTab('DHCP (1)');
     expect(section('Indirizzi assegnati')).toHaveTextContent('192.168.10.100');
     expect(section('Indirizzi assegnati')).toHaveTextContent('PC-1');
@@ -709,7 +709,6 @@ describe('InspectorModal — pools set from the «DHCP» tab', () => {
 
     // and back: off on the port, off in the tab
     fireEvent.click(screen.getByLabelText(/^Server DHCP Abilitato/));
-    savePanel();
     openTab('DHCP');
     expect(tick('porta 1')).not.toBeChecked();
     saveDevice();
@@ -779,7 +778,7 @@ describe('InspectorModal — pools set from the «DHCP» tab', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Dagliene uno' }));
     expect(openedTab()).toHaveTextContent(/^Porte/);
-    expect(screen.getByRole('heading', { name: 'Configurazione Porta 3' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Porta 3/ })).toBeInTheDocument();
   });
 
   it('with no addressed port there is no tick to put: it says why and sends to «Porte»', () => {

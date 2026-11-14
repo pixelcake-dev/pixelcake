@@ -42,6 +42,19 @@ describe('DhcpPanel', () => {
     expect(screen.queryByText(/10\.0\.0\.5/)).toBeNull();
   });
 
+  it('a card on DHCP hands out nothing, even with a range left written on it', () => {
+    // (in the form of the window what was typed stays until the device is saved)
+    const server = device({
+      id: 'srv',
+      type: 'Server',
+      nics: [nic({ dhcp: true, ip: '10.0.0.5', dhcpServer: { start: '10.0.0.100', end: '10.0.0.199' } })],
+    });
+    renderPanel(server);
+    expect(screen.getByLabelText('Server DHCP sulla scheda eth0')).not.toBeChecked();
+    expect(screen.queryByLabelText('Primo indirizzo, scheda eth0')).not.toBeInTheDocument();
+    expect(screen.getByText(/Nessuna scheda assegna indirizzi/)).toBeInTheDocument();
+  });
+
   it('a card with no address cannot be ticked, and «Dagliene uno» asks for that card', () => {
     const server = device({ id: 'srv', type: 'Server', nics: [nic({ ip: '' })] });
     const { onPoolChange, onOpenInterface } = renderPanel(server);

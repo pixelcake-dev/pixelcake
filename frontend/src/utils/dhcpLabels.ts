@@ -5,7 +5,15 @@
  * Everything the windows and the drawing show goes through here.)
  */
 
-import { leaseOf, listInterfaces, poolAt, poolOf, poolProblem, unservedOf } from '@/engine';
+import {
+  leaseOf,
+  listInterfaces,
+  poolAt,
+  poolOf,
+  poolProblem,
+  suggestedPool,
+  unservedOf,
+} from '@/engine';
 import type {
   DeviceInterface,
   DhcpLease,
@@ -61,6 +69,21 @@ export function poolProblemLabel(problem: PoolProblem, iface: DeviceInterface, p
     case 'reversed':
       return `l'ultimo indirizzo (${pool.end}) viene prima del primo (${pool.start})`;
   }
+}
+
+/**
+ * What a pool that works hands out, and how much of it is taken:
+ * `Gateway consegnato 192.168.10.1 · 2 assegnati, 98 liberi su 100`
+ */
+export function poolStatusText(state: DhcpPoolState): string {
+  const unit = state.iface.kind === 'port' ? 'porta' : 'scheda';
+  const given = state.leases.length;
+  return [
+    state.gateway ? `Gateway consegnato ${state.gateway}` : 'Nessun gateway consegnato',
+    ...(state.pool.dns ? [`server DNS consegnato ${state.pool.dns}`] : []),
+    `${given} ${given === 1 ? 'assegnato' : 'assegnati'}, ${state.free} ${state.free === 1 ? 'libero' : 'liberi'} su ${state.size}`,
+    ...(state.iface.enabled ? [] : [`${unit} disabilitata: non risponde`]),
+  ].join(' · ');
 }
 
 /** Why a card on DHCP has no address, in Italian */
@@ -161,6 +184,16 @@ function standIn(type: string, interfaces: Pick<NetworkDevice, 'ports' | 'nics'>
 export function portPoolProblemText(deviceType: string, port: Port, pool: DhcpPool): string | undefined {
   const device = standIn(deviceType, { ports: [port] });
   return poolProblemText(device, listInterfaces(device)[0], pool);
+}
+
+/** A range to start from on a router or firewall port, given the port as it is in the form */
+export function portSuggestedPool(deviceType: string, port: Port): DhcpPool | undefined {
+  return suggestedPool(listInterfaces(standIn(deviceType, { ports: [port] }))[0]);
+}
+
+/** A range to start from on a card of a server, given the card as it is in the form */
+export function nicSuggestedPool(nic: NetworkInterfaceCard): DhcpPool | undefined {
+  return suggestedPool(listInterfaces(standIn('Server', { nics: [nic] }))[0]);
 }
 
 /**
