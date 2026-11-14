@@ -20,6 +20,9 @@ import WelcomeScreen from '@/components/WelcomeScreen';
 import TopMenuBar from '@/components/Toolbar/TopMenuBar';
 import AppearanceSettingsTab from '@/components/Modals/AppearanceSettingsTab';
 import ConfirmDialog from './ConfirmDialog';
+import PresentationBar from '@/components/Presentation/PresentationBar';
+import { usePresentationStore } from '@/store/presentationStore';
+import { createSampleTopology } from '@/utils/sampleTopology';
 
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
@@ -139,6 +142,24 @@ describe('where the switch is', () => {
     expect(screen.getByTitle('Switch to dark theme')).toBe(theme);
     // what the user wrote is not translated
     expect(screen.getByText('Sede Milano')).toBeInTheDocument();
+  });
+
+  it('on the bar of the presentation, next to the theme as on the menu bar', () => {
+    act(() => {
+      const { devices, connections } = createSampleTopology();
+      useNetworkStore.getState().loadTopology(devices, connections);
+      usePresentationStore.getState().enter();
+    });
+    render(<PresentationBar />);
+    const theme = screen.getByRole('button', { name: 'Passa a tema scuro' });
+    expect(screen.getByRole('group', { name: 'Lingua' }).nextElementSibling).toBe(theme);
+    expect(screen.getByRole('button', { name: 'Esci' })).toBeInTheDocument();
+
+    fireEvent.click(button('English'));
+
+    expect(screen.getByRole('button', { name: 'Exit' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Switch to dark theme' })).toBe(theme);
+    act(() => usePresentationStore.getState().exit());
   });
 
   it('on the welcome screen', () => {

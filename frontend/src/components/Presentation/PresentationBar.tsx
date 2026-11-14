@@ -20,6 +20,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { SIMULATION_SPEEDS, useSimulationStore, type SimulationSpeed } from '@/store/simulationStore';
 import { useUIStore } from '@/store/uiStore';
 import { useT, type Dictionary } from '@/i18n';
+import LanguageSwitch from '@/components/ui/LanguageSwitch';
 
 /** Each pace of the packet, and the entry of the dictionary that names it */
 const SPEED_KEYS: Record<SimulationSpeed, keyof Dictionary['presentation']['bar']['speeds']> = {
@@ -169,6 +170,9 @@ const PresentationBar = () => {
             {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
           </button>
         )}
+        {/* The language, next to the theme as on the menu bar */}
+        <LanguageSwitch />
+
         <button
           type="button"
           className="presentation-icon-button"
