@@ -37,6 +37,7 @@ beforeEach(() => {
     ipClass: '192.168.1.0',
     subnet: '255.255.255.0',
     gateway: '192.168.1.1',
+    dns: undefined,
   });
 });
 
@@ -144,6 +145,126 @@ describe('bulk add — the gateway of new routers and firewalls', () => {
       Switch: '192.168.1.1',
       PC: '192.168.1.1',
     });
+  });
+});
+
+describe('the DNS server of the project on a new device', () => {
+  const DNS = '192.168.1.53';
+  const useServer = () => useNetworkStore.getState().setGlobalNetworkSettings({ dns: DNS });
+
+  it.each([
+    ['PC', 'tpl-pc'],
+    ['Server', 'tpl-server'],
+    ['Server', 'tpl-mailserver'],
+    ['Database', 'tpl-database'],
+  ])('the card of a new %s (%s) starts with it', (type, templateId) => {
+    useServer();
+    expect(add(type, templateId).nics?.map(card => card.dns)).toEqual([DNS]);
+  });
+
+  it('is shown in the window, where it can be changed or taken away before adding', () => {
+    useServer();
+    useUIStore.getState().setAddDeviceType('PC', 'tpl-pc');
+    useUIStore.getState().openModal('addDevice');
+    render(<AddDeviceModal />);
+    expect(screen.getByLabelText('Server DNS')).toHaveValue(DNS);
+    expect(screen.getByRole('group', { name: 'Rete · eth0' })).toHaveTextContent(
+      'Subnet mask, gateway e server DNS sono quelli delle Impostazioni → Rete.'
+    );
+
+    fireEvent.change(screen.getByLabelText('Server DNS'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Aggiungi' }));
+    const devices = useNetworkStore.getState().devices;
+    expect(devices[devices.length - 1].nics?.[0].dns).toBeUndefined();
+  });
+
+  it('a card left to DHCP does not keep it: its server comes with the address', () => {
+    useServer();
+    useUIStore.getState().setAddDeviceType('PC', 'tpl-pc');
+    useUIStore.getState().openModal('addDevice');
+    render(<AddDeviceModal />);
+    fireEvent.change(screen.getByLabelText('Indirizzo'), { target: { value: 'dhcp' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Aggiungi' }));
+    const devices = useNetworkStore.getState().devices;
+    expect(devices[devices.length - 1].nics?.[0]).toMatchObject({ dhcp: true });
+    expect(devices[devices.length - 1].nics?.[0].dns).toBeUndefined();
+  });
+
+  it('without one in the project a new card names no server, and the window does not speak of it', () => {
+    expect('dns' in (add('PC', 'tpl-pc').nics?.[0] ?? {})).toBe(false);
+    useUIStore.getState().setAddDeviceType('PC', 'tpl-pc');
+    useUIStore.getState().openModal('addDevice');
+    render(<AddDeviceModal />);
+    expect(screen.getByLabelText('Server DNS')).toHaveValue('');
+    expect(screen.getByRole('group', { name: 'Rete · eth0' })).toHaveTextContent(
+      'Subnet mask e gateway sono quelli delle Impostazioni → Rete.'
+    );
+  });
+
+  it.each([
+    ['AccessPoint', 'tpl-accesspoint'],
+    ['LoadBalancer', 'tpl-loadbalancer'],
+    ['Cloud', 'tpl-cloud'],
+  ])('a %s has a card but is not an end device: its card starts without', (type, templateId) => {
+    useServer();
+    const device = add(type, templateId);
+    expect(device.nics).toHaveLength(1);
+    expect('dns' in (device.nics?.[0] ?? {})).toBe(false);
+
+    useUIStore.getState().setAddDeviceType(type, templateId);
+    useUIStore.getState().openModal('addDevice');
+    render(<AddDeviceModal />);
+    expect(screen.getByRole('group', { name: 'Rete · eth0' })).toHaveTextContent(
+      'Subnet mask e gateway sono quelli delle Impostazioni → Rete.'
+    );
+  });
+
+  it.each([
+    ['Router', 'tpl-router'],
+    ['Firewall', 'tpl-firewall'],
+    ['Switch', 'tpl-switch'],
+  ])('a %s has no card: nothing of it is written on the device', (type, templateId) => {
+    useServer();
+    const device = add(type, templateId);
+    expect(device.nics).toBeUndefined();
+    expect(JSON.stringify(device)).not.toContain(DNS);
+  });
+
+  it('bulk add: the cards of the end devices start with it, switches and routers have none', () => {
+    useServer();
+    const { globalNetworkSettings, addDevice } = useNetworkStore.getState();
+    const rows = (['Router', 'Switch'] as const).map((templateType, index) => ({
+      id: `row-${index}`,
+      templateType,
+      quantity: 1,
+      portCount: 8,
+    }));
+    bulkAddDevices(
+      rows,
+      { PC: 2, Server: 1, Cloud: 1, AccessPoint: 1 },
+      [],
+      globalNetworkSettings,
+      useTemplateStore.getState().templates,
+      addDevice
+    );
+
+    const cards = useNetworkStore.getState().devices.map(device => [device.type, device.nics?.map(card => card.dns)]);
+    expect(cards).toEqual([
+      ['Router', undefined],
+      ['Switch', undefined],
+      ['PC', [DNS]],
+      ['PC', [DNS]],
+      ['Server', [DNS]],
+      ['Cloud', [undefined]],
+      ['AccessPoint', [undefined]],
+    ]);
+    expect(JSON.stringify(useNetworkStore.getState().devices.filter(d => !d.nics))).not.toContain(DNS);
+  });
+
+  it('bulk add without one in the project: no card names a server', () => {
+    const { globalNetworkSettings, addDevice } = useNetworkStore.getState();
+    bulkAddDevices([], { PC: 1 }, [], globalNetworkSettings, useTemplateStore.getState().templates, addDevice);
+    expect('dns' in (useNetworkStore.getState().devices[0].nics?.[0] ?? {})).toBe(false);
   });
 });
 

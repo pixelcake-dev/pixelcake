@@ -11,8 +11,11 @@ import { useUIStore } from '@/store/uiStore';
 import { createCompanySample } from '@/utils/sampleCompany';
 import { dnsCardOf, withLeases } from '@/engine';
 import { executeCommand } from '@/terminal/executor';
+import { answerConfirms, settled } from '@/test/confirm';
 import HelpModal from './HelpModal';
 import InspectorModal from './InspectorModal';
+import SettingsModal from './SettingsModal';
+import AddDeviceModal from './AddDeviceModal';
 
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
@@ -89,6 +92,7 @@ describe('the guide — DNS', () => {
       'Aggiungi record',
       'Schede di rete',
       'Server DNS',
+      'Server DNS di Default',
       'Server DNS consegnato (opzionale)',
       'DNS',
     ]);
@@ -124,6 +128,42 @@ describe('the guide — DNS', () => {
     fireEvent.click(screen.getByText('eth0', { selector: '.nic-name' }));
     expect(screen.getByTestId('nic-lease')).toHaveTextContent('server DNS 192.168.30.10');
     expect(screen.queryByLabelText('Server DNS')).not.toBeInTheDocument();
+  });
+
+  it('the settings have the field it names: saved, new devices start with it and it is offered to those that have none', async () => {
+    expect(step(TITLE).text).toContain(
+      'in Impostazioni → Rete c\'è «Server DNS di Default»: i nuovi dispositivi nascono con quello sulla scheda e, una volta salvato, lì sotto si può assegnarlo anche ai dispositivi del canvas che non ne hanno uno.'
+    );
+    cleanup();
+    ui().openModal('settings');
+    const settings = render(<SettingsModal />);
+    // Rete is the tab the settings open on
+    expect(screen.getByText('Impostazioni Rete Globale')).toBeInTheDocument();
+    const field = screen.getByLabelText('Server DNS di Default');
+    // not saved yet: nothing is offered
+    expect(screen.queryByRole('button', { name: /^Assegna/ })).not.toBeInTheDocument();
+    fireEvent.change(field, { target: { value: '192.168.30.10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salva Impostazioni Rete' }));
+
+    // under it, in the same group: the devices of the sample that ask nobody
+    const offer = screen.getByRole('button', { name: 'Assegna 192.168.30.10' });
+    expect(field.closest('fieldset')).toContainElement(offer);
+    expect(field.compareDocumentPosition(offer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    answerConfirms(true);
+    fireEvent.click(offer);
+    await settled();
+    expect(device('Cliente-Remoto').nics?.[0].dns).toBe('192.168.30.10');
+    expect(device('Portatile-1').nics?.[0].dns).toBeUndefined();
+    settings.unmount();
+    ui().closeModal('settings');
+
+    // a new device
+    ui().setAddDeviceType('PC', 'tpl-pc');
+    ui().openModal('addDevice');
+    render(<AddDeviceModal />);
+    expect(screen.getByLabelText('Server DNS')).toHaveValue('192.168.30.10');
+    cleanup();
+    ui().closeModal('addDevice');
   });
 
   it('the rules and the forwards of the firewall offer the service it names', () => {

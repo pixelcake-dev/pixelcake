@@ -8,7 +8,7 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 
 ### networkStore (`frontend/src/store/networkStore.ts`)
 - The canvas on screen: devices, connections, viewport (x, y, zoom), device/connection counters
-- Project-wide network settings (`globalNetworkSettings`)
+- Project-wide network settings (`globalNetworkSettings`, see [GlobalNetworkSettings](#globalnetworksettings))
 - **Multi-selection state** (selectedDeviceIds, clipboard) - NOT persisted, resets on reload
 - **Copy/Paste functions** (copySelection, paste) - ID remapping + position offset (+50px)
 - Auto-layout triggers
@@ -85,7 +85,7 @@ While presenting, NetworkCanvas makes the drawing read-only (nothing is selected
 - **HelpModal** - The guide, in three tabs: how to use the app, the terminal commands (rendered from `COMMAND_REFERENCE`, the table the terminal's `help` prints), information
 - **ExportImageModal** - The board as a picture: preview, format (PNG, SVG), size, theme, title, background; save to a file or copy to the clipboard. It exists only while it is open, so every time it starts from the drawing and the theme on screen. See "The drawing as a picture" below
 - **ConnectionInspectorModal** - Connection properties editor
-- **SettingsModal** - App settings with tabbed interface
+- **SettingsModal** - App settings with tabbed interface. Its first tab, Rete (`NetworkSettingsTab`), holds the settings of the project: what a new device starts from (network, mask, gateway and, optional, the DNS server its card asks), saved together by the one button of the tab. Once a DNS server is saved, the tab counts the end devices of the canvas that ask nobody (`utils/defaultDns.ts`) and offers to write it on their first card addressed by hand, after a question
 - **BulkAddDeviceModal** - Bulk device creation with table-based interface
   - Two sections: Configurable Devices (Switch/Router/Firewall with portCount dropdown) + Standard Devices (PC/Server/Database with fixed 1 NIC)
   - ConfigurableDeviceRow: Dynamic rows with id, templateType, portCount, quantity
@@ -93,7 +93,7 @@ While presenting, NetworkCanvas makes the drawing read-only (nothing is selected
   - Search filtering + custom scrollbar (react-custom-scrollbars-2, autoHeightMax: 500px)
 
 ### Project Modal
-- **NewProjectModal** - sm (448px), minHeight 550px, fullWidth inputs, `.modal-error-box`. Creates a local project: name, description, network settings
+- **NewProjectModal** - sm (448px), minHeight 550px, fullWidth inputs, `.modal-error-box`. Creates a local project: name, description, network settings (the DNS server of new devices is optional, and refused when it is not an address)
 - Opening and saving a project have no modal: they go through the file picker (`frontend/src/utils/projectFileAccess.ts`)
 
 ### UI Components
@@ -345,7 +345,7 @@ light or dark whatever the theme, a vector file, and a sharp PNG of any size.
 ### Bulk Device Helpers (`frontend/src/utils/bulkDeviceHelpers.ts`)
 - `generateDefaultPorts(portCount, deviceType)` - Switch: trunk+access+PoE, Router: WAN+LAN+NAT, Firewall: security zones
 - A new router or firewall gets no gateway (on a router the gateway is its default route); switches and end devices get the one of the project
-- `generateDefaultNIC(ip, subnet, gateway)` - Auto MAC, eth0, auto speed
+- `generateDefaultNIC(ip, subnet, gateway, dns?)` - Auto MAC, eth0, auto speed; the DNS server of the project when it has one
 - Sequential naming: `${type}-${existingCount}`
 - Grid positioning: `generateGridPositions()` with random offsets (-25/+25px)
 - IP assignment: `findNextAvailableIP()` skips .1 gateway
@@ -360,6 +360,12 @@ interface FlowMap {
   edges: NetworkConnection[]
 }
 ```
+
+### GlobalNetworkSettings
+The settings of a project (`networkStore.globalNetworkSettings`, `settings` in the project file), set in Impostazioni → Rete.
+- `ipClass, subnet, gateway` - The network a new device is proposed an address in, its mask and its gateway
+- `dns?: string` - The DNS server written on the card of a new end device (the window that adds one, bulk add). An end device is what the engine calls a host (`forwardingRole`): not a router, a firewall or a switch, which have no card, nor an access point, a load balancer or a Cloud symbol, which have one. Changing it never touches the devices that are there
+- `emailMode?: 'auto' | 'internal' | 'cloud'` - How the email flow travels
 
 ### NetworkDevice
 - Basic: `id, type, label, ip, subnet, gateway, vendor, location, position`

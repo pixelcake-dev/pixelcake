@@ -19,6 +19,7 @@ import type {
 import { PROJECT_FILE_FORMAT, PROJECT_FILE_VERSION } from '@/types';
 import { normalizeAddressing, normalizeBindings } from '@/engine';
 import { cleanupConnections } from '@/utils/cleanupConnections';
+import { isValidIP } from '@/utils/ipHelpers';
 
 export const PROJECT_FILE_EXTENSION = '.pixelcake.json';
 export const DEFAULT_PROJECT_NAME = 'Progetto senza nome';
@@ -107,7 +108,7 @@ function plural(count: number, one: string, many: string): string {
 
 // ---------- serialising ----------
 
-const SETTINGS_KEYS = ['ipClass', 'subnet', 'gateway', 'emailMode'];
+const SETTINGS_KEYS = ['ipClass', 'subnet', 'gateway', 'dns', 'emailMode'];
 const DEVICE_KEYS = [
   'id',
   'type',
@@ -332,6 +333,15 @@ function parseSettings(value: unknown, warnings: string[]): GlobalNetworkSetting
     subnet: text('subnet'),
     gateway: text('gateway'),
   };
+  // The DNS server of new devices is optional: kept when it is an address,
+  // left out, and said, when it is anything else (it would be written on
+  // the card of every new device)
+  let badDns = false;
+  if (value.dns !== undefined) {
+    const dns = typeof value.dns === 'string' ? value.dns.trim() : null;
+    if (dns !== null && isValidIP(dns)) settings.dns = dns;
+    else if (dns !== '') badDns = true; // an empty field is simply no server
+  }
   const mode = value.emailMode;
   if (mode === 'auto' || mode === 'internal' || mode === 'cloud') {
     settings.emailMode = mode;
@@ -341,6 +351,9 @@ function parseSettings(value: unknown, warnings: string[]): GlobalNetworkSetting
 
   if (repaired) {
     warnings.push('Impostazioni di rete incomplete: completate con i valori predefiniti.');
+  }
+  if (badDns) {
+    warnings.push('Server DNS predefinito non valido: ignorato.');
   }
   return settings;
 }

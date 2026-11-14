@@ -111,9 +111,62 @@ describe('NewProjectModal', () => {
     expectSpacedApart(
       ['Nome Progetto *', 'Descrizione'].map(label => screen.getByLabelText(label))
     );
-    expectSpacedApart(
-      ['Classe IP', 'Subnet Mask', 'Gateway'].map(label => screen.getByLabelText(label))
+    // the values of the network are short: low fields, two to a row, in a
+    // grid that keeps them apart across and down
+    const fields = ['Classe IP', 'Subnet Mask', 'Gateway', 'Server DNS (facoltativo)'].map(label =>
+      screen.getByLabelText(label)
     );
+    const row = fields[0].closest('.grid');
+    expect(row).not.toBeNull();
+    expect(row?.className).toContain('grid-cols-4');
+    expect(row?.className).toContain('gap-x-3');
+    expect(row?.className).toContain('gap-y-2');
+    for (const field of fields) {
+      expect(field.closest('.grid')).toBe(row);
+      expect(field.parentElement?.parentElement).toBe(row);
+      expect(field.parentElement?.className).toContain('col-span-2');
+    }
+    expect(screen.getByRole('group', { name: 'Impostazioni di Rete Globali' })).toContainElement(row as HTMLElement);
+  });
+
+  it('the DNS server of new devices can be given at once, and is kept trimmed', () => {
+    render(<NewProjectModal />);
+
+    type('Nome Progetto *', 'Sede Roma');
+    type('Server DNS (facoltativo)', ' 192.168.1.53 ');
+    fireEvent.click(screen.getByRole('button', { name: 'Crea Progetto' }));
+
+    expect(useNetworkStore.getState().globalNetworkSettings).toEqual({
+      ipClass: '192.168.1.0',
+      subnet: '255.255.255.0',
+      gateway: '192.168.1.1',
+      dns: '192.168.1.53',
+      emailMode: 'auto',
+    });
+  });
+
+  it('left empty, the new project has none: not even the one of the project it replaces', () => {
+    useNetworkStore.getState().setGlobalNetworkSettings({ dns: '10.0.0.53' });
+    render(<NewProjectModal />);
+    expect(screen.getByLabelText<HTMLInputElement>('Server DNS (facoltativo)').value).toBe('');
+
+    type('Nome Progetto *', 'Sede Roma');
+    fireEvent.click(screen.getByRole('button', { name: 'Crea Progetto' }));
+
+    expect('dns' in useNetworkStore.getState().globalNetworkSettings).toBe(false);
+  });
+
+  it('a DNS server that is not an address is refused, and nothing is created', () => {
+    render(<NewProjectModal />);
+
+    type('Nome Progetto *', 'Sede Roma');
+    type('Server DNS (facoltativo)', 'srv-auth');
+    fireEvent.click(screen.getByRole('button', { name: 'Crea Progetto' }));
+
+    expect(screen.getByText(/Server DNS: "srv-auth" non è un indirizzo IPv4 valido/)).toBeInTheDocument();
+    expect(useUIStore.getState().modals.newProject).toBe(true);
+    expect(useProjectStore.getState().name).toBe('Sede Milano');
+    expect(useNetworkStore.getState().devices).toHaveLength(1);
   });
 
   it('starts from the default network settings every time it opens', () => {
@@ -123,5 +176,6 @@ describe('NewProjectModal', () => {
     expect(screen.getByLabelText<HTMLInputElement>('Classe IP').value).toBe('192.168.1.0');
     expect(screen.getByLabelText<HTMLInputElement>('Subnet Mask').value).toBe('255.255.255.0');
     expect(screen.getByLabelText<HTMLInputElement>('Gateway').value).toBe('192.168.1.1');
+    expect(screen.getByLabelText<HTMLInputElement>('Server DNS (facoltativo)').value).toBe('');
   });
 });

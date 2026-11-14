@@ -148,7 +148,10 @@ const GuideTab = () => (
         Un server può fare da server DNS: nella sua scheda «DNS» premi «Aggiungi record» e scrivi
         un nome, per esempio <Mono>gestionale.azienda.example</Mono>, e l&apos;indirizzo a cui
         corrisponde. A chi chiedere lo decide ogni dispositivo: nella scheda «Schede di rete» il
-        campo «Server DNS» contiene l&apos;indirizzo del server. Chi prende l&apos;indirizzo dal
+        campo «Server DNS» contiene l&apos;indirizzo del server. Per non scriverlo ogni volta, in
+        Impostazioni → Rete c&apos;è «Server DNS di Default»: i nuovi dispositivi nascono con
+        quello sulla scheda e, una volta salvato, lì sotto si può assegnarlo anche ai dispositivi
+        del canvas che non ne hanno uno. Chi prende l&apos;indirizzo dal
         DHCP riceve anche quello, se nel server DHCP è compilato «Server DNS consegnato
         (opzionale)». Un nome si usa nel terminale al posto di un indirizzo:{' '}
         <Mono>ping gestionale.azienda.example from PC-Vendite</Mono> chiede prima l&apos;indirizzo

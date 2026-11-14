@@ -252,6 +252,9 @@ export interface GlobalNetworkSettings {
   ipClass: string; // e.g., "192.168.1.0"
   subnet: string; // e.g., "255.255.255.0"
   gateway: string; // e.g., "192.168.1.1"
+  // DNS server written on the card of a new end device (an IPv4 address).
+  // Absent: new cards name no DNS server
+  dns?: string;
   emailMode?: EmailMode; // default 'auto'
 }
 

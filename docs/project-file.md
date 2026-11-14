@@ -108,6 +108,7 @@ The reference implementation is `frontend/src/utils/projectFile.ts`
 | `ipClass` | string | Network address new devices are numbered in, e.g. `"192.168.1.0"`. |
 | `subnet` | string | Default subnet mask. |
 | `gateway` | string | Default gateway. |
+| `dns` | string | Optional. Address of the DNS server written on the card of a new end device. Without it a new card names no DNS server. |
 | `emailMode` | `"auto"` \| `"internal"` \| `"cloud"` | Optional. How the email flow of the simulation is routed; a missing value means `"auto"`. |
 
 ## Canvas
@@ -314,6 +315,7 @@ Everything else is repaired, and each repair is reported to the user:
 | No `name` | `"Progetto senza nome"`. |
 | No `description` | Empty. |
 | No `settings`, or fields of it missing or of the wrong type | The defaults shown in the example. An unknown `emailMode` is dropped. |
+| A `dns` of the settings that is not an IPv4 address | Dropped: the project has no default DNS server. (An empty one is dropped without a word.) |
 | Canvas without `name` | `Canvas N`, N being its position. |
 | Canvas without `id`, or with an `id` already used by an earlier canvas | A new `canvas-N` id. |
 | `activeCanvasId` not among the canvases | The first canvas. |

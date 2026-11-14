@@ -13,6 +13,7 @@ import { useTemplateStore } from '@/store/templateStore';
 import { findNextAvailableIP, generateMacAddress } from '@/utils/ipHelpers';
 import { firstFreePlace } from '@/utils/placeDevice';
 import { nicProblems, tidyNic } from '@/utils/interfaceProblems';
+import { isEndDeviceKind } from '@/utils/defaultDns';
 import { isL3Type, withLeases } from '@/engine';
 import type { DeviceType, Port, NetworkInterfaceCard } from '@/types/network';
 
@@ -72,6 +73,11 @@ const AddDeviceModal = () => {
           ip: nextIp,
           subnet: globalSettings.subnet,
           gateway: globalSettings.gateway,
+          // The DNS server of the project, when it has one: for an end
+          // device, not for what only carries the traffic of others
+          ...(globalSettings.dns && isEndDeviceKind(addDeviceType, template.id)
+            ? { dns: globalSettings.dns }
+            : {}),
           mac: generateMacAddress(),
         }]);
         setPortCount(undefined);
@@ -180,6 +186,8 @@ const AddDeviceModal = () => {
   const deviceTypeName = template?.name || addDeviceType;
   const isPC = addDeviceType === 'PC';
   const routesTraffic = isL3Type(addDeviceType);
+  // The card started with the DNS server of the project (see above)
+  const takesDns = Boolean(globalSettings.dns) && isEndDeviceKind(addDeviceType, template?.id);
 
   return (
     <Modal
@@ -263,8 +271,9 @@ const AddDeviceModal = () => {
               onChange={(patch) => setNics([{ ...card, ...patch }])}
             />
             <p className={`${hintClass} mt-2`}>
-              L&apos;indirizzo è proposto: il primo libero della rete del progetto. Subnet mask e
-              gateway sono quelli delle Impostazioni → Rete.
+              L&apos;indirizzo è proposto: il primo libero della rete del progetto. Subnet mask
+              {takesDns ? ', gateway e server DNS' : ' e gateway'} sono quelli delle
+              Impostazioni → Rete.
             </p>
           </FormFieldset>
         ) : (

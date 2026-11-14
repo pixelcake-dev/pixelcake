@@ -7,6 +7,7 @@ import type {
   NetworkInterfaceCard,
 } from '@/types/network';
 import { generateMacAddress } from './ipHelpers';
+import { isEndDeviceKind } from './defaultDns';
 import { isL3Type } from '@/engine';
 
 /**
@@ -127,12 +128,14 @@ const generateDefaultPorts = (portCount: number, deviceType: DeviceType): Port[]
  * @param ip IP address for NIC
  * @param subnet Subnet mask
  * @param gateway Gateway address
+ * @param dns DNS server the card asks (the one of the project, when it has one)
  * @returns NetworkInterfaceCard configuration
  */
 const generateDefaultNIC = (
   ip: string,
   subnet: string,
-  gateway: string
+  gateway: string,
+  dns?: string
 ): NetworkInterfaceCard => {
   return {
     id: 'nic-1',
@@ -142,6 +145,7 @@ const generateDefaultNIC = (
     ip,
     subnet,
     gateway,
+    ...(dns ? { dns } : {}),
     mac: generateMacAddress(),
     description: 'Primary Network Interface',
   };
@@ -226,7 +230,13 @@ export const bulkAddDevices = (
       const position = allPositions[positionIndex++];
 
       // Generate 1 NIC with MAC address
-      const nic = generateDefaultNIC(ip, globalSettings.subnet, globalSettings.gateway);
+      // (the DNS server of the project is for end devices: see utils/defaultDns)
+      const nic = generateDefaultNIC(
+        ip,
+        globalSettings.subnet,
+        globalSettings.gateway,
+        isEndDeviceKind(type, template.id) ? globalSettings.dns : undefined
+      );
 
       const newDevice: Omit<NetworkDevice, 'id'> = {
         type: type as DeviceType,

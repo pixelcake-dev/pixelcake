@@ -11,8 +11,10 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { FormContainer, FormFieldset } from '@/components/ui/FormContainer';
+import { FieldRow, TextField } from '@/components/ui/compact';
 import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
+import { isValidIP } from '@/utils/ipHelpers';
 
 const NewProjectModal = () => {
   const isOpen = useUIStore((state) => state.modals.newProject);
@@ -23,6 +25,7 @@ const NewProjectModal = () => {
   const [ipClass, setIpClass] = useState('192.168.1.0');
   const [subnet, setSubnet] = useState('255.255.255.0');
   const [gateway, setGateway] = useState('192.168.1.1');
+  const [dns, setDns] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   // Reset form when modal opens
@@ -33,6 +36,7 @@ const NewProjectModal = () => {
       setIpClass('192.168.1.0');
       setSubnet('255.255.255.0');
       setGateway('192.168.1.1');
+      setDns('');
       setError(null);
     }
   }, [isOpen]);
@@ -42,11 +46,18 @@ const NewProjectModal = () => {
       setError('Il nome del progetto è obbligatorio');
       return;
     }
+    // The DNS server is written on the card of every new device: it is
+    // taken only when it is an address (or left empty: none)
+    const server = dns.trim();
+    if (server && !isValidIP(server)) {
+      setError(`Server DNS: "${server}" non è un indirizzo IPv4 valido`);
+      return;
+    }
 
     createNewProject({
       name,
       description,
-      settings: { ipClass, subnet, gateway },
+      settings: { ipClass, subnet, gateway, ...(server ? { dns: server } : {}) },
     });
     closeModal('newProject');
   };
@@ -95,31 +106,43 @@ const NewProjectModal = () => {
           </FormContainer>
         </FormFieldset>
 
-        {/* Global Network Settings */}
+        {/* Global Network Settings: four short values, two to a row (the
+            window is a narrow one) */}
         <FormFieldset legend="Impostazioni di Rete Globali">
-          <FormContainer gap="3">
-            <Input
+          <FieldRow>
+            <TextField
               label="Classe IP"
+              span={2}
+              mono
               value={ipClass}
               onChange={(e) => setIpClass(e.target.value)}
               placeholder="192.168.1.0"
-              fullWidth
             />
-            <Input
+            <TextField
               label="Subnet Mask"
+              span={2}
+              mono
               value={subnet}
               onChange={(e) => setSubnet(e.target.value)}
               placeholder="255.255.255.0"
-              fullWidth
             />
-            <Input
+            <TextField
               label="Gateway"
+              span={2}
+              mono
               value={gateway}
               onChange={(e) => setGateway(e.target.value)}
               placeholder="192.168.1.1"
-              fullWidth
             />
-          </FormContainer>
+            <TextField
+              label="Server DNS (facoltativo)"
+              span={2}
+              mono
+              value={dns}
+              onChange={(e) => setDns(e.target.value)}
+              placeholder="es. 192.168.1.53"
+            />
+          </FieldRow>
         </FormFieldset>
 
         {/* Error Message */}
