@@ -10,6 +10,7 @@ import { BUNDLED_ICON_COLLECTIONS, BUNDLED_ICON_SETS } from '@/data/bundledIcons
 import { registerBundledIcons } from '@/utils/bundledIcons';
 import { COMMON_NETWORK_ICONS } from '@/data/commonIcons';
 import { useTemplateStore } from '@/store/templateStore';
+import { isDrawingId } from '@/utils/deviceDrawing';
 
 const sources = import.meta.glob<string>('/src/**/*.{ts,tsx}', {
   query: '?raw',
@@ -62,9 +63,10 @@ describe('bundled icons', () => {
   });
 
   it('makes the icon of every built-in device template available offline', () => {
+    // (a template that names one of the drawings of the devices has no icon of a set)
     const missing = useTemplateStore
       .getState()
-      .templates.filter((template) => !iconLoaded(template.icon))
+      .templates.filter((template) => !isDrawingId(template.icon) && !iconLoaded(template.icon))
       .map((template) => `${template.name}: ${template.icon}`);
     expect(missing).toEqual([]);
   });

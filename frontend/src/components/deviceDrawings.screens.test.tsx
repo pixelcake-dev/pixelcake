@@ -107,7 +107,7 @@ describe('a kind of device is shown with its drawing', () => {
     useUIStore.getState().openModal('bulkAddDevice');
     render(<BulkAddDeviceModal />);
     const rows = Array.from(document.querySelectorAll('.standard-section tbody tr'));
-    expect(rows).toHaveLength(17);
+    expect(rows).toHaveLength(21);
     for (const row of rows) {
       const name = row.querySelector('.type-cell span')?.textContent;
       const template = templates().find((entry) => entry.name === name);

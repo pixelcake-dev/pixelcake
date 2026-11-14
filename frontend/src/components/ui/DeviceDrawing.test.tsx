@@ -175,10 +175,37 @@ describe('the colours of a drawing', () => {
 describe('which drawing a device is shown with', () => {
   const templates = () => useTemplateStore.getState().templates;
 
-  it('every template the app comes with has a drawing of its own', () => {
-    const drawings = templates().map((template) => DRAWING_OF_TEMPLATE[template.id]);
+  it('every template the app comes with has a drawing of its own, and every drawing a template', () => {
+    const builtIn = templates().filter((template) => !template.isCustom);
+    const drawings = builtIn.map((template) => DRAWING_OF_TEMPLATE[template.id]);
     expect(drawings.filter((drawing) => !isDrawingId(drawing))).toEqual([]);
-    expect(new Set(drawings).size).toBe(templates().length);
+    expect(new Set(drawings).size).toBe(builtIn.length);
+    // twenty-four of each: no drawing is left without a device to show
+    expect(builtIn).toHaveLength(24);
+    expect([...drawings].sort()).toEqual([...DEVICE_DRAWING_IDS].sort());
+    // and the table names no template the app does not come with
+    expect(Object.keys(DRAWING_OF_TEMPLATE).sort()).toEqual(builtIn.map((template) => template.id).sort());
+  });
+
+  it('each is the drawing its name says: the kit names them in Italian here and there', () => {
+    const drawingOfName = (name: string) =>
+      DRAWING_OF_TEMPLATE[templates().find((template) => template.name === name)?.id ?? ''];
+    expect(drawingOfName('Cloud')).toBe('cloud');
+    expect(drawingOfName('IoT Gateway')).toBe('iot');
+    expect(drawingOfName('IP Camera')).toBe('telecamera-ip');
+    expect(drawingOfName('Printer')).toBe('stampante');
+    expect(drawingOfName('IP Phone')).toBe('telefono-ip');
+    expect(drawingOfName('Laptop')).toBe('laptop');
+    expect(drawingOfName('Smartphone')).toBe('smartphone');
+    expect(drawingOfName('Tablet')).toBe('tablet');
+    expect(drawingOfName('Mail Server')).toBe('server-mail');
+    expect(drawingOfName('VPS')).toBe('server-vps');
+    expect(drawingOfName('Web Server')).toBe('server-web');
+    expect(drawingOfName('Proxy Server')).toBe('server-proxy');
+    expect(drawingOfName('DNS Server')).toBe('server-dns');
+    expect(drawingOfName('DHCP Server')).toBe('server-dhcp');
+    expect(drawingOfName('Storage S3')).toBe('storage-s3');
+    expect(drawingOfName('NAS')).toBe('nas');
   });
 
   it('every base type has one, the one of the template that is called like the type', () => {

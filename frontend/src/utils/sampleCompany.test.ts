@@ -87,6 +87,7 @@ describe('createCompanySample — structure', () => {
       switches: count('tpl-switch'),
       accessPoints: count('tpl-accesspoint'),
       pcs: count('tpl-pc'),
+      laptops: count('tpl-laptop'),
       printers: count('tpl-printer'),
       servers: count('tpl-server'),
       webServers: count('tpl-webserver'),
@@ -99,7 +100,9 @@ describe('createCompanySample — structure', () => {
       router: 1,
       switches: 4,
       accessPoints: 1,
-      pcs: 5,
+      pcs: 3,
+      // (the two that come and go on the Wi-Fi)
+      laptops: 2,
       printers: 1,
       servers: 1,
       webServers: 2,

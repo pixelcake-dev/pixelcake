@@ -73,7 +73,7 @@ afterEach(() => {
 describe('bulk add — a quantity belongs to its row', () => {
   it('one more, twice, on «Web Server»: 2 on that row and 0 on every other, the other servers too', () => {
     openBulkWindow();
-    expect(standardRows()).toHaveLength(17);
+    expect(standardRows()).toHaveLength(21);
     expect(raised()).toEqual([]);
 
     fireEvent.click(more('Web Server'));
@@ -143,8 +143,8 @@ describe('bulk add — a quantity belongs to its row', () => {
 
     // and all of them are back, as they were, when the search is emptied
     fireEvent.change(searchField(), { target: { value: '' } });
-    expect(standardRows()).toHaveLength(17);
-    expect(new Set(standardRows().map(nameOfRow)).size).toBe(17);
+    expect(standardRows()).toHaveLength(21);
+    expect(new Set(standardRows().map(nameOfRow)).size).toBe(21);
     expect(raised()).toEqual(['Web Server=1']);
   });
 
@@ -156,7 +156,7 @@ describe('bulk add — a quantity belongs to its row', () => {
     act(() => useUIStore.getState().closeModal('bulkAddDevice'));
     act(() => useUIStore.getState().openModal('bulkAddDevice'));
 
-    expect(standardRows()).toHaveLength(17);
+    expect(standardRows()).toHaveLength(21);
     expect(raised()).toEqual([]);
   });
 });
@@ -198,14 +198,16 @@ describe('bulk add — a row adds devices made from its own template', () => {
     expect(devices().map((d) => templateOf(d)?.name)).toEqual(['PC', 'Web Server', 'DNS Server', 'Printer']);
   });
 
-  it('one of every row: seventeen devices, each of the template of its row, with one card', () => {
+  it('one of every row: twenty-one devices, each of the template of its row, with one card', () => {
     openBulkWindow();
     const names = standardRows().map(nameOfRow);
     names.forEach((name) => fireEvent.click(more(name)));
     fireEvent.click(addButton());
 
-    expect(devices()).toHaveLength(17);
+    expect(devices()).toHaveLength(21);
     expect(devices().map((d) => templateOf(d)?.name)).toEqual(names);
+    // the laptop, the smartphone, the tablet and the IP phone are among them, after the printer
+    expect(names.slice(-5)).toEqual(['Printer', 'Laptop', 'Smartphone', 'Tablet', 'IP Phone']);
     for (const device of devices()) {
       const template = templateOf(device)!;
       expect(device.type, template.name).toBe(template.type);

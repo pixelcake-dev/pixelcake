@@ -293,6 +293,56 @@ const DEFAULT_TEMPLATES: DeviceTemplate[] = [
     supportsPorts: false,
     supportsNICs: true,
   },
+  // More end devices: each has one network card, as a PC has, and is shown
+  // with its own drawing (named by its `icon`)
+  {
+    id: 'tpl-laptop',
+    name: 'Laptop',
+    type: 'PC', // Base type: PC (endpoint)
+    icon: 'laptop',
+    color: '#5E8096',
+    isCustom: false,
+    supportsVLAN: false,
+    supportsSTP: false,
+    supportsPorts: false,
+    supportsNICs: true,
+  },
+  {
+    id: 'tpl-smartphone',
+    name: 'Smartphone',
+    type: 'PC', // Base type: PC (endpoint)
+    icon: 'smartphone',
+    color: '#5E8096',
+    isCustom: false,
+    supportsVLAN: false,
+    supportsSTP: false,
+    supportsPorts: false,
+    supportsNICs: true,
+  },
+  {
+    id: 'tpl-tablet',
+    name: 'Tablet',
+    type: 'PC', // Base type: PC (endpoint)
+    icon: 'tablet',
+    color: '#5E8096',
+    isCustom: false,
+    supportsVLAN: false,
+    supportsSTP: false,
+    supportsPorts: false,
+    supportsNICs: true,
+  },
+  {
+    id: 'tpl-ipphone',
+    name: 'IP Phone',
+    type: 'PC', // Base type: PC (endpoint)
+    icon: 'telefono-ip',
+    color: '#5E8096',
+    isCustom: false,
+    supportsVLAN: false,
+    supportsSTP: false,
+    supportsPorts: false,
+    supportsNICs: true,
+  },
 ];
 
 // Default connection templates
@@ -356,6 +406,34 @@ const DEFAULT_CONNECTION_TEMPLATES: ConnectionTemplate[] = [
     isCustom: false,
   },
 ];
+
+/**
+ * The version of what is kept in localStorage (the key keeps its name):
+ *
+ *  - 0: what was kept before versions were counted
+ *  - 1: the app comes with a laptop, a smartphone, a tablet and an IP phone
+ */
+export const TEMPLATE_STORAGE_VERSION = 1;
+
+/**
+ * What was kept by an older version, as this one reads it. Nothing kept is
+ * changed or lost, a template made by the user least of all: the templates
+ * the app has come with since are added after the ones that are there.
+ */
+export function migrateTemplateStorage(kept: unknown, version: number): PersistedTemplateState {
+  const state = (typeof kept === 'object' && kept !== null ? kept : {}) as Partial<PersistedTemplateState>;
+  const templates = Array.isArray(state.templates) ? state.templates : DEFAULT_TEMPLATES;
+  const connectionTemplates = Array.isArray(state.connectionTemplates)
+    ? state.connectionTemplates
+    : DEFAULT_CONNECTION_TEMPLATES;
+  if (version >= TEMPLATE_STORAGE_VERSION) return { templates, connectionTemplates };
+
+  const there = new Set(templates.map((template) => template.id));
+  return {
+    templates: [...templates, ...DEFAULT_TEMPLATES.filter((template) => !there.has(template.id))],
+    connectionTemplates,
+  };
+}
 
 export const useTemplateStore = create<TemplateStore>()(
   persist(
@@ -467,6 +545,8 @@ export const useTemplateStore = create<TemplateStore>()(
     {
       name: 'pixelcake-templates-v8', // LocalStorage key (v8: added 11 new device types + MPLS connection)
       storage: safeJSONStorage<PersistedTemplateState>(),
+      version: TEMPLATE_STORAGE_VERSION,
+      migrate: migrateTemplateStorage,
       partialize: (state): PersistedTemplateState => ({
         templates: state.templates,
         connectionTemplates: state.connectionTemplates,

@@ -86,7 +86,8 @@ function dhcpClient(
   return {
     id,
     type: 'PC',
-    templateId: 'tpl-pc',
+    // (a laptop: an end device with one card, as a PC is, with its own drawing)
+    templateId: 'tpl-laptop',
     label,
     // No address of its own, at device level or on the card: it is leased
     ip: '',
