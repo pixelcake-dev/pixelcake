@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { useNetworkStore } from '@/store/networkStore';
 import { useProjectStore, type NewProjectInput } from '@/store/projectStore';
 import { useUIStore } from '@/store/uiStore';
+import { askConfirm } from '@/store/confirmStore';
 import { parseProjectFile, projectFileName, serializeProject } from './projectFile';
 
 // ---------- File System Access API: only what is used here ----------
@@ -211,15 +212,21 @@ async function save(askWhere: boolean): Promise<SaveOutcome> {
 
 // ---------- public API ----------
 
+/** Asked before the open project is replaced while it has changes not saved to a file */
+export const DISCARD_CHANGES_QUESTION = {
+  title: 'Continuare senza salvare?',
+  detail: 'Il progetto ha modifiche non ancora salvate su file: andranno perse.',
+  confirmLabel: 'Continua senza salvare',
+  danger: true,
+};
+
 /**
  * True when the open project can be replaced: it has no changes waiting to
  * be saved to a file, or the user accepts to lose them.
  */
-export function confirmDiscardChanges(): boolean {
+export async function confirmDiscardChanges(): Promise<boolean> {
   if (!useNetworkStore.getState().hasUnsavedChanges) return true;
-  return window.confirm(
-    'Il progetto ha modifiche non ancora salvate su file.\nContinuare senza salvare?'
-  );
+  return askConfirm(DISCARD_CHANGES_QUESTION);
 }
 
 /** File → Salva, Ctrl+S: write to the file of this session, or ask where */
@@ -260,7 +267,7 @@ export async function openProject(): Promise<OpenOutcome> {
     return 'failed';
   }
 
-  if (!confirmDiscardChanges()) return 'cancelled';
+  if (!(await confirmDiscardChanges())) return 'cancelled';
 
   useProjectStore.getState().loadProject(result.project);
   currentHandle = picked.handle;
@@ -283,8 +290,8 @@ export async function openProject(): Promise<OpenOutcome> {
  * File → Nuovo progetto…: ask before losing unsaved changes, then show the
  * form. False when the user chose to keep the open project.
  */
-export function requestNewProject(): boolean {
-  if (!confirmDiscardChanges()) return false;
+export async function requestNewProject(): Promise<boolean> {
+  if (!(await confirmDiscardChanges())) return false;
   useUIStore.getState().openModal('newProject');
   return true;
 }

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { useTemplateStore } from '@/store/templateStore';
 import type { DeviceTemplate, DeviceType } from '@/types/network';
+import { askConfirm } from '@/store/confirmStore';
 
 interface CustomTemplatesTabProps {
   templates: DeviceTemplate[];
@@ -52,8 +53,13 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
     setIsCreating(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Sei sicuro di voler eliminare questo template?')) {
+  const handleDelete = async (id: string) => {
+    const confirmed = await askConfirm({
+      title: 'Eliminare questo template?',
+      confirmLabel: 'Elimina',
+      danger: true,
+    });
+    if (confirmed) {
       deleteTemplate(id);
     }
   };

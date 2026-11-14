@@ -24,6 +24,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
 import { parseProjectFile, serializeProject } from '@/utils/projectFile';
+import { answerConfirms, settled } from '@/test/confirm';
 import TopMenuBar from './TopMenuBar';
 
 vi.mock('sonner', () => ({
@@ -277,6 +278,8 @@ describe('TopMenuBar', () => {
       click('Mostra la schermata di benvenuto');
 
       expect(useUIStore.getState().showWelcomeScreen).toBe(true);
+      // asked for: the canvas shows it although the project has other canvases
+      expect(useUIStore.getState().welcomeRequested).toBe(true);
       expect(localStorage.getItem('pixelcake-hide-welcome')).toBeNull();
       expect(toastInfoMock).not.toHaveBeenCalled();
       const canvases = useProjectStore.getState().buildProjectFile().canvases;
@@ -289,27 +292,30 @@ describe('TopMenuBar', () => {
   });
 
   describe('File → Nuovo progetto…', () => {
-    it('with changes not saved to a file: does nothing when the user declines', () => {
+    it('with changes not saved to a file: does nothing when the user declines', async () => {
       drawTwoDevices();
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      const confirms = answerConfirms(false);
       render(<TopMenuBar />);
 
       click('Nuovo progetto…');
+      await settled();
 
-      expect(confirmSpy).toHaveBeenCalledTimes(1);
-      expect(confirmSpy.mock.calls[0][0]).toContain('modifiche non ancora salvate su file');
+      expect(confirms.asked).toHaveLength(1);
+      expect(confirms.asked[0].title).toBe('Continuare senza salvare?');
+      expect(confirms.asked[0].detail).toContain('modifiche non ancora salvate su file');
       expect(useUIStore.getState().modals.newProject).toBe(false);
       expect(labels()).toEqual(['PC-1', 'PC-2']);
       expect(useProjectStore.getState().name).toBe('Sede HQ');
       expect(useNetworkStore.getState().hasUnsavedChanges).toBe(true);
     });
 
-    it('with changes not saved to a file: opens the form after confirmation, drawing still there', () => {
+    it('with changes not saved to a file: opens the form after confirmation, drawing still there', async () => {
       drawTwoDevices();
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      answerConfirms(true);
       render(<TopMenuBar />);
 
       click('Nuovo progetto…');
+      await settled();
 
       expect(useUIStore.getState().modals.newProject).toBe(true);
       // nothing is replaced until the form itself is confirmed
@@ -317,13 +323,14 @@ describe('TopMenuBar', () => {
       expect(useProjectStore.getState().name).toBe('Sede HQ');
     });
 
-    it('with everything saved: opens the form without asking', () => {
-      const confirmSpy = vi.spyOn(window, 'confirm');
+    it('with everything saved: opens the form without asking', async () => {
+      const confirms = answerConfirms(false);
       render(<TopMenuBar />);
 
       click('Nuovo progetto…');
+      await settled();
 
-      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(confirms.asked).toEqual([]);
       expect(useUIStore.getState().modals.newProject).toBe(true);
     });
   });
@@ -404,11 +411,12 @@ describe('TopMenuBar', () => {
       drawTwoDevices();
       const picker = vi.fn().mockResolvedValue([otherProjectFile().handle]);
       vi.stubGlobal('showOpenFilePicker', picker);
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      const confirms = answerConfirms(false);
       render(<TopMenuBar />);
 
       click('Apri…');
-      await waitFor(() => expect(confirmSpy).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(confirms.asked).toHaveLength(1));
+      await settled();
 
       expect(labels()).toEqual(['PC-1', 'PC-2']);
       expect(useProjectStore.getState().name).toBe('Sede HQ');
@@ -419,7 +427,7 @@ describe('TopMenuBar', () => {
       projectWithTwoCanvases();
       useNetworkStore.getState().addDevice(makeDevice('PC-3'));
       vi.stubGlobal('showOpenFilePicker', vi.fn().mockResolvedValue([otherProjectFile().handle]));
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      answerConfirms(true);
       render(<TopMenuBar />);
 
       click('Apri…');
@@ -432,13 +440,13 @@ describe('TopMenuBar', () => {
 
     it('with everything saved: opens without asking', async () => {
       vi.stubGlobal('showOpenFilePicker', vi.fn().mockResolvedValue([otherProjectFile().handle]));
-      const confirmSpy = vi.spyOn(window, 'confirm');
+      const confirms = answerConfirms(false);
       render(<TopMenuBar />);
 
       click('Apri…');
       await waitFor(() => expect(useProjectStore.getState().name).toBe('Sede Roma'));
 
-      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(confirms.asked).toEqual([]);
     });
   });
 });

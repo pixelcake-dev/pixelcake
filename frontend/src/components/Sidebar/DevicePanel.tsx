@@ -10,6 +10,7 @@ import { createPerimeterSample } from '@/utils/samplePerimeter';
 import { createRedundancySample } from '@/utils/sampleRedundancy';
 import { Plug, Package } from 'lucide-react';
 import type { DeviceType } from '@/types/network';
+import { askConfirm } from '@/store/confirmStore';
 
 // Helper function for device descriptions
 const getDeviceDescription = (type: DeviceType): string => {
@@ -79,10 +80,14 @@ const DevicePanel = () => {
   };
 
   // A sample network takes the place of what is on the canvas: ask first
-  const handleLoadSample = (create: typeof createSampleTopology) => {
+  const handleLoadSample = async (create: typeof createSampleTopology) => {
     const shouldLoad =
       devices.length === 0 ||
-      confirm('Caricare la rete di esempio? Prende il posto di quello che c\'è sul canvas.');
+      (await askConfirm({
+        title: 'Caricare la rete di esempio?',
+        detail: 'Prende il posto di quello che c\'è sul canvas.',
+        confirmLabel: 'Carica',
+      }));
 
     if (shouldLoad) {
       clearAllDevices();

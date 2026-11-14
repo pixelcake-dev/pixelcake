@@ -85,6 +85,7 @@ const NetworkCanvas = () => {
   const magnifiedConnectionTypes = useUIStore((state) => state.magnifiedConnectionTypes);
   const particleAnimationEnabled = useUIStore((state) => state.particleAnimationEnabled);
   const showWelcomeScreen = useUIStore((state) => state.showWelcomeScreen);
+  const welcomeRequested = useUIStore((state) => state.welcomeRequested);
   const canvasRevision = useNetworkStore((state) => state.canvasRevision);
   const canvasCount = useProjectStore((state) => state.canvases.length);
   // Presentation mode: the drawing is shown, not edited
@@ -178,8 +179,13 @@ const NetworkCanvas = () => {
       }
 
       // Only update if selection changed (avoid infinite loops)
-      // Use Set for efficient comparison instead of sort().join()
-      const currentSet = new Set(selectedDeviceIds);
+      // Use Set for efficient comparison instead of sort().join().
+      // The selection of the store is read here, at the moment of the call,
+      // and this handler stays the same one: React Flow calls a handler again
+      // whenever it is a new one, with the selection it has at that moment,
+      // and a selection just set by the app (a device added and selected) was
+      // taken for one the user had cleared
+      const currentSet = new Set(useNetworkStore.getState().selectedDeviceIds);
       const newSet = new Set(selectedIds);
       const changed =
         currentSet.size !== newSet.size ||
@@ -199,7 +205,7 @@ const NetworkCanvas = () => {
       dragEndPos.current = null;
       currentDragId.current = null;
     },
-    [selectedDeviceIds, selectMultipleDevices]
+    [selectMultipleDevices]
   );
 
   // Handle node deletion (Delete key)
@@ -468,10 +474,14 @@ const NetworkCanvas = () => {
     // Keep currentDragId for validation in handleSelectionChange
   }, []);
 
-  // The welcome screen only shows on an empty project: one canvas with
-  // nothing on it. An empty canvas added to a project is just an empty canvas
+  // The welcome screen shows by itself only on an empty project: one canvas
+  // with nothing on it (an empty canvas added to a project is just an empty
+  // canvas). Asked for from the Aiuto menu, it shows on any empty canvas
   const shouldShowWelcome =
-    !presenting && showWelcomeScreen && devices.length === 0 && canvasCount === 1;
+    !presenting &&
+    showWelcomeScreen &&
+    devices.length === 0 &&
+    (canvasCount === 1 || welcomeRequested);
 
   return (
     <div className="relative w-full h-full">

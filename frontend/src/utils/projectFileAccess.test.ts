@@ -25,8 +25,6 @@ vi.mock('sonner', () => ({
   },
 }));
 
-const CONFIRM_TEXT =
-  'Il progetto ha modifiche non ancora salvate su file.\nContinuare senza salvare?';
 
 function makePc(label: string): Omit<NetworkDevice, 'id'> {
   return {
@@ -46,8 +44,10 @@ async function loadApp() {
   const { useProjectStore } = await import('@/store/projectStore');
   const { useTemplateStore } = await import('@/store/templateStore');
   const { useUIStore } = await import('@/store/uiStore');
+  const { useConfirmStore } = await import('@/store/confirmStore');
   const access = await import('./projectFileAccess');
   return {
+    confirm: useConfirmStore,
     network: useNetworkStore,
     project: useProjectStore,
     templates: useTemplateStore,
@@ -63,6 +63,20 @@ async function loadApp() {
 }
 
 type App = Awaited<ReturnType<typeof loadApp>>;
+
+/**
+ * From now on every question the app asks in its window gets this answer, as
+ * from a click on one of its two buttons. Gives the questions asked.
+ */
+function answerQuestions(app: App, yes: boolean) {
+  const asked: Array<{ title: string; detail?: string; confirmLabel: string; danger?: boolean }> = [];
+  app.confirm.subscribe((state) => {
+    if (!state.pending) return;
+    asked.push(state.pending);
+    state.answer(yes);
+  });
+  return asked;
+}
 
 const labels = (devices: NetworkDevice[]) => devices.map(d => d.label);
 
@@ -523,12 +537,12 @@ describe('project file access', () => {
       const app = await appWithProject();
       const before = app.project.getState().buildProjectFile().canvases;
       vi.stubGlobal('showOpenFilePicker', vi.fn().mockRejectedValue(abortError()));
-      const confirm = vi.spyOn(window, 'confirm');
+      const asked = answerQuestions(app, false);
 
       expect(await app.access.openProject()).toBe('cancelled');
 
       expectNoToast(app);
-      expect(confirm).not.toHaveBeenCalled();
+      expect(asked).toEqual([]);
       expect(app.project.getState().name).toBe('Sede Milano');
       expect(app.project.getState().buildProjectFile().canvases).toEqual(before);
       expect(app.network.getState().hasUnsavedChanges).toBe(true);
@@ -537,7 +551,7 @@ describe('project file access', () => {
     it('a file that is not a project is refused with the reason, and nothing changes', async () => {
       const app = await appWithProject();
       openPicker(diskFile('appunti.json', '{"hello": "world"}'));
-      const confirm = vi.spyOn(window, 'confirm');
+      const asked = answerQuestions(app, false);
 
       expect(await app.access.openProject()).toBe('failed');
 
@@ -546,7 +560,7 @@ describe('project file access', () => {
       expect(title).toBe('Impossibile aprire "appunti.json"');
       expect(options.description).toContain('non è un progetto PixelCake');
       // nothing to lose yet: the question is not even asked
-      expect(confirm).not.toHaveBeenCalled();
+      expect(asked).toEqual([]);
       expect(app.project.getState().name).toBe('Sede Milano');
       expect(labels(app.network.getState().devices)).toEqual(['B-1']);
       expect(app.network.getState().hasUnsavedChanges).toBe(true);
@@ -561,13 +575,17 @@ describe('project file access', () => {
       const before = app.project.getState().buildProjectFile().canvases;
       const other = diskFile('sede-roma.pixelcake.json', serializeProject(fileProject()));
       openPicker(other);
-      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      const asked = answerQuestions(app, false);
       app.toast.success.mockClear();
 
       expect(await app.access.openProject()).toBe('cancelled');
 
-      expect(confirm).toHaveBeenCalledTimes(1);
-      expect(confirm).toHaveBeenCalledWith(CONFIRM_TEXT);
+      expect(asked).toHaveLength(1);
+      expect(asked).toEqual([app.access.DISCARD_CHANGES_QUESTION]);
+      // it says what is lost, and its yes names what it does
+      expect(asked[0].title).toBe('Continuare senza salvare?');
+      expect(asked[0].detail).toContain('modifiche non ancora salvate su file');
+      expect(asked[0]).toMatchObject({ confirmLabel: 'Continua senza salvare', danger: true });
       expect(app.project.getState().name).toBe('Sede Milano');
       expect(app.project.getState().buildProjectFile().canvases).toEqual(before);
       expect(labels(app.network.getState().devices)).toEqual(['B-1', 'B-2']);
@@ -584,11 +602,11 @@ describe('project file access', () => {
     it('with unsaved changes, accepting replaces the project', async () => {
       const app = await appWithProject();
       openPicker(diskFile('sede-roma.pixelcake.json', serializeProject(fileProject())));
-      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const asked = answerQuestions(app, true);
 
       expect(await app.access.openProject()).toBe('opened');
 
-      expect(confirm).toHaveBeenCalledTimes(1);
+      expect(asked).toHaveLength(1);
       expect(app.project.getState().name).toBe('Sede Roma');
       expect(labels(app.network.getState().devices)).toEqual(['R-1']);
       expect(app.network.getState().hasUnsavedChanges).toBe(false);
@@ -598,11 +616,11 @@ describe('project file access', () => {
       const app = await appWithProject();
       app.network.getState().markSaved();
       openPicker(diskFile('sede-roma.pixelcake.json', serializeProject(fileProject())));
-      const confirm = vi.spyOn(window, 'confirm');
+      const asked = answerQuestions(app, false);
 
       expect(await app.access.openProject()).toBe('opened');
 
-      expect(confirm).not.toHaveBeenCalled();
+      expect(asked).toEqual([]);
       expect(app.project.getState().name).toBe('Sede Roma');
     });
 
@@ -745,11 +763,11 @@ describe('project file access', () => {
     it('with unsaved changes, declining the confirmation changes nothing', async () => {
       const app = await appWithProject();
       fileChooser(jsonFile(fileProject()));
-      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      const asked = answerQuestions(app, false);
 
       expect(await app.access.openProject()).toBe('cancelled');
 
-      expect(confirm).toHaveBeenCalledWith(CONFIRM_TEXT);
+      expect(asked).toEqual([app.access.DISCARD_CHANGES_QUESTION]);
       expect(app.project.getState().name).toBe('Sede Milano');
       expect(labels(app.network.getState().devices)).toEqual(['B-1']);
       expect(app.network.getState().hasUnsavedChanges).toBe(true);
@@ -797,11 +815,11 @@ describe('project file access', () => {
   describe('new project', () => {
     it('with unsaved changes it asks first; declining leaves everything, the form does not open', async () => {
       const app = await appWithProject();
-      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      const asked = answerQuestions(app, false);
 
-      expect(app.access.requestNewProject()).toBe(false);
+      expect(await app.access.requestNewProject()).toBe(false);
 
-      expect(confirm).toHaveBeenCalledWith(CONFIRM_TEXT);
+      expect(asked).toEqual([app.access.DISCARD_CHANGES_QUESTION]);
       expect(app.ui.getState().modals.newProject).toBe(false);
       expect(app.project.getState().name).toBe('Sede Milano');
       expect(labels(app.network.getState().devices)).toEqual(['B-1']);
@@ -810,9 +828,9 @@ describe('project file access', () => {
 
     it('accepting opens the form; the project is only replaced when the form is confirmed', async () => {
       const app = await appWithProject();
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      answerQuestions(app, true);
 
-      expect(app.access.requestNewProject()).toBe(true);
+      expect(await app.access.requestNewProject()).toBe(true);
 
       expect(app.ui.getState().modals.newProject).toBe(true);
       expect(app.project.getState().name).toBe('Sede Milano');
@@ -821,11 +839,11 @@ describe('project file access', () => {
 
     it('without unsaved changes it does not ask', async () => {
       const app = await loadApp();
-      const confirm = vi.spyOn(window, 'confirm');
+      const asked = answerQuestions(app, false);
 
-      expect(app.access.requestNewProject()).toBe(true);
+      expect(await app.access.requestNewProject()).toBe(true);
 
-      expect(confirm).not.toHaveBeenCalled();
+      expect(asked).toEqual([]);
       expect(app.ui.getState().modals.newProject).toBe(true);
     });
 

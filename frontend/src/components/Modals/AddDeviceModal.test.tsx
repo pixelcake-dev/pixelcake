@@ -88,6 +88,31 @@ describe('AddDeviceModal — where a new device appears', () => {
     expect(near(second.position.x, (centre.x + 4000) / 0.5)).toBe(true);
     expect(near(second.position.y, (centre.y + 3000) / 0.5)).toBe(true);
   });
+
+  it('never on top of the one added before, and always in the same place: nothing is left to chance', () => {
+    const first = add('PC', 'tpl-pc');
+    const second = add('PC', 'tpl-pc');
+    const third = add('Switch', 'tpl-switch');
+    const apart = (a: typeof first, b: typeof first) =>
+      Math.abs(a.position.x - b.position.x) >= 120 || Math.abs(a.position.y - b.position.y) >= 90;
+    expect(apart(first, second)).toBe(true);
+    expect(apart(first, third)).toBe(true);
+    expect(apart(second, third)).toBe(true);
+
+    // the same three again, on an empty canvas: the same three places
+    const before = [first, second, third].map((device) => device.position);
+    useNetworkStore.getState().clearAllDevices();
+    const again = [add('PC', 'tpl-pc'), add('PC', 'tpl-pc'), add('Switch', 'tpl-switch')];
+    expect(again.map((device) => device.position)).toEqual(before);
+  });
+
+  it('is the selected device, alone: it is found at once', () => {
+    const first = add('PC', 'tpl-pc');
+    expect(useNetworkStore.getState().selectedDeviceIds).toEqual([first.id]);
+
+    const second = add('Server', 'tpl-server');
+    expect(useNetworkStore.getState().selectedDeviceIds).toEqual([second.id]);
+  });
 });
 
 describe('bulk add — the gateway of new routers and firewalls', () => {

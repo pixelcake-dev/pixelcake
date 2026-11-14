@@ -1,7 +1,7 @@
 /**
  * CustomEdge — how a cable is drawn in presentation mode: cut, leading to a
- * broken device, on the way of the answer; and that none of it shows outside
- * presentation mode.
+ * broken device, with the packet on it; and that the marks of a failure do
+ * not show outside presentation mode.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -10,6 +10,7 @@ import { Position, ReactFlowProvider } from 'reactflow';
 import { useNetworkStore } from '@/store/networkStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
+import { useTemplateStore } from '@/store/templateStore';
 import type { NetworkConnection } from '@/types';
 import CustomEdge from './CustomEdge';
 
@@ -103,15 +104,35 @@ describe('CustomEdge — presentation mode', () => {
     expect(look(renderEdge()).opacity).toBe('0.6');
   });
 
-  it('the way of an answer that arrives is green, of one that stops amber', () => {
+  it('the way of the answer is not painted: a cable on it rests like the others', () => {
+    const atRest = { stroke: 'var(--line-color)', opacity: '0.6' };
     presentation().setRoute({ links: ['cable-1'], arrives: true, dropDeviceId: null });
-    expect(look(renderEdge())).toMatchObject({ stroke: GREEN, opacity: '1' });
+    expect(look(renderEdge())).toMatchObject(atRest);
 
     presentation().setRoute({ links: ['cable-1'], arrives: false, dropDeviceId: 'dev-b' });
-    expect(look(renderEdge())).toMatchObject({ stroke: AMBER, opacity: '1' });
+    expect(look(renderEdge())).toMatchObject(atRest);
+  });
 
-    presentation().setRoute({ links: ['another-cable'], arrives: true, dropDeviceId: null });
-    expect(look(renderEdge()).stroke).not.toBe(GREEN);
+  it('a cable lights up while the packet is on it, in the colour of its kind, as while building', () => {
+    const trunk: NetworkConnection = { ...CABLE, type: 'trunk' };
+    const ofItsKind = useTemplateStore.getState().getConnectionTemplateByType('trunk')?.color;
+    expect(ofItsKind).toBeTruthy();
+    presentation().setRoute({ links: ['cable-1', 'cable-2'], arrives: true, dropDeviceId: null });
+
+    // the packet is on it
+    useSimulationStore.getState().startSimulation(['dev-a', 'dev-b', 'dev-c'], 'ping');
+    useSimulationStore.getState().setCurrentConnection('cable-1', false, 500);
+    const lit = look(renderEdge(trunk));
+    expect(lit).toMatchObject({ stroke: ofItsKind, opacity: '1' });
+    expect([GREEN, AMBER]).not.toContain(lit.stroke);
+
+    // the packet has moved on to the next cable: this one rests again
+    useSimulationStore.getState().setCurrentConnection('cable-2', false, 500);
+    expect(look(renderEdge(trunk))).toMatchObject({ stroke: 'var(--line-color)', opacity: '0.6' });
+
+    // a cable of no kind has no colour of its own: it only stands out
+    useSimulationStore.getState().setCurrentConnection('cable-1', false, 500);
+    expect(look(renderEdge())).toMatchObject({ stroke: 'var(--line-color)', opacity: '1' });
   });
 
   it('a cut wins over everything else', () => {

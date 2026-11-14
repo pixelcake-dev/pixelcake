@@ -56,7 +56,8 @@ interface NetworkStore {
   canvasRevision: number;
 
   // Actions - Devices
-  addDevice: (device: Omit<NetworkDevice, 'id'>) => void;
+  /** Adds the device and gives the id it got */
+  addDevice: (device: Omit<NetworkDevice, 'id'>) => string;
   updateDevice: (id: string, updates: Partial<NetworkDevice>) => void;
   removeDevice: (id: string) => void;
   getDevice: (id: string) => NetworkDevice | undefined;
@@ -175,8 +176,8 @@ export const useNetworkStore = create<NetworkStore>()(
 
       // Device Actions
       addDevice: (device) => {
+        const id = `dev-${get().deviceCounter}`;
         set((state) => {
-          const id = `dev-${state.deviceCounter}`;
           const newDevice: NetworkDevice = normalizeAddressing({ ...device, id });
           return {
             devices: [...state.devices, newDevice],
@@ -184,6 +185,7 @@ export const useNetworkStore = create<NetworkStore>()(
           };
         });
         get().markChanged();
+        return id;
       },
 
       updateDevice: (id, updates) => {

@@ -11,6 +11,7 @@ import { InlineEdit } from '@/components/ui/InlineEdit';
 import { useProjectStore } from '@/store/projectStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { openProject, saveProject } from '@/utils/projectFileAccess';
+import { askConfirm } from '@/store/confirmStore';
 
 /** What is being edited in place, if anything */
 type Editing =
@@ -53,13 +54,17 @@ const ExplorerPanel = () => {
     setShowNewCanvasInput(false);
   };
 
-  const handleDeleteCanvas = (canvasId: string, canvasName: string, deviceCount: number) => {
-    const question =
-      `Eliminare il canvas "${canvasName}"?` +
-      (deviceCount > 0
-        ? `\nContiene ${deviceCountLabel(deviceCount)}: il suo contenuto andrà perso.`
-        : '');
-    if (!confirm(question)) return;
+  const handleDeleteCanvas = async (canvasId: string, canvasName: string, deviceCount: number) => {
+    const confirmed = await askConfirm({
+      title: `Eliminare il canvas «${canvasName}»?`,
+      detail:
+        deviceCount > 0
+          ? `Contiene ${deviceCountLabel(deviceCount)}: il suo contenuto andrà perso.`
+          : undefined,
+      confirmLabel: 'Elimina',
+      danger: true,
+    });
+    if (!confirmed) return;
     deleteCanvas(canvasId);
   };
 

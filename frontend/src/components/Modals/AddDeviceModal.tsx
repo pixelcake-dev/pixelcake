@@ -9,6 +9,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { findNextAvailableIP, generateMacAddress } from '@/utils/ipHelpers';
+import { firstFreePlace } from '@/utils/placeDevice';
 import { isL3Type, withLeases } from '@/engine';
 import type { DeviceType, Port, NetworkInterfaceCard } from '@/types/network';
 
@@ -82,14 +83,22 @@ const AddDeviceModal = () => {
       return;
     }
 
-    // The new device appears where the user is looking: around the centre of
-    // the visible part of the canvas, a little off it so that devices added
-    // one after the other do not land exactly on top of each other
-    const { viewport } = useNetworkStore.getState();
+    // The new device appears where the user is looking: at the centre of the
+    // visible part of the canvas, or in the nearest free place when another
+    // device is already there. Never at random: it is where one expects it
+    const { viewport, devices: placed } = useNetworkStore.getState();
     const zoom = viewport.zoom || 1;
-    const jitter = () => Math.round((Math.random() - 0.5) * 160);
-    const centerX = Math.round((window.innerWidth / 2 - viewport.x) / zoom) - 40 + jitter();
-    const centerY = Math.round((window.innerHeight / 2 - viewport.y) / zoom) - 40 + jitter();
+    const canvas = document.querySelector('.react-flow')?.getBoundingClientRect();
+    const viewWidth = canvas?.width || window.innerWidth;
+    const viewHeight = canvas?.height || window.innerHeight;
+    // (a device is about 120 by 100: half of that puts its middle on the centre)
+    const place = firstFreePlace(
+      {
+        x: Math.round((viewWidth / 2 - viewport.x) / zoom) - 60,
+        y: Math.round((viewHeight / 2 - viewport.y) / zoom) - 50,
+      },
+      placed.map((device) => device.position)
+    );
 
     // A router or firewall does not take the gateway of the end devices: its
     // gateway is its default route, set later by whoever configures it
@@ -108,7 +117,7 @@ const AddDeviceModal = () => {
         }))
       : undefined;
 
-    addDevice({
+    const newId = addDevice({
       type: addDeviceType as DeviceType,
       templateId: addDeviceTemplateId || undefined, // Store template ID for icon lookup
       label: name,
@@ -117,12 +126,14 @@ const AddDeviceModal = () => {
       gateway: routesTraffic ? '' : globalSettings.gateway,
       vendor: addDeviceType !== 'PC' ? vendor : undefined,
       location: addDeviceType !== 'PC' ? position : undefined,
-      position: { x: centerX, y: centerY },
+      position: place,
       portCount: portCount,
       ports: ports,
       // The IP typed in this form is the address of the first NIC
       nics: nics?.map((nic, index) => (index === 0 ? { ...nic, ip } : nic)),
     });
+    // The new device is the selected one: it stands out, and is found at once
+    useNetworkStore.getState().selectMultipleDevices([newId]);
 
     handleClose();
   };

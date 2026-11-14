@@ -26,8 +26,8 @@ const WelcomeScreen = () => {
     }
   }, []); // Esegui al mount del componente
 
-  const handleNewProject = () => {
-    if (requestNewProject()) {
+  const handleNewProject = async () => {
+    if (await requestNewProject()) {
       dismissWelcomeScreen(neverShowAgain);
     }
   };

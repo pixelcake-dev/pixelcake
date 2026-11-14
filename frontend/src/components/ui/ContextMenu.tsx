@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
+import { askConfirm } from '@/store/confirmStore';
 
 const ContextMenu = () => {
   const contextMenuDevice = useUIStore((state) => state.contextMenuDevice);
@@ -45,17 +46,18 @@ const ContextMenu = () => {
     closeContextMenu();
   };
 
-  const handleDelete = () => {
-    if (contextMenuDevice) {
-      if (
-        confirm(
-          `Sei sicuro di voler eliminare "${contextMenuDevice.label}"?`
-        )
-      ) {
-        removeDevice(contextMenuDevice.id);
-        closeContextMenu();
-      }
-    }
+  const handleDelete = async () => {
+    if (!contextMenuDevice) return;
+    // The menu has done its job: the question takes its place
+    const { id, label } = contextMenuDevice;
+    closeContextMenu();
+    const confirmed = await askConfirm({
+      title: `Eliminare «${label}»?`,
+      detail: 'Con il dispositivo vengono tolti anche i suoi collegamenti.',
+      confirmLabel: 'Elimina',
+      danger: true,
+    });
+    if (confirmed) removeDevice(id);
   };
 
   if (!contextMenuDevice || !contextMenuPosition) return null;

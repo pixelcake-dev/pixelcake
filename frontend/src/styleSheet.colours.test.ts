@@ -101,6 +101,17 @@ describe('the colours of the interface', () => {
     expect(found).toEqual([]);
   });
 
+  it('the answer of presentation mode is not a filled block: a rule of its colour, no background', () => {
+    for (const tone of ['ok', 'ko', 'unknown']) {
+      const rule = new RegExp(`\\.presentation-verdict\\.tone-${tone}\\s*\\{([^{}]*)\\}`).exec(sheet)?.[1] ?? '';
+      expect(rule, tone).toMatch(/color:/);
+      expect(rule, tone).not.toMatch(/background/);
+    }
+    const box = /(?:^|[};])\s*\.presentation-verdict\s*\{([^{}]*)\}/.exec(sheet)?.[1] ?? '';
+    expect(box).toMatch(/border-left:\s*3px solid currentColor/);
+    expect(box).not.toMatch(/background/);
+  });
+
   it('the label of a cable takes its four colours from the theme, as the picture draws it', () => {
     const edge = sources['/src/components/Canvas/CustomEdge.tsx'];
     const label = /className="edge-label[\s\S]*?<\/EdgeLabelRenderer>/.exec(edge)?.[0] ?? '';

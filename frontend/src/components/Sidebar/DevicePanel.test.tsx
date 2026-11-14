@@ -8,6 +8,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { useUIStore } from '@/store/uiStore';
+import { answerConfirms, settled } from '@/test/confirm';
 import DevicePanel from './DevicePanel';
 
 const labels = () => useNetworkStore.getState().devices.map(d => d.label);
@@ -61,32 +62,38 @@ describe('DevicePanel — sample networks', () => {
     expect(useNetworkStore.getState().fitViewRequest).toBe(fitsAsked + 1);
   });
 
-  it('every sample is asked into view when it is loaded', () => {
+  it('every sample is asked into view when it is loaded', async () => {
     openSamples();
+    answerConfirms(true);
     for (const name of [/Ufficio: due reti/, /Sede: VLAN/, /Due sedi:/]) {
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
       const fitsAsked = useNetworkStore.getState().fitViewRequest;
       fireEvent.click(screen.getByRole('button', { name }));
+      await settled();
       expect(useNetworkStore.getState().fitViewRequest, String(name)).toBe(fitsAsked + 1);
     }
   });
 
-  it('a sample that is not loaded, because the answer was no, moves nothing', () => {
+  it('a sample that is not loaded, because the answer was no, moves nothing', async () => {
     openSamples();
     fireEvent.click(screen.getByRole('button', { name: /Ufficio: due reti/ }));
+    await settled();
     const fitsAsked = useNetworkStore.getState().fitViewRequest;
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const confirms = answerConfirms(false);
 
     fireEvent.click(screen.getByRole('button', { name: /Azienda: uffici/ }));
+    await settled();
+
+    expect(confirms.asked).toHaveLength(1);
 
     expect(labels()).toContain('Router-1');
     expect(useNetworkStore.getState().fitViewRequest).toBe(fitsAsked);
   });
 
-  it('loads the two sites: every device, every cable, each cable on its port', () => {
+  it('loads the two sites: every device, every cable, each cable on its port', async () => {
     openSamples();
 
     fireEvent.click(screen.getByRole('button', { name: /Due sedi: linea principale e di riserva/ }));
+    await settled();
 
     expect(labels()).toHaveLength(12);
     expect(labels()).toContain('R-Riserva');
@@ -98,30 +105,38 @@ describe('DevicePanel — sample networks', () => {
     }
   });
 
-  it('loads each one on an empty canvas without asking', () => {
-    const confirm = vi.spyOn(window, 'confirm');
+  it('loads each one on an empty canvas without asking', async () => {
+    const confirms = answerConfirms(false);
     openSamples();
 
     fireEvent.click(screen.getByRole('button', { name: /Sede: VLAN, DMZ e firewall/ }));
+    await settled();
     expect(labels()).toContain('FW-Edge');
     expect(labels()).toHaveLength(10);
     expect(useNetworkStore.getState().connections).toHaveLength(10);
-    expect(confirm).not.toHaveBeenCalled();
+    expect(confirms.asked).toEqual([]);
   });
 
-  it('asks before replacing a drawing, and leaves it alone on "no"', () => {
+  it('asks before replacing a drawing, and leaves it alone on "no"', async () => {
     openSamples();
     fireEvent.click(screen.getByRole('button', { name: /Ufficio: due reti e un router/ }));
+    await settled();
     expect(labels()).toContain('Router-1');
 
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const confirms = answerConfirms(false);
     fireEvent.click(screen.getByRole('button', { name: /Sede: VLAN, DMZ e firewall/ }));
-    expect(confirm).toHaveBeenCalledTimes(1);
+    await settled();
+    expect(confirms.asked).toHaveLength(1);
+    // the question says what a yes does, and its button names the action
+    expect(confirms.asked[0].title).toBe('Caricare la rete di esempio?');
+    expect(confirms.asked[0].detail).toContain('Prende il posto');
+    expect(confirms.asked[0].confirmLabel).toBe('Carica');
     expect(labels()).toContain('Router-1');
     expect(labels()).not.toContain('FW-Edge');
 
-    confirm.mockReturnValue(true);
+    confirms.say(true);
     fireEvent.click(screen.getByRole('button', { name: /Sede: VLAN, DMZ e firewall/ }));
+    await settled();
     expect(labels()).toContain('FW-Edge');
     expect(labels()).not.toContain('Router-1');
   });

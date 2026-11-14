@@ -89,7 +89,7 @@ export const FormFieldset: React.FC<FormFieldsetProps> = ({
   className = '',
 }) => {
   return (
-    <fieldset className={`border border-[var(--border-color)] rounded-lg px-4 py-3 ${className}`}>
+    <fieldset className={className}>
       {/* (its look is the one every legend has: see the style sheet) */}
       <legend>
         {legend}

@@ -30,7 +30,7 @@ const TopMenuBar = () => {
   const toggleDarkMode = useUIStore((state) => state.toggleDarkMode);
   const openHelp = useUIStore((state) => state.openHelp);
   const openModal = useUIStore((state) => state.openModal);
-  const setShowWelcomeScreen = useUIStore((state) => state.setShowWelcomeScreen);
+  const requestWelcomeScreen = useUIStore((state) => state.requestWelcomeScreen);
   const magnifiedDeviceTypes = useUIStore((state) => state.magnifiedDeviceTypes);
   const magnifiedConnectionTypes = useUIStore((state) => state.magnifiedConnectionTypes);
   const toggleMagnifyDevice = useUIStore((state) => state.toggleMagnifyDevice);
@@ -57,7 +57,7 @@ const TopMenuBar = () => {
   // asks before unsaved changes are lost and reports the outcome with a toast.
   // The pickers must be reached straight from the click: nothing is awaited
   // before them.
-  const handleNewProject = () => requestNewProject();
+  const handleNewProject = () => void requestNewProject();
   const handleOpen = () => void openProject();
   const handleSave = () => void saveProject();
   const handleSaveAs = () => void saveProjectAs();
@@ -92,9 +92,10 @@ const TopMenuBar = () => {
       return;
     }
 
-    // Reset the "non mostrare più" preference, then show it
+    // Reset the "non mostrare più" preference, then show it: asked for, it
+    // shows on this empty canvas also when the project has other canvases
     localStorage.removeItem('pixelcake-hide-welcome');
-    setShowWelcomeScreen(true);
+    requestWelcomeScreen();
   };
 
   // File → Esporta immagine…: a picture of the drawing needs a drawing

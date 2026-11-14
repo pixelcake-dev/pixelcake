@@ -297,3 +297,41 @@ describe('NetworkCanvas — mouse and keyboard', () => {
     });
   });
 });
+
+describe('NetworkCanvas — a device the app selects', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    stubBrowser();
+    createNewProject({ name: 'Prova' });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('a device added and selected by the app (the window that adds one does so) stays selected on the canvas', async () => {
+    addPc('PC-1');
+    renderCanvas();
+
+    act(() => {
+      const id = useNetworkStore.getState().addDevice({
+        type: 'PC',
+        label: 'PC-2',
+        ip: '192.168.1.11',
+        subnet: '255.255.255.0',
+        gateway: '192.168.1.1',
+        position: { x: 200, y: 0 },
+      });
+      useNetworkStore.getState().selectMultipleDevices([id]);
+    });
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 20));
+    });
+
+    expect(selected()).toEqual(['PC-2']);
+    const node = screen.getByText('PC-2').closest<HTMLElement>('.react-flow__node')!;
+    expect(node.className).toContain('selected');
+    // and the one that was there is not
+    expect(screen.getByText('PC-1').closest<HTMLElement>('.react-flow__node')!.className).not.toContain('selected');
+  });
+});

@@ -6,8 +6,10 @@
  * - Color coding by connection type
  * - Bandwidth/label display
  * - Packet animation using SVG animateMotion (React Flow official approach)
- * - Presentation mode: a cable that is cut, a cable that leads to a broken
- *   device, and the way of the answer on screen
+ * - Presentation mode: a cable that is cut and a cable that leads to a broken
+ *   device. The way of the answer is not painted on the drawing: the packet
+ *   shows it, and each cable lights up while the packet is on it, in the
+ *   colour of its kind, as while building
  */
 
 import { useEffect, useRef } from 'react';
@@ -22,11 +24,9 @@ import { FLOW_MODEL_COLORS } from '@/types/network';
 import { MARK_COLORS } from '@/utils/drawingImage';
 
 /**
- * Colours of presentation mode, readable on both themes. The picture of the
- * drawing (File → Esporta immagine…) uses the very same ones.
+ * The colour of a simulated failure, readable on both themes. The picture of
+ * the drawing (File → Esporta immagine…) uses the very same one.
  */
-const ROUTE_COLOR_ARRIVES = MARK_COLORS.arrives;
-const ROUTE_COLOR_STOPS = MARK_COLORS.stops;
 const FAILURE_COLOR = MARK_COLORS.failure;
 
 const CustomEdge = ({
@@ -61,9 +61,6 @@ const CustomEdge = ({
       state.active &&
       data !== undefined &&
       (state.failedDevices.includes(data.source) || state.failedDevices.includes(data.target))
-  );
-  const routeState = usePresentationStore((state) =>
-    state.active && state.route?.links.includes(id) ? (state.route.arrives ? 'arrives' : 'stops') : null
   );
 
   // Check if this is the active edge in the simulation
@@ -145,8 +142,9 @@ const CustomEdge = ({
   const strokeStyle = getStrokeStyle();
 
   // What the cable looks like. Presentation mode comes first: a cut cable is
-  // red and broken up, a cable into a broken device fades, the way of the
-  // answer stands out in the colour of its outcome.
+  // red and broken up, a cable into a broken device fades. Then, presenting
+  // or building, a cable stands out in the colour of its kind while the
+  // packet is on it (or its device is under the pointer) and rests otherwise.
   const appearance = (() => {
     if (isCut) {
       return {
@@ -158,14 +156,6 @@ const CustomEdge = ({
     }
     if (leadsToFailure) {
       return { stroke: lineColor, strokeWidth: strokeStyle.strokeWidth, strokeDasharray: '3 7', opacity: 0.3 };
-    }
-    if (routeState) {
-      return {
-        stroke: routeState === 'arrives' ? ROUTE_COLOR_ARRIVES : ROUTE_COLOR_STOPS,
-        strokeWidth: strokeStyle.strokeWidth + 1.5,
-        strokeDasharray: strokeStyle.strokeDasharray,
-        opacity: 1,
-      };
     }
     return {
       stroke: isHighlighted ? edgeColor : lineColor,

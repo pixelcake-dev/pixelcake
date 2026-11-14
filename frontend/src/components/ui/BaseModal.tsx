@@ -260,7 +260,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
       onClick={handleOverlayClick}
     >
       <div
-        className={`base-modal w-full ${sizeClass} ${layoutClass} bg-[var(--bg-toolbar)] rounded-xl shadow-modal flex flex-col overflow-hidden ${className || ''}`}
+        className={`base-modal w-full ${sizeClass} ${layoutClass} bg-[var(--bg-toolbar)] rounded-md shadow-modal flex flex-col overflow-hidden ${className || ''}`}
         style={{
           minHeight: finalMinHeight,
           maxHeight: finalMaxHeight,
@@ -270,7 +270,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
       >
         {/* Header - Fixed */}
         {!header && (
-          <div className="modal-header flex items-center justify-between px-6 pt-5 pb-3 flex-shrink-0">
+          <div className="modal-header flex items-center justify-between mx-6 pt-5 pb-3 flex-shrink-0">
             <h3 className="text-base font-semibold tracking-tight">{title}</h3>
             {showCloseButton && (
               <button

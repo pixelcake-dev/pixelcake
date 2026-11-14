@@ -53,6 +53,11 @@ interface UIStore {
 
   // Welcome Screen State (not persisted - controlled by separate localStorage flag)
   showWelcomeScreen: boolean;
+  /**
+   * The user asked to see it (Aiuto → Mostra la schermata di benvenuto): it
+   * then shows on an empty canvas also when the project has more than one
+   */
+  welcomeRequested: boolean;
 
   // Actions
   toggleDarkMode: () => void;
@@ -82,6 +87,8 @@ interface UIStore {
 
   // Welcome Screen Actions
   setShowWelcomeScreen: (show: boolean) => void;
+  /** Show it because the user asked for it */
+  requestWelcomeScreen: () => void;
   dismissWelcomeScreen: (neverShowAgain: boolean) => void;
 }
 
@@ -132,6 +139,7 @@ export const useUIStore = create<UIStore>()(
 
       // Welcome Screen State (not persisted - default ON)
       showWelcomeScreen: true,
+      welcomeRequested: false,
 
       // Actions
       toggleDarkMode: () => {
@@ -291,14 +299,19 @@ export const useUIStore = create<UIStore>()(
 
       // Welcome Screen Actions
       setShowWelcomeScreen: (show) => {
-        set({ showWelcomeScreen: show });
+        // (put away, it is no longer asked for)
+        set(show ? { showWelcomeScreen: true } : { showWelcomeScreen: false, welcomeRequested: false });
+      },
+
+      requestWelcomeScreen: () => {
+        set({ showWelcomeScreen: true, welcomeRequested: true });
       },
 
       dismissWelcomeScreen: (neverShowAgain) => {
         if (neverShowAgain) {
           localStorage.setItem('pixelcake-hide-welcome', 'true');
         }
-        set({ showWelcomeScreen: false });
+        set({ showWelcomeScreen: false, welcomeRequested: false });
       },
     }),
     {

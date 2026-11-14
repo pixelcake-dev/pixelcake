@@ -26,6 +26,7 @@ import TerminalModal from '@/components/Modals/TerminalModal';
 import NewProjectModal from '@/components/Modals/NewProjectModal';
 import ImportExportModal from '@/components/Modals/ImportExportModal';
 import ExportImageModal from '@/components/Modals/ExportImageModal';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import 'reactflow/dist/style.css';
 
 function App() {
@@ -49,10 +50,11 @@ function App() {
   return (
     <ReactFlowProvider>
       {/* Toast Notifications */}
+      {/* (their look is in index.css, under «Notices») */}
       <Toaster
+        className="pc-toasts"
         position="bottom-right"
         expand={false}
-        richColors
         closeButton
         theme={darkMode ? 'dark' : 'light'}
       />
@@ -92,6 +94,8 @@ function App() {
         <NewProjectModal />
         <ImportExportModal />
         <ExportImageModal />
+        {/* A question with a yes and a no: over everything else */}
+        <ConfirmDialog />
       </div>
     </ReactFlowProvider>
   );

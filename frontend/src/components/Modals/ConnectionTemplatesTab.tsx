@@ -10,6 +10,7 @@ import { useTemplateStore } from '@/store/templateStore';
 import ConnectionTemplateEditModal from './ConnectionTemplateEditModal';
 import ConnectionLinePreview from './ConnectionLinePreview';
 import type { ConnectionTemplate } from '@/types/network';
+import { askConfirm } from '@/store/confirmStore';
 
 const ConnectionTemplatesTab = () => {
   const connectionTemplates = useTemplateStore((state) => state.connectionTemplates);
@@ -30,10 +31,13 @@ const ConnectionTemplatesTab = () => {
     setEditModalOpen(true);
   };
 
-  const handleDelete = (template: ConnectionTemplate) => {
-    const confirmed = confirm(
-      `Sei sicuro di voler eliminare il tipo connessione "${template.name}"?\n\nLe connessioni esistenti con questo tipo potrebbero non visualizzarsi correttamente.`
-    );
+  const handleDelete = async (template: ConnectionTemplate) => {
+    const confirmed = await askConfirm({
+      title: `Eliminare il tipo di connessione «${template.name}»?`,
+      detail: 'Le connessioni esistenti di questo tipo potrebbero non essere più disegnate come prima.',
+      confirmLabel: 'Elimina',
+      danger: true,
+    });
     if (confirmed) {
       deleteConnectionTemplate(template.id);
     }

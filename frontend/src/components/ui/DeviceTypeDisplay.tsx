@@ -29,9 +29,9 @@ export const DeviceTypeDisplay = ({ deviceType, label }: DeviceTypeDisplayProps)
 
       <div
         style={{
-          border: '2px solid var(--border-color)',
+          border: '1px solid var(--border-color)',
           borderRadius: 'var(--radius)',
-          padding: '12px 16px',
+          padding: '8px 12px',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
@@ -41,10 +41,10 @@ export const DeviceTypeDisplay = ({ deviceType, label }: DeviceTypeDisplayProps)
         {/* Device Icon */}
         <div
           style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: 'var(--radius)',
-            backgroundColor: `${color}20`,
+            width: '36px',
+            height: '36px',
+            borderRadius: 'var(--radius-small)',
+            backgroundColor: 'var(--bg-component)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

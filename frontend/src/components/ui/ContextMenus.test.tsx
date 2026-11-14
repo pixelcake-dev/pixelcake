@@ -11,6 +11,7 @@ import { useNetworkStore } from '@/store/networkStore';
 import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
 import ContextMenu from './ContextMenu';
+import { answerConfirms, settled } from '@/test/confirm';
 import ConnectionContextMenu from './ConnectionContextMenu';
 
 function addPc(label: string): NetworkDevice {
@@ -85,13 +86,27 @@ describe('context menus', () => {
       expect(useUIStore.getState().terminalContextDevice).toBe('PC-1');
     });
 
-    it('"Elimina" removes the device once confirmed', () => {
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+    it('"Elimina" removes the device once confirmed', async () => {
+      const confirms = answerConfirms(true);
       openOn('PC-1');
 
       fireEvent.click(screen.getByText('Elimina'));
+      await settled();
 
+      expect(confirms.asked).toHaveLength(1);
+      expect(confirms.asked[0]).toMatchObject({ title: 'Eliminare «PC-1»?', confirmLabel: 'Elimina', danger: true });
       expect(useNetworkStore.getState().devices).toEqual([]);
+    });
+
+    it('"Elimina" leaves the device where it is on a no, and the menu is gone either way', async () => {
+      answerConfirms(false);
+      openOn('PC-1');
+
+      fireEvent.click(screen.getByText('Elimina'));
+      await settled();
+
+      expect(useNetworkStore.getState().devices).toHaveLength(1);
+      expect(useUIStore.getState().contextMenuDevice).toBeNull();
     });
   });
 
@@ -122,11 +137,12 @@ describe('context menus', () => {
       expect(useUIStore.getState().inspectorConnection).toEqual(connection);
     });
 
-    it('"Elimina Connessione" removes the link once confirmed', () => {
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+    it('"Elimina Connessione" removes the link once confirmed', async () => {
+      answerConfirms(true);
       openOnLink();
 
       fireEvent.click(screen.getByText('Elimina Connessione'));
+      await settled();
 
       expect(useNetworkStore.getState().connections).toEqual([]);
       expect(useNetworkStore.getState().devices).toHaveLength(2);

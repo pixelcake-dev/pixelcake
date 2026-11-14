@@ -48,7 +48,7 @@ const SettingsModal = () => {
       fixedContent={
         <>
           {/* Header with Title and Close Button */}
-          <div className="modal-header flex items-center justify-between px-6 pt-5 pb-3 flex-shrink-0">
+          <div className="modal-header flex items-center justify-between mx-6 pt-5 pb-3 flex-shrink-0">
             <h3 className="text-base font-semibold tracking-tight">Impostazioni</h3>
             <button
               onClick={handleClose}

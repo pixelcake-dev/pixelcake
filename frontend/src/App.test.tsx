@@ -15,6 +15,7 @@ import { useUIStore } from '@/store/uiStore';
 import { serializeProject } from '@/utils/projectFile';
 import { createNewProject } from '@/utils/projectFileAccess';
 import { createSampleTopology } from '@/utils/sampleTopology';
+import { answerConfirms, settled } from '@/test/confirm';
 import App from './App';
 
 vi.mock('sonner', () => ({
@@ -53,6 +54,7 @@ describe('App', () => {
     createNewProject({ name: 'Sede Milano' });
     useUIStore.setState(state => ({
       showWelcomeScreen: false,
+      welcomeRequested: false,
       helpTab: 'guide',
       modals: { ...state.modals, help: false },
     }));
@@ -226,6 +228,48 @@ describe('App', () => {
       expect(useNetworkStore.getState().fitViewRequest).toBe(fitsAsked + 1);
     });
 
+    it('asked for from the Aiuto menu, it shows on an empty canvas of a project with other canvases', () => {
+      useNetworkStore.getState().addDevice({
+        type: 'PC',
+        label: 'PC-1',
+        ip: '192.168.1.10',
+        subnet: '255.255.255.0',
+        gateway: '192.168.1.1',
+        position: { x: 0, y: 0 },
+      });
+      const empty = useProjectStore.getState().addCanvas('Vuoto');
+      useProjectStore.getState().switchCanvas(empty);
+      render(<App />);
+      // an empty canvas added to a project is just an empty canvas
+      expect(screen.queryByText('Visual Network Designer')).toBeNull();
+
+      fireEvent.click(screen.getByText('Mostra la schermata di benvenuto'));
+      expect(screen.getByText('Visual Network Designer')).toBeInTheDocument();
+
+      // what it offers works on this canvas, and the other one is not touched
+      fireEvent.click(screen.getByText('Carica la rete di esempio'));
+      expect(screen.queryByText('Visual Network Designer')).toBeNull();
+      expect(useUIStore.getState().welcomeRequested).toBe(false);
+      expect(useNetworkStore.getState().devices).toHaveLength(20);
+      const canvases = useProjectStore.getState().buildProjectFile().canvases;
+      expect(canvases[0].devices.map(d => d.label)).toEqual(['PC-1']);
+    });
+
+    it('asked for and then put away, it does not come back on the next empty canvas', () => {
+      const empty = useProjectStore.getState().addCanvas('Vuoto');
+      useProjectStore.getState().switchCanvas(empty);
+      render(<App />);
+      fireEvent.click(screen.getByText('Mostra la schermata di benvenuto'));
+      expect(screen.getByText('Visual Network Designer')).toBeInTheDocument();
+
+      act(() => useUIStore.getState().dismissWelcomeScreen(false));
+      expect(screen.queryByText('Visual Network Designer')).toBeNull();
+
+      act(() => useUIStore.getState().setShowWelcomeScreen(true));
+      // (shown by itself, it is for an empty project only: this one has two canvases)
+      expect(screen.queryByText('Visual Network Designer')).toBeNull();
+    });
+
     it('"Apri Progetto" opens the file picker: cancelling it leaves the welcome screen', async () => {
       const picker = vi.fn().mockRejectedValue(new DOMException('aborted', 'AbortError'));
       vi.stubGlobal('showOpenFilePicker', picker);
@@ -309,11 +353,13 @@ describe('App', () => {
       expect(screen.getByText('Reception')).toBeInTheDocument();
     });
 
-    it('"Nuovo Progetto" opens the form; the new project starts on its empty canvas', () => {
+    it('"Nuovo Progetto" opens the form; the new project starts on its empty canvas', async () => {
       useUIStore.setState({ activeSidebarPanel: 'explorer' });
       render(<App />);
 
       fireEvent.click(screen.getByText('Nuovo Progetto'));
+      // (nothing to lose, so nothing is asked: the form opens a moment later)
+      await settled();
       fireEvent.change(screen.getByLabelText('Nome Progetto *'), {
         target: { value: 'Sede Torino' },
       });
@@ -339,14 +385,15 @@ describe('App', () => {
       });
     }
 
-    it('File → Nuovo progetto… keeps it when the user declines the confirmation', () => {
+    it('File → Nuovo progetto… keeps it when the user declines the confirmation', async () => {
       draw();
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      const confirms = answerConfirms(false);
       render(<App />);
 
       fireEvent.click(screen.getByText('Nuovo progetto…'));
+      await settled();
 
-      expect(confirmSpy).toHaveBeenCalledTimes(1);
+      expect(confirms.asked).toHaveLength(1);
       expect(screen.queryByLabelText('Nome Progetto *')).toBeNull();
       expect(screen.getByText('PC-1')).toBeInTheDocument();
     });

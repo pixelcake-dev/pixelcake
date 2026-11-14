@@ -1002,6 +1002,79 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   border: 1px solid var(--border-color);
 }
 
+/* Its title stands over a line of ink, as the logo does on the welcome
+   screen and the name of the site on its pages */
+.modal-header {
+  border-bottom: 1px solid var(--text-color);
+}
+
+/* The headings of a table in a window: small capitals, as every label */
+.base-modal th {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-color-light);
+}
+
+/* Notices (the toasts of sonner; the class is given to their list in
+   App.tsx). Flat, with the frame of a window and a rule of the colour of
+   what they say on the left. Their own style sheet is loaded at run time and
+   sets its colours on the same element: three conditions here outrank it */
+.pc-toasts[data-sonner-toaster][data-sonner-theme] {
+  --normal-bg: var(--bg-menu);
+  --normal-border: var(--border-color);
+  --normal-text: var(--text-color);
+  --border-radius: var(--radius);
+  font-family: inherit;
+}
+
+/* (three conditions again: the style sheet of the notices frames a notice
+   with two, and comes later) */
+.pc-toasts [data-sonner-toast][data-styled] {
+  border-left: 3px solid var(--secondary-color);
+  box-shadow: 0 8px 24px var(--shadow-color);
+}
+
+.pc-toasts [data-sonner-toast][data-type='success'] {
+  border-left-color: var(--ok-color);
+}
+
+.pc-toasts [data-sonner-toast][data-type='error'] {
+  border-left-color: var(--danger-color);
+}
+
+.pc-toasts [data-sonner-toast][data-type='warning'] {
+  border-left-color: #f59e0b;
+}
+
+.pc-toasts [data-sonner-toast][data-type='success'] [data-icon] {
+  color: var(--ok-color);
+}
+
+.pc-toasts [data-sonner-toast][data-type='error'] [data-icon] {
+  color: var(--danger-color);
+}
+
+.pc-toasts [data-sonner-toast][data-type='warning'] [data-icon] {
+  color: #f59e0b;
+}
+
+.pc-toasts [data-sonner-toast] [data-title] {
+  font-weight: 600;
+}
+
+.pc-toasts [data-sonner-toast] [data-description] {
+  color: var(--text-color-light);
+}
+
+.pc-toasts[data-sonner-toaster] [data-sonner-toast][data-styled] [data-close-button] {
+  border-radius: var(--radius-small);
+  background: var(--bg-menu);
+  border-color: var(--border-color);
+  color: var(--text-color-light);
+}
+
 .form-group {
   margin-bottom: 12px;
 }
@@ -1236,11 +1309,15 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   color: var(--text-color);
 }
 
+/* A group of fields: its name on a thin rule, as a section of the site.
+   No box around it */
 fieldset {
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  padding: 10px 15px 15px 15px;
+  border: 0;
+  border-top: 1px solid var(--border-color);
+  border-radius: 0;
+  padding: 10px 0 0;
   margin-top: 20px;
+  min-width: 0;
 }
 
 legend {
@@ -1249,7 +1326,7 @@ legend {
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--text-color-light);
-  padding: 0 6px;
+  padding: 0 10px 0 0;
 }
 
 /* Magnification Effects */
@@ -2480,14 +2557,16 @@ legend {
   color: var(--text-color-light);
 }
 
-/* The answer */
+/* The answer: a rule of the colour of the outcome on its left and the icon
+   in that colour, the words in the colours of the text. (The colour of each
+   outcome is the `color` of the rule below: the rule and the icon take it,
+   and the exported picture repeats it.) */
 .presentation-verdict {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
+  padding: 6px 0 6px 12px;
+  border-left: 3px solid currentColor;
 }
 
 .presentation-verdict svg {
@@ -2498,29 +2577,25 @@ legend {
   display: block;
   font-size: 1.15em;
   line-height: 1.2;
+  color: var(--text-color);
 }
 
 .presentation-verdict span {
   display: block;
   font-size: 0.9em;
   line-height: 1.35;
+  color: var(--text-color-light);
 }
 
 .presentation-verdict.tone-ok {
-  background-color: rgba(16, 185, 129, 0.12);
-  border-color: rgba(16, 185, 129, 0.45);
   color: #047857;
 }
 
 .presentation-verdict.tone-ko {
-  background-color: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.45);
   color: #b91c1c;
 }
 
 .presentation-verdict.tone-unknown {
-  background-color: rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.5);
   color: #b45309;
 }
 

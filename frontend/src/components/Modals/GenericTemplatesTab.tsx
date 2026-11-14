@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { useTemplateStore } from '@/store/templateStore';
 import TemplateEditModal from './TemplateEditModal';
 import type { DeviceTemplate } from '@/types/network';
+import { askConfirm } from '@/store/confirmStore';
 
 interface GenericTemplatesTabProps {
   templates: DeviceTemplate[];
@@ -26,10 +27,13 @@ const GenericTemplatesTab = ({ templates }: GenericTemplatesTabProps) => {
     setEditModalOpen(true);
   };
 
-  const handleDelete = (template: DeviceTemplate) => {
-    const confirmed = confirm(
-      `Sei sicuro di voler eliminare il template "${template.name}"?\n\nI dispositivi esistenti con questo tipo potrebbero non visualizzarsi correttamente.`
-    );
+  const handleDelete = async (template: DeviceTemplate) => {
+    const confirmed = await askConfirm({
+      title: `Eliminare il template «${template.name}»?`,
+      detail: 'I dispositivi esistenti di questo tipo potrebbero non essere più disegnati come prima.',
+      confirmLabel: 'Elimina',
+      danger: true,
+    });
     if (confirmed) {
       deleteTemplate(template.id);
     }

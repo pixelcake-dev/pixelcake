@@ -53,7 +53,8 @@ const GuideTab = () => (
       <Step title="Aggiungi i dispositivi">
         Nella barra a sinistra apri «Aggiungi Dispositivo» (il pulsante +) e scegli un tipo
         dall&apos;elenco: controlla il nome e conferma, l&apos;indirizzo IP viene proposto in
-        automatico. Il dispositivo compare al centro della parte di canvas che stai guardando.
+        automatico. Il dispositivo compare al centro della parte di canvas che stai guardando
+        (o nel primo posto libero lì accanto) ed è già selezionato.
         «Aggiungi in Blocco» ne crea molti in una volta. Nella scheda
         «Topologie» dello stesso pannello ci sono quattro reti di esempio già pronte: quella di
         una piccola azienda (la stessa della schermata iniziale), una semplice, una con VLAN, DMZ
@@ -358,7 +359,7 @@ const HelpModal = () => {
       fixedContent={
         <>
           {/* Header with Title and Close Button */}
-          <div className="modal-header flex items-center justify-between px-6 pt-5 pb-3 flex-shrink-0">
+          <div className="modal-header flex items-center justify-between mx-6 pt-5 pb-3 flex-shrink-0">
             <h3 className="text-base font-semibold tracking-tight">Guida</h3>
             <button
               onClick={handleClose}

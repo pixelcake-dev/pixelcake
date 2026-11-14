@@ -9,6 +9,7 @@ import type { NetworkDevice } from '@/types';
 import { useNetworkStore } from '@/store/networkStore';
 import { useProjectStore } from '@/store/projectStore';
 import { createNewProject } from '@/utils/projectFileAccess';
+import { answerConfirms, settled } from '@/test/confirm';
 import ExplorerPanel from './ExplorerPanel';
 
 vi.mock('sonner', () => ({
@@ -240,33 +241,37 @@ describe('ExplorerPanel', () => {
       expect(canvasNames()).toEqual(['Piano terra', 'DMZ']);
     });
 
-    it('deletes a canvas only after confirmation', () => {
+    it('deletes a canvas only after confirmation', async () => {
       const second = twoCanvases();
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      const confirms = answerConfirms(false);
       render(<ExplorerPanel />);
 
       fireEvent.click(screen.getByRole('button', { name: 'Elimina canvas DMZ' }));
-      expect(confirmSpy).toHaveBeenCalledTimes(1);
-      expect(confirmSpy.mock.calls[0][0]).toContain('"DMZ"');
-      expect(confirmSpy.mock.calls[0][0]).toContain('1 dispositivo');
+      await settled();
+      expect(confirms.asked).toHaveLength(1);
+      expect(confirms.asked[0].title).toContain('«DMZ»');
+      expect(confirms.asked[0].detail).toContain('1 dispositivo');
+      expect(confirms.asked[0]).toMatchObject({ confirmLabel: 'Elimina', danger: true });
       expect(project().canvases.map(c => c.id)).toEqual(['canvas-1', second]);
       // clicking the bin is not clicking the card: the canvas on screen stays
       expect(project().activeCanvasId).toBe('canvas-1');
 
-      confirmSpy.mockReturnValue(true);
+      confirms.say(true);
       fireEvent.click(screen.getByRole('button', { name: 'Elimina canvas DMZ' }));
+      await settled();
       expect(canvasNames()).toEqual(['Canvas 1']);
       expect(screen.queryByText('DMZ')).toBeNull();
       expect(project().activeCanvasId).toBe('canvas-1');
       expect(network().devices.map(d => d.label)).toEqual(['PC-1', 'PC-2']);
     });
 
-    it('deleting the canvas on screen shows another one', () => {
+    it('deleting the canvas on screen shows another one', async () => {
       twoCanvases();
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      answerConfirms(true);
       render(<ExplorerPanel />);
 
       fireEvent.click(screen.getByRole('button', { name: 'Elimina canvas Canvas 1' }));
+      await settled();
 
       expect(canvasNames()).toEqual(['DMZ']);
       expect(network().devices.map(d => d.label)).toEqual(['FW-1']);
