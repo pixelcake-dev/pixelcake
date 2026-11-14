@@ -16,6 +16,7 @@ import { AREA_MIN_SIZE, nextAreaId, readAreas, tidyAreaLabel } from '@/utils/can
 import { applyHierarchicalLayout, applySubnetGroupedLayout, autoConnectDevices } from '@/utils/autoLayout';
 import { cleanupConnections } from '@/utils/cleanupConnections';
 import { safeJSONStorage } from '@/utils/safeStorage';
+import type { SampleNetwork } from '@/utils/sampleNetwork';
 import { bindConnection, normalizeAddressing, normalizeBindings, sanitizeBindings } from '@/engine';
 
 export { cleanupConnections };
@@ -117,6 +118,11 @@ interface NetworkStore {
   // Actions - Utility
   clearAllDevices: () => void;
   loadTopology: (devices: NetworkDevice[], connections: NetworkConnection[]) => void;
+  /**
+   * A sample network in place of what is on the canvas: its drawing, and the
+   * network settings of the project, which become the ones the sample brings
+   */
+  loadSample: (sample: SampleNetwork) => void;
 
   // Actions - Whole canvas (used by the project store)
   /** The canvas on screen, as it is stored in a project */
@@ -585,6 +591,13 @@ export const useNetworkStore = create<NetworkStore>()(
             connectionCounter: connCounter,
           };
         });
+        get().markChanged();
+      },
+
+      loadSample: (sample) => {
+        get().loadTopology(sample.devices, sample.connections);
+        // (every setting is the sample's: none of those there were is left)
+        set({ globalNetworkSettings: { ...sample.settings } });
         get().markChanged();
       },
 

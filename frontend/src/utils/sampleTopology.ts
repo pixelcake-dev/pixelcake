@@ -29,6 +29,7 @@
 
 import type { NetworkDevice, NetworkConnection, NetworkInterfaceCard, Port } from '@/types';
 import { getT } from '@/i18n';
+import { sampleSettings, type SampleNetwork } from '@/utils/sampleNetwork';
 
 const MASK = '255.255.255.0';
 
@@ -103,10 +104,7 @@ function endDevice(
   };
 }
 
-export function createSampleTopology(): {
-  devices: NetworkDevice[];
-  connections: NetworkConnection[];
-} {
+export function createSampleTopology(): SampleNetwork {
   const OFFICE_GATEWAY = '192.168.10.1';
   const SERVERS_GATEWAY = '192.168.20.1';
 
@@ -259,5 +257,9 @@ export function createSampleTopology(): {
     },
   ];
 
-  return { devices, connections };
+  // What the project is set to with this network: a new device starts on the
+  // network of the offices. The sample has no DNS server and no VLAN
+  const settings = sampleSettings({ network: '192.168.10.0', gateway: OFFICE_GATEWAY });
+
+  return { devices, connections, settings };
 }

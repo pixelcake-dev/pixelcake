@@ -50,9 +50,8 @@ const WelcomeScreen = () => {
 
     // The network of a small company, whole in the window whatever part of
     // the board was on screen before
-    const topology = createCompanySample();
     const networkStore = useNetworkStore.getState();
-    networkStore.loadTopology(topology.devices, topology.connections);
+    networkStore.loadSample(createCompanySample());
     networkStore.triggerFitView();
   };
 

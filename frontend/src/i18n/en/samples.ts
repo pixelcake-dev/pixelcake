@@ -14,6 +14,7 @@ const offices = 'Offices';
 const serverRoom = 'Server room';
 const officesVlan = (vlan: number) => `Offices (VLAN ${vlan})`;
 const serversVlan = (vlan: number) => `Servers (VLAN ${vlan})`;
+const vlans = { default: 'Default', offices, servers: 'Servers' };
 const inside = 'Internal';
 const insideNetworks = 'internal networks';
 
@@ -52,6 +53,7 @@ export const samples: Dictionary['samples'] = {
       incomingMail: 'incoming mail',
       portalReadsDatabase: 'the portal reads the database',
     },
+    vlans,
     /** The names the DNS server of the company answers for */
     hostNames: {
       erp: 'erp.company.example',
@@ -87,6 +89,7 @@ export const samples: Dictionary['samples'] = {
       servers: serversVlan,
       inside,
     },
+    vlans,
     /** What the route, the port forward and the rule of the firewall are there for */
     notes: {
       insideNetworks,

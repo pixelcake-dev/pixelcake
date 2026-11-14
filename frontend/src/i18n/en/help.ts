@@ -25,14 +25,16 @@ export const help: Dictionary['help'] = {
     addDevices: {
       title: 'Add devices',
       text:
-        'In the bar on the left open “Add device” (the + button) and choose a type from the list: ' +
-        'check the name and confirm; the IP address is suggested automatically and can be changed, ' +
-        'or left to DHCP. The device appears at the centre of the part of the board you are looking ' +
-        'at (or in the first free place next to it) and is already selected. “Bulk add” creates ' +
-        'many at once. In the “Samples” tab of the same panel there are four sample networks ready ' +
-        'to use: that of a small company (the same as on the welcome screen), a simple one, one ' +
-        'with VLANs, a DMZ and a firewall, and one with two sites and a backup line. Loading one ' +
-        'replaces what is on the board.',
+        'In the bar on the left open “Add device” (the + button) and choose a type from the ' +
+        'list: check the name and confirm; the IP address is suggested automatically and can be ' +
+        'changed, or left to DHCP. The device appears at the centre of the part of the board you ' +
+        'are looking at (or in the first free place next to it) and is already selected. “Bulk ' +
+        'add” creates many at once. In the “Samples” tab of the same panel there are four sample ' +
+        'networks ready to use: that of a small company (the same as on the welcome screen), a ' +
+        'simple one, one with VLANs, a DMZ and a firewall, and one with two sites and a backup ' +
+        'line. Loading one replaces what is on the board and brings its own network settings ' +
+        '(Settings → Network): the network new devices start from, the DNS server, the names of ' +
+        'the VLANs.',
     },
     moveAndSelect: {
       title: 'Move and select them',

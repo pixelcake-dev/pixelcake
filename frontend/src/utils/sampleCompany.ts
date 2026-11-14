@@ -55,11 +55,16 @@
  * another language (devices, places, ports, notes, DNS names) is read from
  * the dictionary, `samples.company`, at the moment the sample is created;
  * what is called the same everywhere (SW-Core, Mail, Internet, VLAN 10…) is
- * written here. Ids and addresses never change.
+ * written here. Ids and addresses never change (and an id is seen by nobody:
+ * a sample that is loaded is given new ones, `dev-1`, `conn-1`…).
+ *
+ * The sample brings the network settings of its project (`settings`): see
+ * utils/sampleNetwork.ts.
  */
 
 import type { NetworkDevice, NetworkConnection, NetworkInterfaceCard, Port } from '@/types';
 import { getT } from '@/i18n';
+import { sampleSettings, type SampleNetwork } from '@/utils/sampleNetwork';
 
 const MASK = '255.255.255.0';
 const P2P_MASK = '255.255.255.252';
@@ -166,10 +171,7 @@ const SERVER_GATEWAY = '192.168.30.1';
 /** Srv-Auth: the DNS server of the inside */
 const DNS_SERVER = '192.168.30.10';
 
-export function createCompanySample(): {
-  devices: NetworkDevice[];
-  connections: NetworkConnection[];
-} {
+export function createCompanySample(): SampleNetwork {
   // The names are read now, in the language the interface is in: once on the
   // board they are content, and they stay as they were created
   const names = getT().samples.company;
@@ -556,5 +558,20 @@ export function createCompanySample(): {
     access('link-nas', 'nas', 'sw-server', 5),
   ];
 
-  return { devices, connections };
+  // What the project is set to with this network: a new device starts on the
+  // network of the offices, asks the DNS server of the inside, and every
+  // VLAN of the drawing has its name (1 is where the ports nobody set are)
+  const settings = sampleSettings({
+    network: '192.168.10.0',
+    gateway: OFFICE_GATEWAY,
+    dns: DNS_SERVER,
+    vlans: [
+      { id: 1, name: names.vlans.default },
+      { id: 10, name: names.vlans.offices },
+      { id: 20, name: 'Wi-Fi' },
+      { id: 30, name: names.vlans.servers },
+    ],
+  });
+
+  return { devices, connections, settings };
 }

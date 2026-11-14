@@ -46,7 +46,9 @@ export const devicePanel: Dictionary['devicePanel'] = {
 
   /** The tab of the sample networks */
   samples: {
-    intro: 'Sample networks, already configured. Loading one replaces the open board.',
+    intro:
+      'Sample networks, already configured. Loading one replaces the open board and the network ' +
+      'settings of the project.',
     company: {
       title: 'Company: offices, Wi-Fi, servers and DMZ',
       description: 'The sample network: VLANs on a trunk, access point, firewall with three rules',
@@ -66,7 +68,9 @@ export const devicePanel: Dictionary['devicePanel'] = {
     /** Asked before a sample takes the place of a drawing */
     replaceQuestion: {
       title: 'Load the sample network?',
-      detail: 'It replaces what is on the board.',
+      detail:
+        'It replaces what is on the board, and the network settings of the project become its ' +
+        'own.',
       confirm: 'Load',
     },
   },

@@ -48,7 +48,9 @@ export const devicePanel = {
 
   /** The tab of the sample networks */
   samples: {
-    intro: 'Reti di esempio già configurate. Caricarne una sostituisce il canvas aperto.',
+    intro:
+      'Reti di esempio già configurate. Caricarne una sostituisce il canvas aperto e le ' +
+      'impostazioni di rete del progetto.',
     company: {
       title: 'Azienda: uffici, Wi-Fi, server e DMZ',
       description: 'La rete di esempio: VLAN su un trunk, access point, firewall con tre regole',
@@ -68,7 +70,9 @@ export const devicePanel = {
     /** Asked before a sample takes the place of a drawing */
     replaceQuestion: {
       title: 'Caricare la rete di esempio?',
-      detail: "Prende il posto di quello che c'è sul canvas.",
+      detail:
+        "Prende il posto di quello che c'è sul canvas, e le impostazioni di rete del progetto " +
+        'diventano le sue.',
       confirm: 'Carica',
     },
   },

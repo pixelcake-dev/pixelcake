@@ -39,6 +39,7 @@
 
 import type { NetworkDevice, NetworkConnection, NetworkInterfaceCard, Port } from '@/types';
 import { getT } from '@/i18n';
+import { sampleSettings, type SampleNetwork } from '@/utils/sampleNetwork';
 
 const MASK = '255.255.255.0';
 const P2P_MASK = '255.255.255.252';
@@ -112,10 +113,7 @@ function switchDevice(
   };
 }
 
-export function createRedundancySample(): {
-  devices: NetworkDevice[];
-  connections: NetworkConnection[];
-} {
+export function createRedundancySample(): SampleNetwork {
   // The names are read now, in the language the interface is in: once on the
   // board they are content, and they stay as they were created
   const names = getT().samples.twoSites;
@@ -402,5 +400,9 @@ export function createRedundancySample(): {
     },
   ];
 
-  return { devices, connections };
+  // What the project is set to with this network: a new device starts on the
+  // network of the head office. The sample has no DNS server and no VLAN
+  const settings = sampleSettings({ network: '192.168.1.0', gateway: '192.168.1.1' });
+
+  return { devices, connections, settings };
 }

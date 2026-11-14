@@ -31,7 +31,8 @@ export const help = {
         'pannello ci sono quattro reti di esempio già pronte: quella di una piccola azienda (la ' +
         'stessa della schermata di benvenuto), una semplice, una con VLAN, DMZ e firewall, e una ' +
         'con due sedi e una linea di riserva. Caricarne una prende il posto di quanto è sul ' +
-        'canvas.',
+        'canvas e porta con sé le sue impostazioni di rete (Impostazioni → Rete): la rete da cui ' +
+        'partono i nuovi dispositivi, il server DNS, i nomi delle VLAN.',
     },
     moveAndSelect: {
       title: 'Spostali e selezionali',

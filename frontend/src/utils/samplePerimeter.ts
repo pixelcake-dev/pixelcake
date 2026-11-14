@@ -41,6 +41,7 @@
 
 import type { NetworkDevice, NetworkConnection, NetworkInterfaceCard, Port } from '@/types';
 import { getT } from '@/i18n';
+import { sampleSettings, type SampleNetwork } from '@/utils/sampleNetwork';
 
 const MASK = '255.255.255.0';
 const P2P_MASK = '255.255.255.252';
@@ -87,10 +88,7 @@ function endDevice(
   };
 }
 
-export function createPerimeterSample(): {
-  devices: NetworkDevice[];
-  connections: NetworkConnection[];
-} {
+export function createPerimeterSample(): SampleNetwork {
   // The names are read now, in the language the interface is in: once on the
   // board they are content, and they stay as they were created
   const names = getT().samples.site;
@@ -357,5 +355,18 @@ export function createPerimeterSample(): {
     },
   ];
 
-  return { devices, connections };
+  // What the project is set to with this network: a new device starts on the
+  // network of the offices, and the VLANs of the drawing have their names (1
+  // is where the ports nobody set are). The sample has no DNS server
+  const settings = sampleSettings({
+    network: '192.168.10.0',
+    gateway: '192.168.10.1',
+    vlans: [
+      { id: 1, name: names.vlans.default },
+      { id: 10, name: names.vlans.offices },
+      { id: 20, name: names.vlans.servers },
+    ],
+  });
+
+  return { devices, connections, settings };
 }

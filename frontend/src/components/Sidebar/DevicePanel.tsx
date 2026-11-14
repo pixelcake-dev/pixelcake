@@ -26,7 +26,7 @@ const DevicePanel = () => {
 
   const devices = useNetworkStore((state) => state.devices);
   const areaCount = useNetworkStore((state) => state.areas.length);
-  const loadTopology = useNetworkStore((state) => state.loadTopology);
+  const loadSample = useNetworkStore((state) => state.loadSample);
   const clearAllDevices = useNetworkStore((state) => state.clearAllDevices);
   const triggerFitView = useNetworkStore((state) => state.triggerFitView);
 
@@ -68,7 +68,8 @@ const DevicePanel = () => {
     setSearchQuery(''); // Reset search for next time
   };
 
-  // A sample network takes the place of what is on the canvas: ask first
+  // A sample network takes the place of what is on the canvas, and of the
+  // network settings of the project: ask first
   const handleLoadSample = async (create: typeof createSampleTopology) => {
     // (an area drawn on a canvas without devices is something to lose, too)
     const shouldLoad =
@@ -81,8 +82,7 @@ const DevicePanel = () => {
 
     if (shouldLoad) {
       clearAllDevices();
-      const topology = create();
-      loadTopology(topology.devices, topology.connections);
+      loadSample(create());
       // Whole in the window, whatever part of the board was on screen
       triggerFitView();
     }

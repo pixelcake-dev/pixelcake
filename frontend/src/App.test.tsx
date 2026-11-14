@@ -226,6 +226,13 @@ describe('App', () => {
       expect(useNetworkStore.getState().hasUnsavedChanges).toBe(true);
       // and the whole of it is asked into view, wherever the board was
       expect(useNetworkStore.getState().fitViewRequest).toBe(fitsAsked + 1);
+      // The project is set for this network: a new device starts on the network of the offices
+      expect(useNetworkStore.getState().globalNetworkSettings).toMatchObject({
+        ipClass: '192.168.10.0',
+        gateway: '192.168.10.1',
+        dns: '192.168.30.10',
+      });
+      expect(useNetworkStore.getState().findNextAvailableIP()).toBe('192.168.10.2');
     });
 
     it('asked for from the Aiuto menu, it shows on an empty canvas of a project with other canvases', () => {

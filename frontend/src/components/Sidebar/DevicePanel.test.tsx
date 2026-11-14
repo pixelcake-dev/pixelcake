@@ -117,6 +117,39 @@ describe('DevicePanel — sample networks', () => {
     expect(confirms.asked).toEqual([]);
   });
 
+  it('a sample brings the network settings of its project: a new device starts on its network', async () => {
+    // a project set for another network, with a VLAN of its own
+    useNetworkStore.getState().setGlobalNetworkSettings({
+      ipClass: '192.168.1.0',
+      gateway: '192.168.1.1',
+      dns: undefined,
+      vlans: [{ id: 99, name: 'Magazzino' }],
+    });
+    openSamples();
+    answerConfirms(true);
+
+    fireEvent.click(screen.getByRole('button', { name: /Azienda: uffici, Wi-Fi, server e DMZ/ }));
+    await settled();
+    const company = useNetworkStore.getState().globalNetworkSettings;
+    expect(company).toMatchObject({ ipClass: '192.168.10.0', gateway: '192.168.10.1', dns: '192.168.30.10' });
+    expect(company.vlans).toEqual([
+      { id: 1, name: 'Predefinita' },
+      { id: 10, name: 'Uffici' },
+      { id: 20, name: 'Wi-Fi' },
+      { id: 30, name: 'Server' },
+    ]);
+    expect(useNetworkStore.getState().findNextAvailableIP()).toBe('192.168.10.2');
+
+    // another sample: its own, and nothing left of the one before (no DNS server, no VLAN)
+    fireEvent.click(screen.getByRole('button', { name: /Due sedi:/ }));
+    await settled();
+    const twoSites = useNetworkStore.getState().globalNetworkSettings;
+    expect(twoSites).toMatchObject({ ipClass: '192.168.1.0', gateway: '192.168.1.1' });
+    expect(twoSites.dns).toBeUndefined();
+    expect(twoSites.vlans).toBeUndefined();
+    expect(useNetworkStore.getState().findNextAvailableIP()).toBe('192.168.1.5');
+  });
+
   it('asks before replacing a drawing, and leaves it alone on "no"', async () => {
     openSamples();
     fireEvent.click(screen.getByRole('button', { name: /Ufficio: due reti e un router/ }));
@@ -130,6 +163,9 @@ describe('DevicePanel — sample networks', () => {
     // the question says what a yes does, and its button names the action
     expect(confirms.asked[0].title).toBe('Caricare la rete di esempio?');
     expect(confirms.asked[0].detail).toContain('Prende il posto');
+    // (the settings of the project go with the drawing: the question says so)
+    expect(confirms.asked[0].detail).toContain('le impostazioni di rete del progetto diventano le sue');
+    expect(useNetworkStore.getState().globalNetworkSettings.vlans).toBeUndefined();
     expect(confirms.asked[0].confirmLabel).toBe('Carica');
     expect(labels()).toContain('Router-1');
     expect(labels()).not.toContain('FW-Edge');
