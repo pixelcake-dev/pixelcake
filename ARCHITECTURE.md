@@ -369,10 +369,11 @@ light or dark whatever the theme, a vector file, and a sharp PNG of any size.
 - `bulkAddDevices(rows, quantities, …)` - every device is made from the template of its row, found by its id, and says so (`templateId`: the canvas takes its icon, and the windows its capabilities, from there)
 - `generateDefaultPorts(portCount, deviceType)` - Switch: trunk+access+PoE, Router: WAN+LAN+NAT, Firewall: security zones
 - A new router or firewall gets no gateway (on a router the gateway is its default route); switches and end devices get the one of the project
-- `generateDefaultNIC(ip, subnet, gateway, dns?)` - Auto MAC, eth0, auto speed; the DNS server of the project when it has one
-- Sequential naming: `${type}-${existingCount}`
+- `generateDefaultNIC(ip, subnet, gateway, dns?)` - Auto MAC, eth0, auto speed; the DNS server of the project when it has one. It is the card AddDeviceModal starts from
+- Naming: `generateDeviceName(template, devices)`, the name of the template and how many devices of its type there are, those just made included: the name AddDeviceModal proposes
 - Grid positioning: `generateGridPositions()` with random offsets (-25/+25px)
-- IP assignment: `findNextAvailableIP()` skips .1 gateway
+- IP assignment: `findNextAvailableIP()` of `ipHelpers`, the one AddDeviceModal uses: the first free address of the network of the project, from .2
+- A device made here is the one AddDeviceModal makes from the same template (`BulkAddDeviceModal.same.test.tsx` compares the two, template by template), but for three things: the port defaults above (a device made alone starts with plain ports), its place on the grid, and that it is not selected
 
 ## Data Types
 

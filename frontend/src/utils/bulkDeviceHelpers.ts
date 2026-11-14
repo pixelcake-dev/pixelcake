@@ -6,7 +6,7 @@ import type {
   Port,
   NetworkInterfaceCard,
 } from '@/types/network';
-import { generateMacAddress } from './ipHelpers';
+import { findNextAvailableIP, generateMacAddress } from './ipHelpers';
 import { isEndDeviceKind } from './defaultDns';
 import { isL3Type } from '@/engine';
 
@@ -23,15 +23,16 @@ interface ConfigurableDeviceRow {
 }
 
 /**
- * Generates sequential device name based on type and existing count
+ * The name of a new device of a template: the name of the template, and how
+ * many devices of its type are there already (those just added count too).
+ * It is the name the window that adds one device proposes (AddDeviceModal)
  */
 export const generateDeviceName = (
-  type: DeviceType,
-  index: number,
+  template: DeviceTemplate,
   existingDevices: NetworkDevice[]
 ): string => {
-  const typeCount = existingDevices.filter((d) => d.type === type).length;
-  return `${type}-${typeCount + index}`;
+  const typeCount = existingDevices.filter((d) => d.type === template.type).length;
+  return `${template.name.replace(/\s+/g, '-')}-${typeCount}`;
 };
 
 /**
@@ -57,28 +58,6 @@ export const generateGridPositions = (
   }
 
   return positions;
-};
-
-/**
- * Finds next available IP for a device
- */
-const findNextAvailableIP = (
-  existingDevices: NetworkDevice[],
-  globalSettings: GlobalNetworkSettings
-): string => {
-  const usedIPs = new Set(existingDevices.map((d) => d.ip));
-  const [base1, base2, base3] = globalSettings.gateway.split('.').slice(0, 3);
-
-  // Start from .2 (skip .1 which is gateway)
-  for (let i = 2; i <= 254; i++) {
-    const ip = `${base1}.${base2}.${base3}.${i}`;
-    if (!usedIPs.has(ip)) {
-      return ip;
-    }
-  }
-
-  // Fallback if all IPs are taken (shouldn't happen)
-  return `${base1}.${base2}.${base3}.${Math.floor(Math.random() * 253) + 2}`;
 };
 
 /**
@@ -126,7 +105,8 @@ const generateDefaultPorts = (portCount: number, deviceType: DeviceType): Port[]
 };
 
 /**
- * Generate default NIC configuration for end devices
+ * Generate default NIC configuration for end devices: the card the window
+ * that adds one device starts from (AddDeviceModal)
  * @param ip IP address for NIC
  * @param subnet Subnet mask
  * @param gateway Gateway address
@@ -149,13 +129,14 @@ const generateDefaultNIC = (
     gateway,
     ...(dns ? { dns } : {}),
     mac: generateMacAddress(),
-    description: 'Primary Network Interface',
   };
 };
 
 /**
  * Bulk adds multiple devices with configurable port counts and standard devices with NICs.
- * Each is made from the template of its row, which is found by its id
+ * Each is made from the template of its row, which is found by its id: its
+ * name, its address and its card are those the window that adds one device
+ * gives a device of that template
  *
  * @param configurableRows Array of configurable device rows (Switch/Router/Firewall with portCount)
  * @param standardQuantities How many standard devices (PC/Server/Database/etc.) of each template, by template id
@@ -193,7 +174,7 @@ export const bulkAddDevices = (
     const type = template.type;
 
     for (let i = 0; i < row.quantity; i++) {
-      const deviceName = generateDeviceName(type, i, currentDevices);
+      const deviceName = generateDeviceName(template, currentDevices);
       const ip = findNextAvailableIP(currentDevices, globalSettings);
       const position = allPositions[positionIndex++];
 
@@ -231,7 +212,7 @@ export const bulkAddDevices = (
     const type = template.type;
 
     for (let i = 0; i < quantity; i++) {
-      const deviceName = generateDeviceName(type, i, currentDevices);
+      const deviceName = generateDeviceName(template, currentDevices);
       const ip = findNextAvailableIP(currentDevices, globalSettings);
       const position = allPositions[positionIndex++];
 
