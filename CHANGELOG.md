@@ -65,6 +65,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Subtle 2px track line matching BulkAddDeviceModal design
 
 ### Changed
+- **The look of the interface.** The app looks like its site. White or near black surfaces with the greys of the logo, and one accent, the orange of the logo, in light and in dark: it marks a state (what is selected, where the focus is, where the packet is) and nothing else. Links and icons take the slate. The button that goes on is a block of ink, the one next to it an outline. What is under the pointer takes a flat grey: the glows, the gradients and the small movements are gone. Corners are barely rounded and a shadow is kept only for what floats over the page. The typefaces are Inter and JetBrains Mono and travel with the app: no request goes to a font service.
+- **The welcome screen** is laid out as a page of the site: the logo over a line, the motto, the three steps as a numbered list, one button to start and two outlines next to it.
+- **The sidebar** has icons of one colour; the panel that is open is marked in orange. **The terminal** has the colours of the one shown on the site, a title in place of the coloured dot, and an X to close it.
+- **The logo is the new one**: with its name on the welcome screen, the symbol alone on the menu bar, in the browser tab and at the foot of the settings and of the guide, where the logo with its name would be too small to read.
+- **The exported picture follows**: the same colours as the screen, no shadow under a device, the labels of the cables in the greys of the theme, and the letters on the two marks of a question («DA», «A») dark or light according to the colour they are on.
 - **The Internet does not carry private addresses.** A Cloud symbol named Internet refuses a packet whose source or destination is in a private range, and the reason says which of the two and what should have translated it. A drawing that crossed it with private addresses needs NAT on the port that faces it, and a port forward for what is reached from outside. A Cloud symbol with any other name is unchanged.
 - **The two samples with an Internet** (the company, and the site with a DMZ) do NAT on the firewall port that faces it and publish there what is reached from outside. Their answers are the same; what cannot be reached from outside now stops at the Internet.
 - **Connection points show where they are needed**: on the device under the pointer, on a selected one, and on all of them while a cable is being dragged. At rest the drawing has none.
@@ -91,6 +96,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Two-part processing: configurable devices (with ports) + standard devices (with NICs)
 
 ### Fixed
+- **Six colours of the interface had no value.** A few lists and buttons used style variables that nothing defined (`--bg-color-hover`, `--bg-color-secondary`, `--input-bg`, `--color-canvas`, `--color-bg`, `--accent-color-hover`): what they coloured was see-through. They take the colours of the theme, and a test fails when a variable is used that has no value in light and in dark.
+- **Dark theme: the address under a device was a different grey on screen and in the exported picture**, and so were the labels of the cables. Both take the greys of the theme.
+- **White letters on orange** (the mark of a link on a port, the badge of presentation mode, the start of a question) could hardly be read: they are the graphite of the logo.
+- **The logo with its name was shown 24 pixels wide** at the foot of two windows, too small to read: the symbol is there now.
 - **Adding a YAML file to the drawing lost its routes, firewall rules and port forwards.** Import/Export → Import with «Aggiungi alla topologia» now keeps them, as «Sostituisci topologia» always did.
 - **A device with no address on its network cards could not be saved from its window**: the Internet symbol, for one, could not even be renamed ("Nome e IP sono obbligatori"). The address is asked for only where it is typed, in the first tab; a device addressed through its cards, or by DHCP, needs a name.
 - **Dark theme: the zoom buttons and the small map are no longer white.** They take the colours of the theme, in light and in dark. The credit to React Flow is readable on a dark canvas and no longer runs under the zoom buttons.

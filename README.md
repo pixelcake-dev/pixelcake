@@ -154,7 +154,7 @@ Opened from a presentation (the picture button on its bar), it shows what the pr
 - **DNS is one server, asked every time.** A network card names one DNS server: there is no second one to fall back on. A server answers only for the names written on it: it does not pass a question on to another server, and a public DNS server that is not in the drawing is nobody. Nothing is cached, so every question that uses a name looks it up again. There is no reverse lookup, and there are no aliases or wildcards. Names are for the terminal: the simulation panel and the presentation choose devices from menus.
 - **The Internet symbol is a stand-in.** It carries public addresses, with a note, and refuses private ones, as the Internet does. A Cloud symbol with any other name carries everything, with a note.
 - **No undo.** It does not exist yet.
-- **A picture is one board.** A project with several boards is exported one board at a time. The SVG names the fonts of the interface without embedding them: on a computer that has none of them the texts are set in another typeface. A PNG of a very large drawing is reduced to what the browser can paint, and the dialog says so.
+- **A picture is one board.** A project with several boards is exported one board at a time. Its texts are set in the typeface of the computer, not in the one of the interface, which a picture cannot carry along: the same picture opened on another computer can have slightly different letters. A PNG of a very large drawing is reduced to what the browser can paint, and the dialog says so.
 - **The YAML format is PixelCake's own.** Device names that look like numbers or booleans, and duplicate names, do not survive an export and import.
 - **The Terraform export cannot be applied.** It uses placeholder resource types and no provider. Reading existing Terraform state is not implemented.
 - **No accounts, no sharing.** A project is a file on your disk. Two browser tabs open on the same project do not see each other's changes: the last one to write wins.
@@ -216,7 +216,7 @@ Copyright © 2025–2026 [@Phil-pje](https://github.com/Phil-pje).
 
 PixelCake is released under the GNU Affero General Public License v3.0. See [LICENSE](LICENSE).
 
-The bundled icons keep their own licences: Material Design Icons (Apache 2.0), Lucide (ISC), Carbon (Apache 2.0) and Solar (CC BY 4.0, by 480 Design), obtained through [Iconify](https://iconify.design).
+The bundled icons keep their own licences: Material Design Icons (Apache 2.0), Lucide (ISC), Carbon (Apache 2.0) and Solar (CC BY 4.0, by 480 Design), obtained through [Iconify](https://iconify.design). So do the two typefaces of the interface, which travel with the app: Inter and JetBrains Mono, both under the SIL Open Font License 1.1.
 
 ## Contact
 

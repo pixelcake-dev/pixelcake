@@ -104,7 +104,8 @@ While presenting, NetworkCanvas makes the drawing read-only (nothing is selected
 - **DeviceTypeDisplay** - Read-only device type preview with icon
 - **PortGrid** / **PortConfigPanel** - Port display grid + configuration panel
 - **NICList** / **NICConfigPanel** - NIC list with custom scrollbar + configuration panel
-- **Input/Select** - Compact form controls (`py-1.5`, accent color on focus)
+- **Input/Select** - Compact form controls (`py-1.5`, 14 px text, a ring of the accent on focus)
+- **Logo** - One of the four files of the logo, never drawn or typed: with the name or the symbol alone (`symbol`), in colour on a light page or negative on a dark one. The logo with the name is never asked narrower than 110 px (a test reads every use)
 
 ### Sidebar (`frontend/src/components/Sidebar/`)
 - **Sidebar** - Six buttons. Each shows its name beside it under the pointer or the keyboard; the name is drawn on the page through a portal, because the panel a button opens covers the sidebar's own layer
@@ -122,11 +123,26 @@ While presenting, NetworkCanvas makes the drawing read-only (nothing is selected
 - In the middle of the bar, the project that is open: its name, the canvas on screen when there is more than one, a dot while there are changes not saved to a file. A click opens the Explorer
 - No entry is there to announce a feature: an entry that cannot act (nothing selected to copy) is disabled only for as long as that is true
 
+## The look (`frontend/src/index.css`, `frontend/tailwind.config.js`)
+
+The interface follows the site: flat surfaces, thin lines, one accent.
+
+- **Every colour is a variable of the theme**, set for light in `:root` and for dark in `.dark` (the class is on `<html>`). No component names a colour of a fixed palette (`text-gray-500`, `dark:bg-…`) and none styles the dark theme apart: the variables change, the classes do not.
+- **Each colour has one job.** `--text-color` on `--bg-canvas` is the page, and the button that goes on is a block of the first with the second written on it (`Button` `primary`, `.presentation-primary`, `.welcome-button.primary`, `.explorer-button-accent`). `--accent-color`, the orange of the logo in both themes, marks a state: selected, in focus, open, where the packet is; what is written on a fill of it takes `--on-accent`, never white. `--accent-text` (the slate, dark on white and light on black) is for links and for the icons of a list. `--secondary-color` is the slate itself: the icon of a device, the end of a question. `--ok-color`, `--trunk-color` and `--danger-color` say that something works, is a trunk, is wrong.
+- **Under the pointer** a row, a menu entry or an icon takes `--bg-hover`, a flat grey, and an outline takes the colour of the text. Nothing glows, slides or grows.
+- **Corners** come from two sizes, `--radius` (4 px) and `--radius-small` (2 px); Tailwind's `rounded-*` are mapped to the same few values in `tailwind.config.js`. A device on the canvas keeps 3 px, the number the exported picture repeats. **Shadows** are for what floats over the page: menus, windows, a device while it is dragged.
+- **Labels** (the title of a panel, a `legend`, the heading of a section) are small capitals with space between the letters, as on the site.
+- **Typefaces**: Inter for the interface, JetBrains Mono for addresses and for the terminal, both bundled (`@fontsource-variable/inter`, `@fontsource/jetbrains-mono`, imported in `main.tsx`). The exported picture uses the typefaces of the computer instead: an SVG shown as an image cannot use the fonts of the page.
+- **The terminal** keeps a dark pane in both themes, in the colours of the terminal shown on the site (`TerminalModal.tsx`).
+
+Three test files keep it in one piece: `styleSheet.colours.test.ts` (no fixed palette, no variable without a value in both themes, one accent, nothing white on it), `utils/drawingImage.test.ts` (the picture repeats the colours and the numbers of the style sheet) and `components/Canvas/NetworkCanvas.theme.test.tsx` (the panels React Flow draws follow the theme).
+
 ## Reusable CSS Classes (`frontend/src/index.css`)
 
 | Category | Classes |
 |----------|---------|
-| Modal messages | `.modal-error-box`, `.modal-info-box` |
+| Modal messages | `.modal-error-box`, `.modal-info-box` (a rule on the left, the words in the colour of the text) |
+| A choice among a few | `.segmented` (buttons side by side, the chosen one `.active`) |
 | Explorer | `.explorer-button`, `.explorer-button-accent`, `.explorer-button-dashed`, `.explorer-canvas-card` |
 | NIC list | `.nic-list`, `.nic-card`, `.nic-card-selected` |
 
@@ -272,7 +288,9 @@ light or dark whatever the theme, a vector file, and a sharp PNG of any size.
 - The numbers of a device (padding, border, line heights) and the colours of
   the two themes are repeated from `index.css`. A test reads the style sheet
   and fails when they drift apart. The colours of presentation mode
-  (`MARK_COLORS`) are shared with `CustomEdge`.
+  (`MARK_COLORS`) are shared with `CustomEdge`; the two colours of a question
+  and of what is written on them (`ACCENTS`) are the `--accent-color`,
+  `--secondary-color`, `--on-accent` and `--on-secondary` of the theme.
 - Everything the user typed is written as text (`escapeXml`). An icon fetched
   by name for a custom template goes in only if it is a plain drawing
   (`isPlainDrawing`): no script, no style, no reference outside the document.
