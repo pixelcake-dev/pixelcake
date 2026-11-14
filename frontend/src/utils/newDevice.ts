@@ -6,7 +6,8 @@
  * Pure: no React, no stores.
  */
 
-import type { NetworkDevice } from '@/types/network';
+import type { NetworkDevice, Port } from '@/types/network';
+import { isL3Type } from '@/engine';
 
 /**
  * A name as the terminal compares names (`resolveEndpoint` of the engine):
@@ -38,4 +39,27 @@ export function newDeviceName(
   let number = 1;
   while (taken.has(nameKey(`${base}-${number}`))) number++;
   return `${base}-${number}`;
+}
+
+/**
+ * The ports a new switch, router or firewall starts with: as many as were
+ * chosen, numbered from 1, each on and at the speed the link finds. A port of
+ * a router or a firewall is a LAN port, one of a switch (or of any other
+ * device with ports) an access port.
+ *
+ * Nothing else is written on them: no VLAN, PoE, NAT, zone or IPS. The engine
+ * applies those for real, so each is for whoever configures the device to
+ * choose; a device with nothing on its ports forwards as one expects.
+ *
+ * @param portCount How many ports
+ * @param deviceType The type of the device (Switch, Router, Firewall…)
+ */
+export function newDevicePorts(portCount: number, deviceType: string): Port[] {
+  const portType = isL3Type(deviceType) ? 'lan' : 'access';
+  return Array.from({ length: portCount }, (_, index) => ({
+    id: index + 1,
+    enabled: true,
+    speed: 'auto',
+    portType,
+  }));
 }

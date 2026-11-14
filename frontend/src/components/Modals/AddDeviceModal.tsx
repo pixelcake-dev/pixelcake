@@ -12,7 +12,7 @@ import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { findNextAvailableIP, generateMacAddress } from '@/utils/ipHelpers';
 import { firstFreePlace } from '@/utils/placeDevice';
-import { newDeviceName } from '@/utils/newDevice';
+import { newDeviceName, newDevicePorts } from '@/utils/newDevice';
 import { nicProblems, tidyNic } from '@/utils/interfaceProblems';
 import { isEndDeviceKind } from '@/utils/defaultDns';
 import { isL3Type, withLeases } from '@/engine';
@@ -131,17 +131,12 @@ const AddDeviceModal = () => {
     // gateway is its default route, set later by whoever configures it
     const routesTraffic = isL3Type(addDeviceType);
 
-    // Initialize ports array if device supports ports
+    // Initialize ports array if device supports ports (the ports bulk add gives too)
     const template = addDeviceTemplateId
       ? templates.find((t) => t.id === addDeviceTemplateId)
       : templates.find((t) => t.type === addDeviceType);
     const ports: Port[] | undefined = template?.supportsPorts && portCount
-      ? Array.from({ length: portCount }, (_, i) => ({
-          id: i + 1,
-          enabled: true,
-          speed: 'auto',
-          portType: routesTraffic ? 'lan' : 'access',
-        }))
+      ? newDevicePorts(portCount, addDeviceType)
       : undefined;
 
     // The device is named by its first card: its own three fields follow it

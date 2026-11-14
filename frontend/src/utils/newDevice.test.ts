@@ -2,14 +2,15 @@
  * What a new device starts with, whichever window makes it (utils/newDevice).
  *
  * Its name: the name of the template and the lowest number, from 1, that
- * leaves the name free. The two windows are tried, one against the other, in
+ * leaves the name free. Its ports: plain ones, with nothing the engine acts
+ * on. The two windows are tried, one against the other, in
  * components/Modals/BulkAddDeviceModal.same.test.tsx.
  */
 
 import { describe, it, expect } from 'vitest';
-import { resolveEndpoint } from '@/engine';
+import { isVlanAware, requiresExplicitBinding, resolveEndpoint } from '@/engine';
 import type { NetworkDevice } from '@/types/network';
-import { newDeviceName } from './newDevice';
+import { newDeviceName, newDevicePorts } from './newDevice';
 
 /** Devices that have these names, and nothing else worth telling */
 const called = (...labels: string[]): NetworkDevice[] =>
@@ -128,5 +129,80 @@ describe('newDeviceName — the name a new device is proposed', () => {
         }
       }
     }
+  });
+});
+
+/** A device of a type with ports, as a window makes it */
+const withPorts = (type: string, count: number): NetworkDevice => ({
+  id: 'd0',
+  type,
+  label: `${type}-1`,
+  ip: '',
+  subnet: '',
+  gateway: '',
+  position: { x: 0, y: 0 },
+  portCount: count,
+  ports: newDevicePorts(count, type),
+});
+
+describe('newDevicePorts — the ports a new switch, router or firewall starts with', () => {
+  it('as many as were chosen, numbered from 1', () => {
+    for (const count of [1, 2, 5, 8, 24, 48]) {
+      expect(newDevicePorts(count, 'Switch').map((port) => port.id)).toEqual(
+        Array.from({ length: count }, (_, index) => index + 1)
+      );
+    }
+    expect(newDevicePorts(0, 'Switch')).toEqual([]);
+  });
+
+  it('each on and at the speed the link finds: an access port on a switch, a LAN port on a router or a firewall', () => {
+    expect(newDevicePorts(2, 'Switch')).toEqual([
+      { id: 1, enabled: true, speed: 'auto', portType: 'access' },
+      { id: 2, enabled: true, speed: 'auto', portType: 'access' },
+    ]);
+    for (const type of ['Router', 'Firewall']) {
+      expect(newDevicePorts(2, type)).toEqual([
+        { id: 1, enabled: true, speed: 'auto', portType: 'lan' },
+        { id: 2, enabled: true, speed: 'auto', portType: 'lan' },
+      ]);
+    }
+  });
+
+  it('nothing else is written on any of them, whatever the type and the number', () => {
+    for (const type of ['Switch', 'Router', 'Firewall']) {
+      for (const count of [1, 2, 3, 16, 48]) {
+        for (const port of newDevicePorts(count, type)) {
+          expect(Object.keys(port).sort(), `${type}, ${count} ports, port ${port.id}`).toEqual([
+            'enabled',
+            'id',
+            'portType',
+            'speed',
+          ]);
+        }
+      }
+    }
+  });
+
+  it('a device of another type with ports has access ports, as the window that adds one gave it', () => {
+    expect(newDevicePorts(2, 'Server').map((port) => port.portType)).toEqual(['access', 'access']);
+  });
+
+  it('nothing on them the engine acts on: a switch is not VLAN-aware, a firewall takes a cable on any port', () => {
+    expect(isVlanAware(withPorts('Switch', 48))).toBe(false);
+    expect(requiresExplicitBinding(withPorts('Firewall', 16))).toBe(false);
+    for (const type of ['Router', 'Firewall']) {
+      expect(newDevicePorts(16, type).filter((port) => port.nat || port.securityZone || port.ips)).toEqual([]);
+    }
+  });
+
+  it('each port is its own: what is changed on one is on no other, nor on the next device', () => {
+    const first = newDevicePorts(3, 'Switch');
+    first[0].vlan = 10;
+    first[1].enabled = false;
+    expect(first[2]).toEqual({ id: 3, enabled: true, speed: 'auto', portType: 'access' });
+    expect(newDevicePorts(3, 'Switch').slice(0, 2)).toEqual([
+      { id: 1, enabled: true, speed: 'auto', portType: 'access' },
+      { id: 2, enabled: true, speed: 'auto', portType: 'access' },
+    ]);
   });
 });

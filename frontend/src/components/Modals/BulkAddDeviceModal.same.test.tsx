@@ -1,7 +1,8 @@
 /**
  * A device made in bulk is the device the window that adds one makes from
  * the same template: its name, the address it is proposed, its card, the DNS
- * server of the project on the card of an end device.
+ * server of the project on the card of an end device, the ports of a switch,
+ * a router or a firewall.
  *
  * The name is the name of the template and a number: the lowest, from 1,
  * that leaves the name free on the canvas, whatever the case.
@@ -17,6 +18,7 @@ import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { isValidMAC } from '@/utils/ipHelpers';
 import { createSampleTopology } from '@/utils/sampleTopology';
+import { isVlanAware, requiresExplicitBinding, traceRoute } from '@/engine';
 import type { DeviceTemplate, NetworkDevice } from '@/types/network';
 import {
   PROJECT_DNS,
@@ -25,6 +27,7 @@ import {
   emptyCanvas,
   more,
   openBulkWindow,
+  portChoices,
   quantityField,
 } from '@/test/bulkAddWindow';
 import AddDeviceModal from './AddDeviceModal';
@@ -39,22 +42,35 @@ const templateOf = (device: NetworkDevice) => templates().find((t) => t.id === d
 /** A template the app comes with, by the name its row shows */
 const named = (name: string) => templates().find((t) => t.name === name && !t.isCustom)!;
 
-/** One device of a template made with the window that adds one, opened as the panel opens it */
-function madeAlone(template: DeviceTemplate): NetworkDevice {
+/**
+ * One device of a template made with the window that adds one, opened as the
+ * panel opens it; with so many ports, when they are given
+ */
+function madeAlone(template: DeviceTemplate, portCount?: number): NetworkDevice {
   useUIStore.getState().setAddDeviceType(template.type, template.id);
   useUIStore.getState().openModal('addDevice');
   const view = render(<AddDeviceModal />);
+  if (portCount !== undefined) {
+    // (the number of ports is the one list of the window of a device with ports)
+    const lists = document.querySelectorAll<HTMLSelectElement>('select');
+    expect(lists).toHaveLength(1);
+    fireEvent.change(lists[0], { target: { value: String(portCount) } });
+  }
   // (the second of its two buttons adds)
   fireEvent.click(document.querySelectorAll<HTMLButtonElement>('.modal-actions button')[1]);
   view.unmount();
   return devices()[devices().length - 1];
 }
 
-/** One device of a template made with the window that adds in bulk */
-function madeInBulk(template: DeviceTemplate): NetworkDevice {
+/** One device of a template made with the window that adds in bulk; with so many ports, when they are given */
+function madeInBulk(template: DeviceTemplate, portCount?: number): NetworkDevice {
   const view = openBulkWindow();
   if (template.supportsPorts) {
-    fireEvent.change(quantityField(addConfigurable(template.name)), { target: { value: '1' } });
+    const row = addConfigurable(template.name);
+    if (portCount !== undefined) {
+      fireEvent.change(row.querySelector('.config-select')!, { target: { value: String(portCount) } });
+    }
+    fireEvent.change(quantityField(row), { target: { value: '1' } });
   } else {
     fireEvent.click(more(template.name));
   }
@@ -135,15 +151,138 @@ describe('bulk add — the same device the window that adds one makes', () => {
     expect(inBulk.nics?.[0].mac).not.toBe(alone.nics?.[0].mac);
   });
 
-  it.each(WITH_PORTS)('«%s»: the same but for what is written on its ports', (name) => {
+  it.each(WITH_PORTS)('«%s»: type, template, name, addresses and ports are the same', (name) => {
     const alone = madeAlone(named(name));
     emptyCanvas();
     const inBulk = madeInBulk(named(name));
 
-    const { ports: portsAlone, ...restAlone } = comparable(alone);
-    const { ports: portsInBulk, ...restInBulk } = comparable(inBulk);
-    expect(restInBulk).toEqual(restAlone);
-    expect(portsInBulk).toHaveLength(portsAlone?.length ?? -1);
+    expect(comparable(inBulk)).toEqual(comparable(alone));
+    expect(inBulk.ports?.length).toBeGreaterThan(0);
+  });
+});
+
+// Every number of ports the two windows offer for the templates that have ports
+const PORT_CHOICES: Array<[string, number]> = [
+  ['Switch', 5],
+  ['Switch', 8],
+  ['Switch', 16],
+  ['Switch', 24],
+  ['Switch', 48],
+  ['Router', 2],
+  ['Router', 4],
+  ['Router', 8],
+  ['Router', 16],
+  ['Firewall', 2],
+  ['Firewall', 4],
+  ['Firewall', 8],
+  ['Firewall', 16],
+];
+
+describe('bulk add — the ports of a switch, a router or a firewall are those the window that adds one gives', () => {
+  it.each(PORT_CHOICES)('«%s» with %i ports: port by port the same', (name, count) => {
+    const alone = madeAlone(named(name), count);
+    emptyCanvas();
+    const inBulk = madeInBulk(named(name), count);
+
+    expect(alone.portCount).toBe(count);
+    expect(alone.ports).toHaveLength(count);
+    expect(inBulk.portCount).toBe(count);
+    expect(inBulk.ports).toEqual(alone.ports);
+  });
+
+  it('the numbers above are all the two windows offer', () => {
+    const offered = WITH_PORTS.flatMap((name) => named(name).portOptions!.map((count) => [name, count]));
+    expect(offered).toEqual(PORT_CHOICES);
+    openBulkWindow();
+    for (const name of WITH_PORTS) {
+      expect(portChoices(addConfigurable(name)).map(Number)).toEqual(
+        PORT_CHOICES.filter(([kind]) => kind === name).map(([, count]) => count)
+      );
+    }
+  });
+
+  it('plain ports: on, at the speed the link finds, an access port on a switch and a LAN port on a router or a firewall, and nothing else', () => {
+    openBulkWindow();
+    for (const name of WITH_PORTS) {
+      fireEvent.change(quantityField(addConfigurable(name)), { target: { value: '1' } });
+    }
+    fireEvent.click(addButton());
+
+    const plain = (count: number, portType: string) =>
+      Array.from({ length: count }, (_, index) => ({ id: index + 1, enabled: true, speed: 'auto', portType }));
+    expect(devices().map((d) => [templateOf(d)?.name, d.ports])).toEqual([
+      ['Switch', plain(24, 'access')],
+      ['Router', plain(8, 'lan')],
+      ['Firewall', plain(8, 'lan')],
+    ]);
+  });
+
+  it('nothing on them the engine acts on: no VLAN on the switch, no NAT on the router, no zone on the firewall', () => {
+    openBulkWindow();
+    for (const name of WITH_PORTS) {
+      fireEvent.change(quantityField(addConfigurable(name)), { target: { value: '1' } });
+    }
+    fireEvent.click(addButton());
+    const [made, router, firewall] = devices();
+
+    expect(isVlanAware(made)).toBe(false);
+    expect(router.ports!.filter((port) => port.nat)).toEqual([]);
+    expect(firewall.ports!.filter((port) => port.securityZone !== undefined || port.ips)).toEqual([]);
+    // (so a cable is put on a port of the firewall as on any other device)
+    expect(requiresExplicitBinding(firewall)).toBe(false);
+  });
+
+  it('a network made in bulk forwards as the one made alone: the same cables on the same ports, the same trace there and back', () => {
+    /** Two networks joined by a router, and a PC on a firewall, made with one window or the other */
+    const build = (make: (template: DeviceTemplate) => NetworkDevice) => {
+      emptyCanvas();
+      const [made, router, office, server, firewall, guest] = ['Switch', 'Router', 'PC', 'PC', 'Firewall', 'PC'].map(
+        (name) => make(named(name))
+      );
+      const store = useNetworkStore.getState();
+      store.addConnection({ source: office.id, target: made.id });
+      store.addConnection({ source: made.id, target: router.id });
+      store.addConnection({ source: router.id, target: server.id });
+      store.addConnection({ source: guest.id, target: firewall.id });
+      const now = (id: string) => devices().find((d) => d.id === id)!;
+      const MASK = '255.255.255.0';
+      store.updateDevice(router.id, {
+        ports: now(router.id).ports!.map((port) =>
+          port.id === 1
+            ? { ...port, ip: '192.168.1.1', subnet: MASK }
+            : port.id === 2
+              ? { ...port, ip: '10.0.0.1', subnet: MASK }
+              : port
+        ),
+      });
+      store.updateDevice(server.id, { nics: [{ ...now(server.id).nics![0], ip: '10.0.0.2', gateway: '10.0.0.1' }] });
+
+      const { connections } = useNetworkStore.getState();
+      const topology = { devices: devices(), connections };
+      return {
+        cables: connections.map(({ source, target, sourcePort, targetPort, sourceNic, targetNic }) => ({
+          source,
+          target,
+          sourcePort,
+          targetPort,
+          sourceNic,
+          targetNic,
+        })),
+        there: traceRoute(office.id, server.id, topology),
+        back: traceRoute(server.id, office.id, topology),
+        guest: traceRoute(guest.id, firewall.id, topology),
+      };
+    };
+
+    const alone = build((template) => madeAlone(template));
+    const inBulk = build((template) => madeInBulk(template));
+
+    expect(alone.there.verdict).toBe('success');
+    expect(alone.back.verdict).toBe('success');
+    expect(inBulk.cables).toEqual(alone.cables);
+    expect(inBulk.there).toEqual(alone.there);
+    expect(inBulk.back).toEqual(alone.back);
+    expect(inBulk.guest).toEqual(alone.guest);
   });
 });
 
