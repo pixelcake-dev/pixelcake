@@ -152,6 +152,9 @@ export interface NetworkDevice {
   gateway: string;
   vendor?: string;
   location?: string;
+  // Free text about the device, of one or more lines. Kept trimmed, and
+  // absent when there is none (see utils/deviceNotes)
+  notes?: string;
   // React Flow position
   position: { x: number; y: number };
   // Network Advanced Config

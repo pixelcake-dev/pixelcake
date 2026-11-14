@@ -20,6 +20,7 @@ import { PROJECT_FILE_FORMAT, PROJECT_FILE_VERSION } from '@/types';
 import { normalizeAddressing, normalizeBindings } from '@/engine';
 import { cleanupConnections } from '@/utils/cleanupConnections';
 import { isValidIP } from '@/utils/ipHelpers';
+import { tidyNotes } from '@/utils/deviceNotes';
 
 export const PROJECT_FILE_EXTENSION = '.pixelcake.json';
 export const DEFAULT_PROJECT_NAME = 'Progetto senza nome';
@@ -119,6 +120,7 @@ const DEVICE_KEYS = [
   'gateway',
   'vendor',
   'location',
+  'notes',
   'position',
   'vlan',
   'stp',
@@ -473,6 +475,14 @@ function parseDevices(list: unknown[], where: string, warnings: string[]): Netwo
     if (!isPosition(device.position)) {
       device.position = { x: 0, y: 0 };
       fixed = true;
+    }
+    // The note: kept as the app keeps it (trimmed, none when empty); what
+    // is not text is dropped
+    if (device.notes !== undefined) {
+      const notes = tidyNotes(device.notes);
+      if (typeof device.notes !== 'string') fixed = true;
+      if (notes === undefined) delete device.notes;
+      else device.notes = notes;
     }
     for (const [key, hasId] of [
       ['ports', (id: unknown) => typeof id === 'number'],

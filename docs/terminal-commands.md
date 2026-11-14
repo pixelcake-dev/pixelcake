@@ -369,7 +369,7 @@ condition into a silent success; it adds a note to the result instead:
 | `show ports [of] <device>` | Port table (status, mode, VLAN, zone, IP, link) — specialized ports-only view |
 | `show vlans` | Every VLAN with where it lives: the ports of the switches that apply VLANs, and the devices that carry it in their own list |
 | `show connections [of <device>]` | Links, with the interface on each end: `[port 3 ↔ eth0]` (`?` for an end not attached to an interface) |
-| `show config [of] <device>` | IP/subnet/gateway, VLANs, STP, ports, NICs, number of routes and rules, NAT, DHCP, DNS |
+| `show config [of] <device>` | IP/subnet/gateway, location and note, VLANs, STP, ports, NICs, number of routes and rules, NAT, DHCP, DNS |
 | `show neighbors [of] <device>` | Directly connected devices |
 | `show ip [of] <device>` | Compact addressing summary: primary ip/mask/gateway + each NIC + each addressed port. A card on DHCP shows its lease and the pool it comes from, or why it has none. A card that asks a DNS server shows which |
 | `show routes [of] <device>` | The routing table exactly as the engine reads it: destination, next hop, interface it leaves from, kind. A route whose next hop is on none of the device's networks is flagged |

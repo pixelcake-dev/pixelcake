@@ -66,6 +66,43 @@ export const TextField: React.FC<TextFieldProps> = ({
   );
 };
 
+type TextAreaFieldProps = FieldFrame &
+  Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'className'>;
+
+/** A text of more than one line: a note. As wide as its row unless told otherwise */
+export const TextAreaField: React.FC<TextAreaFieldProps> = ({
+  label,
+  hint,
+  error,
+  span = 4,
+  id,
+  rows = 2,
+  ...area
+}) => {
+  const own = useId();
+  const fieldId = id ?? own;
+  return (
+    <div className={`flex flex-col gap-0.5 min-w-0 ${spanClass[span]}`}>
+      <label htmlFor={fieldId} className={labelClass}>
+        {label}
+      </label>
+      <textarea
+        id={fieldId}
+        rows={rows}
+        className={`${cellClass} resize-y`}
+        aria-invalid={error ? true : undefined}
+        {...area}
+      />
+      {hint && <span className={hintClass}>{hint}</span>}
+      {error && (
+        <span className={errorClass} role="alert">
+          {error}
+        </span>
+      )}
+    </div>
+  );
+};
+
 type SelectFieldProps = FieldFrame &
   Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'size' | 'className'>;
 

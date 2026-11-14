@@ -138,6 +138,7 @@ item never takes the id of an existing one.
 | `label` | string | Name of the device. |
 | `ip`, `subnet`, `gateway` | string | Device-level address. For a device with NICs these mirror its first NIC, and are empty when that NIC takes its address from DHCP. |
 | `vendor`, `location` | string | Optional. |
+| `notes` | string | Optional. Free text about the device; lines are separated by `\n`. |
 | `position` | object | `x`, `y` on the canvas. |
 | `vlan` | integer[] | Optional. VLAN ids the device carries. |
 | `stp` | object | Optional. `enabled` (boolean), `mode` (`STP`, `RSTP`, `PVST+`, `MST`), `priority` (integer). |
@@ -322,6 +323,7 @@ Everything else is repaired, and each repair is reported to the user:
 | `viewport` missing or not usable | `{ "x": 0, "y": 0, "zoom": 1 }`. |
 | A device that is not an object, has no `id` or `type`, or repeats an `id` | Dropped. |
 | A device without `label`, `ip`, `subnet`, `gateway` or `position`, or with invalid entries in `ports` / `nics` | Completed: `label` becomes the id, addresses become empty, `position` becomes `0, 0`, invalid interface entries are dropped. |
+| A `notes` that is not text | Dropped: the device keeps everything else. |
 | A route without `id`, `destination` or `nextHop`; a rule without `id`, with an `action` other than `allow` / `deny`, an unknown `service`, or no `source` / `destination`; a port forward without `id`, with an unknown `service`, a `port` that is not an integer, or no `to` | Dropped: the other routes, rules and forwards keep their order. |
 | A `dhcpServer` that is not an object, or without `start` or `end` as text, or with a `gateway` or a `dns` that is not text; a `dhcp` that is not a boolean; a `dns` of a NIC that is not text | Dropped: the port or NIC keeps everything else. |
 | A DNS record without `id`, `name` or `address` as text | Dropped: the other records keep their order. |
@@ -332,7 +334,7 @@ Everything else is repaired, and each repair is reported to the user:
 | No `templates` | None. |
 | A template missing a required field | Dropped. |
 
-Three normalisations are applied silently, so that files written by earlier
+Four normalisations are applied silently, so that files written by earlier
 versions (or by hand) keep working:
 
 - a connection end attached to a port or NIC its device does not have, or to
@@ -346,7 +348,9 @@ versions (or by hand) keep working:
   from its first NIC;
 - a NIC whose `dhcp` is `true` loses whatever `ip`, `subnet`, `gateway` and
   `dns` it carries: they are not used while it is on DHCP, and could be
-  mistaken for what it is leased.
+  mistaken for what it is leased;
+- the `notes` of a device lose the white space around them and get one kind
+  of line end (`\n`); notes left empty are dropped.
 
 A file that is already in this form is read back exactly as it was written.
 

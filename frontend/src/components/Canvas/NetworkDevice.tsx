@@ -34,6 +34,7 @@ function arePropsEqual(
     prevProps.data.label === nextProps.data.label &&
     prevProps.data.ip === nextProps.data.ip &&
     prevProps.data.address === nextProps.data.address &&
+    prevProps.data.notes === nextProps.data.notes &&
     prevProps.data.type === nextProps.data.type &&
     prevProps.data.templateId === nextProps.data.templateId &&
     prevProps.data.position.x === nextProps.data.position.x &&
@@ -120,6 +121,9 @@ const NetworkDevice = memo(({ data, id }: NodeProps<NetworkDeviceData>) => {
   return (
     <div
       className={`network-device group ${magnifyClasses} ${stateClasses}`}
+      // The note of the device is read by resting the pointer on it: the
+      // drawing carries no mark for it
+      title={data.notes || undefined}
       onContextMenu={handleContextMenu}
       onDoubleClick={handleDoubleClick}
       onMouseEnter={handleMouseEnter}

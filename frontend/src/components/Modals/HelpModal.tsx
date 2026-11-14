@@ -85,7 +85,9 @@ const GuideTab = () => (
         le porte; di un router o di un firewall le porte in uso, ciascuna con indirizzo,
         collegamento e cosa fa. Switch, router e firewall hanno anche la scheda «Porte»: scegli una
         porta e sotto compaiono le sue impostazioni; lì si cambia anche il «Numero di porte». Gli
-        altri dispositivi hanno «Schede di rete», con nome, velocità e MAC di ogni scheda. Quello
+        altri dispositivi hanno «Schede di rete», con nome, velocità e MAC di ogni scheda. Su
+        «Generale» ogni dispositivo ha anche le «Note»: un testo libero, di più righe, per ciò che
+        non sta in un campo. Sul disegno le leggi fermando il puntatore sul dispositivo. Quello
         che non va viene detto sotto il campo mentre scrivi; le modifiche valgono solo dopo aver
         premuto «Salva».
       </Step>

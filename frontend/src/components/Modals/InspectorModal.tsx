@@ -11,6 +11,7 @@ import {
   FieldRow,
   ReadOnlyField,
   SelectField,
+  TextAreaField,
   TextField,
 } from '@/components/ui/compact';
 import { hintClass, linkClass } from '@/components/ui/compactStyles';
@@ -42,6 +43,7 @@ import type { DeviceInterface, DhcpResolution } from '@/engine';
 import { linkPeerLabel } from '@/utils/interfaceLabels';
 import { NO_LEASE_LABEL, cardLeaseText, firstPoolProblem, poolStatusText } from '@/utils/dhcpLabels';
 import { firstInterfaceProblem, tidyNic, tidyPort } from '@/utils/interfaceProblems';
+import { NOTES_MAX_LENGTH, tidyNotes } from '@/utils/deviceNotes';
 import {
   forwardProblemText,
   isBlankForward,
@@ -99,6 +101,7 @@ const InspectorModal = () => {
   const [name, setName] = useState('');
   const [vendor, setVendor] = useState('');
   const [location, setLocation] = useState('');
+  const [notes, setNotes] = useState('');
 
   // Network Config
   const [ip, setIp] = useState('');
@@ -136,6 +139,7 @@ const InspectorModal = () => {
       setName(inspectorDevice.label);
       setVendor(inspectorDevice.vendor || '');
       setLocation(inspectorDevice.location || '');
+      setNotes(inspectorDevice.notes || '');
       setIp(inspectorDevice.ip);
       setSubnet(inspectorDevice.subnet);
       setGateway(inspectorDevice.gateway);
@@ -305,6 +309,8 @@ const InspectorModal = () => {
       label: name,
       vendor: inspectorDevice.type !== 'PC' ? vendor : undefined,
       location: inspectorDevice.type !== 'PC' ? location : undefined,
+      // (trimmed; a note emptied is no note)
+      notes: tidyNotes(notes),
       ip,
       subnet,
       gateway,
@@ -488,6 +494,15 @@ const InspectorModal = () => {
                   onChange={(e) => setLocation(e.target.value)}
                 />
               )}
+              {/* What does not fit a field: every kind of device has it */}
+              <TextAreaField
+                label="Note"
+                placeholder="es. a chi è assegnato, cosa c'è da sistemare, a chi chiedere..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                maxLength={NOTES_MAX_LENGTH}
+                hint="Si leggono anche sul disegno, fermando il puntatore sul dispositivo."
+              />
             </FieldRow>
           </FormFieldset>
 

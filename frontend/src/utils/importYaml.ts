@@ -16,6 +16,7 @@ import type {
   StaticRoute,
 } from '@/types';
 import type { ConnectionBinding, ConnectionEnd } from '@/engine/interfaces';
+import { tidyNotes } from '@/utils/deviceNotes';
 
 export interface ImportResult {
   devices: NetworkDevice[];
@@ -360,6 +361,9 @@ export function parseYamlTopology(content: string): ImportResult {
     if (typeof d.template_id === 'string' && d.template_id) device.templateId = d.template_id;
     if (typeof d.vendor === 'string') device.vendor = d.vendor;
     if (typeof d.location === 'string') device.location = d.location;
+    // (a note of digits alone comes back from YAML as a number when its quotes were taken away)
+    const notes = tidyNotes(typeof d.notes === 'number' ? String(d.notes) : d.notes);
+    if (notes) device.notes = notes;
 
     // VLAN
     if (Array.isArray(d.vlan)) {

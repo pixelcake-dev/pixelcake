@@ -670,6 +670,10 @@ function showConfig(topo: Topology, d: NetworkDevice): TerminalLine[] {
   lines.push(line(`  subnet:   ${d.subnet || '-'}`));
   lines.push(line(`  gateway:  ${d.gateway || '-'}`));
   if (d.location) lines.push(line(`  location: ${d.location}`));
+  // The note of the device, line by line under its first one
+  (d.notes ?? '').split('\n').filter(Boolean).forEach((text, index) => {
+    lines.push(line(`  ${index === 0 ? 'notes:   ' : '         '} ${text}`));
+  });
   lines.push(line(`  vlans:    ${d.vlan && d.vlan.length > 0 ? d.vlan.join(', ') : 'none (untagged)'}`));
   if (d.stp?.enabled) {
     lines.push(line(`  stp:      ${d.stp.mode ?? 'STP'} priority ${d.stp.priority ?? 32768} (not simulated)`));

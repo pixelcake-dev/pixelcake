@@ -31,6 +31,19 @@ function yamlValue(val: string | number | boolean | undefined | null): string {
   return s;
 }
 
+/**
+ * A free text, of one or more lines, as one YAML value: always in double
+ * quotes, with its line ends written as \n. (A note may start with a dash or
+ * hold a colon, which a plain value could not.)
+ */
+function yamlText(text: string): string {
+  const escaped = text
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\r\n?|\n/g, '\\n');
+  return `"${escaped}"`;
+}
+
 /** Indent a line */
 function indent(level: number): string {
   return '  '.repeat(level);
@@ -158,6 +171,7 @@ function serializeDevice(device: NetworkDevice, level: number): string[] {
   }
   if (device.vendor) lines.push(`${indent(level)}  vendor: ${yamlValue(device.vendor)}`);
   if (device.location) lines.push(`${indent(level)}  location: ${yamlValue(device.location)}`);
+  if (device.notes) lines.push(`${indent(level)}  notes: ${yamlText(device.notes)}`);
 
   // VLAN
   if (device.vlan && device.vlan.length > 0) {

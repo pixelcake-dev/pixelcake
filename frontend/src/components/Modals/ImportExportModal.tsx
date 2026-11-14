@@ -171,6 +171,7 @@ const ImportExportModal = () => {
           position: device.position,
           vendor: device.vendor,
           location: device.location,
+          notes: device.notes,
           vlan: device.vlan,
           stp: device.stp,
           portCount: device.portCount,
