@@ -45,6 +45,12 @@ import { cardLeaseText, firstPoolProblem, noLeaseLabel, poolStatusText } from '@
 import { firstInterfaceProblem, tidyNic, tidyPort } from '@/utils/interfaceProblems';
 import { NOTES_MAX_LENGTH, noteRows, tidyNotes } from '@/utils/deviceNotes';
 import {
+  BRIDGE_PRIORITY_DEFAULT,
+  BRIDGE_PRIORITY_MAX,
+  BRIDGE_PRIORITY_STEP,
+  nearestBridgePriority,
+} from '@/utils/bridgePriority';
+import {
   forwardProblemText,
   isBlankForward,
   isBlankRecord,
@@ -115,7 +121,7 @@ const InspectorModal = () => {
   // STP Config
   const [stpEnabled, setStpEnabled] = useState(false);
   const [stpMode, setStpMode] = useState<StpMode>('RSTP');
-  const [stpPriority, setStpPriority] = useState(32768);
+  const [stpPriority, setStpPriority] = useState(BRIDGE_PRIORITY_DEFAULT);
 
   // Ports, and the one whose settings are open in «Porte»
   const [ports, setPorts] = useState<Port[]>([]);
@@ -149,7 +155,7 @@ const InspectorModal = () => {
       setVlans(inspectorDevice.vlan || []);
       setStpEnabled(inspectorDevice.stp?.enabled || false);
       setStpMode(inspectorDevice.stp?.mode || 'RSTP');
-      setStpPriority(inspectorDevice.stp?.priority || 32768);
+      setStpPriority(nearestBridgePriority(inspectorDevice.stp?.priority));
       setPorts(inspectorDevice.ports || []);
       setSelectedPortId(null);
       setNics(inspectorDevice.nics || []);
@@ -330,7 +336,8 @@ const InspectorModal = () => {
         ? {
             enabled: stpEnabled,
             mode: stpMode,
-            priority: stpPriority,
+            // (a number typed between two steps, or past the last one, is kept as the nearest)
+            priority: nearestBridgePriority(stpPriority),
           }
         : undefined,
       ports: keptPorts.length > 0 ? keptPorts : undefined,
@@ -632,10 +639,15 @@ const InspectorModal = () => {
                   label={general.stp.bridgePriority}
                   type="number"
                   value={stpPriority}
-                  onChange={(e) => setStpPriority(parseInt(e.target.value) || 32768)}
+                  onChange={(e) => {
+                    // (0 is a priority, the lowest: only an empty field is the default)
+                    const typed = parseInt(e.target.value, 10);
+                    setStpPriority(Number.isNaN(typed) ? BRIDGE_PRIORITY_DEFAULT : typed);
+                  }}
+                  onBlur={() => setStpPriority(nearestBridgePriority(stpPriority))}
                   min={0}
-                  max={65535}
-                  step={4096}
+                  max={BRIDGE_PRIORITY_MAX}
+                  step={BRIDGE_PRIORITY_STEP}
                   disabled={!stpEnabled}
                   hint={general.stp.bridgePriorityHint}
                 />

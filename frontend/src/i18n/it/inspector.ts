@@ -55,7 +55,7 @@ export const inspector = {
       enabled: 'STP attivo',
       mode: 'Modalità STP',
       bridgePriority: 'Priorità del bridge',
-      bridgePriorityHint: 'Da 0 a 65535 a passi di 4096 (predefinita 32768)',
+      bridgePriorityHint: 'Da 0 a 61440 a passi di 4096 (predefinita 32768).',
       notSimulated: 'Lo spanning tree resta come documentazione: il motore non lo simula.',
     },
   },

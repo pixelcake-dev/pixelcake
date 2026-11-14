@@ -162,7 +162,7 @@ export interface NetworkDevice {
   stp?: {
     enabled: boolean;
     mode?: 'STP' | 'RSTP' | 'PVST+' | 'MST';
-    priority?: number; // Bridge priority (0-65535, step 4096, default 32768)
+    priority?: number; // Bridge priority (0-61440, step 4096, default 32768)
   };
   // Port Management (Switch, Router, Firewall)
   portCount?: number; // Total number of ports (5, 8, 16, 24, 48)
@@ -210,7 +210,7 @@ export interface NetworkConnection {
   targetNic?: string;
   // Enhanced connection metadata
   type?: ConnectionType; // Type of connection
-  bandwidth?: string; // e.g., "1Gbps", "100Mbps"
+  bandwidth?: string; // e.g., "1 Gbps", "100 Mbps"
   vlan?: number[]; // VLAN IDs (for future network logic)
   label?: string; // Custom label
   color?: string; // Custom color override

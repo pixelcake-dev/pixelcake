@@ -155,6 +155,41 @@ describe('InspectorModal — the first screen of a switch', () => {
     expect(section('Spanning tree')).toHaveTextContent('il motore non lo simula');
   });
 
+  it('the bridge priority goes from 0 to 61440 in steps of 4096, and nothing else is kept', () => {
+    openInspector('SW-Office');
+    fireEvent.click(within(section('Spanning tree')).getByLabelText('STP attivo'));
+    const field = () => within(section('Spanning tree')).getByLabelText('Priorità del bridge');
+    expect(field()).toHaveAttribute('min', '0');
+    expect(field()).toHaveAttribute('max', '61440');
+    expect(field()).toHaveAttribute('step', '4096');
+    expect(field()).toHaveValue(32768);
+    expect(section('Spanning tree')).toHaveTextContent('Da 0 a 61440 a passi di 4096 (predefinita 32768)');
+
+    // Past the last value: leaving the field brings it back to the last one
+    fireEvent.change(field(), { target: { value: '65535' } });
+    fireEvent.blur(field());
+    expect(field()).toHaveValue(61440);
+
+    // Between two steps, and saved without leaving the field: the nearest step is kept
+    fireEvent.change(field(), { target: { value: '5000' } });
+    save();
+    expect(device('SW-Office').stp).toMatchObject({ enabled: true, priority: 4096 });
+
+    // 0 is a priority (the lowest), not an empty field
+    openInspector('SW-Office');
+    expect(field()).toHaveValue(4096);
+    fireEvent.change(field(), { target: { value: '0' } });
+    save();
+    expect(device('SW-Office').stp?.priority).toBe(0);
+    openInspector('SW-Office');
+    expect(field()).toHaveValue(0);
+
+    // An empty field is the default
+    fireEvent.change(field(), { target: { value: '' } });
+    save();
+    expect(device('SW-Office').stp?.priority).toBe(32768);
+  });
+
   it('with no VLAN on its ports says they are one network, and counts them', () => {
     setPorts('SW-Office', port => ({ ...port, vlan: undefined, portType: 'access' }));
     openInspector('SW-Office');
