@@ -142,6 +142,21 @@ describe('DevicePanel — sample networks', () => {
   });
 });
 
+describe('DevicePanel — what each device is', () => {
+  it('a template says what it is under its name, not what it is built on', () => {
+    render(<DevicePanel />);
+    const row = (name: string) => screen.getByText(name).closest('.device-list-item');
+    expect(row('IoT Gateway')).toHaveTextContent('Collega sensori e dispositivi IoT alla rete');
+    expect(row('Access Point')).toHaveTextContent('Punto di accesso Wi-Fi');
+    expect(row('Printer')).toHaveTextContent('Stampante di rete');
+    expect(row('DNS Server')).toHaveTextContent('Traduce i nomi in indirizzi');
+    // (none is left with the words of another)
+    const said = Array.from(document.querySelectorAll('.device-list-description')).map(node => node.textContent);
+    expect(said).toHaveLength(20);
+    expect(new Set(said).size).toBe(20);
+  });
+});
+
 describe('DevicePanel — custom templates', () => {
   it('lists a custom template with the built-in ones, and starts adding a device of it', () => {
     useTemplateStore.getState().addTemplate({

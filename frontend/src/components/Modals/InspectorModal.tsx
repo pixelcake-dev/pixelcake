@@ -217,11 +217,8 @@ const InspectorModal = () => {
     setSelectedNicId(newNic.id);
   };
 
+  // (the last card of a device cannot be taken away: NicRows gives it no button)
   const handleRemoveNic = (nicId: string) => {
-    if (nics.length <= 1) {
-      toast.error(t.inspector.toasts.lastCard);
-      return;
-    }
     setNics(nics.filter((nic) => nic.id !== nicId));
     if (selectedNicId === nicId) {
       setSelectedNicId(null);

@@ -264,7 +264,9 @@ const ImportExportModal = () => {
               Import / Export
             </h3>
             <button
+              type="button"
               onClick={handleClose}
+              aria-label={t.ui.closeWindow}
               className="p-1 text-[var(--text-color-light)] hover:text-[var(--text-color)] hover:bg-[var(--bg-hover)] rounded transition-colors"
               style={{ color: 'var(--text-color-light)' }}
             >

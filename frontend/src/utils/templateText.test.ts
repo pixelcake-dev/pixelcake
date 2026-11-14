@@ -3,7 +3,7 @@ import { dictionaryOf } from '@/i18n';
 import { formerLinkTypeDescriptions as formerItalian } from '@/i18n/it/former';
 import { formerLinkTypeDescriptions as formerEnglish } from '@/i18n/en/former';
 import { useTemplateStore } from '@/store/templateStore';
-import { linkTypeDescription } from './templateText';
+import { deviceTemplateDescription, linkTypeDescription } from './templateText';
 
 const italian = dictionaryOf('it');
 const english = dictionaryOf('en');
@@ -75,5 +75,46 @@ describe('the description of a link type', () => {
       formerItalian.trunk[0]
     );
     expect(linkTypeDescription({ id: 'conn-access', description: undefined }, english)).toBeUndefined();
+  });
+});
+
+describe('what a device template is, in the panel that adds devices', () => {
+  const builtIn = () => useTemplateStore.getState().templates.filter((template) => !template.isCustom);
+
+  it.each([
+    ['it', italian],
+    ['en', english],
+  ] as const)('%s: each of the twenty built-in templates says what it is, and no two say the same', (_, words) => {
+    const said = builtIn().map((template) => deviceTemplateDescription(template, words));
+    expect(said).toHaveLength(20);
+    expect(said.every((text) => text.length > 0)).toBe(true);
+    expect(new Set(said).size).toBe(20);
+  });
+
+  it('a template that is a kind of a type is not described as that type', () => {
+    const of = (id: string) => {
+      const template = builtIn().find((candidate) => candidate.id === id);
+      if (!template) throw new Error(`no template ${id}`);
+      return template;
+    };
+    // an IoT gateway is built on the access point, a printer on the PC, a NAS on the database
+    expect(deviceTemplateDescription(of('tpl-iotgateway'), italian)).toBe('Collega sensori e dispositivi IoT alla rete');
+    expect(deviceTemplateDescription(of('tpl-iotgateway'), english)).toBe(
+      'Connects sensors and IoT devices to the network'
+    );
+    expect(deviceTemplateDescription(of('tpl-accesspoint'), italian)).toBe('Punto di accesso Wi-Fi');
+    expect(deviceTemplateDescription(of('tpl-printer'), italian)).toBe('Stampante di rete');
+    expect(deviceTemplateDescription(of('tpl-pc'), italian)).toBe('Dispositivo finale per gli utenti');
+    expect(deviceTemplateDescription(of('tpl-nas'), english)).toBe('Shared network storage');
+    expect(deviceTemplateDescription(of('tpl-database'), english)).toBe('Database server');
+  });
+
+  it('a template the app does not know by its id is described by its type', () => {
+    expect(deviceTemplateDescription({ id: 'tpl-server-1700000000000', type: 'Server' }, italian)).toBe(
+      italian.devicePanel.descriptions.server
+    );
+    expect(deviceTemplateDescription({ id: 'tpl-new', type: 'Router' }, english)).toBe(
+      english.devicePanel.descriptions.router
+    );
   });
 });

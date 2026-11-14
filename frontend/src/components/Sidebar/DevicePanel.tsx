@@ -12,26 +12,8 @@ import { Plug, Package, SquareDashed } from 'lucide-react';
 import { addAreaInView } from '@/utils/areaActions';
 import type { DeviceType } from '@/types/network';
 import { askConfirm } from '@/store/confirmStore';
-import { useT, type Dictionary } from '@/i18n';
-
-type Descriptions = Dictionary['devicePanel']['descriptions'];
-
-/** Where the dictionary keeps what a device of each built-in type is */
-const DESCRIPTION_OF_TYPE = new Map<DeviceType, keyof Descriptions>([
-  ['PC', 'pc'],
-  ['Switch', 'switch'],
-  ['Router', 'router'],
-  ['Server', 'server'],
-  ['Firewall', 'firewall'],
-  ['AccessPoint', 'accessPoint'],
-  ['LoadBalancer', 'loadBalancer'],
-  ['Database', 'database'],
-  ['Cloud', 'cloud'],
-]);
-
-/** What a device of this type is, in the words of the dictionary it is handed */
-const describeType = (type: DeviceType, descriptions: Descriptions): string =>
-  descriptions[DESCRIPTION_OF_TYPE.get(type) ?? 'other'];
+import { useT } from '@/i18n';
+import { deviceTemplateDescription } from '@/utils/templateText';
 
 const DevicePanel = () => {
   const t = useT();
@@ -60,7 +42,7 @@ const DevicePanel = () => {
         name: template.name,
         description: template.isCustom
           ? t.devicePanel.customTemplate(template.type)
-          : describeType(template.type, t.devicePanel.descriptions),
+          : deviceTemplateDescription(template, t),
         icon: template.icon,
         color: template.color,
       })),

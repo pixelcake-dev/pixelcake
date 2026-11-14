@@ -197,6 +197,9 @@ const AddDeviceModal = () => {
       onClose={handleClose}
       title={t.addDevice.title(deviceTypeName)}
       size="md"
+      // (four fields to a row: at the 42rem of "md" each is too narrow for the
+      // longest choice of a select and for the example of an address)
+      className="!max-w-[46rem]"
       autoHeight={true}
       footer={
         <div className="modal-actions px-6 pb-6 pt-4">

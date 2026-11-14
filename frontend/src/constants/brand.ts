@@ -15,3 +15,11 @@ export const APP_DESCRIPTOR = 'Visual Network Designer';
 
 /** The title of the browser tab */
 export const APP_TITLE = `${APP_NAME} - ${APP_DESCRIPTOR}`;
+
+/**
+ * The version of the application: the one of package.json, read when the app
+ * is built (its `version` alone: nothing else of that file reaches the page)
+ */
+export const APP_VERSION: string = Object.values(
+  import.meta.glob<string>('/package.json', { eager: true, import: 'version' })
+)[0];

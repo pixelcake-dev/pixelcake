@@ -28,6 +28,19 @@ export const devicePanel: Dictionary['devicePanel'] = {
     cloud: 'Cloud or virtual service',
     other: 'Network device',
   },
+  specialised: {
+    mailServer: 'Receives and delivers email',
+    vps: 'Virtual private server',
+    webServer: 'Server for websites and web applications',
+    proxy: 'Intermediary for web traffic',
+    objectStorage: 'S3-compatible object storage',
+    nas: 'Shared network storage',
+    dnsServer: 'Turns names into addresses',
+    dhcpServer: 'Assigns addresses to devices',
+    iotGateway: 'Connects sensors and IoT devices to the network',
+    ipCamera: 'Network camera',
+    printer: 'Network printer',
+  },
   /** The same for a template made by the user, of the type it is built on */
   customTemplate: (type: string) => `Custom template (${type})`,
 

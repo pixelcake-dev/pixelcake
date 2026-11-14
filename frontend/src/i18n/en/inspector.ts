@@ -63,7 +63,6 @@ export const inspector: Dictionary['inspector'] = {
 
   /** What the window answers when it does not do what was asked */
   toasts: {
-    lastCard: 'The last network card cannot be removed',
     nameRequired: 'The name is required',
     nameAndIpRequired: 'Name and IP address are required',
     portsWithCable: (portIds: number[]) =>

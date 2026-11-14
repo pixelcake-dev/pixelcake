@@ -21,7 +21,7 @@ import Logo from '@/components/ui/Logo';
 import { useUIStore, type HelpTab } from '@/store/uiStore';
 import { COMMAND_REFERENCE } from '@/terminal/executor';
 import { GITHUB_REPO } from '@/constants/links';
-import { APP_NAME } from '@/constants/brand';
+import { APP_NAME, APP_VERSION } from '@/constants/brand';
 import { useT } from '@/i18n';
 import { Rich } from '@/i18n/Rich';
 
@@ -126,7 +126,7 @@ const AboutTab = () => {
         </AboutRow>
 
         <AboutRow icon="mdi:tag" title={t.help.about.version}>
-          0.1.0 (Beta)
+          {APP_VERSION} (Beta)
         </AboutRow>
 
         <AboutRow icon="mdi:license" title={t.help.about.licence}>

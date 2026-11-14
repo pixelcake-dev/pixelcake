@@ -324,7 +324,7 @@ export interface ConnectionTemplate {
   id: string;
   name: string; // Display name (e.g., "Trunk", "Access")
   type: string; // Unique identifier (e.g., "trunk", "access")
-  description?: string; // Italian description for UI
+  description?: string; // What the type is for: shown in the language of the interface until the user rewrites it (utils/templateText.ts)
   color: string; // Hex color (e.g., "#9333ea")
   lineStyle: 'solid' | 'dashed' | 'dotted'; // Visual line style
   strokeWidth: number; // Base stroke width (e.g., 2.5, 3, 4)

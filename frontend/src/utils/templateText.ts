@@ -13,7 +13,7 @@
 import { LANGUAGES, dictionaryOf, type Dictionary } from '@/i18n';
 import { formerLinkTypeDescriptions as formerItalian } from '@/i18n/it/former';
 import { formerLinkTypeDescriptions as formerEnglish } from '@/i18n/en/former';
-import type { ConnectionTemplate } from '@/types/network';
+import type { ConnectionTemplate, DeviceType } from '@/types/network';
 
 type BuiltInLinkType = keyof Dictionary['templates']['links']['builtInDescriptions'];
 
@@ -43,4 +43,57 @@ export function linkTypeDescription(
       (language) => dictionaryOf(language).templates.links.builtInDescriptions[builtIn] === description
     ) || [formerItalian, formerEnglish].some((former) => former[builtIn]?.includes(description));
   return writtenByTheApp ? t.templates.links.builtInDescriptions[builtIn] : description;
+}
+
+type TypeDescriptions = Dictionary['devicePanel']['descriptions'];
+type SpecialisedDescriptions = Dictionary['devicePanel']['specialised'];
+
+/** Where the dictionary keeps what a device of each built-in type is */
+const DESCRIPTION_OF_TYPE: ReadonlyMap<DeviceType, keyof TypeDescriptions> = new Map<
+  DeviceType,
+  keyof TypeDescriptions
+>([
+  ['PC', 'pc'],
+  ['Switch', 'switch'],
+  ['Router', 'router'],
+  ['Server', 'server'],
+  ['Firewall', 'firewall'],
+  ['AccessPoint', 'accessPoint'],
+  ['LoadBalancer', 'loadBalancer'],
+  ['Database', 'database'],
+  ['Cloud', 'cloud'],
+]);
+
+/**
+ * The built-in device templates that are a kind of one of those types, by
+ * their id (store/templateStore.ts): each says what it is, not what it is
+ * built on. An IoT gateway is drawn and set as an access point, and is not
+ * one; a printer is an end device, and not "for users".
+ */
+const DESCRIPTION_OF_TEMPLATE: ReadonlyMap<string, keyof SpecialisedDescriptions> = new Map<
+  string,
+  keyof SpecialisedDescriptions
+>([
+  ['tpl-mailserver', 'mailServer'],
+  ['tpl-vps', 'vps'],
+  ['tpl-webserver', 'webServer'],
+  ['tpl-proxy', 'proxy'],
+  ['tpl-storage-s3', 'objectStorage'],
+  ['tpl-nas', 'nas'],
+  ['tpl-dnsserver', 'dnsServer'],
+  ['tpl-dhcpserver', 'dhcpServer'],
+  ['tpl-iotgateway', 'iotGateway'],
+  ['tpl-ipcamera', 'ipCamera'],
+  ['tpl-printer', 'printer'],
+]);
+
+/**
+ * What a built-in device template is, under its name in the panel that adds
+ * devices, in the words of `t`: its own when it has them, else those of its
+ * type.
+ */
+export function deviceTemplateDescription(template: { id: string; type: DeviceType }, t: Dictionary): string {
+  const own = DESCRIPTION_OF_TEMPLATE.get(template.id);
+  if (own) return t.devicePanel.specialised[own];
+  return t.devicePanel.descriptions[DESCRIPTION_OF_TYPE.get(template.type) ?? 'other'];
 }

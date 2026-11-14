@@ -52,7 +52,7 @@ export const interfaces: Dictionary['interfaces'] = {
     mode: 'Port mode',
     modes: {
       access: 'Access (end device)',
-      trunk: 'Trunk (link between switches)',
+      trunk: 'Trunk (between switches)',
       wan: 'WAN (wide area network)',
       lan: 'LAN (local area network)',
       dmz: 'DMZ (demilitarised zone)',
@@ -83,7 +83,7 @@ export const interfaces: Dictionary['interfaces'] = {
     zones: {
       none: 'None',
       trust: 'Trust (trusted network)',
-      untrust: 'Untrust (untrusted network)',
+      untrust: 'Untrust (not trusted)',
       dmz: 'DMZ (demilitarised zone)',
     },
     nat: 'NAT enabled',

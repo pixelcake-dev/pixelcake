@@ -110,27 +110,29 @@ export const NicAddressFields: React.FC<NicAddressFieldsProps> = ({ nic, onChang
     );
   }
 
+  // (an address is its own example: with «es.» before it, it would not fit
+  // the field of the window that adds a device, a quarter of a row wide)
   return (
     <FieldRow>
       {mode}
       <TextField
         label={fields.ipAddress}
         mono
-        placeholder={t.interfaces.example('192.168.1.10')}
+        placeholder="192.168.1.10"
         value={nic.ip ?? ''}
         onChange={(e) => onChange({ ip: e.target.value })}
       />
       <TextField
         label={fields.subnetMask}
         mono
-        placeholder={t.interfaces.example('255.255.255.0')}
+        placeholder="255.255.255.0"
         value={nic.subnet ?? ''}
         onChange={(e) => onChange({ subnet: e.target.value })}
       />
       <TextField
         label={fields.gateway}
         mono
-        placeholder={t.interfaces.example('192.168.1.1')}
+        placeholder="192.168.1.1"
         value={nic.gateway ?? ''}
         onChange={(e) => onChange({ gateway: e.target.value })}
       />
@@ -138,7 +140,7 @@ export const NicAddressFields: React.FC<NicAddressFieldsProps> = ({ nic, onChang
         id="nic-dns"
         label={fields.dnsServer}
         mono
-        placeholder={t.interfaces.example('192.168.1.53')}
+        placeholder="192.168.1.53"
         value={nic.dns ?? ''}
         error={problems.dns}
         onChange={(e) => onChange({ dns: e.target.value })}

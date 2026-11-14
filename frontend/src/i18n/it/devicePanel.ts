@@ -26,6 +26,23 @@ export const devicePanel = {
     cloud: 'Servizio cloud o virtuale',
     other: 'Dispositivo di rete',
   },
+  /**
+   * The same for the built-in templates that are a kind of one of those types
+   * (a mail server is a server, a printer an end device): what each one is
+   */
+  specialised: {
+    mailServer: 'Riceve e consegna la posta elettronica',
+    vps: 'Server virtuale privato',
+    webServer: 'Server per siti e applicazioni web',
+    proxy: 'Intermediario per il traffico web',
+    objectStorage: 'Archivio a oggetti compatibile con S3',
+    nas: 'Archivio di rete condiviso',
+    dnsServer: 'Traduce i nomi in indirizzi',
+    dhcpServer: 'Assegna gli indirizzi ai dispositivi',
+    iotGateway: 'Collega sensori e dispositivi IoT alla rete',
+    ipCamera: 'Telecamera di rete',
+    printer: 'Stampante di rete',
+  },
   /** The same for a template made by the user, of the type it is built on */
   customTemplate: (type: string) => `Template personalizzato (${type})`,
 

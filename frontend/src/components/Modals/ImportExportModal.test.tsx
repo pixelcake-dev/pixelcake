@@ -120,6 +120,16 @@ describe('ImportExportModal — the buttons at the bottom', () => {
     expect(icon?.parentElement).toBe(button);
     expect(icon?.getAttribute('style')).toBeNull();
   });
+
+  it('the X at the top has a name, as in every other window, and closes the window', () => {
+    render(<ImportExportModal />);
+    const close = screen.getByRole('button', { name: 'Chiudi la finestra' });
+    expect(close).toHaveAttribute('type', 'button');
+    expect(close.closest('.modal-header')).not.toBeNull();
+
+    fireEvent.click(close);
+    expect(useUIStore.getState().modals.importExport).toBe(false);
+  });
 });
 
 describe('ImportExportModal — importing a YAML file', () => {

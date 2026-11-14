@@ -62,7 +62,6 @@ export const inspector = {
 
   /** What the window answers when it does not do what was asked */
   toasts: {
-    lastCard: "Impossibile rimuovere l'ultima scheda di rete",
     nameRequired: 'Il nome è obbligatorio',
     nameAndIpRequired: 'Nome e IP sono obbligatori',
     portsWithCable: (portIds: number[]) =>
