@@ -10,10 +10,21 @@ is accepted anywhere a device is expected, and a host name wherever a
 question has a target.
 
 This document is the **source of the spec**. In the app, `help` in the
-terminal lists the same commands, and so does Aiuto → Comandi del terminale.
+terminal lists the same commands, and so does Help → Terminal commands
+(Aiuto → Comandi del terminale with the interface in Italian).
 The language is versioned independently of the app; until v1.0 canonical
 forms are stable but aliases and output formats may still be refined between
 minor versions.
+
+The interface of the app is in Italian and in English; the terminal speaks
+English in both. A sample network names its devices in the language the
+interface has when it is loaded, and the sessions of this document were
+recorded on the samples loaded in Italian: `PC-Vendite`, `Portatile-1`,
+`Web-Gestionale`, `Portale-Clienti`, `Cliente-Remoto`, `R-Sede`, `R-Filiale`
+and the names under `azienda.example` are, on a sample loaded in English,
+`PC-Sales`, `Laptop-1`, `Web-ERP`, `Customer-Portal`, `Remote-Customer`,
+`R-HQ`, `R-Branch` and names under `company.example`. Names apart, the
+terminal prints the same.
 
 **New in v0.5:** DNS. A host name works as the target of `ping`, `trace`,
 `browse`, `mail` and `download`: the source asks its DNS server first, and

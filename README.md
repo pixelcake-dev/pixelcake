@@ -24,13 +24,15 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 - **Hand over.** The board as a picture, PNG or SVG, in the light or the dark theme, to a file or to the clipboard. Made from a presentation, it carries the question, the answer and what was broken.
 - **Export.** The topology as YAML, which can be loaded back. A Terraform-style export exists only as a sketch.
 
-The interface is in Italian. The terminal language is English.
+The interface is in Italian and in English. It starts in Italian in a browser set to Italian and in English in any other, and `IT` / `EN` on the menu bar (and on the welcome screen, and in Settings → Appearance) change it at once; the choice is kept in the browser. `?lang=it` or `?lang=en` in the address chooses it too. The terminal language is English in both. This page names menus and buttons as the English interface does.
 
-Four sample networks are bundled. The welcome screen loads the first: a small company, with offices and Wi-Fi in two VLANs on one trunk, an access point, a switch of servers, a public portal in a DMZ and a firewall with three rules that does NAT towards the Internet. The router hands out the addresses of the offices and of the Wi-Fi, and the two laptops take theirs from it. One of the servers is the DNS server of the inside: it knows the management software, the mail server and the portal by name. It is also under Aggiungi → Topologie, with the other three: a small office with two subnets and a router; a site with VLANs, a DMZ and a firewall; and two sites joined by a main line and a backup line, made for trying failures.
+Four sample networks are bundled. The welcome screen loads the first: a small company, with offices and Wi-Fi in two VLANs on one trunk, an access point, a switch of servers, a public portal in a DMZ and a firewall with three rules that does NAT towards the Internet. The router hands out the addresses of the offices and of the Wi-Fi, and the two laptops take theirs from it. One of the servers is the DNS server of the inside: it knows the management software, the mail server and the portal by name. It is also under Add → Samples, with the other three: a small office with two subnets and a router; a site with VLANs, a DMZ and a firewall; and two sites joined by a main line and a backup line, made for trying failures.
 
 ### The terminal
 
-Output on the small office sample (Aggiungi → Topologie → «Ufficio: due reti e un router»):
+A sample network names its devices in the language the interface has when it is loaded, and what is on the board keeps its names afterwards: the sales PC of the small company is `PC-Sales` in English and `PC-Vendite` in Italian. The transcripts below were taken in English.
+
+Output on the small office sample (Add → Samples → “Office: two networks and a router”):
 
 ```text
 pixelcake> ping Web-01 from PC-1
@@ -92,24 +94,24 @@ POOLS
   Router-Core port 1     192.168.10.100 – 192.168.10.199  gateway 192.168.10.1  dns 192.168.30.10  0 leased, 100 free of 100
   Router-Core port 2     192.168.20.100 – 192.168.20.199  gateway 192.168.20.1  dns 192.168.30.10  2 leased, 98 free of 100
 LEASES
-  192.168.20.100   Portatile-1 eth0         from Router-Core port 2
-  192.168.20.101   Portatile-2 eth0         from Router-Core port 2
+  192.168.20.100   Laptop-1 eth0            from Router-Core port 2
+  192.168.20.101   Laptop-2 eth0            from Router-Core port 2
   leases are worked out from the drawing: nothing is renewed, nothing is relayed to another network
 ```
 
 **A device can be called by name.** A server keeps a list of names, each with its address. A network card says which DNS server it asks, or is handed one with its lease. In the terminal a name then works as the target of a question: `ping`, `trace`, `browse`, `mail`, `download`. Nothing is remembered: every time, the question goes to the DNS server and the answer comes back, through the same switches, routes and firewall rules as any other exchange, and it fails in the same ways, with the reason.
 
 ```text
-pixelcake> ping gestionale.azienda.example from PC-Vendite
-Looking up gestionale.azienda.example from PC-Vendite (DNS server 192.168.30.10)...
-  ✓ DNS request: PC-Vendite → Srv-Auth
-  ✓ DNS reply: Srv-Auth → PC-Vendite
-gestionale.azienda.example is 192.168.30.30 (answered by Srv-Auth)
-Pinging Web-Gestionale (192.168.30.30) from PC-Vendite...
+pixelcake> ping erp.company.example from PC-Sales
+Looking up erp.company.example from PC-Sales (DNS server 192.168.30.10)...
+  ✓ DNS request: PC-Sales → Srv-Auth
+  ✓ DNS reply: Srv-Auth → PC-Sales
+erp.company.example is 192.168.30.30 (answered by Srv-Auth)
+Pinging Web-ERP (192.168.30.30) from PC-Sales...
 Reply from 192.168.30.30: hops=6 time=9ms
-pixelcake> resolve portale.azienda.example from Cliente-Remoto
-Looking up portale.azienda.example from Cliente-Remoto...
-Lookup failed: Cliente-Remoto has no DNS server: it cannot look up portale.azienda.example
+pixelcake> resolve portal.company.example from Remote-Customer
+Looking up portal.company.example from Remote-Customer...
+Lookup failed: Remote-Customer has no DNS server: it cannot look up portal.company.example
 ```
 
 ### What happens if this breaks
@@ -118,7 +120,7 @@ Lookup failed: Cliente-Remoto has no DNS server: it cannot look up portale.azien
 
 In presentation mode a click on a device or on a cable takes it as broken. The drawing is not edited: the failure is a list handed to the engine next to the network, and it is gone when the presentation ends. The question on screen is asked again at once.
 
-- A device that is down sends and takes nothing; a cable that is cut carries nothing. The reason of a failed answer names them: `SW-Core is down`, `link R-Sede–R-Filiale is down`.
+- A device that is down sends and takes nothing; a cable that is cut carries nothing. The reason of a failed answer names them: `SW-Core is down`, `link R-HQ–R-Branch is down`.
 - Between switches the engine takes the shortest way that still works, so a ring or a second cable carries the traffic.
 - A router, or a host with two network cards, stops using a route when the interface it leaves by has no working cable left, and takes the next route for that destination: a backup route written after the main one. The answer says so in a note.
 - The panel then counts, over every pair of end devices: how many exchanges stop, how many take another way, how many do not notice. A click on one of them asks that question.
@@ -133,7 +135,7 @@ When the engine cannot verify something, it says so in a note instead of answeri
 
 ![The screen above as an exported picture: the whole board, the way of the answer in green through the backup router, the cut line in red, and under the drawing the question, its answer, the simulated failure and the effect on the other exchanges](docs/export.png)
 
-**File → Esporta immagine…** draws the whole board again as a picture. It is not a screenshot: it is made from the same data as the canvas, so it shows every device whatever the zoom, and never a selection or a connection point.
+**File → Export picture…** draws the whole board again as a picture. It is not a screenshot: it is made from the same data as the canvas, so it shows every device whatever the zoom, and never a selection or a connection point.
 
 - **PNG**, at one, two or three times the size of the screen, for documents, slides and messages; or **SVG**, a vector file that stays sharp at any size, with its texts still texts.
 - Light or dark, whatever the screen shows. The name of the project can be written above the drawing, and the background left out.
@@ -171,7 +173,7 @@ pnpm dev
 
 Open `http://localhost:5173`. Everything runs in the browser: there is nothing else to start.
 
-Your work is kept in the browser's storage, so it is still there after a reload. To keep it for good, or to move it to another computer, save the project to a file with **File → Salva** (Ctrl+S). In Chrome and Edge the file is written in place; in other browsers it is downloaded. The format is described in [docs/project-file.md](docs/project-file.md).
+Your work is kept in the browser's storage, so it is still there after a reload. To keep it for good, or to move it to another computer, save the project to a file with **File → Save** (Ctrl+S). In Chrome and Edge the file is written in place; in other browsers it is downloaded. The format is described in [docs/project-file.md](docs/project-file.md).
 
 The app's icons are bundled with it. Only an icon name typed by hand in a custom device template is fetched from the Iconify API.
 
@@ -179,7 +181,7 @@ The app's icons are bundled with it. Only an icon name typed by hand in a custom
 
 ```bash
 cd frontend
-pnpm test:run      # 2198 tests: engine, terminal, project files, import/export, pictures, screens
+pnpm test:run      # 2805 tests: engine, terminal, project files, import/export, pictures, screens, the two languages
 pnpm type-check
 pnpm lint
 pnpm build

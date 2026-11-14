@@ -2,6 +2,8 @@
 
 Detailed technical reference for PixelCake. To install and run it, see [README.md](./README.md).
 
+The interface speaks Italian and English (see [Two languages](#two-languages-frontendsrci18n)). This document names controls by their Italian labels, the ones the dictionary starts from: «Salva», «Porte», Impostazioni → Rete.
+
 ## State Management (Zustand Stores)
 
 All stores use Zustand. There is no server: what must survive a reload is kept in the browser's localStorage, and a project is saved for good as a file (see [Projects and files](#projects-and-files)).
@@ -89,7 +91,7 @@ An area is a rectangle with a label, drawn behind a group of devices to say what
 - **PresentationBar** - Takes the place of the menu bar: project and canvases, pace of the packet, terminal, the picture of what is on screen, full screen, exit (also Esc)
 - **PresentationPanel** - Question, answer, simulated failures with their effect on the rest of the network, and the way hop by hop. `usePresentationAnswer` works all of it out from the drawing, the question and the failures, marks the way on the canvas and sets the packet off at every change
 - **PresentationMenu** - The menu a click on a device or a cable opens: start here, arrive here, break, repair
-- `utils/presentation.ts` - Pure: the engine's answer turned into what is shown (Italian sentences, rows tied to the animation, exchanges grouped by device, the caption of an exported picture). The reasons and notes of the engine are shown as the engine wrote them
+- `utils/presentation.ts` - The engine's answer turned into what is shown (sentences in the language of the interface, rows tied to the animation, exchanges grouped by device, the caption of an exported picture). It touches no store but the language; the reasons and notes of the engine are shown as the engine wrote them, in English in both languages
 
 ### WelcomeScreen (`frontend/src/components/WelcomeScreen.tsx`)
 - Excalidraw-style minimalist transparent overlay on canvas (NOT popup)
@@ -146,6 +148,58 @@ An area is a rectangle with a label, drawn behind a group of devices to say what
 - Aiuto Menu: Guida, Comandi del terminale, Mostra la schermata di benvenuto, Informazioni
 - In the middle of the bar, the project that is open: its name, the canvas on screen when there is more than one, a dot while there are changes not saved to a file. A click opens the Explorer
 - No entry is there to announce a feature: an entry that cannot act (nothing selected to copy) is disabled only for as long as that is true
+- On the right, after «Presenta»: the language (`ui/LanguageSwitch.tsx`, two letters each, a `.segmented` control) and the theme
+
+## Two languages (`frontend/src/i18n/`)
+
+Every text a person can read or a screen reader can say is in two dictionaries, Italian and English, and changes at once when the language does. There is no translation library: a small typed layer of our own.
+
+- `it/<namespace>.ts` is the source dictionary, one file for each part of the interface (`menu`, `inspector`, `dhcp`, `help`…), put together in `it/index.ts`. `en/<namespace>.ts` holds the same entries: each namespace is typed `Dictionary['<namespace>']` (`dictionary.ts`: `typeof it`), so a missing English entry, or one of another kind, does not compile.
+- An entry is a text, or a function when the text carries values: `devices: (count: number) => …`. Plurals, gender and the order of the words are plain TypeScript, written apart in each language. A sentence is always one entry: it is never glued together in a component out of translated pieces.
+- `index.ts`: `useT()` gives a component the dictionary and draws it again when the language changes; `getT()` gives it to code outside React (a store, a utility, a notice) at the moment of the call. `useLanguage()`, `getLanguage()`, `setLanguage()`.
+- `language.ts`: which language. At start-up, in this order: `?lang=it|en` in the address (taken, remembered, and removed from the address); the choice kept in `localStorage` under `pixelcake-language`; the languages of the browser in the order the user prefers them, the first one the interface speaks, English when it speaks none. Only a choice is remembered. `<html lang>` follows.
+- `Rich.tsx`: a sentence with something inside it that the screen draws itself. Words between backticks are code; `<name>…</name>` and `<name/>` are pieces handed to the caller (a button in the middle of a sentence, a number in bold). What a person typed is handed over as a piece, never pasted into the text.
+- `components/ui/LanguageSwitch.tsx`: the switch, on the menu bar, on the welcome screen and in Impostazioni → Aspetto. Each language is named in itself.
+
+**What is not translated.** What a person wrote (names, notes, descriptions). What the engine says: reasons and notes are English in both languages, as is the whole terminal (commands, output, `help`); only the window around the terminal is in the dictionary. Technical names that are the same in the two languages (`Switch`, `VLAN`, `trust`, `1 Gbps`, the names of the built-in templates) stay in the source.
+
+**Names the app gives** (a project without a name, a new canvas, a new area, the devices of a sample network, the description of a built-in connection type) are given in the language of that moment and are content afterwards: they do not change with the language. The built-in connection types are the one exception, because their description is stored with the templates: one that is still a built-in description, in either language, is shown in the language of the interface (`utils/templateText.ts`); one the user changed is shown as typed. A device made from a template is named after the template (`Web-Server-1`), the same in both languages.
+
+**No text in a constant of a module.** A table of labels or a list of tabs written at the top of a file is frozen in the language the page was loaded in: it is built when it is drawn, or it is a function (`flowName(flow)`, `noLeaseLabel()`, `defaultProjectName()`). A `useMemo` whose result holds text made by a utility takes the language among its dependencies.
+
+**To add a text:** write it in the Italian namespace of the screen and in the English one (the compiler asks for both), then use `t.namespace.entry` in the component or `getT().namespace.entry` outside React. A new part of the interface gets a new pair of files, added to the two `index.ts`.
+
+**Tests.** They run in Italian (`test/setup.ts` makes the browser of the tests an Italian one, since jsdom presents itself as English), so the tests that look for Italian words did not change. On top of them:
+- `i18n/language.test.ts`: first visit, the address, the remembered choice, `<html lang>`.
+- `i18n/dictionaries.test.ts`: no English entry that is the Italian one again, no Italian in the English dictionary, the same pieces in a sentence in both languages, the glossary (a canvas is a board, an image is a picture), and a guide that quotes only labels that controls really have.
+- `i18n/hardcodedText.test.ts`: reads every source file and fails on Italian in a string, a template or JSX text outside `i18n/it/`. It knows Italian by its words (`test/italian.ts`): a list written by hand, and every word the Italian dictionary uses and the English one does not.
+- `i18n/english.test.tsx`: the main screens drawn in Italian and switched to English while on screen; nothing Italian may be left in text, `title`, `placeholder`, `aria-label`, `alt`.
+- `components/ui/LanguageSwitch.test.tsx`: the switch, what is on screen following it without being drawn from scratch, notices and questions made outside React.
+
+**The English** is written to be read by a native speaker: short, plain, sentence case for every label, British spelling, “curly quotes” where the Italian has «guillemets». One word for one thing:
+
+| Italian | English |
+|---|---|
+| canvas | board |
+| disegno | drawing |
+| dispositivo, dispositivo finale | device, end device |
+| collegamento, connessione | link (Tipo Connessione: link type) |
+| cavo | cable |
+| porta, scheda di rete, interfaccia | port, network card (card), interface |
+| scheda (of a window) | tab |
+| la scheda di un dispositivo | the device window |
+| rotta, rotta predefinita, rotta di riserva, prossimo salto | route, default route, backup route, next hop |
+| regola, zona di sicurezza, politica delle zone | rule, security zone, zone policy |
+| inoltro | port forward |
+| intervallo; assegnare; indirizzo assegnato; consegnato | range; hand out; leased address; handed out |
+| guasto simulato; Simula un guasto; Ripara | simulated failure; Simulate a failure; Repair |
+| domanda, risposta; Da, A; Partenza, Destinazione | question, answer; From, To; Source, Destination |
+| percorso; comunicazione, scambio; un'altra strada | path; exchange; another way |
+| rete di esempio; schermata di benvenuto | sample network; welcome screen |
+| immagine | picture |
+| riquadro; riquadro di selezione | area; selection box |
+| Topologie; Aggiungi in Blocco | Samples; Bulk add |
+| Explorer, Console, Import/Export, Template | the same |
 
 ## The look (`frontend/src/index.css`, `frontend/tailwind.config.js`)
 
@@ -302,7 +356,9 @@ The picture is not taken from the screen: the board is drawn again as one SVG
 document from the same data. That is what lets it be whole whatever the zoom,
 light or dark whatever the theme, a vector file, and a sharp PNG of any size.
 
-- `drawingImage.ts` — pure (no React, no stores, no DOM). `layoutDrawing()`
+- `drawingImage.ts` — no React, no DOM, and no store but the language (the
+  two words it writes on the ends of a question come from the dictionary at
+  the moment of the call). `layoutDrawing()`
   places areas, devices and cables in canvas coordinates; `renderDrawingImage()`
   writes the document, with an optional title above and caption below. The
   caller gives the size each device has on screen, the shapes of the icons and
@@ -491,13 +547,14 @@ PixelCake has no server. A project lives in the browser while you work and is sa
 - `pixelcake-project-v1`: project name, description and every canvas (projectStore)
 - `pixelcake-templates-v8`: device and connection templates
 - `pixelcake-ui-v1`: light or dark
+- `pixelcake-language`: `it` or `en`, once the user has chosen (the switch, or `?lang=` in the address)
 - Every change is written at once: closing the tab loses nothing
 - A write that fails (storage full) does not crash the app: `utils/safeStorage.ts` shows one message asking to save the project to a file
 - Two tabs open on the same project do not see each other: the last one to write wins. The canvas id kept next to the canvas data prevents one canvas from being shown as another, not the loss of the other tab's edits
 
 ### On disk (`.pixelcake.json`)
 - Format reference: [docs/project-file.md](docs/project-file.md)
-- `utils/projectFile.ts` (pure): `serializeProject()`, `parseProjectFile()`. The parser never throws: it returns the project with the list of repairs it made, or a message for the user
+- `utils/projectFile.ts` (pure, but for the language its messages are written in): `serializeProject()`, `parseProjectFile()`. The parser never throws: it returns the project with the list of repairs it made, or a message for the user
 - `utils/projectFileAccess.ts`: save, save as, open, new project, Ctrl+S. With the File System Access API (Chrome, Edge) the file is written in place and remembered for the session; elsewhere saving downloads the file and opening uses a file input. The API is looked up at every call, never at import
 
 ### Data flow
