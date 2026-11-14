@@ -85,7 +85,7 @@ While presenting, NetworkCanvas makes the drawing read-only (nothing is selected
 - **HelpModal** - The guide, in three tabs: how to use the app, the terminal commands (rendered from `COMMAND_REFERENCE`, the table the terminal's `help` prints), information
 - **ExportImageModal** - The board as a picture: preview, format (PNG, SVG), size, theme, title, background; save to a file or copy to the clipboard. It exists only while it is open, so every time it starts from the drawing and the theme on screen. See "The drawing as a picture" below
 - **ConnectionInspectorModal** - Connection properties editor
-- **SettingsModal** - App settings with tabbed interface. Its first tab, Rete (`NetworkSettingsTab`), holds the settings of the project: what a new device starts from (network, mask, gateway and, optional, the DNS server its card asks), saved together by the one button of the tab. Once a DNS server is saved, the tab counts the end devices of the canvas that ask nobody (`utils/defaultDns.ts`) and offers to write it on their first card addressed by hand, after a question
+- **SettingsModal** - App settings with tabbed interface. Its first tab, Rete (`NetworkSettingsTab`), holds the settings of the project: what a new device starts from (network, mask, gateway and, optional, the DNS server its card asks), saved together by the one button of the tab. Once a DNS server is saved, the tab counts the end devices of the canvas that ask nobody (`utils/defaultDns.ts`) and offers to write it on their first card addressed by hand, after a question. The group «VLAN del progetto» is the table of the names of the VLANs (`ui/VlanNamesTable`): the VLANs that have one and those the canvas uses without one (`vlansInUse`), a row added by hand for any other; what is wrong with a row (`vlanRowProblem`) is said under it and stops the save
 - **BulkAddDeviceModal** - Bulk device creation with table-based interface
   - Two sections: Configurable Devices (Switch/Router/Firewall with portCount dropdown) + Standard Devices (PC/Server/Database with fixed 1 NIC)
   - ConfigurableDeviceRow: Dynamic rows with id, templateType, portCount, quantity
@@ -103,6 +103,7 @@ While presenting, NetworkCanvas makes the drawing read-only (nothing is selected
 - **compact** (`ui/compact.tsx`, `ui/compactStyles.ts`) - The fields of a settings screen: `TextField`, `SelectField`, `CheckField`, `ReadOnlyField`, `TextAreaField` for a text of several lines (a small label over a low field, with its note and what is wrong under it) and `FieldRow`, a row of up to four. Used by the window of a device, by the window that adds one and by Impostazioni → Rete; `Input` and `Select` remain for the windows that ask one or two things
 - **TabContainer** - Reusable tab system for modals. It keeps the open tab by itself, or shows the one it is given (`activeTab` with `onTabChange`) when the window has to send to one of its tabs
 - **VLANInput** - Multi-value input with tag chips (range 1-4094)
+- **The name of a VLAN** - A VLAN is a number in the data and for the engine; the project may give it a name (`GlobalNetworkSettings.vlans`). `utils/vlanNames.ts` writes a VLAN with its name (`vlanLabel`: `VLAN 10 «Uffici»`; `vlanShort`: `10 «Uffici»` in a list of numbers), and `utils/useVlanNames.ts` hands the names to the components that show a number: the summary of a switch (`PortsOverview`), the VLAN field of a port (`PortEditor`, the names under the field: the field holds numbers), what a port says under the pointer (`PortGrid`, `portVlanText`), the tags of `VLANInput`. The terminal, the reasons of the engine and the labels typed on cables keep the numbers
 - **DeviceTypeDisplay** - Read-only device type preview with icon
 - **PortGrid** / **PortConfigPanel** - Port display grid + configuration panel
 - **NICList** / **NICConfigPanel** - NIC list with custom scrollbar + configuration panel
@@ -366,6 +367,7 @@ The settings of a project (`networkStore.globalNetworkSettings`, `settings` in t
 - `ipClass, subnet, gateway` - The network a new device is proposed an address in, its mask and its gateway
 - `dns?: string` - The DNS server written on the card of a new end device (the window that adds one, bulk add). An end device is what the engine calls a host (`forwardingRole`): not a router, a firewall or a switch, which have no card, nor an access point, a load balancer or a Cloud symbol, which have one. Changing it never touches the devices that are there
 - `emailMode?: 'auto' | 'internal' | 'cloud'` - How the email flow travels
+- `vlans?: ProjectVlan[]` - The VLANs that were given a name: `{ id, name }`, lowest number first, one for a number, names of 32 characters at most; absent when none has one
 
 ### NetworkDevice
 - Basic: `id, type, label, ip, subnet, gateway, vendor, location, position`

@@ -110,6 +110,7 @@ The reference implementation is `frontend/src/utils/projectFile.ts`
 | `gateway` | string | Default gateway. |
 | `dns` | string | Optional. Address of the DNS server written on the card of a new end device. Without it a new card names no DNS server. |
 | `emailMode` | `"auto"` \| `"internal"` \| `"cloud"` | Optional. How the email flow of the simulation is routed; a missing value means `"auto"`. |
+| `vlans` | array | Optional. The names of the VLANs of the project: one `{ "id": 10, "name": "Uffici" }` for each VLAN that has a name, lowest `id` first. `id` is a VLAN number (an integer from 1 to 4094), `name` a text of 32 characters at most. A VLAN stays a number on devices, ports and connections: the name is only shown next to it. |
 
 ## Canvas
 
@@ -317,6 +318,7 @@ Everything else is repaired, and each repair is reported to the user:
 | No `description` | Empty. |
 | No `settings`, or fields of it missing or of the wrong type | The defaults shown in the example. An unknown `emailMode` is dropped. |
 | A `dns` of the settings that is not an IPv4 address | Dropped: the project has no default DNS server. (An empty one is dropped without a word.) |
+| A `vlans` of the settings that is not an array; an entry of it without an `id` from 1 to 4094 or without a `name`, or repeating the `id` of an earlier entry; a `name` longer than 32 characters | The list is dropped; the entry is dropped (the first of two with one `id` is kept); the name is cut to 32 characters. |
 | Canvas without `name` | `Canvas N`, N being its position. |
 | Canvas without `id`, or with an `id` already used by an earlier canvas | A new `canvas-N` id. |
 | `activeCanvasId` not among the canvases | The first canvas. |
@@ -334,7 +336,7 @@ Everything else is repaired, and each repair is reported to the user:
 | No `templates` | None. |
 | A template missing a required field | Dropped. |
 
-Four normalisations are applied silently, so that files written by earlier
+Five normalisations are applied silently, so that files written by earlier
 versions (or by hand) keep working:
 
 - a connection end attached to a port or NIC its device does not have, or to
@@ -350,7 +352,9 @@ versions (or by hand) keep working:
   `dns` it carries: they are not used while it is on DHCP, and could be
   mistaken for what it is leased;
 - the `notes` of a device lose the white space around them and get one kind
-  of line end (`\n`); notes left empty are dropped.
+  of line end (`\n`); notes left empty are dropped;
+- the `vlans` of the settings are put in the order of their `id`, their names
+  lose the white space around them, and an empty list is dropped.
 
 A file that is already in this form is read back exactly as it was written.
 

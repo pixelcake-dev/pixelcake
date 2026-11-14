@@ -10,6 +10,8 @@ import {
   readVlanText,
   vlanText,
 } from '@/utils/interfaceProblems';
+import { vlanLabel, vlanName, vlanShort } from '@/utils/vlanNames';
+import { useVlanNames } from '@/utils/useVlanNames';
 import type { Port } from '@/types/network';
 
 interface PortEditorProps {
@@ -30,7 +32,8 @@ type Speed = NonNullable<Port['speed']>;
 /**
  * The VLAN of a switch port. What is typed is kept as typed (a list is
  * written a comma at a time); the port takes it each time it reads as a
- * VLAN, or as a list of them.
+ * VLAN, or as a list of them. The field holds numbers: the names the
+ * project gave them are said under it.
  */
 const VlanField: React.FC<{
   mode: 'access' | 'trunk';
@@ -39,6 +42,11 @@ const VlanField: React.FC<{
 }> = ({ mode, vlan, onChange }) => {
   const [text, setText] = useState(() => vlanText(vlan));
   const [error, setError] = useState<string>();
+  const names = useVlanNames();
+  // What is typed, as far as it reads: the VLANs whose names are said
+  const read = readVlanText(mode, text).vlan;
+  const typed = read === undefined ? [] : Array.isArray(read) ? read : [read];
+  const named = typed.some((vlan) => vlanName(vlan, names) !== undefined);
   return (
     <TextField
       label={mode === 'access' ? 'VLAN (singola)' : 'VLANs (separati da virgola)'}
@@ -59,6 +67,13 @@ const VlanField: React.FC<{
             ? 'La porta appartiene a questa VLAN (numero da 1 a 4094). Vuoto: nessuna VLAN propria.'
             : 'Le VLAN che la porta trasporta con etichetta (numeri da 1 a 4094). Vuoto: tutte.'}{' '}
           Appena una porta dello switch ha una VLAN, quelle senza sono nella VLAN 1.
+          {named && (
+            <span className="block text-[var(--text-color)]" data-testid="vlan-names">
+              {typed.length === 1
+                ? vlanLabel(typed[0], names)
+                : `VLAN ${typed.map((vlan) => vlanShort(vlan, names)).join(', ')}`}
+            </span>
+          )}
         </>
       }
     />

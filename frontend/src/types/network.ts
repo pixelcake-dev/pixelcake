@@ -249,6 +249,16 @@ export interface FlowMap {
 export type EmailMode = 'auto' | 'internal' | 'cloud';
 
 /**
+ * A VLAN of the project and the name it goes by: `10` is `Uffici`. A VLAN
+ * stays a number for the engine; the name is what the interface shows next
+ * to it (see utils/vlanNames).
+ */
+export interface ProjectVlan {
+  id: number;   // VLAN number, 1-4094
+  name: string; // Trimmed, never empty, 32 characters at most
+}
+
+/**
  * Global Network Settings
  */
 export interface GlobalNetworkSettings {
@@ -259,6 +269,9 @@ export interface GlobalNetworkSettings {
   // Absent: new cards name no DNS server
   dns?: string;
   emailMode?: EmailMode; // default 'auto'
+  // The VLANs that were given a name, lowest number first, one entry for a
+  // number. Absent when none has one
+  vlans?: ProjectVlan[];
 }
 
 /**

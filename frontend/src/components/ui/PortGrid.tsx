@@ -1,5 +1,7 @@
 import React from 'react';
 import { Icon } from '@iconify/react';
+import { portVlanText } from '@/utils/portSummary';
+import { useVlanNames } from '@/utils/useVlanNames';
 import type { Port } from '@/types/network';
 
 interface PortGridProps {
@@ -16,8 +18,11 @@ interface PortGridProps {
  * number, its name and its marks
  * Color coding: green (enabled/access), purple (trunk), gray (disabled)
  * A link marker in the corner flags ports that have a connection attached
+ * Resting the pointer on a port says its name, its VLAN (with the name the
+ * project gave it) and what it is linked to
  */
 const PortGrid: React.FC<PortGridProps> = ({ ports, selectedPortId, onPortSelect, linkedPorts }) => {
+  const names = useVlanNames();
   const getPortStatusClass = (port: Port): string => {
     if (!port.enabled) return 'port-box-disabled';
     if (port.portType === 'trunk') return 'port-box-trunk';
@@ -34,7 +39,9 @@ const PortGrid: React.FC<PortGridProps> = ({ ports, selectedPortId, onPortSelect
     <div className="port-grid">
       {ports.map((port) => {
         const linkedTo = linkedPorts?.get(port.id);
-        const baseTitle = port.name || `Port ${port.id}`;
+        const baseTitle = [port.name || `Port ${port.id}`, portVlanText(port, ports, names)]
+          .filter(Boolean)
+          .join(' — ');
 
         return (
           <button

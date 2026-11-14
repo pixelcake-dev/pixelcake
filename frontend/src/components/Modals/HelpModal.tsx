@@ -105,7 +105,11 @@ const GuideTab = () => (
         Nella scheda «Porte» di uno switch ogni porta è di accesso, in una VLAN, oppure trunk, e
         trasporta più VLAN con l&apos;etichetta. Due porte in VLAN diverse non si parlano: per farle
         comunicare serve un router con una porta in ciascuna. Appena una porta ha una VLAN, quelle
-        che non hai toccato sono nella VLAN 1.
+        che non hai toccato sono nella VLAN 1. Le VLAN si possono chiamare per nome: in
+        Impostazioni → Rete, sotto «VLAN del progetto», trovi quelle usate sul canvas e scrivi il
+        nome di ciascuna; «Aggiungi VLAN» ne aggiunge un&apos;altra. Dopo aver salvato, il nome
+        compare accanto al numero, per esempio VLAN 10 «Uffici», nella scheda dello switch e nelle
+        impostazioni delle sue porte. Nel terminale le VLAN restano numeri.
       </Step>
 
       <Step title="Filtra con il firewall">

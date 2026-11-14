@@ -1,6 +1,8 @@
 import React from 'react';
 import { linkClass } from '@/components/ui/compactStyles';
 import { isPortInUse, portAddressText, portRanges, summariseSwitch } from '@/utils/portSummary';
+import { vlanLabel, vlanShort } from '@/utils/vlanNames';
+import { useVlanNames } from '@/utils/useVlanNames';
 import type { Port } from '@/types';
 
 const ZONE_NAMES: Record<NonNullable<Port['securityZone']>, string> = {
@@ -124,10 +126,12 @@ interface SwitchPortsOverviewProps {
  * How a switch splits its ports, on the first screen of its window: how
  * many are linked, which VLAN each group of access ports is in, which ports
  * are trunks and what they carry. It is what the engine reads from the
- * ports as they are in the form.
+ * ports as they are in the form. A VLAN the project gave a name to is
+ * written with it.
  */
 export const SwitchPortsOverview: React.FC<SwitchPortsOverviewProps> = ({ ports, linkedPorts, onOpenPort }) => {
   const summary = summariseSwitch(ports, linkedPorts);
+  const names = useVlanNames();
   const counts = [
     `${summary.total} porte`,
     `${summary.linked} ${summary.linked === 1 ? 'collegata' : 'collegate'}`,
@@ -148,14 +152,16 @@ export const SwitchPortsOverview: React.FC<SwitchPortsOverviewProps> = ({ ports,
         <ul className="flex flex-col gap-0.5">
           {summary.vlans.map(({ vlan, ports: ids }) => (
             <li key={vlan}>
-              <span className="font-medium">VLAN {vlan}</span>: {ids.length === 1 ? 'porta' : 'porte'}{' '}
+              <span className="font-medium">{vlanLabel(vlan, names)}</span>: {ids.length === 1 ? 'porta' : 'porte'}{' '}
               <span className="font-mono">{portRanges(ids)}</span>
             </li>
           ))}
           {summary.trunks.map(({ port, vlans }) => (
             <li key={`trunk-${port}`}>
               <span className="font-medium">Trunk</span>: porta <span className="font-mono">{port}</span>
-              {vlans.length > 0 ? `, porta le VLAN ${vlans.join(', ')}` : ', porta tutte le VLAN'}
+              {vlans.length > 0
+                ? `, porta le VLAN ${vlans.map((vlan) => vlanShort(vlan, names)).join(', ')}`
+                : ', porta tutte le VLAN'}
             </li>
           ))}
         </ul>

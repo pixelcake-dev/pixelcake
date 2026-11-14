@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Mock } from 'vitest';
-import { act, render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import { toast } from 'sonner';
 import { useNetworkStore } from '@/store/networkStore';
 import { useUIStore } from '@/store/uiStore';
@@ -253,6 +253,212 @@ describe('SettingsModal', () => {
       expect(field()).toHaveAttribute('aria-invalid', 'true');
       expect(toast.error as Mock).toHaveBeenCalledWith('"srv-auth" non è un indirizzo IPv4 valido');
       expect(settings()).toEqual(before);
+    });
+  });
+
+  describe('Rete — the names of the VLANs of the project', () => {
+    const save = () => fireEvent.click(screen.getByRole('button', { name: 'Salva Impostazioni Rete' }));
+    const store = () => useNetworkStore.getState();
+    const named = () => store().globalNetworkSettings.vlans;
+    const group = () => screen.getByRole('group', { name: 'VLAN del progetto' });
+    const nameOf = (vlan: number) => screen.getByLabelText<HTMLInputElement>(`Nome della VLAN ${vlan}`);
+    const type = (field: HTMLElement, value: string) => fireEvent.change(field, { target: { value } });
+    /** [number, name, what the canvas does with it] of every row of the table */
+    const rows = () =>
+      within(group())
+        .getAllByRole('row')
+        .slice(1)
+        .filter(row => row.querySelector('input'))
+        .map(row => {
+          const cells = row.querySelectorAll('td');
+          const number = cells[0].querySelector('input')?.value ?? cells[0].textContent;
+          return [number, cells[1].querySelector('input')?.value, cells[2].textContent];
+        });
+
+    /** A switch split in VLAN 10 and 20 with a trunk that also carries 30, and a port left alone */
+    function draw() {
+      store().addDevice(
+        switchWith('SW', [
+          port(1, { portType: 'trunk', vlan: [10, 20, 30] }),
+          port(2, { portType: 'access', vlan: 10 }),
+          port(3, { portType: 'access', vlan: 20 }),
+          port(4),
+        ])
+      );
+    }
+
+    it('is a group of its own, between what a new device starts from and the simulation', () => {
+      render(<SettingsModal />);
+      const groups = screen.getAllByRole('group').map(g => g.querySelector('legend')?.textContent);
+      expect(groups).toEqual(['Nuovi dispositivi', 'VLAN del progetto', 'Simulazione']);
+      expect(group()).toHaveTextContent('Un nome per ogni VLAN, scritto una volta');
+      // an empty project: nothing to list, and a way to add
+      expect(group()).toHaveTextContent('Nessuna VLAN ha un nome, e questo canvas non ne usa.');
+      expect(within(group()).queryByRole('table')).not.toBeInTheDocument();
+      expect(within(group()).getByRole('button', { name: 'Aggiungi VLAN' })).toBeInTheDocument();
+      // there is still one button that saves
+      expect(screen.getAllByRole('button', { name: /^Salva/ })).toHaveLength(1);
+    });
+
+    it('lists the VLANs the drawing uses, to be named in one go, and those named before', () => {
+      draw();
+      store().setGlobalNetworkSettings({ vlans: [{ id: 20, name: 'Wi-Fi' }, { id: 99, name: 'Vecchia' }] });
+      render(<SettingsModal />);
+
+      expect(rows()).toEqual([
+        ['1', '', 'in uso'],
+        ['10', '', 'in uso'],
+        ['20', 'Wi-Fi', 'in uso'],
+        ['30', '', 'in uso'],
+        ['99', 'Vecchia', 'non usata'],
+      ]);
+      // the number of a VLAN that is there is not typed: only its name
+      expect(within(group()).queryByLabelText('Numero della nuova VLAN')).not.toBeInTheDocument();
+      expect(nameOf(10).placeholder).toBe('senza nome');
+      expect(nameOf(10).maxLength).toBe(32);
+    });
+
+    it('names typed are saved with the rest, by the one button, in the order of the numbers', () => {
+      draw();
+      store().markSaved();
+      render(<SettingsModal />);
+
+      type(nameOf(30), ' Server ');
+      type(nameOf(10), 'Uffici');
+      // nothing reaches the project before it is saved
+      expect(named()).toBeUndefined();
+      type(screen.getByLabelText('Gateway di Default'), '192.168.1.254');
+      save();
+
+      expect(toast.error as Mock).not.toHaveBeenCalled();
+      expect(toast.success as Mock).toHaveBeenCalledWith('Impostazioni di rete salvate');
+      expect(store().globalNetworkSettings).toMatchObject({
+        gateway: '192.168.1.254',
+        vlans: [
+          { id: 10, name: 'Uffici' },
+          { id: 30, name: 'Server' },
+        ],
+      });
+      expect(store().hasUnsavedChanges).toBe(true);
+      // the rows left without a name are still there to be named, and are not kept
+      expect(rows()).toEqual([
+        ['1', '', 'in uso'],
+        ['10', 'Uffici', 'in uso'],
+        ['20', '', 'in uso'],
+        ['30', 'Server', 'in uso'],
+      ]);
+    });
+
+    it('saving without naming any keeps the project without a list', () => {
+      draw();
+      render(<SettingsModal />);
+      save();
+      expect(toast.success as Mock).toHaveBeenCalled();
+      expect(named()).toBeUndefined();
+    });
+
+    it('a VLAN the drawing does not use is added by hand: number and name', () => {
+      render(<SettingsModal />);
+      fireEvent.click(screen.getByRole('button', { name: 'Aggiungi VLAN' }));
+      type(screen.getByLabelText('Numero della nuova VLAN'), '40');
+      type(screen.getByLabelText('Nome della nuova VLAN'), 'Telefoni');
+      expect(rows()).toEqual([['40', 'Telefoni', '']]);
+      save();
+
+      expect(named()).toEqual([{ id: 40, name: 'Telefoni' }]);
+      // saved, it is a VLAN of the project like the others: its number is no longer typed
+      expect(rows()).toEqual([['40', 'Telefoni', 'non usata']]);
+      expect(screen.queryByLabelText('Numero della nuova VLAN')).not.toBeInTheDocument();
+      expect(nameOf(40)).toHaveValue('Telefoni');
+    });
+
+    it.each([
+      ['4095', 'Telefoni', '"4095" non è una VLAN: il numero va da 1 a 4094'],
+      ['dieci', 'Telefoni', '"dieci" non è una VLAN: il numero va da 1 a 4094'],
+      ['', 'Telefoni', 'Manca il numero della VLAN «Telefoni»'],
+      ['40', '  ', 'Manca il nome della VLAN 40'],
+      ['10', 'Altro', "La VLAN 10 è già nell'elenco"],
+    ])('a row that is wrong (%j, %j) is said under it and stops the save', (number, name, problem) => {
+      draw();
+      store().setGlobalNetworkSettings({ vlans: [{ id: 10, name: 'Uffici' }] });
+      const before = store().globalNetworkSettings;
+      render(<SettingsModal />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Aggiungi VLAN' }));
+      type(screen.getByLabelText('Numero della nuova VLAN'), number);
+      type(screen.getByLabelText('Nome della nuova VLAN'), name);
+      // nothing is said before the user asks to save
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      save();
+
+      expect(within(group()).getByRole('alert')).toHaveTextContent(problem);
+      expect(toast.error as Mock).toHaveBeenCalledWith(problem);
+      expect(toast.success as Mock).not.toHaveBeenCalled();
+      expect(store().globalNetworkSettings).toEqual(before);
+
+      // put right, it goes away as it is typed, and the save goes through
+      type(screen.getByLabelText('Numero della nuova VLAN'), '40');
+      type(screen.getByLabelText('Nome della nuova VLAN'), 'Telefoni');
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      save();
+      expect(named()).toEqual([
+        { id: 10, name: 'Uffici' },
+        { id: 40, name: 'Telefoni' },
+      ]);
+    });
+
+    it('a row added and left empty is no row', () => {
+      render(<SettingsModal />);
+      fireEvent.click(screen.getByRole('button', { name: 'Aggiungi VLAN' }));
+      save();
+      expect(toast.error as Mock).not.toHaveBeenCalled();
+      expect(named()).toBeUndefined();
+      expect(within(group()).queryByRole('table')).not.toBeInTheDocument();
+    });
+
+    it('a name is taken away with its button: the VLAN leaves the list, or stays unnamed when the drawing uses it', () => {
+      draw();
+      store().setGlobalNetworkSettings({
+        vlans: [{ id: 10, name: 'Uffici' }, { id: 99, name: 'Vecchia' }],
+      });
+      render(<SettingsModal />);
+      // a VLAN of the drawing that has no name has nothing to take away
+      expect(screen.queryByRole('button', { name: 'Togli il nome della VLAN 20' })).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Togli il nome della VLAN 99' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Togli il nome della VLAN 10' }));
+      expect(rows()).toEqual([
+        ['1', '', 'in uso'],
+        ['10', '', 'in uso'],
+        ['20', '', 'in uso'],
+        ['30', '', 'in uso'],
+      ]);
+      // (still in the project until it is saved)
+      expect(named()).toHaveLength(2);
+      save();
+
+      expect(named()).toBeUndefined();
+      expect('vlans' in JSON.parse(JSON.stringify(store().globalNetworkSettings))).toBe(false);
+    });
+
+    it('a name emptied is a name taken away', () => {
+      store().setGlobalNetworkSettings({ vlans: [{ id: 10, name: 'Uffici' }, { id: 20, name: 'Wi-Fi' }] });
+      render(<SettingsModal />);
+      type(nameOf(10), '   ');
+      save();
+      expect(toast.error as Mock).not.toHaveBeenCalled();
+      expect(named()).toEqual([{ id: 20, name: 'Wi-Fi' }]);
+      expect(rows()).toEqual([['20', 'Wi-Fi', 'non usata']]);
+    });
+
+    it('a row added by hand can be taken away before it is saved', () => {
+      render(<SettingsModal />);
+      fireEvent.click(screen.getByRole('button', { name: 'Aggiungi VLAN' }));
+      type(screen.getByLabelText('Numero della nuova VLAN'), '40');
+      fireEvent.click(screen.getByRole('button', { name: 'Togli la nuova VLAN' }));
+      expect(within(group()).queryByRole('table')).not.toBeInTheDocument();
+      save();
+      expect(named()).toBeUndefined();
     });
   });
 

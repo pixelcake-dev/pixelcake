@@ -14,6 +14,7 @@ import type {
   NetworkDevice,
   ProjectFile,
   ProjectTemplates,
+  ProjectVlan,
   StoredCanvas,
 } from '@/types';
 import { PROJECT_FILE_FORMAT, PROJECT_FILE_VERSION } from '@/types';
@@ -21,6 +22,7 @@ import { normalizeAddressing, normalizeBindings } from '@/engine';
 import { cleanupConnections } from '@/utils/cleanupConnections';
 import { isValidIP } from '@/utils/ipHelpers';
 import { tidyNotes } from '@/utils/deviceNotes';
+import { isVlanId, tidyVlanName, VLAN_NAME_MAX_LENGTH } from '@/utils/vlanNames';
 
 export const PROJECT_FILE_EXTENSION = '.pixelcake.json';
 export const DEFAULT_PROJECT_NAME = 'Progetto senza nome';
@@ -109,7 +111,8 @@ function plural(count: number, one: string, many: string): string {
 
 // ---------- serialising ----------
 
-const SETTINGS_KEYS = ['ipClass', 'subnet', 'gateway', 'dns', 'emailMode'];
+const SETTINGS_KEYS = ['ipClass', 'subnet', 'gateway', 'dns', 'emailMode', 'vlans'];
+const VLAN_KEYS = ['id', 'name'];
 const DEVICE_KEYS = [
   'id',
   'type',
@@ -286,7 +289,12 @@ export function serializeProject(project: ProjectFile): string {
     name: project.name,
     description: project.description,
     savedAt: project.savedAt,
-    settings: ordered(project.settings, SETTINGS_KEYS),
+    // (a project that names no VLAN is written without the list)
+    settings: ordered(
+      { ...project.settings, vlans: project.settings.vlans?.length ? project.settings.vlans : undefined },
+      SETTINGS_KEYS,
+      { vlans: each(VLAN_KEYS) }
+    ),
     activeCanvasId: project.activeCanvasId,
     canvases: project.canvases.map(canvas => ({
       id: canvas.id,
@@ -315,6 +323,41 @@ export type ParseProjectResult =
 
 /** Thrown inside the parser for a file that cannot be opened at all */
 class ProjectFileError extends Error {}
+
+/**
+ * The names of the VLANs of the project: a number from 1 to 4094 and a name
+ * each, one name for a number, lowest number first. What is not is left
+ * out, a name that is too long is cut, and both are said.
+ */
+function parseVlans(value: unknown, warnings: string[]): ProjectVlan[] {
+  if (!Array.isArray(value)) {
+    warnings.push('Elenco dei nomi delle VLAN non valido: ignorato.');
+    return [];
+  }
+  const byId = new Map<number, ProjectVlan>();
+  let dropped = 0;
+  let cut = 0;
+  for (const entry of value) {
+    const name = isRecord(entry) && typeof entry.name === 'string' ? entry.name.trim() : '';
+    if (!isRecord(entry) || !isVlanId(entry.id) || name === '' || byId.has(entry.id)) {
+      dropped++;
+      continue;
+    }
+    if (name.length > VLAN_NAME_MAX_LENGTH) cut++;
+    byId.set(entry.id, { id: entry.id, name: tidyVlanName(name) });
+  }
+  if (dropped > 0) {
+    warnings.push(
+      `${plural(dropped, 'nome di VLAN non valido o duplicato ignorato', 'nomi di VLAN non validi o duplicati ignorati')}.`
+    );
+  }
+  if (cut > 0) {
+    warnings.push(
+      `${plural(cut, 'nome di VLAN troppo lungo accorciato', 'nomi di VLAN troppo lunghi accorciati')} a ${VLAN_NAME_MAX_LENGTH} caratteri.`
+    );
+  }
+  return [...byId.values()].sort((a, b) => a.id - b.id);
+}
 
 function parseSettings(value: unknown, warnings: string[]): GlobalNetworkSettings {
   if (!isRecord(value)) {
@@ -356,6 +399,10 @@ function parseSettings(value: unknown, warnings: string[]): GlobalNetworkSetting
   }
   if (badDns) {
     warnings.push('Server DNS predefinito non valido: ignorato.');
+  }
+  if (value.vlans !== undefined) {
+    const vlans = parseVlans(value.vlans, warnings);
+    if (vlans.length > 0) settings.vlans = vlans;
   }
   return settings;
 }

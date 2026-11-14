@@ -1,5 +1,7 @@
 import { useState, type KeyboardEvent } from 'react';
 import { X } from 'lucide-react';
+import { vlanShort } from '@/utils/vlanNames';
+import { useVlanNames } from '@/utils/useVlanNames';
 
 interface VLANInputProps {
   label?: string;
@@ -11,11 +13,13 @@ interface VLANInputProps {
 
 /**
  * VLANInput - Multi-value input for VLAN IDs with tag chips
- * Validates VLAN range (1-4094) and displays as removable tags
+ * Validates VLAN range (1-4094) and displays as removable tags. A VLAN the
+ * project gave a name to shows it on its tag, after the number
  */
 export const VLANInput = ({ label, value, onChange, placeholder = 'es. 10, 20, 30', disabled = false }: VLANInputProps) => {
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState('');
+  const names = useVlanNames();
 
   const addVLAN = (vlanString: string) => {
     const trimmed = vlanString.trim();
@@ -101,7 +105,7 @@ export const VLANInput = ({ label, value, onChange, placeholder = 'es. 10, 20, 3
               fontWeight: 500,
             }}
           >
-            {vlan}
+            {vlanShort(vlan, names)}
             {!disabled && (
               <button
                 type="button"

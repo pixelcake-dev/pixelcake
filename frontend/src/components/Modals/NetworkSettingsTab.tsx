@@ -2,7 +2,8 @@
  * Network Settings Tab
  * The network of the project: what a new device starts from (the network its
  * addresses are proposed in, the mask, the gateway, the DNS server its card
- * asks), and how emails travel in a simulation.
+ * asks), the names of its VLANs, and how emails travel in a simulation. One
+ * button saves it all.
  */
 
 import { useState, useEffect } from 'react';
@@ -11,10 +12,12 @@ import { Button } from '@/components/ui/Button';
 import { FormFieldset } from '@/components/ui/FormContainer';
 import { FieldRow, SelectField, TextField } from '@/components/ui/compact';
 import { hintClass } from '@/components/ui/compactStyles';
+import VlanNamesTable from '@/components/ui/VlanNamesTable';
 import { useNetworkStore } from '@/store/networkStore';
 import { askConfirm } from '@/store/confirmStore';
 import { isValidIP } from '@/utils/ipHelpers';
 import { devicesWithoutDns, withDnsServer } from '@/utils/defaultDns';
+import { namedVlans, vlanRowProblem, vlanRows, vlansInUse, type VlanRow } from '@/utils/vlanNames';
 import { type EmailMode } from '@/types';
 
 /** What is wrong with an address field of the project; undefined when it is fine */
@@ -50,6 +53,7 @@ const NetworkSettingsTab = () => {
   const [gateway, setGateway] = useState('');
   const [dns, setDns] = useState('');
   const [emailMode, setEmailMode] = useState<EmailMode>('auto');
+  const [vlans, setVlans] = useState<VlanRow[]>([]);
   // What is wrong is said once the user has tried to save, then as it is typed
   const [checked, setChecked] = useState(false);
 
@@ -60,6 +64,10 @@ const NetworkSettingsTab = () => {
     setGateway(globalSettings.gateway);
     setDns(globalSettings.dns ?? '');
     setEmailMode(globalSettings.emailMode ?? 'auto');
+    // The VLANs that have a name, and those the drawing on screen uses
+    // without one (read once: the drawing does not change under this window)
+    const drawing = useNetworkStore.getState();
+    setVlans(vlanRows(globalSettings.vlans, vlansInUse(drawing.devices, drawing.connections)));
   }, [globalSettings]);
 
   const problems = {
@@ -109,7 +117,12 @@ const NetworkSettingsTab = () => {
       toast.error('Tutti i campi sono obbligatori');
       return;
     }
-    const wrong = problems.ipClass ?? problems.subnet ?? problems.gateway ?? problems.dns;
+    const wrong =
+      problems.ipClass ??
+      problems.subnet ??
+      problems.gateway ??
+      problems.dns ??
+      vlans.map((row) => vlanRowProblem(row, vlans)).find((problem) => problem !== undefined);
     if (wrong) {
       setChecked(true);
       toast.error(wrong);
@@ -122,6 +135,8 @@ const NetworkSettingsTab = () => {
       gateway: gateway.trim(),
       dns: dns.trim() || undefined,
       emailMode,
+      // (rows left without a name are not kept; none named, no list)
+      vlans: namedVlans(vlans).length > 0 ? namedVlans(vlans) : undefined,
     });
     setChecked(false);
 
@@ -191,6 +206,15 @@ const NetworkSettingsTab = () => {
             </div>
           )}
         </FieldRow>
+      </FormFieldset>
+
+      <FormFieldset legend="VLAN del progetto">
+        <p className={`${hintClass} mb-2`}>
+          Un nome per ogni VLAN, scritto una volta: compare accanto al numero dove la VLAN è
+          mostrata, nella scheda di uno switch e nelle impostazioni delle sue porte. Le VLAN usate
+          su questo canvas sono già in elenco. Una riga lasciata senza nome non viene salvata.
+        </p>
+        <VlanNamesTable rows={vlans} onChange={setVlans} showProblems={checked} />
       </FormFieldset>
 
       <FormFieldset legend="Simulazione">

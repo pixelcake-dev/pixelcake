@@ -6,7 +6,8 @@
 
 import { maskToPrefix, portVlanMode } from '@/engine';
 import { isValidIP } from '@/utils/ipHelpers';
-import type { Port } from '@/types';
+import { vlanLabel, vlanShort } from '@/utils/vlanNames';
+import type { Port, ProjectVlan } from '@/types';
 
 /** `1–4, 7, 9–10`: a list of port numbers, runs written as ranges */
 export function portRanges(ids: number[]): string {
@@ -41,11 +42,36 @@ export interface SwitchSummary {
   trunks: { port: number; vlans: number[] }[];
 }
 
+/** True when a port of these has a VLAN of its own: the device then applies VLANs port by port */
+function appliesVlans(ports: Port[]): boolean {
+  return ports.some((port) => {
+    const mode = portVlanMode(port);
+    return mode.kind === 'access' ? mode.explicit : mode.vlans.length > 0;
+  });
+}
+
+/**
+ * The VLAN of a port in a few words, as the engine reads the port among the
+ * others of its device: `VLAN 10 «Uffici»` for an access port, `trunk: VLAN
+ * 10 «Uffici», 20` or `trunk: tutte le VLAN` for a trunk. Empty when the
+ * device applies no VLAN: a router, a firewall, a switch nobody split.
+ */
+export function portVlanText(
+  port: Port,
+  ports: Port[],
+  names: readonly ProjectVlan[] | undefined
+): string {
+  if (!appliesVlans(ports)) return '';
+  const mode = portVlanMode(port);
+  if (mode.kind === 'access') return vlanLabel(mode.vlan, names);
+  if (mode.vlans.length === 0) return 'trunk: tutte le VLAN';
+  const carried = [...mode.vlans].sort((a, b) => a - b).map((vlan) => vlanShort(vlan, names));
+  return `trunk: VLAN ${carried.join(', ')}`;
+}
+
 export function summariseSwitch(ports: Port[], linkedPorts: ReadonlyMap<number, string>): SwitchSummary {
   const modes = ports.map((port) => ({ port, mode: portVlanMode(port) }));
-  const vlanAware = modes.some(({ mode }) =>
-    mode.kind === 'access' ? mode.explicit : mode.vlans.length > 0
-  );
+  const vlanAware = appliesVlans(ports);
   const byVlan = new Map<number, number[]>();
   const trunks: SwitchSummary['trunks'] = [];
   for (const { port, mode } of modes) {
