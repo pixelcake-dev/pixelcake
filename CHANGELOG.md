@@ -113,6 +113,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Two-part processing: configurable devices (with ports) + standard devices (with NICs)
 
 ### Fixed
+- **A device clicked after a click on the empty canvas looked selected and was not.** «Copia» stayed off, Ctrl+C copied nothing, and the device lost its selected look as soon as it was moved. The same happened to a device taken with the keyboard, and after the right button on a device. A click on a cable did the opposite: the devices it let go stayed selected for the app, and Ctrl+C still copied them. The canvas remembered where the last press and release had been and, when they were less than 5 pixels apart, kept the next change of selection from the rest of the app, whenever it came and whatever made it. That check is gone. It was written against a selection box drawn by accident and never saw one: a box changes the selection while it is drawn, before the release the check waited for.
 - **The cross that removes a VLAN from the list of a device was white on a light chip**, and could not be seen in the light theme.
 - **Aiuto → Mostra la schermata di benvenuto did nothing on the empty canvas of a project with more than one canvas**, although its own notice said to go to an empty canvas. Asked for, it now shows on any empty canvas.
 - **A selection set by the app was cleared at once by the canvas** (it took it for one the user had cleared): a device the app selects now stays selected.

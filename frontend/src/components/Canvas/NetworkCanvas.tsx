@@ -124,10 +124,6 @@ const NetworkCanvas = () => {
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const isUpdatingSelection = useRef(false);
-  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
-  const dragEndPos = useRef<{ x: number; y: number } | null>(null);
-  const dragGestureId = useRef<number>(0);
-  const currentDragId = useRef<number | null>(null);
 
   // Handle context menu on device. While presenting, the right button opens
   // the same small menu as a click: nothing there edits the drawing
@@ -182,23 +178,11 @@ const NetworkCanvas = () => {
         return;
       }
 
+      // Every change is passed on, whatever was done on the canvas before
+      // it: React Flow has changed its selection already, and a change kept
+      // from the store leaves the app with another selection than the one on
+      // screen
       const selectedIds = nodes.filter((n) => n.selected).map((n) => n.id);
-
-      // Check if this was a micro-drag (< 5px) and cancel selection if so
-      // Validate that coordinates are from the same drag gesture
-      if (dragStartPos.current && dragEndPos.current && currentDragId.current !== null) {
-        const dx = dragEndPos.current.x - dragStartPos.current.x;
-        const dy = dragEndPos.current.y - dragStartPos.current.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        // If drag distance < 5px, it's accidental - cancel selection
-        if (distance < 5) {
-          dragStartPos.current = null;
-          dragEndPos.current = null;
-          currentDragId.current = null;
-          return; // Don't update selection
-        }
-      }
 
       // Only update if selection changed (avoid infinite loops)
       // Use Set for efficient comparison instead of sort().join().
@@ -221,11 +205,6 @@ const NetworkCanvas = () => {
           isUpdatingSelection.current = false;
         });
       }
-
-      // Reset drag tracking
-      dragStartPos.current = null;
-      dragEndPos.current = null;
-      currentDragId.current = null;
     },
     [selectMultipleDevices]
   );
@@ -546,20 +525,6 @@ const NetworkCanvas = () => {
     return;
   }, []);
 
-  // Track mouse drag for threshold-based selection
-  // Use onPaneMouseDown/Up to ensure events only fire from canvas pane (not Controls/MiniMap)
-  const handlePaneMouseDown = useCallback((e: React.MouseEvent) => {
-    dragGestureId.current++;
-    currentDragId.current = dragGestureId.current;
-    dragStartPos.current = { x: e.clientX, y: e.clientY };
-    dragEndPos.current = null;
-  }, []);
-
-  const handlePaneMouseUp = useCallback((e: React.MouseEvent) => {
-    dragEndPos.current = { x: e.clientX, y: e.clientY };
-    // Keep currentDragId for validation in handleSelectionChange
-  }, []);
-
   // The welcome screen shows by itself only on an empty project: one canvas
   // with nothing on it (an empty canvas added to a project is just an empty
   // canvas). Asked for from the Aiuto menu, it shows on any empty canvas
@@ -601,8 +566,6 @@ const NetworkCanvas = () => {
         onMoveStart={presenting ? closePresentationMenu : undefined}
         onError={handleError}
         onMoveEnd={handleMoveEnd}
-        onMouseDown={handlePaneMouseDown}
-        onMouseUp={handlePaneMouseUp}
         nodeTypes={memoizedNodeTypes}
         edgeTypes={memoizedEdgeTypes}
         // Restore saved viewport on mount

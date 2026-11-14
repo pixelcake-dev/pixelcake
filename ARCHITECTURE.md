@@ -63,6 +63,8 @@ The panels React Flow draws by itself (zoom buttons, small map, credit) take the
 
 The connection points of a device (`.connect-point`) are hidden at rest: they show on the device under the pointer, on a selected one, and on every device while a cable is being dragged. Their hit area is always there.
 
+The selection of the devices is React Flow's: every change it tells of (`onSelectionChange`) is written to networkStore, whatever was done on the canvas before it. The handler keeps its identity and reads the store when it is called, because React Flow calls a new handler at once with the selection it has at that moment. It keeps nothing back: React Flow has changed its selection already, and a change that does not reach the store leaves the app with another selection than the one on screen.
+
 Bringing the whole drawing into view is a request (`fitViewRequest` in networkStore, raised by `triggerFitView`). The canvas answers each request once, after React Flow has measured the devices, so a drawing that has just been loaded (a sample network) is fitted too.
 
 While presenting, NetworkCanvas makes the drawing read-only (nothing is selected, moved, joined, deleted or pasted; dragging pans), a click on a device or a cable opens the presentation menu, the drawing is fitted to the window, and the view saved with the drawing is not touched. NetworkDevice and CustomEdge mark the ends of the question, a broken device and a cut cable. The way of the answer is not painted: the packet shows it, and a cable lights up in the colour of its kind while the packet is on it, as while building.
@@ -516,7 +518,7 @@ Open           -> file -> parseProjectFile() -> projectStore.loadProject() -> ne
 | Modal jumps on tab change | `verticalAlign="start"` keeps modal anchored |
 | VLAN/STP fields not visible | templateStore v4 with supportsVLAN/supportsSTP |
 | Loop infinito onSelectionChange | `isUpdatingSelection` ref + `queueMicrotask` |
-| Selezione globale spontanea | 5px movement threshold + `selectionMode="full"` |
+| Selezione globale spontanea | `selectionMode="full"`. The 5px threshold that came with it is gone: it never saw a selection box, and kept other changes of selection from the store |
 | Lag durante drag/selection | Set comparison + NetworkDevice memo comparator |
 | Dropdown select accent color | CSS focus state: `border-color: var(--accent-color)` + box-shadow rgba |
 | NICs/Ports wrapping on resize | `minWidth: '400px'` on left panel |
