@@ -18,6 +18,8 @@ export const dns = {
     number: 'N.',
     name: 'Nome',
     address: 'Indirizzo',
+    /** A name as the field of a record expects it */
+    namePlaceholder: 'www.azienda.example',
     nameOf: (row: number) => `Nome del record ${row}`,
     addressOf: (row: number) => `Indirizzo del record ${row}`,
     delete: 'Elimina il record',

@@ -11,10 +11,10 @@ export const newProject: Dictionary['newProject'] = {
 
   info: {
     legend: 'Project information',
-    name: 'Project name *',
-    namePlaceholder: example('Infrastructure HQ'),
+    name: 'Project name',
+    namePlaceholder: example('Head office network'),
     description: 'Description',
-    descriptionPlaceholder: 'Short description of the project...',
+    descriptionPlaceholder: 'Short description of the project…',
   },
 
   /** What the new devices of the project start from */

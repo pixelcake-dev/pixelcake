@@ -17,11 +17,11 @@ export const inspector: Dictionary['inspector'] = {
       type: 'Type',
       name: 'Device name',
       vendor: 'Vendor',
-      vendorPlaceholder: 'e.g. Cisco, HP, Dell...',
+      vendorPlaceholder: 'e.g. Cisco, HP, Dell…',
       location: 'Location',
-      locationPlaceholder: 'e.g. Rack 01, Office 102...',
+      locationPlaceholder: 'e.g. Rack 01, Office 102…',
       notes: 'Notes',
-      notesPlaceholder: 'Free text. It can also be read on the drawing, by resting the pointer on the device.',
+      notesPlaceholder: 'Free text. It also shows on the drawing when you hover over the device.',
     },
 
     network: {
@@ -31,14 +31,15 @@ export const inspector: Dictionary['inspector'] = {
       gatewayDefaultRoute: 'Gateway (default route)',
       /** Under the address of a router or of a firewall */
       namedByAddress:
-        'The address above is the one the device is named by; the networks it is attached to come from the addresses of its ports.',
+        'The address above is the one the device is known by; the networks it is attached to ' +
+        'come from the addresses of its ports.',
       /** Under the address of the first card. `<peer/>` is what the card is linked to, `<tab>` opens the tab of the cards */
       firstCard: {
-        linkedTo: 'Linked to <peer/>.',
+        linkedTo: 'Connected to <peer/>.',
         noCable: 'No cable attached.',
         onlyCard: `The name, speed and MAC of the card are in the <tab>${cardsTab} tab</tab>.`,
         firstOfSeveral: (count: number) =>
-          `It is the first of ${count} cards, the one the device is named by: the others, and the name, speed and MAC of each, are in the <tab>${cardsTab} tab</tab>.`,
+          `It is the first of ${count} cards, the one the device is known by: the others, and the name, speed and MAC of each, are in the <tab>${cardsTab} tab</tab>.`,
       },
     },
 
@@ -55,8 +56,8 @@ export const inspector: Dictionary['inspector'] = {
       enabled: 'STP enabled',
       mode: 'STP mode',
       bridgePriority: 'Bridge priority',
-      bridgePriorityHint: 'From 0 to 65535 in steps of 4096 (default 32768)',
-      notSimulated: 'Spanning tree is kept as documentation: the engine does not simulate it.',
+      bridgePriorityHint: 'From 0 to 61440 in steps of 4096 (default 32768).',
+      notSimulated: 'Spanning tree is for documentation only: the engine does not simulate it.',
     },
   },
 

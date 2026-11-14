@@ -45,15 +45,15 @@ export const firewall: Dictionary['firewall'] = {
   noMatch: {
     title: 'When no rule matches',
     text:
-      'The zone policy decides: traffic towards a more trusted zone is denied (untrust → ' +
-      'trust, untrust → dmz, dmz → trust), everything else is allowed. The reply to an allowed ' +
-      'flow always passes.',
+      'The zone policy decides: traffic towards a more trusted zone is denied (untrust → trust, ' +
+      'untrust → dmz, dmz → trust); everything else is allowed. The reply to an allowed flow ' +
+      'always passes.',
   },
 
   /** What is wrong with a rule as typed: under its row, and after “Rule 2: ” on saving */
   problems: {
     /** The side is named as its column is: “From”, “To” */
     invalidEndpoint: (side: 'source' | 'destination', value: string) =>
-      `“${side === 'source' ? 'From' : 'To'}”: "${value}" is not any, a zone (trust, untrust, dmz), an address or a network`,
+      `“${side === 'source' ? 'From' : 'To'}”: "${value}" must be “any”, a zone (trust, untrust, dmz), an address or a network`,
   },
 };

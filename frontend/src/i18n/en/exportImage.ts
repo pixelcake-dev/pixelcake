@@ -2,8 +2,8 @@ import type { Dictionary } from '../dictionary';
 
 /** The board as a picture: the window, the notices, what is written in the picture */
 export const exportImage: Dictionary['exportImage'] = {
-  title: 'Export picture',
-  previewAlt: 'Preview of the picture',
+  title: 'Export image',
+  previewAlt: 'Image preview',
 
   format: {
     legend: 'Format',
@@ -41,11 +41,12 @@ export const exportImage: Dictionary['exportImage'] = {
 
   /** Shown when the picture is made from a presentation */
   presentationNote:
-    'The picture shows the drawing as it is now in the presentation, with the marks of the question and of the simulated failures.',
-  pngFailed: 'The browser could not create the PNG picture. Try a smaller size, or the SVG format.',
+    'The image shows the drawing as it is now in the presentation, with the question and the ' +
+    'simulated failures marked.',
+  pngFailed: 'The browser could not create the PNG image. Try a smaller size, or the SVG format.',
 
   copy: 'Copy to clipboard',
-  copyHint: 'Copy the picture (PNG) to paste it into a document or a message',
+  copyHint: 'Copy the image (PNG) to paste it into a document or a message',
   copied: 'Copied',
   preparing: 'Preparing the PNG…',
   /** Where the browser asks where to save */
@@ -55,20 +56,20 @@ export const exportImage: Dictionary['exportImage'] = {
 
   /** Saving and copying a picture: what the app says afterwards */
   notices: {
-    copied: 'Picture copied to clipboard',
-    cannotCopy: 'Could not copy the picture',
-    cannotCopyDetail: 'The browser did not allow it. You can save the picture to a file.',
-    downloaded: (fileName: string) => `Picture downloaded as ${fileName}`,
-    cannotChooseWhere: 'Could not choose where to save the picture',
-    cannotSaveTo: (fileName: string) => `Could not save to "${fileName}"`,
+    copied: 'Image copied to clipboard',
+    cannotCopy: 'Could not copy the image',
+    cannotCopyDetail: 'The browser did not allow it. You can save the image to a file.',
+    downloaded: (fileName: string) => `Image downloaded as ${fileName}`,
+    cannotChooseWhere: 'Could not open the save dialog',
+    cannotSaveTo: (fileName: string) => `Could not save to “${fileName}”`,
     tryElsewhere: 'Try again with another file or another folder.',
-    saved: 'Picture saved',
+    saved: 'Image saved',
   },
 
   /** How the file picker names each kind of file */
   fileTypes: {
-    png: 'PNG picture',
-    svg: 'SVG picture',
+    png: 'PNG image',
+    svg: 'SVG image',
   },
 
   /** In the name of a file, for a picture whose project and board leave nothing to write */

@@ -21,9 +21,9 @@ export const connection: Dictionary['connection'] = {
   type: 'Link type',
   noType: 'None (default)',
   colourPreview: 'Colour preview',
-  bandwidth: 'Bandwidth (e.g. 1Gbps, 100Mbps)',
+  bandwidth: 'Bandwidth (e.g. 1 Gbps, 100 Mbps)',
   label: 'Custom label',
   labelPlaceholder: 'Optional label',
   customColour: 'Custom colour (optional)',
-  customColourNote: 'The custom colour overrides the colour of the type',
+  customColourNote: 'The custom colour overrides the colour of the type.',
 };

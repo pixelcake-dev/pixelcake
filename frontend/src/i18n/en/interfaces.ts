@@ -24,8 +24,8 @@ export const interfaces: Dictionary['interfaces'] = {
   /** What a port or a card is linked to */
   link: {
     /** The label in front of what is at the other end of the cable */
-    linkedTo: 'Linked to',
-    linkedToPeer: (peer: string) => `Linked to ${peer}`,
+    linkedTo: 'Connected to',
+    linkedToPeer: (peer: string) => `Connected to ${peer}`,
     noCable: 'No cable attached',
     /** The other end, when its device is not in the drawing */
     unknownDevice: 'unknown device',
@@ -35,11 +35,11 @@ export const interfaces: Dictionary['interfaces'] = {
   portsTab: {
     summary: (linked: number, total: number) => {
       const ports = total === 1 ? 'port' : 'ports';
-      return `${linked} of ${total} ${ports} linked. Choose a port to see and change its settings.`;
+      return `${linked} of ${total} ${ports} connected. Choose a port to see and change its settings.`;
     },
     count: 'Number of ports',
     countOption: (count: number) => (count === 1 ? '1 port' : `${count} ports`),
-    nonePicked: 'Select a port to view and edit its settings.',
+    nonePicked: 'Choose a port to see and change its settings.',
     none: 'No ports configured for this device.',
   },
 
@@ -52,7 +52,7 @@ export const interfaces: Dictionary['interfaces'] = {
     mode: 'Port mode',
     modes: {
       access: 'Access (end device)',
-      trunk: 'Trunk (switch link)',
+      trunk: 'Trunk (link between switches)',
       wan: 'WAN (wide area network)',
       lan: 'LAN (local area network)',
       dmz: 'DMZ (demilitarised zone)',
@@ -74,11 +74,11 @@ export const interfaces: Dictionary['interfaces'] = {
       typedList: (vlans: readonly string[]) =>
         vlans.length === 1 ? `VLAN ${vlans[0]}` : `VLANs ${vlans.join(', ')}`,
     },
-    poe: 'PoE enabled (power over Ethernet)',
+    poe: 'PoE enabled (Power over Ethernet)',
 
     /** A router, a firewall: the address of the port, what leaves by it */
     addressHint: (defaultMask: string) =>
-      `It is the gateway of the devices linked to this port. Leave it empty if the port has no address; without a subnet mask, ${defaultMask} is used.`,
+      `This is the gateway for the devices connected to this port. Leave it empty if the port has no address; without a subnet mask, ${defaultMask} is used.`,
     zone: 'Security zone',
     zones: {
       none: 'None',
@@ -87,20 +87,20 @@ export const interfaces: Dictionary['interfaces'] = {
       dmz: 'DMZ (demilitarised zone)',
     },
     nat: 'NAT enabled',
-    natHint: `With NAT, what leaves by this port takes its address: it is needed towards the Internet, which does not carry private addresses. The services to be reached from outside are published in the ${natTab} tab.`,
+    natHint: `With NAT, traffic that leaves through this port takes the port’s address. Enable it on the port that faces the Internet, which does not carry private addresses. Services that must be reachable from outside are published in the ${natTab} tab.`,
     natWithoutAddress: 'The port has no address: until it has one, NAT translates nothing.',
     /** Under the gateway that the DHCP server of the port hands out */
     dhcpGatewayHint: 'Empty: the address of this port.',
     ips: 'IPS/IDS enabled (intrusion prevention/detection)',
-    ipsHint: 'Kept as documentation: the engine does not simulate it.',
-    notesPlaceholder: 'e.g. Uplink to core switch, server VLAN 10...',
+    ipsHint: 'For documentation only: the engine does not simulate it.',
+    notesPlaceholder: 'e.g. Uplink to core switch, server VLAN 10…',
   },
 
   /** The grid of the ports */
   grid: {
     /** What a port says under the pointer: its name, its VLAN when it has one, what it is linked to */
     title: (name: string, vlan: string, linkedTo: string | undefined) =>
-      [name, vlan, linkedTo ? `linked to ${linkedTo}` : ''].filter(Boolean).join(' — '),
+      [name, vlan, linkedTo ? `connected to ${linkedTo}` : ''].filter(Boolean).join(' — '),
     poe: 'PoE enabled',
   },
 
@@ -127,8 +127,8 @@ export const interfaces: Dictionary['interfaces'] = {
       port: 'Port',
       address: 'Address',
       zone: 'Zone',
-      linkedTo: 'Linked to',
-      does: 'Does',
+      linkedTo: 'Connected to',
+      does: 'Role',
     },
     /** What a port does, besides NAT */
     does: {
@@ -144,7 +144,7 @@ export const interfaces: Dictionary['interfaces'] = {
     switchCounts: (total: number, linked: number, disabled: number) =>
       [
         total === 1 ? '1 port' : `${total} ports`,
-        `${linked} linked`,
+        `${linked} connected`,
         ...(disabled === 0 ? [] : [`${disabled} disabled`]),
       ].join(' · ') + '.',
     /** `<vlan/>` is the VLAN with its name, `<ports/>` the numbers of the ports in it */
@@ -164,12 +164,12 @@ export const interfaces: Dictionary['interfaces'] = {
   card: {
     enabled: 'Card enabled',
     name: 'Interface name',
-    namePlaceholder: 'e.g. eth0, eth1, ens192...',
+    namePlaceholder: 'e.g. eth0, eth1, ens192…',
     mac: 'MAC address',
-    generateMac: 'Generate a MAC',
+    generateMac: 'Generate a MAC address',
     /** Under the gateway that the DHCP server of the card hands out */
     dhcpGatewayHint: 'Empty: no gateway. It is usually the address of the router.',
-    notesPlaceholder: 'e.g. Primary link, backup link...',
+    notesPlaceholder: 'e.g. Primary link, backup link…',
 
     /** Where the card takes its address from, and the address */
     address: {
@@ -184,9 +184,13 @@ export const interfaces: Dictionary['interfaces'] = {
       },
       fromDhcpServer: 'The address comes from the DHCP server of the network the card is attached to.',
       automaticHint:
-        'The address, subnet mask and gateway are handed out by a DHCP server of the same network: a router or firewall port, or a server, with “DHCP server enabled”. They are worked out from the drawing, the same way every time. The DNS server comes with the address, if that server hands one out.',
+        'The address, subnet mask and gateway are handed out by a DHCP server on the same ' +
+        'network: a router or firewall port, or a server, with “DHCP server enabled”. They are ' +
+        'worked out from the drawing, the same way every time. The DNS server comes with the ' +
+        'address, if that server hands one out.',
       dnsHint:
-        'The address of the server the card asks what address a name stands for. Empty: none, and a name used in place of an address gets no answer.',
+        'The address of the server the card asks to turn a name into an address. Empty: none, ' +
+        'and a name used in place of an address cannot be resolved.',
     },
   },
 
@@ -196,8 +200,8 @@ export const interfaces: Dictionary['interfaces'] = {
     noAddress: 'no address',
     noMac: 'MAC not set',
     disabled: 'Disabled',
-    remove: 'Remove card',
-    removeNamed: (name: string) => `Remove card ${name}`,
+    remove: 'Delete card',
+    removeNamed: (name: string) => `Delete card ${name}`,
     add: 'Add card',
   },
 
@@ -205,12 +209,12 @@ export const interfaces: Dictionary['interfaces'] = {
   problems: {
     notSubnetMask: (value: string) => `"${value}" is not a valid subnet mask`,
     addressOrNoMask: 'Enter an IP address or clear the subnet mask',
-    notVlan: (value: string | number) => `${value} is not a VLAN: the number goes from 1 to 4094`,
+    notVlan: (value: string | number) => `${value} is not a valid VLAN: the number must be between 1 and 4094`,
     accessPortOneVlan: 'An access port is in one VLAN only: several VLANs need a trunk',
     cardNeedsName: 'The card needs a name, for example eth0',
     /** The notice that refuses to save the device: which port or card, then what is wrong with it */
     ofPort: (id: number, problem: string) => `Port ${id}: ${problem}`,
     ofCard: (name: string, problem: string) => `Card ${name}: ${problem}`,
-    sameCardName: (name: string) => `Two cards are called ${name}: each card has a name of its own`,
+    sameCardName: (name: string) => `Two cards are called ${name}: each card needs its own name`,
   },
 };

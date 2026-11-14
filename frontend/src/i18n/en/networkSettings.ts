@@ -15,13 +15,11 @@ const listOf = (names: string[]) => {
 
 export const networkSettings: Dictionary['networkSettings'] = {
   title: 'Global network settings',
-  intro:
-    'They apply to the whole project. Changing them does not touch the devices that are already ' +
-    'there.',
+  intro: 'They apply to the whole project. Changing them does not affect existing devices.',
 
   newDevices: {
     legend: 'New devices',
-    network: 'Starting network',
+    network: 'Network',
     networkPlaceholder: example('192.168.1.0'),
     mask: 'Default subnet mask',
     maskPlaceholder: example('255.255.255.0'),
@@ -30,9 +28,9 @@ export const networkSettings: Dictionary['networkSettings'] = {
     dns: 'Default DNS server',
     dnsPlaceholder: 'optional',
     hint:
-      'A new device is offered the first free address of this network, with this subnet mask ' +
-      'and this gateway. A router or a firewall starts without a gateway: its default route is ' +
-      'chosen in its window. The DNS server, if there is one, is written on the network card ' +
+      'The first free address of this network is suggested for a new device, with this subnet ' +
+      'mask and this gateway. A router or a firewall starts without a gateway: its default route ' +
+      'is chosen in its window. The DNS server, if there is one, is written on the network card ' +
       'of new PCs, servers and the other end devices.',
   },
 
@@ -79,8 +77,8 @@ export const networkSettings: Dictionary['networkSettings'] = {
     auto: 'Auto (detect automatically)',
     internal: 'Internal mail server',
     hint:
-      'Decides how emails travel in a simulation: through an internal mail server or through ' +
-      'the internet exit.',
+      'Decides how emails travel in a simulation: through an internal mail server, or through an ' +
+      'external service (Cloud), out through the Internet.',
   },
 
   save: 'Save network settings',

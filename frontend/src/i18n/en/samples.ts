@@ -14,8 +14,8 @@ const offices = 'Offices';
 const serverRoom = 'Server room';
 const officesVlan = (vlan: number) => `Offices (VLAN ${vlan})`;
 const serversVlan = (vlan: number) => `Servers (VLAN ${vlan})`;
-const inside = 'Inside';
-const insideNetworks = 'inside networks';
+const inside = 'Internal';
+const insideNetworks = 'internal networks';
 
 export const samples: Dictionary['samples'] = {
   /** The small company the welcome screen loads: offices, Wi-Fi, servers and a DMZ */
@@ -37,7 +37,7 @@ export const samples: Dictionary['samples'] = {
     places: {
       offices,
       serverRoom,
-      offSite: 'Off site',
+      offSite: 'Off-site',
     },
     /** Ports named for the network behind them */
     ports: {

@@ -15,9 +15,9 @@ export const addDevice: Dictionary['addDevice'] = {
     name: 'Device name',
     namePlaceholder: (type: string) => `e.g. ${type}-Office-01`,
     vendor: 'Vendor',
-    vendorPlaceholder: 'e.g. Cisco, HP...',
+    vendorPlaceholder: 'e.g. Cisco, HP…',
     location: 'Location',
-    locationPlaceholder: 'e.g. Rack 01...',
+    locationPlaceholder: 'e.g. Rack 01…',
     portCount: 'Number of ports',
     portCountHint: 'It can also be changed later.',
   },
@@ -27,7 +27,7 @@ export const addDevice: Dictionary['addDevice'] = {
     legendOfCard: (cardName: string) => `Network · ${cardName}`,
     /** Under the address of the card of an end device; `withDns` when the project gives it a DNS server */
     cardHint: (withDns: boolean) =>
-      "The address is suggested: the first free one in the project's network. " +
+      "The address is suggested: the first free one in the project’s network. " +
       (withDns
         ? 'The subnet mask, gateway and DNS server come from Settings → Network.'
         : 'The subnet mask and gateway come from Settings → Network.'),
@@ -42,11 +42,11 @@ export const addDevice: Dictionary['addDevice'] = {
   /** The window that adds many devices at once */
   bulk: {
     title: 'Add devices in bulk',
-    searchPlaceholder: 'Search by type or configuration...',
+    searchPlaceholder: 'Search by type or ports…',
     noDevicesFor: (query: string) => `No devices found for "${query}"`,
 
-    configurableHeading: 'CONFIGURABLE DEVICES',
-    standardHeading: 'STANDARD DEVICES (1 network card by default)',
+    configurableHeading: 'Configurable devices',
+    standardHeading: 'Standard devices (1 network card by default)',
     columns: {
       configuration: 'Configuration',
       quantity: 'Quantity',
@@ -54,12 +54,12 @@ export const addDevice: Dictionary['addDevice'] = {
       controls: 'Controls',
     },
     addRow: 'Add Switch/Router/Firewall',
-    removeRow: 'Remove row',
+    removeRow: 'Delete row',
     decrease: 'Decrease',
     increase: 'Increase',
     total: 'Total devices:',
 
-    selectAtLeastOne: 'Select at least one device to add.',
+    selectAtLeastOne: 'Select at least one device to add',
     added: (count: number) => (count === 1 ? '1 device added' : `${count} devices added`),
   },
 };

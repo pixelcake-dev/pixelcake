@@ -109,8 +109,8 @@ describe('the two dictionaries', () => {
       'The address is suggested: the first free one.',
       'Delete “Offices”?',
       'a trunk, which carries several VLANs tagged',
-      'e.g. Cisco, HP, Dell...',
-      'ping www.azienda.example from PC-Vendite',
+      'e.g. Cisco, HP, Dell…',
+      'ping www.company.example from PC-Sales',
     ]) {
       expect(italianIn(text, { strict: true }), text).toEqual([]);
     }
@@ -137,11 +137,17 @@ describe('the two dictionaries', () => {
     expect(uneven).toEqual([]);
   });
 
-  it('the English one keeps to the glossary: a canvas is a board, an image is a picture', () => {
+  it('the English one keeps to the glossary: board, image, path, connected to, network card', () => {
     const banned: Array<[RegExp, string]> = [
       [/\bcanvas(es)?\b/i, 'board'],
-      [/\bimages?\b/i, 'picture'],
+      [/\bpictures?\b/i, 'image'],
       [/\bNICs?\b/, 'network card'],
+      [/\b(another|shortest) way\b/i, 'path'],
+      [/\blinked to\b/i, 'connected to'],
+      // (as a label: «Gateway consegnato» is "Gateway for clients"; "hand out" stays as a verb)
+      [/\bhanded out\b(?! by)/i, 'for clients'],
+      // (an Italian word inside an example: the English ones are under company.example)
+      [/azienda/i, 'company'],
     ];
     const findings = english.flatMap((leaf) =>
       banned

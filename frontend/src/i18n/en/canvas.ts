@@ -17,9 +17,9 @@ export const canvas: Dictionary['canvas'] = {
   area: {
     /** What a new area is called until it is given its name */
     defaultName: 'Area',
-    name: 'Name of the area',
+    name: 'Area name',
     namePlaceholder: 'Name',
     unnamed: 'Unnamed',
-    labelHint: 'Drag to move the area, double click to rename it',
+    labelHint: 'Drag to move the area, double-click to rename it',
   },
 };

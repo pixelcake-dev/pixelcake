@@ -14,19 +14,19 @@ export const vlan: Dictionary['vlan'] = {
     outOfRange: 'A VLAN must be between 1 and 4094',
     duplicate: 'VLAN already in the list',
     remove: (id: number) => `Remove VLAN ${id}`,
-    hint: 'Press Enter or comma to add a VLAN (1-4094)',
+    hint: 'Press Enter or comma to add a VLAN (1–4094).',
   },
 
   /** The table of the VLANs of the project and of their names (Settings → Network) */
   names: {
-    title: 'VLANs of the project',
+    title: 'Project VLANs',
     name: 'Name',
     onThisCanvas: 'On this board',
     remove: 'Remove',
-    newNumber: 'Number of the new VLAN',
+    newNumber: 'New VLAN number',
     numberPlaceholder: example('30'),
     nameOf: (id: string) => `Name of VLAN ${id}`,
-    newName: 'Name of the new VLAN',
+    newName: 'New VLAN name',
     /** In the empty name of a VLAN the drawing uses */
     unnamed: 'no name',
     namePlaceholder: example('Offices'),
@@ -40,7 +40,7 @@ export const vlan: Dictionary['vlan'] = {
     /** What is wrong with a row */
     problems: {
       numberMissing: (name: string) => `The number of VLAN “${name}” is missing`,
-      notAVlan: (typed: string) => `"${typed}" is not a VLAN: the number goes from 1 to 4094`,
+      notAVlan: (typed: string) => `"${typed}" is not a valid VLAN: the number must be between 1 and 4094`,
       nameMissing: (id: number) => `The name of VLAN ${id} is missing`,
       duplicate: (id: number) => `VLAN ${id} is already in the list`,
     },

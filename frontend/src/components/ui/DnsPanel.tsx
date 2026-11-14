@@ -80,7 +80,7 @@ const DnsPanel: React.FC<DnsPanelProps> = ({ records, onChange, addresses }) => 
                         <input
                           aria-label={words.records.nameOf(n)}
                           className={`${cell} font-mono`}
-                          placeholder="www.azienda.example"
+                          placeholder={words.records.namePlaceholder}
                           value={record.name}
                           onChange={(e) => update(record.id, { name: e.target.value })}
                         />

@@ -230,7 +230,7 @@ const ConnectionInspectorModal = () => {
           label={t.connection.bandwidth}
           value={bandwidth}
           onChange={(e) => setBandwidth(e.target.value)}
-          placeholder="1Gbps"
+          placeholder="1 Gbps"
           size="sm"
         />
 

@@ -13,10 +13,10 @@ const flowNames: Record<FlowModelType, string> = {
 
 export const simulation: Dictionary['simulation'] = {
   source: 'Source',
-  sourcePlaceholder: 'Search for a source device...',
+  sourcePlaceholder: 'Search for a source device…',
   destination: 'Destination',
-  destinationPlaceholder: 'Search for a destination device...',
-  flowModel: 'Flow model',
+  destinationPlaceholder: 'Search for a destination device…',
+  flowModel: 'Traffic type',
   flowModels: {
     ping: 'Ping (ICMP)',
     email: 'Email message (SMTP)',
@@ -29,9 +29,9 @@ export const simulation: Dictionary['simulation'] = {
 
   /** What a simulation that is refused, or that fails, says in a notice */
   notices: {
-    addTwoDevices: 'Add at least two devices to start a simulation.',
-    chooseBothEnds: 'Select a source and a destination device.',
-    sameDevice: 'The source and the destination cannot be the same device.',
+    addTwoDevices: 'Add at least two devices to start a simulation',
+    chooseBothEnds: 'Select a source and a destination device',
+    sameDevice: 'The source and the destination cannot be the same device',
     failed: (flow: FlowModelType) => `${flowNames[flow]} simulation failed`,
     /** In place of the reason, when the engine gives none */
     unknownReason: 'unknown reason',

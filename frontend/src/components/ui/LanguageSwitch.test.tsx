@@ -138,7 +138,7 @@ describe('where the switch is', () => {
     expect(screen.queryByText('Modifica')).toBeNull();
     expect(screen.getByText('Edit')).toBeInTheDocument();
     expect(screen.getByText('New project…')).toBeInTheDocument();
-    expect(screen.getByText('Export picture…')).toBeInTheDocument();
+    expect(screen.getByText('Export image…')).toBeInTheDocument();
     expect(screen.getByTitle('Switch to dark theme')).toBe(theme);
     // what the user wrote is not translated
     expect(screen.getByText('Sede Milano')).toBeInTheDocument();
@@ -184,7 +184,7 @@ describe('where the switch is', () => {
     expect(screen.getByRole('heading', { name: 'Language' })).toBeInTheDocument();
     expect(screen.getByText('English')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Appearance settings' })).toBeInTheDocument();
-    expect(screen.getByRole('switch')).toHaveTextContent('Light mode on');
+    expect(screen.getByRole('switch')).toHaveTextContent('Light theme on');
   });
 });
 
@@ -195,7 +195,7 @@ describe('text made outside React', () => {
 
     setLanguage('en');
     createNewProject({ name: 'Two' });
-    expect(toast.success).toHaveBeenLastCalledWith('Project "Two" created');
+    expect(toast.success).toHaveBeenLastCalledWith('Project “Two” created');
 
     setLanguage('it');
     createNewProject({ name: 'Tre' });
@@ -232,7 +232,7 @@ describe('text made outside React', () => {
     createNewProject({ name: '' });
     expect(getT().project.defaultName).toBe('Untitled project');
     const given = toast.success as ReturnType<typeof vi.fn>;
-    expect(given).toHaveBeenLastCalledWith('Project "Untitled project" created');
+    expect(given).toHaveBeenLastCalledWith('Project “Untitled project” created');
 
     setLanguage('it');
     render(<TopMenuBar />);

@@ -22,7 +22,7 @@ export const contextMenu: Dictionary['contextMenu'] = {
 
   area: {
     rename: 'Rename',
-    colourGroup: 'Colour of the area',
+    colourGroup: 'Area colour',
     colour: 'Colour',
     /** The colours of the palette, in its order */
     colours: {
@@ -36,7 +36,7 @@ export const contextMenu: Dictionary['contextMenu'] = {
     deleteQuestion: {
       /** `name` is empty for an area without a name */
       title: (name: string) => (name ? `Delete the area “${name}”?` : 'Delete the area?'),
-      detail: 'The devices it is drawn around stay where they are.',
+      detail: 'The devices it encloses stay where they are.',
     },
   },
 };

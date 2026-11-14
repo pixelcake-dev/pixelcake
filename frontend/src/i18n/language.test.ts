@@ -99,7 +99,7 @@ describe('the language of the interface', () => {
 
       expect(getLanguage()).toBe('en');
       expect(getT().common.actions.save).toBe('Save');
-      expect(getT().files.opened('HQ')).toBe('Project "HQ" opened');
+      expect(getT().files.opened('HQ')).toBe('Project “HQ” opened');
     });
 
     it('is remembered, and wins over the language of the browser at the next visit', async () => {

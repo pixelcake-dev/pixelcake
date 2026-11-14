@@ -9,7 +9,7 @@ const list = (items: string[]) =>
 
 const exchanges = (count: number) => (count === 1 ? '1 exchange' : `${count} exchanges`);
 
-const takeAnotherWay = (count: number) => `${count} ${count === 1 ? 'takes' : 'take'} another way`;
+const takeAnotherWay = (count: number) => `${count} ${count === 1 ? 'takes' : 'take'} another path`;
 
 const doNotChange = (count: number) => `${count} ${count === 1 ? 'does not change' : 'do not change'}`;
 
@@ -29,7 +29,9 @@ export const presentation: Dictionary['presentation'] = {
 
   /** What each exchange is, under the pointer (their names are in `common.services`) */
   flowHints: {
-    ping: 'A question and its answer: the simplest way to know whether two devices see each other',
+    ping:
+      'A question and its answer: the simplest way to find out whether two devices can reach ' +
+      'each other',
     web: 'The request for a page and the page that comes back',
     email: 'An email: from the sender to the mail server, from the server to the recipient',
   },
@@ -41,7 +43,7 @@ export const presentation: Dictionary['presentation'] = {
     httpRequest: 'Page request',
     httpResponse: 'Server response',
     downloadRequest: 'File request',
-    downloadData: 'File arrival',
+    downloadData: 'File transfer',
     smtpSubmit: 'Sending to the mail server',
     delivery: 'Delivery to the recipient',
     smtpToCloud: 'Sending to the external mail service',
@@ -51,7 +53,7 @@ export const presentation: Dictionary['presentation'] = {
   /** The bar that takes the place of the menu bar */
   bar: {
     badge: 'Presentation',
-    canvases: 'Boards of the project',
+    canvases: 'Project boards',
     packetSpeed: 'Packet speed',
     speeds: {
       slow: 'Slow',
@@ -59,7 +61,7 @@ export const presentation: Dictionary['presentation'] = {
       fast: 'Fast',
     },
     terminal: 'Terminal',
-    exportPicture: 'Export picture',
+    exportPicture: 'Export image',
     fullScreen: 'Full screen',
     exitFullScreen: 'Exit full screen',
     lightTheme: 'Switch to light theme',
@@ -80,8 +82,8 @@ export const presentation: Dictionary['presentation'] = {
     to: 'To',
     fromPlaceholder: 'Where it starts…',
     toPlaceholder: 'Where it arrives…',
-    swapEnds: 'Swap start and arrival',
-    exchangeType: 'Exchange type',
+    swapEnds: 'Swap source and destination',
+    exchangeType: 'Traffic type',
     stop: 'Stop',
     showAgain: 'Show again',
   },
@@ -102,7 +104,7 @@ export const presentation: Dictionary['presentation'] = {
       email: (source: string, target: string) => `The email from ${source} reaches ${target}.`,
     },
     cannotTry: 'Something is missing to run the test.',
-    noCable: 'No cable joins the two devices.',
+    noCable: 'No path of cables joins the two devices.',
     lost: 'The packet is lost on the way.',
     /** `leg` is the title of the leg it happens on */
     neverLeaves: (device: string, leg: string) => `It does not even leave ${device} (${leg.toLowerCase()}).`,
@@ -111,10 +113,10 @@ export const presentation: Dictionary['presentation'] = {
 
   /** The answer next to the one the same question gets with nothing broken */
   comparison: {
-    untouched: 'The failures do not touch this path: it goes as before.',
-    anotherWay: 'It still arrives, by another way.',
+    untouched: 'The failures do not affect this path: it works as before.',
+    anotherWay: 'It still arrives, by another path.',
     anotherWayThrough: (devices: string[]) =>
-      `It still arrives, by another way: it now goes through ${list(devices)}.`,
+      `It still arrives, by another path: it now goes through ${list(devices)}.`,
     arrivedBefore: 'Without the failures it would arrive.',
     didNotArriveBefore: 'Without the failures it would not arrive.',
     neverArrived: 'It would not arrive even without the failures.',
@@ -122,7 +124,9 @@ export const presentation: Dictionary['presentation'] = {
 
   failures: {
     heading: 'Simulated failures',
-    hint: 'What happens if it breaks? Click a device or a cable in the drawing, then “Simulate a failure”. The drawing is not edited.',
+    hint:
+      'What happens if something breaks? Click a device or a cable in the drawing, then ' +
+      '“Simulate a failure”. The drawing itself is not changed.',
     repair: 'Repair',
     repairDevice: (name: string) => `Repair ${name}`,
     repairCable: (name: string) => `Repair the cable ${name}`,
@@ -143,7 +147,9 @@ export const presentation: Dictionary['presentation'] = {
       count === 0 ? 'None of them stop' : `${count} ${count === 1 ? 'stops' : 'stop'}`,
     takeAnotherWay,
     doNotChange,
-    shortestWay: 'The engine takes the shortest way that works; protocols such as spanning tree are not simulated.',
+    shortestWay:
+      'The engine takes the shortest path that works; protocols such as spanning tree are not ' +
+      'simulated.',
 
     show: (source: string, target: string) => `Show from ${source} to ${target}`,
     andMore: (count: number) => `and ${count} more`,
@@ -172,7 +178,7 @@ export const presentation: Dictionary['presentation'] = {
   path: {
     heading: 'Path',
     /** A reply that comes back the way the request went: `<leg/>` is the title of the leg */
-    retraced: '<leg/> <same>by the same way</same>',
+    retraced: '<leg/> <same>along the same path</same>',
     engineNotes: 'Engine notes',
   },
 

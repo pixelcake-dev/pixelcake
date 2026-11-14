@@ -15,14 +15,13 @@ interface TableRow {
 
 export const routes: Dictionary['routes'] = {
   intro:
-    'The networks the device is attached to through a port are reached on their own. The ' +
-    'networks that lie behind another router are written here: traffic for such a network is ' +
-    'handed to the next hop. The gateway in the “General” tab is the default route, used when ' +
-    'no other route matches.',
+    'Networks the device is directly connected to through a port need no route. Networks behind ' +
+    'another router go here: traffic for them is handed to the next hop. The gateway in the ' +
+    '“General” tab is the default route, used when no other route matches.',
   backup:
-    'Two routes to the same network: the first is the one used. The second is a backup and ' +
-    'takes over when the port the first leaves by is down, or when its line has failed (you ' +
-    'can simulate that in presentation mode).',
+    'Two routes to the same network: the first is the one used. The second is a backup and takes ' +
+    'over when the port the first leaves through is down, or when its line has failed (you can ' +
+    'simulate that in presentation mode).',
   /** On a device none of whose ports has an address */
   noAddresses:
     'No port of this device has an address: it lets traffic through without routing it, and ' +
@@ -39,7 +38,7 @@ export const routes: Dictionary['routes'] = {
     },
     destinationOf: (n: number) => `Destination network of route ${n}`,
     nextHopOf: (n: number) => `Next hop of route ${n}`,
-    noteOf: (n: number) => `Note of route ${n}`,
+    noteOf: (n: number) => `Note for route ${n}`,
     notePlaceholder: 'e.g. Milan site',
     delete: 'Delete route',
     deleteNumbered: (n: number) => `Delete route ${n}`,
@@ -50,14 +49,14 @@ export const routes: Dictionary['routes'] = {
   table: {
     title: 'Routing table',
     explanation:
-      'It is the one the engine uses, with the changes made in this window that are not saved ' +
-      'yet. The most specific row wins.',
+      'This is the table the engine uses, including the unsaved changes in this window. The most ' +
+      'specific row wins.',
     empty: 'No rows: the device has no addresses.',
     columns: {
       destination: 'Destination',
       nextHop: 'Next hop',
-      leavesBy: 'Leaves by',
-      kind: 'Kind',
+      leavesBy: 'Interface',
+      kind: 'Type',
     },
     /** The last cell of a row: `static, backup`, `default (gateway)` */
     kind: ({ kind, fromGateway, backup, state }: TableRow) => {
@@ -66,7 +65,7 @@ export const routes: Dictionary['routes'] = {
         name +
         (fromGateway ? ' (gateway)' : '') +
         (backup ? ', backup' : '') +
-        (state === 'unreachable' ? ": the next hop is on none of the device's networks" : '') +
+        (state === 'unreachable' ? ": the next hop is on none of the device’s networks" : '') +
         (state === 'down' ? ' (interface down)' : '')
       );
     },

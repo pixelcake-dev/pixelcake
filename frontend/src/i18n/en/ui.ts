@@ -15,13 +15,13 @@ export const ui: Dictionary['ui'] = {
 
   iconPicker: {
     placeholder: 'Select an icon',
-    search: 'Search icons...',
+    search: 'Search icons…',
     noResults: 'No icons found',
   },
 
   /** The list one searches in to choose an entry */
   searchableSelect: {
-    placeholder: 'Select...',
+    placeholder: 'Select…',
     noResults: 'No results found',
   },
 };

@@ -3,7 +3,7 @@ import type { Dictionary } from '../dictionary';
 /** Reading a project file: what was repaired, what is wrong */
 
 /** What is said of one board of the file: its name comes first */
-const inCanvas = (canvasName: string, what: string) => `Board "${canvasName}": ${what}`;
+const inCanvas = (canvasName: string, what: string) => `Board “${canvasName}”: ${what}`;
 
 export const projectFile: Dictionary['projectFile'] = {
   /** A file that cannot be opened: what is wrong with it */
@@ -15,7 +15,7 @@ export const projectFile: Dictionary['projectFile'] = {
       `The file was made with a newer version of PixelCake (format ${version}): ` +
       'update the app to open it.',
     noCanvases: 'The project has no boards.',
-    canvasNotValid: (number: number) => `Board no. ${number} of the file is not valid.`,
+    canvasNotValid: (number: number) => `Board ${number} in the file is not valid.`,
     noDeviceList: (canvasName: string) =>
       inCanvas(canvasName, 'the list of devices ("devices") is missing.'),
     noConnectionList: (canvasName: string) =>
@@ -26,7 +26,7 @@ export const projectFile: Dictionary['projectFile'] = {
   /** A file that was opened: what was put right on the way */
   repairs: {
     noVersion: 'Format version not stated: the file was read as version 1.',
-    noProjectName: (givenName: string) => `Project name missing: "${givenName}" used.`,
+    noProjectName: (givenName: string) => `Project name missing: “${givenName}” used.`,
     noDescription: 'Project description missing: left empty.',
 
     noSettings: 'Network settings missing: default values used.',
@@ -43,7 +43,7 @@ export const projectFile: Dictionary['projectFile'] = {
         : `${count} VLAN names too long, shortened to ${maxLength} characters.`,
 
     canvasUnnamed: (number: number, givenName: string) =>
-      `Board no. ${number} has no name: called "${givenName}".`,
+      `Board ${number} has no name: named “${givenName}”.`,
     devicesDropped: (canvasName: string, count: number) =>
       inCanvas(
         canvasName,
@@ -62,8 +62,8 @@ export const projectFile: Dictionary['projectFile'] = {
       inCanvas(
         canvasName,
         count === 1
-          ? '1 link with a duplicate id removed.'
-          : `${count} links with a duplicate id removed.`
+          ? '1 link with a duplicate ID removed.'
+          : `${count} links with a duplicate ID removed.`
       ),
     connectionsDetached: (canvasName: string, count: number) =>
       inCanvas(
@@ -82,12 +82,12 @@ export const projectFile: Dictionary['projectFile'] = {
     viewReset: (canvasName: string) =>
       inCanvas(canvasName, 'view missing or not valid, reset to the starting position.'),
     countersRaised: (canvasName: string) =>
-      inCanvas(canvasName, 'id counters missing or too low, recalculated.'),
+      inCanvas(canvasName, 'ID counters missing or too low, recalculated.'),
     canvasIdsGiven: (count: number) =>
       count === 1
-        ? '1 board with a missing or duplicate id: given a new id.'
-        : `${count} boards with a missing or duplicate id: given new ids.`,
-    activeCanvasNotFound: (openedName: string) => `Active board not found: "${openedName}" opened.`,
+        ? '1 board with a missing or duplicate ID: given a new ID.'
+        : `${count} boards with a missing or duplicate ID: given new IDs.`,
+    activeCanvasNotFound: (openedName: string) => `Active board not found: “${openedName}” opened.`,
 
     noTemplateList: 'List of custom templates missing: no template imported.',
     templatesDropped: (count: number) =>

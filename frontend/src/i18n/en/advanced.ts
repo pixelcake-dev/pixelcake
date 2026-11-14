@@ -4,14 +4,14 @@ import type { Dictionary } from '../dictionary';
 export const advanced: Dictionary['advanced'] = {
   usage: {
     title: 'Usage statistics',
-    intro: 'Statistics on the current use of the application.',
+    intro: 'Statistics on the current use of the app.',
     devices: {
       title: 'Devices on the board',
       caption: 'Devices on the open board',
     },
     links: {
       title: 'Links on the board',
-      caption: 'Active links between devices',
+      caption: 'Links between devices',
     },
     deviceTemplates: {
       title: 'Custom device templates',
@@ -19,7 +19,7 @@ export const advanced: Dictionary['advanced'] = {
     },
     linkTemplates: {
       title: 'Custom link templates',
-      caption: 'Customised link templates',
+      caption: 'Link templates you created',
     },
   },
 

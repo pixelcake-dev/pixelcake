@@ -25,8 +25,8 @@ export const templates: Dictionary['templates'] = {
     colour: 'Colour',
 
     generic: {
-      intro: 'Default devices available for quick use',
-      add: 'Add new template',
+      intro: 'Built-in devices, ready to use',
+      add: 'New template',
       edit: 'Edit template',
       delete: 'Delete template',
       deleteQuestion: {
@@ -41,22 +41,22 @@ export const templates: Dictionary['templates'] = {
       saveChanges: 'Save changes',
       create: 'Create template',
       name: 'Name',
-      namePlaceholder: 'e.g. PC, Printer, IoT Device',
+      namePlaceholder: 'e.g. PC, Printer, IoT device',
       chooseType: '-- Select a type --',
-      typeLocked: 'The type cannot be changed, to avoid problems with existing devices',
+      typeLocked: 'The type cannot be changed, to avoid problems with existing devices.',
       icon: 'Icon (Iconify)',
       preview: 'Preview',
       errors: {
-        nameRequired: 'Name required',
-        typeRequired: 'Base type required',
+        nameRequired: 'The name is required',
+        typeRequired: 'The base type is required',
         typeExists: 'This type already exists among the generic templates',
-        iconRequired: 'Icon required',
+        iconRequired: 'The icon is required',
       },
     },
 
     custom: {
       intro: 'Custom templates with Terraform fields',
-      add: '+ New template',
+      add: 'New template',
       formTitle: 'Create new template',
       name: 'Template name',
       namePlaceholder: 'e.g. AWS EC2 Instance',
@@ -69,7 +69,7 @@ export const templates: Dictionary['templates'] = {
   },
 
   links: {
-    intro: 'Link types available for the links between devices',
+    intro: 'Link types you can use between devices',
     add: newLinkType,
     edit: 'Edit link type',
     delete: 'Delete link type',
@@ -85,22 +85,22 @@ export const templates: Dictionary['templates'] = {
       titleNew: newLinkType,
       saveChanges: 'Save changes',
       create: 'Create type',
-      name: 'Name *',
+      name: 'Name',
       namePlaceholder: 'e.g. Trunk, Access, WAN',
-      typeId: 'Type ID *',
+      typeId: 'Type ID',
       typeIdPlaceholder: 'e.g. trunk, access, wan',
       typeIdHint: 'Unique identifier (lower case, no spaces). It cannot be changed once created.',
       description: 'Description',
       descriptionPlaceholder: 'e.g. Trunk link between switches',
-      colour: 'Colour *',
-      lineStyle: 'Line style *',
+      colour: 'Colour',
+      lineStyle: 'Line style',
       lineStyles: {
         solid: 'Solid',
         dashed: 'Dashed',
         dotted: 'Dotted',
       },
-      thickness: 'Thickness *',
-      thicknessHint: 'From 1 to 10 pixels',
+      thickness: 'Thickness',
+      thicknessHint: 'From 1 to 10 pixels.',
       preview: 'Preview',
       errors: {
         nameRequired: 'The name is required',
@@ -118,7 +118,7 @@ export const templates: Dictionary['templates'] = {
      * as long as the user has not rewritten them.
      */
     builtInDescriptions: {
-      access: 'Access port for end devices',
+      access: 'Access link to end devices',
       trunk: 'Trunk link between switches',
       uplink: 'Uplink to core/Internet',
       backbone: 'Critical infrastructure',

@@ -14,9 +14,9 @@ export const importExport: Dictionary['importExport'] = {
     format: 'Format:',
     terraformDraft: 'Terraform HCL (draft)',
     terraformNote:
-      '<strong>It is a draft: it cannot be applied with Terraform.</strong> The resource types are ' +
-      'placeholders and no provider is named. To save the topology and load it back, ' +
-      'use the YAML format.',
+      '<strong>This is a draft: it cannot be applied with Terraform.</strong> The resource types ' +
+      'are placeholders and no provider is named. To save the topology and load it back, use the ' +
+      'YAML format.',
     noDevices: 'No devices in the current topology.',
     addDevicesFirst: 'Add devices to the board to export them.',
     lines: (count: number) => (count === 1 ? '1 line' : `${count} lines`),
@@ -44,7 +44,7 @@ export const importExport: Dictionary['importExport'] = {
     append: 'Add to the topology',
     confirm: 'Import',
 
-    unsupportedFormat: 'Format not supported. Use a .yaml or .yml file',
+    unsupportedFormat: 'Format not supported. Use a .yaml or .yml file.',
     cannotRead: 'Could not read the file',
     nothingToImport: 'No devices to import',
     replacedNotice: (deviceCount: number, connectionCount: number) =>
@@ -58,7 +58,7 @@ export const importExport: Dictionary['importExport'] = {
     /** `reason` is what the YAML reader said, when it said something */
     yamlError: (reason: string | undefined) =>
       reason === undefined ? 'YAML parsing error: unknown error' : `YAML parsing error: ${reason}`,
-    noData: 'The YAML file holds no valid data',
+    noData: 'The YAML file contains no valid data',
     unknownStructure: 'YAML structure not recognised',
     noDevices: 'No devices found in the file',
 
@@ -67,7 +67,7 @@ export const importExport: Dictionary['importExport'] = {
       `${deviceName}: invalid IP address "${address}"`,
     portAddressNotValid: (portId: number, address: string) =>
       `Port ${portId}: invalid IP address "${address}"`,
-    portVlanOutOfRange: (portId: number) => `Port ${portId}: VLAN out of range (1-4094)`,
+    portVlanOutOfRange: (portId: number) => `Port ${portId}: VLAN out of range (1–4094)`,
     portPoolIncomplete: (portId: number) =>
       `Port ${portId}: DHCP server without a first or a last address, ignored`,
     cardPoolIncomplete: (deviceName: string, cardName: string) =>
@@ -83,16 +83,16 @@ export const importExport: Dictionary['importExport'] = {
 
     connectionNotValid: (number: number) => `Link ${number}: invalid format, ignored`,
     sourceNotFound: (number: number, deviceName: string) =>
-      `Link ${number}: source "${deviceName}" not found`,
+      `Link ${number}: source “${deviceName}” not found`,
     targetNotFound: (number: number, deviceName: string) =>
-      `Link ${number}: target "${deviceName}" not found`,
+      `Link ${number}: target “${deviceName}” not found`,
     portNotFound: (number: number, port: string, deviceName: string) =>
-      `Link ${number}: port ${port} not found on "${deviceName}", end not assigned`,
+      `Link ${number}: port ${port} not found on “${deviceName}”, end not assigned`,
     portTaken: (number: number, portId: number, deviceName: string) =>
-      `Link ${number}: port ${portId} of "${deviceName}" already used by another link, end not assigned`,
+      `Link ${number}: port ${portId} of “${deviceName}” already used by another link, end not assigned`,
     cardNotFound: (number: number, cardName: string, deviceName: string) =>
-      `Link ${number}: interface "${cardName}" not found on "${deviceName}", end not assigned`,
+      `Link ${number}: interface “${cardName}” not found on “${deviceName}”, end not assigned`,
     cardTaken: (number: number, cardName: string, deviceName: string) =>
-      `Link ${number}: interface "${cardName}" of "${deviceName}" already used by another link, end not assigned`,
+      `Link ${number}: interface “${cardName}” of “${deviceName}” already used by another link, end not assigned`,
   },
 };

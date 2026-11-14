@@ -7,7 +7,7 @@ export const devicePanel: Dictionary['devicePanel'] = {
     samples: 'Samples',
   },
 
-  searchPlaceholder: 'Search devices...',
+  searchPlaceholder: 'Search devices…',
   noDevicesFor: (query: string) => `No devices found for "${query}"`,
   bulkAdd: 'Bulk add',
   area: {
@@ -18,7 +18,7 @@ export const devicePanel: Dictionary['devicePanel'] = {
   /** What a device of each built-in type is, under its name in the list; `other` for the rest */
   descriptions: {
     pc: 'End device for users',
-    switch: 'Local network aggregation',
+    switch: 'Connects the devices on a local network',
     router: 'Gateway and routing between networks',
     server: 'Application or data server',
     firewall: 'Network protection and security',
@@ -48,12 +48,12 @@ export const devicePanel: Dictionary['devicePanel'] = {
     },
     twoSites: {
       title: 'Two sites: main line and backup line',
-      description: 'For trying failures: nearly every cable has another way',
+      description: 'For trying out failures: nearly every cable has an alternative path',
     },
     /** Asked before a sample takes the place of a drawing */
     replaceQuestion: {
       title: 'Load the sample network?',
-      detail: 'It takes the place of what is on the board.',
+      detail: 'It replaces what is on the board.',
       confirm: 'Load',
     },
   },
