@@ -163,7 +163,7 @@ describe('TopMenuBar', () => {
         'Salva con nome…',
         'Esporta immagine…',
       ]);
-      expect(entriesOf('Modifica')).toEqual(['Copia', 'Incolla']);
+      expect(entriesOf('Modifica')).toEqual(['Copia', 'Incolla', 'Racchiudi in un riquadro']);
       expect(entriesOf('Aiuto')).toEqual([
         'Guida',
         'Comandi del terminale',
@@ -185,16 +185,19 @@ describe('TopMenuBar', () => {
       }
     });
 
-    it('Copia and Incolla are the only entries that can be off, and only while they cannot work', () => {
+    it('the entries of Modifica are the only ones that can be off, and only while they cannot work', () => {
       drawTwoDevices();
       const { container } = render(<TopMenuBar />);
       const disabled = () =>
         Array.from(container.querySelectorAll('li.disabled')).map(li => li.textContent);
 
       // nothing selected, nothing copied
-      expect(disabled()).toEqual(['Copia', 'Incolla']);
+      expect(disabled()).toEqual(['Copia', 'Incolla', 'Racchiudi in un riquadro']);
       click('Copia');
       expect(useNetworkStore.getState().clipboard).toBeNull();
+      // (an area is drawn around what is selected: with nothing selected, none is)
+      click('Racchiudi in un riquadro');
+      expect(useNetworkStore.getState().areas).toEqual([]);
 
       act(() => useNetworkStore.getState().selectMultipleDevices(['dev-0']));
       expect(disabled()).toEqual(['Incolla']);

@@ -48,6 +48,17 @@
   --trunk-color: #6d5bb8;
   --trunk-color-rgb: 109, 91, 184;
 
+  /* The areas of the canvas («riquadri»): a small palette of calm colours,
+     for the border and the label of an area; its inside is a light tint of
+     the same colour. Dark enough to read as small text on that tint. The
+     exported picture repeats them (utils/canvasAreas.ts) */
+  --area-slate: #4a6b7f;
+  --area-green: #2a7351;
+  --area-amber: #8a5a12;
+  --area-red: #a8463f;
+  --area-violet: #6a58a6;
+  --area-teal: #1c6f7c;
+
   /* Terminal Colors (Light Mode) */
   --terminal-bg: #ffffff;
   --terminal-text: #22313b;
@@ -89,6 +100,13 @@
   --ok-color-rgb: 76, 195, 138;
   --trunk-color: #a595e6;
   --trunk-color-rgb: 165, 149, 230;
+
+  --area-slate: #8fb0c6;
+  --area-green: #6fbf9a;
+  --area-amber: #d9a441;
+  --area-red: #e08f88;
+  --area-violet: #a99bd6;
+  --area-teal: #62bccb;
 
   /* Terminal Colors (Dark Mode) */
   --terminal-bg: #111315;
@@ -308,6 +326,204 @@ input[type='radio'] {
 
 .react-flow .react-flow__attribution a {
   color: var(--text-color-light);
+}
+
+/* An area of the canvas («riquadro»): a light tint of its colour, a thin
+   border of the same colour and a label in small capitals in a corner. It
+   lies behind the devices and the cables and is not in their way: its
+   inside lets the pointer through, and it is taken by its label or by its
+   border (see components/Canvas/AreaNode.tsx) */
+.react-flow .react-flow__node-area {
+  pointer-events: none !important;
+  cursor: default !important;
+}
+
+.area-node {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  background-color: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.area-slate {
+  color: var(--area-slate);
+}
+
+.area-green {
+  color: var(--area-green);
+}
+
+.area-amber {
+  color: var(--area-amber);
+}
+
+.area-red {
+  color: var(--area-red);
+}
+
+.area-violet {
+  color: var(--area-violet);
+}
+
+.area-teal {
+  color: var(--area-teal);
+}
+
+/* Selected: the mark of a state is the orange, around the area */
+.area-node.selected {
+  outline: 1.5px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.area-label {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  max-width: calc(100% - 12px);
+  padding: 0 3px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+button.area-label {
+  pointer-events: all;
+  cursor: move;
+}
+
+button.area-label:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+/* An area without a name: nothing is written on it, until it is the one
+   being worked on */
+.area-label-empty {
+  opacity: 0;
+  font-style: italic;
+}
+
+.area-node.selected .area-label-empty,
+.area-label-empty:hover,
+.area-label-empty:focus-visible {
+  opacity: 0.7;
+}
+
+.area-label-input {
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  width: min(220px, calc(100% - 10px));
+  padding: 0 4px;
+  border: 1px solid var(--accent-color);
+  border-radius: var(--radius-small);
+  background: var(--bg-canvas);
+  color: var(--text-color);
+  font-size: 12px;
+  line-height: 18px;
+  pointer-events: all;
+}
+
+.area-label-input:focus {
+  outline: none;
+}
+
+/* The four sides of the border: what the area is taken by, a little wider
+   than the line that is drawn */
+.area-edge {
+  position: absolute;
+  pointer-events: all;
+  cursor: move;
+}
+
+.area-edge-top,
+.area-edge-bottom {
+  left: 0;
+  right: 0;
+  height: 9px;
+}
+
+.area-edge-left,
+.area-edge-right {
+  top: 0;
+  bottom: 0;
+  width: 9px;
+}
+
+.area-edge-top {
+  top: -5px;
+}
+
+.area-edge-bottom {
+  bottom: -5px;
+}
+
+.area-edge-left {
+  left: -5px;
+}
+
+.area-edge-right {
+  right: -5px;
+}
+
+/* The handles that resize a selected area: eight small squares in the
+   accent, at the corners and in the middle of the sides */
+.area-node .react-flow__resize-control.area-resize-handle {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--accent-color);
+  border-radius: 0;
+  background-color: var(--bg-canvas);
+  pointer-events: all;
+}
+
+/* While presenting an area is shown and nothing else */
+.area-node.readonly,
+.area-node.readonly * {
+  pointer-events: none;
+}
+
+/* The colours of the palette in the menu of an area */
+.area-colour-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px 8px;
+}
+
+.area-colour-caption {
+  margin-right: 4px;
+  font-size: 0.75em;
+  color: var(--text-color-light);
+}
+
+.area-colour-swatch {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1.5px solid currentColor;
+  border-radius: var(--radius-small);
+  background-color: color-mix(in srgb, currentColor 35%, transparent);
+  cursor: pointer;
+}
+
+.area-colour-swatch:hover {
+  background-color: currentColor;
+}
+
+.area-colour-swatch[aria-pressed='true'] {
+  outline: 1.5px solid var(--text-color);
+  outline-offset: 2px;
 }
 
 /* Network Device Styles */

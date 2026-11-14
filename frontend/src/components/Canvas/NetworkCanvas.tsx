@@ -7,6 +7,7 @@ import ReactFlow, {
   useEdgesState,
   useReactFlow,
   useStore,
+  useStoreApi,
   ConnectionMode,
   ConnectionLineType,
   SelectionMode,
@@ -26,9 +27,10 @@ import type {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import NetworkDevice from './NetworkDevice';
+import AreaNode from './AreaNode';
 import { useDhcp } from '@/utils/useDhcp';
 import { shownAddress } from '@/utils/dhcpLabels';
-import { miniMapColour } from '@/utils/miniMapColour';
+import { miniMapAreaColour, miniMapColour } from '@/utils/miniMapColour';
 import CustomEdge from './CustomEdge';
 import ParticleEdge from './ParticleEdge';
 import PacketAnimation from './PacketAnimation';
@@ -37,21 +39,31 @@ import { useNetworkStore } from '@/store/networkStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useUIStore } from '@/store/uiStore';
 import { usePresentationStore } from '@/store/presentationStore';
-import type { NetworkDevice as NetworkDeviceType } from '@/types/network';
+import type { CanvasArea, NetworkDevice as NetworkDeviceType } from '@/types/network';
 
 // Define node and edge types outside component to prevent re-renders
 const nodeTypes: NodeTypes = {
   device: NetworkDevice,
+  // An area («riquadro»): a labelled rectangle behind the devices
+  area: AreaNode,
 };
+
+/** The kind of node an area is, and what tells one from a device */
+const AREA_NODE = 'area';
 
 const edgeTypes = {
   custom: CustomEdge,
   particle: ParticleEdge, // Particle animations with CSS offset-path
 };
 
-/** A device on the small map is drawn in the colour of its type */
+/**
+ * A device on the small map is drawn in the colour of its type; an area is
+ * a faint rectangle of its own colour behind them
+ */
 const miniMapNodeColour = (node: Node): string =>
-  miniMapColour((node.data as NetworkDeviceType | undefined)?.type);
+  node.type === AREA_NODE
+    ? miniMapAreaColour((node.data as CanvasArea | undefined)?.color)
+    : miniMapColour((node.data as NetworkDeviceType | undefined)?.type);
 
 /**
  * True once React Flow knows the size of every device on screen, which is
@@ -69,6 +81,8 @@ const allNodesMeasured = (state: ReactFlowState): boolean => {
 const NetworkCanvas = () => {
   const devices = useNetworkStore((state) => state.devices);
   const connections = useNetworkStore((state) => state.connections);
+  const areas = useNetworkStore((state) => state.areas);
+  const selectedAreaId = useNetworkStore((state) => state.selectedAreaId);
   const viewport = useNetworkStore((state) => state.viewport);
   const fitViewRequest = useNetworkStore((state) => state.fitViewRequest);
   const updateDevice = useNetworkStore((state) => state.updateDevice);
@@ -98,6 +112,7 @@ const NetworkCanvas = () => {
   const panelOpen = usePresentationStore((state) => state.panelOpen);
 
   const reactFlowInstance = useReactFlow();
+  const reactFlowStore = useStoreApi();
   const nodesMeasured = useStore(allNodesMeasured);
 
   // Memoize node and edge types to prevent React Flow warnings
@@ -142,6 +157,8 @@ const NetworkCanvas = () => {
 
   // Presentation mode: a click on a device or on a cable opens its menu
   const handlePresentationNodeClick: NodeMouseHandler = useCallback((event, node) => {
+    // (an area is shown and nothing else: it has no menu)
+    if (node.type === AREA_NODE) return;
     usePresentationStore
       .getState()
       .openMenu({ kind: 'device', id: node.id, x: event.clientX, y: event.clientY });
@@ -259,8 +276,34 @@ const NetworkCanvas = () => {
   // for a device on DHCP
   const dhcp = useDhcp();
 
+  // The areas come first and lie under everything: under the cables too,
+  // which React Flow draws at depth 0. An area is not React Flow's to
+  // select, drag, join or delete: it never enters the selection of the
+  // devices, and a selection box drawn over it takes the devices alone
+  // (see AreaNode for how it is taken and moved)
+  const areaNodes: Node[] = useMemo(
+    () =>
+      areas.map((area) => ({
+        id: area.id,
+        type: AREA_NODE,
+        position: area.position,
+        data: area,
+        style: { width: area.size.width, height: area.size.height },
+        // (its size is known: it needs no measuring to be drawn or fitted)
+        width: area.size.width,
+        height: area.size.height,
+        zIndex: -1,
+        selectable: false,
+        draggable: false,
+        connectable: false,
+        focusable: false,
+        deletable: false,
+      })),
+    [areas]
+  );
+
   // Sync Zustand devices to React Flow nodes (memoized to prevent unnecessary re-renders)
-  const reactFlowNodes: Node[] = useMemo(() =>
+  const deviceNodes: Node[] = useMemo(() =>
     devices.map((device) => ({
       id: device.id,
       type: 'device',
@@ -275,6 +318,11 @@ const NetworkCanvas = () => {
       },
     })),
     [devices, dhcp, selectedDeviceIds, handleDeviceContextMenu, handleDeviceDoubleClick]
+  );
+
+  const reactFlowNodes: Node[] = useMemo(
+    () => (areaNodes.length > 0 ? [...areaNodes, ...deviceNodes] : deviceNodes),
+    [areaNodes, deviceNodes]
   );
 
   useEffect(() => {
@@ -374,6 +422,8 @@ const NetworkCanvas = () => {
       // Update Zustand store when node position changes (anche durante drag)
       changes.forEach((change) => {
         if (change.type === 'position' && 'position' in change && change.position) {
+          // (an area moved by one of its resize handles writes itself to the store)
+          if (useNetworkStore.getState().areas.some((area) => area.id === change.id)) return;
           updateDevice(change.id, { position: change.position });
         }
       });
@@ -407,6 +457,37 @@ const NetworkCanvas = () => {
     },
     [addConnection]
   );
+
+  // An area that is selected: the devices and the cables React Flow had
+  // selected are let go (the store has emptied its own list already), so
+  // that the Delete key deletes the area and nothing else
+  useEffect(() => {
+    if (selectedAreaId !== null) reactFlowStore.getState().unselectNodesAndEdges();
+  }, [selectedAreaId, reactFlowStore]);
+
+  // A press on the empty canvas (a click there, or a selection box begun
+  // there) lets go of the area that was selected
+  const deselectArea = useCallback(() => {
+    useNetworkStore.getState().selectArea(null);
+  }, []);
+
+  // The Delete key deletes the area that is selected, as it deletes the
+  // devices that are. Not while typing, and not while presenting
+  useEffect(() => {
+    const handleDeleteKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete') return;
+      if (usePresentationStore.getState().active) return;
+      const target = e.target;
+      const isTyping =
+        target instanceof HTMLElement &&
+        (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+      if (isTyping) return;
+      const network = useNetworkStore.getState();
+      if (network.selectedAreaId !== null) network.removeArea(network.selectedAreaId);
+    };
+    window.addEventListener('keydown', handleDeleteKey);
+    return () => window.removeEventListener('keydown', handleDeleteKey);
+  }, []);
 
   // Close the context menu when clicking on the canvas
   // Note: React Flow handles selection clearing automatically
@@ -486,6 +567,8 @@ const NetworkCanvas = () => {
     !presenting &&
     showWelcomeScreen &&
     devices.length === 0 &&
+    // (a canvas with an area drawn on it is not an empty one)
+    areas.length === 0 &&
     (canvasCount === 1 || welcomeRequested);
 
   return (
@@ -514,6 +597,7 @@ const NetworkCanvas = () => {
         onNodeClick={presenting ? handlePresentationNodeClick : undefined}
         onEdgeClick={presenting ? handlePresentationEdgeClick : undefined}
         onPaneClick={presenting ? closePresentationMenu : undefined}
+        onSelectionStart={presenting ? undefined : deselectArea}
         onMoveStart={presenting ? closePresentationMenu : undefined}
         onError={handleError}
         onMoveEnd={handleMoveEnd}

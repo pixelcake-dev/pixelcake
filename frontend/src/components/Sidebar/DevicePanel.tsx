@@ -8,7 +8,8 @@ import { createSampleTopology } from '@/utils/sampleTopology';
 import { createCompanySample } from '@/utils/sampleCompany';
 import { createPerimeterSample } from '@/utils/samplePerimeter';
 import { createRedundancySample } from '@/utils/sampleRedundancy';
-import { Plug, Package } from 'lucide-react';
+import { Plug, Package, SquareDashed } from 'lucide-react';
+import { addAreaInView } from '@/utils/areaActions';
 import type { DeviceType } from '@/types/network';
 import { askConfirm } from '@/store/confirmStore';
 
@@ -37,6 +38,7 @@ const DevicePanel = () => {
   const templates = useTemplateStore((state) => state.templates);
 
   const devices = useNetworkStore((state) => state.devices);
+  const areaCount = useNetworkStore((state) => state.areas.length);
   const loadTopology = useNetworkStore((state) => state.loadTopology);
   const clearAllDevices = useNetworkStore((state) => state.clearAllDevices);
   const triggerFitView = useNetworkStore((state) => state.triggerFitView);
@@ -81,8 +83,9 @@ const DevicePanel = () => {
 
   // A sample network takes the place of what is on the canvas: ask first
   const handleLoadSample = async (create: typeof createSampleTopology) => {
+    // (an area drawn on a canvas without devices is something to lose, too)
     const shouldLoad =
-      devices.length === 0 ||
+      (devices.length === 0 && areaCount === 0) ||
       (await askConfirm({
         title: 'Caricare la rete di esempio?',
         detail: 'Prende il posto di quello che c\'è sul canvas.',
@@ -139,6 +142,20 @@ const DevicePanel = () => {
             >
               <Package size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
               <span>Aggiungi in Blocco</span>
+            </button>
+          </div>
+
+          {/* An area: a labelled rectangle behind a group of devices. It is
+              added where the user is looking, ready to be named */}
+          <div className="mb-3">
+            <button className="sidebar-panel-item w-full" onClick={() => addAreaInView()}>
+              <SquareDashed size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
+              <span>
+                Riquadro
+                <span className="block text-xs text-[var(--text-color-light)]">
+                  Un&apos;area con un nome, dietro a un gruppo di dispositivi
+                </span>
+              </span>
             </button>
           </div>
 

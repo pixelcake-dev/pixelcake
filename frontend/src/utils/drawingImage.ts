@@ -16,11 +16,14 @@
 import { Position, getSmoothStepPath } from 'reactflow';
 import { DEVICE_ICONS } from '@/types/network';
 import type {
+  AreaColour,
+  CanvasArea,
   ConnectionTemplate,
   DeviceTemplate,
   NetworkConnection,
   NetworkDevice,
 } from '@/types/network';
+import { AREA_PALETTE, AREA_TINT } from '@/utils/canvasAreas';
 
 // ---------- what the caller gives ----------
 
@@ -67,6 +70,8 @@ export interface DrawingMarks {
 export interface DrawingInput {
   devices: NetworkDevice[];
   connections: NetworkConnection[];
+  /** The areas behind the devices («riquadri»), first drawn first */
+  areas?: CanvasArea[];
   deviceTemplates: DeviceTemplate[];
   connectionTemplates: ConnectionTemplate[];
   /** Size of each device as the screen draws it; a missing one is worked out from its texts */
@@ -138,6 +143,20 @@ const HEADING_FONT: FontSpec = { size: 14, weight: 600 };
 const CAPTION_FONT: FontSpec = { size: 12.5, weight: 400 };
 
 const PILL = { line: 16, padX: 8, padY: 4, border: 1, radius: 3 } as const;
+
+/** An area («riquadro») as the style sheet draws it: its border, its corners, its label */
+export const AREA_METRICS = {
+  border: 1.5,
+  radius: 3,
+  /** The label: where its text starts from the inside of the border, its line, its letters */
+  labelLeft: 9,
+  labelTop: 4,
+  labelLine: 18,
+  labelSize: 11,
+  /** Space between the letters, in ems */
+  labelSpacing: 0.07,
+} as const;
+const AREA_LABEL_FONT: FontSpec = { size: AREA_METRICS.labelSize, weight: 600 };
 const CUT_MARK_RADIUS = 11;
 const FALLBACK_ICON = 'mdi:help-circle-outline';
 const FALLBACK_ICON_COLOR = '#5E8096';
@@ -239,6 +258,14 @@ export interface SceneDevice {
   drop: boolean;
 }
 
+export interface SceneArea {
+  id: string;
+  /** The label as it is drawn: in capitals, cut where the area ends; '' for none */
+  label: string;
+  color: AreaColour;
+  box: Box;
+}
+
 export interface SceneLabel {
   box: Box;
   lines: Array<{ text: string; strong: boolean }>;
@@ -256,6 +283,8 @@ export interface SceneCable {
 }
 
 export interface Scene {
+  /** Drawn first: everything else lies over them */
+  areas: SceneArea[];
   devices: SceneDevice[];
   cables: SceneCable[];
   /** The smallest box that holds everything drawn */
@@ -364,6 +393,20 @@ export function layoutDrawing(input: DrawingInput): Scene {
   const bounds = new Bounds();
   const m = DEVICE_METRICS;
 
+  // The areas, as large as they were drawn. The label is written in
+  // capitals, on one line, and gives way to dots where the area is too
+  // narrow for it, as on screen
+  const areas: SceneArea[] = (input.areas ?? []).map(area => {
+    const box: Box = { ...area.position, ...area.size };
+    bounds.addBox(box);
+    return {
+      id: area.id,
+      label: fitAreaLabel(area.label, area.size.width, measureText),
+      color: area.color,
+      box,
+    };
+  });
+
   const devices: SceneDevice[] = input.devices.map(device => {
     // Same choice as the canvas: the template by id, else by type
     const template = device.templateId
@@ -466,7 +509,25 @@ export function layoutDrawing(input: DrawingInput): Scene {
     });
   }
 
-  return { devices, cables, bounds: bounds.box() };
+  return { areas, devices, cables, bounds: bounds.box() };
+}
+
+/** The width of a label of an area, with the space between its letters */
+function areaLabelWidth(text: string, measure: TextMeasure): number {
+  return (
+    measure(text, AREA_LABEL_FONT) + [...text].length * AREA_METRICS.labelSize * AREA_METRICS.labelSpacing
+  );
+}
+
+/** The label of an area as it fits in it: in capitals, ending in dots when it is cut */
+function fitAreaLabel(label: string, areaWidth: number, measure: TextMeasure): string {
+  const text = label.trim().toLocaleUpperCase('it');
+  if (text === '') return '';
+  const room = areaWidth - 2 * (AREA_METRICS.border + AREA_METRICS.labelLeft);
+  if (areaLabelWidth(text, measure) <= room) return text;
+  const letters = [...text];
+  while (letters.length > 1 && areaLabelWidth(`${letters.join('')}…`, measure) > room) letters.pop();
+  return `${letters.join('').trimEnd()}…`;
 }
 
 // ---------- the scene as SVG ----------
@@ -658,6 +719,29 @@ function deviceSvg(
   return `<g>${parts.join('')}</g>`;
 }
 
+/** An area: a light tint of its colour, a thin border of the same colour, its label in a corner */
+function areaSvg(area: SceneArea, theme: ImageTheme): string {
+  const a = AREA_METRICS;
+  const color = AREA_PALETTE[theme][area.color] ?? AREA_PALETTE[theme].slate;
+  const { x, y, width, height } = area.box;
+  const parts = [
+    `<rect x="${num(x + a.border / 2)}" y="${num(y + a.border / 2)}" width="${num(width - a.border)}" height="${num(height - a.border)}" rx="${num(a.radius - a.border / 2)}" fill="${color}" fill-opacity="${AREA_TINT}" stroke="${color}" stroke-width="${a.border}"/>`,
+  ];
+  if (area.label) {
+    parts.push(
+      textElement(
+        area.label,
+        x + a.border + a.labelLeft,
+        baseline(y + a.border + a.labelTop, a.labelLine, a.labelSize),
+        AREA_LABEL_FONT,
+        color,
+        ` letter-spacing="${num(a.labelSize * a.labelSpacing)}"`
+      )
+    );
+  }
+  return `<g>${parts.join('')}</g>`;
+}
+
 /** The "no power" sign of a broken device (Lucide "zap-off", ISC licence) */
 const ZAP_OFF =
   '<path d="M10.513 4.856 13.12 2.17a.5.5 0 0 1 .86.46l-1.377 4.317"/>' +
@@ -817,6 +901,10 @@ export function renderDrawingImage(input: DrawingInput, options: ImageOptions): 
   };
   body.push(
     `<g transform="translate(${num(offsetX)} ${num(offsetY)})">`,
+    // (the areas first, in a group of their own: cables and devices are drawn over them)
+    scene.areas.length > 0
+      ? `<g>${scene.areas.map(area => areaSvg(area, options.theme)).join('')}</g>`
+      : '',
     `<g>${scene.cables.map(cable => cableSvg(cable, palette)).join('')}</g>`,
     `<g>${scene.cables.map(cable => cableLabelSvg(cable, palette)).join('')}</g>`,
     ...scene.devices.map(device =>

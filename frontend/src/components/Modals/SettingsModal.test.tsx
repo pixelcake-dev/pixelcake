@@ -105,9 +105,9 @@ describe('SettingsModal', () => {
         ['Salva il progetto su file', 'Ctrl + S'],
         ['Copia i dispositivi selezionati', 'Ctrl + C'],
         ['Incolla i dispositivi copiati', 'Ctrl + V'],
-        ['Elimina i dispositivi selezionati', 'Canc'],
+        ['Elimina i dispositivi selezionati, o il riquadro selezionato', 'Canc'],
         ['Aggiungi o togli un dispositivo dalla selezione', 'Ctrl + Clic'],
-        ['Seleziona più dispositivi con un riquadro', "Trascina su un'area vuota"],
+        ['Seleziona più dispositivi con un riquadro di selezione', "Trascina su un'area vuota"],
         ['Sposta la vista', 'Tasto destro + trascina'],
         ['Zoom', 'Rotellina del mouse'],
       ]);

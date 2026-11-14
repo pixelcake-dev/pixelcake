@@ -16,6 +16,7 @@ import PresentationPanel from '@/components/Presentation/PresentationPanel';
 import PresentationMenu from '@/components/Presentation/PresentationMenu';
 import ContextMenu from '@/components/ui/ContextMenu';
 import ConnectionContextMenu from '@/components/ui/ConnectionContextMenu';
+import AreaContextMenu from '@/components/ui/AreaContextMenu';
 import AddDeviceModal from '@/components/Modals/AddDeviceModal';
 import BulkAddDeviceModal from '@/components/Modals/BulkAddDeviceModal';
 import InspectorModal from '@/components/Modals/InspectorModal';
@@ -80,6 +81,7 @@ function App() {
           <>
             <ContextMenu />
             <ConnectionContextMenu />
+            <AreaContextMenu />
           </>
         )}
 

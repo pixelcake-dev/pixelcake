@@ -6,11 +6,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
+  CanvasArea,
   CanvasData,
   NetworkDevice,
   NetworkConnection,
   GlobalNetworkSettings,
 } from '@/types';
+import { AREA_MIN_SIZE, nextAreaId, readAreas, tidyAreaLabel } from '@/utils/canvasAreas';
 import { applyHierarchicalLayout, applySubnetGroupedLayout, autoConnectDevices } from '@/utils/autoLayout';
 import { cleanupConnections } from '@/utils/cleanupConnections';
 import { safeJSONStorage } from '@/utils/safeStorage';
@@ -22,6 +24,11 @@ interface NetworkStore {
   // State
   devices: NetworkDevice[];
   connections: NetworkConnection[];
+  /**
+   * The areas drawn behind the devices («riquadri»), first drawn first. A
+   * drawing and nothing else: no device or cable refers to one
+   */
+  areas: CanvasArea[];
   globalNetworkSettings: GlobalNetworkSettings;
   selectedDeviceId: string | null;
   hoveredDeviceId: string | null;
@@ -29,6 +36,13 @@ interface NetworkStore {
   // Multi-selection & Clipboard
   selectedDeviceIds: string[];
   clipboard: { devices: NetworkDevice[]; connections: NetworkConnection[] } | null;
+
+  // The area that is selected (it can then be resized, and the Delete key
+  // deletes it), and the one whose label is being typed. Kept apart from the
+  // selection of the devices, which is React Flow's: an area is never part
+  // of it. Selecting one empties the other. Not persisted
+  selectedAreaId: string | null;
+  editingAreaId: string | null;
 
   // Canvas viewport state (persisted)
   viewport: { x: number; y: number; zoom: number };
@@ -70,6 +84,16 @@ interface NetworkStore {
   selectMultipleDevices: (ids: string[]) => void;
   copySelection: () => void;
   paste: () => void;
+
+  // Actions - Areas
+  /** Adds the area and gives the id it got */
+  addArea: (area: Omit<CanvasArea, 'id'>) => string;
+  updateArea: (id: string, updates: Partial<Omit<CanvasArea, 'id'>>) => void;
+  removeArea: (id: string) => void;
+  /** Select an area (and no device), or none */
+  selectArea: (id: string | null) => void;
+  /** The area whose label is being typed in place, or none */
+  setEditingArea: (id: string | null) => void;
 
   // Actions - Connections
   addConnection: (connection: Omit<NetworkConnection, 'id'>) => void;
@@ -122,6 +146,7 @@ type PersistedNetworkState = Pick<
   NetworkStore,
   | 'devices'
   | 'connections'
+  | 'areas'
   | 'globalNetworkSettings'
   | 'viewport'
   | 'deviceCounter'
@@ -139,6 +164,9 @@ export const useNetworkStore = create<NetworkStore>()(
       // Initial State
       devices: [],
       connections: [],
+      areas: [],
+      selectedAreaId: null,
+      editingAreaId: null,
       globalNetworkSettings: {
         ipClass: '192.168.1.0',
         subnet: '255.255.255.0',
@@ -244,7 +272,8 @@ export const useNetworkStore = create<NetworkStore>()(
       },
 
       selectMultipleDevices: (ids) => {
-        set({ selectedDeviceIds: ids });
+        // (devices selected: the area that was is no longer)
+        set(ids.length > 0 ? { selectedDeviceIds: ids, selectedAreaId: null } : { selectedDeviceIds: ids });
       },
 
       copySelection: () => {
@@ -312,6 +341,59 @@ export const useNetworkStore = create<NetworkStore>()(
           // Note: Don't update selectedDeviceIds here to avoid loop with onSelectionChange
         }));
         get().markChanged();
+      },
+
+      // Area Actions
+      addArea: (area) => {
+        const id = nextAreaId(get().areas);
+        set((state) => ({
+          areas: [...state.areas, { ...area, id, label: tidyAreaLabel(area.label) }],
+        }));
+        get().markChanged();
+        return id;
+      },
+
+      updateArea: (id, updates) => {
+        const current = get().areas.find((area) => area.id === id);
+        if (!current) return;
+        const next: CanvasArea = {
+          ...current,
+          ...updates,
+          id,
+          label: updates.label === undefined ? current.label : tidyAreaLabel(updates.label),
+        };
+        // (never smaller than an area can be made)
+        next.size = {
+          width: Math.max(AREA_MIN_SIZE.width, next.size.width),
+          height: Math.max(AREA_MIN_SIZE.height, next.size.height),
+        };
+        // (a label confirmed as it was, a handle pressed and let go: not an edit)
+        if (JSON.stringify(next) === JSON.stringify(current)) return;
+        set((state) => ({ areas: state.areas.map((area) => (area.id === id ? next : area)) }));
+        get().markChanged();
+      },
+
+      removeArea: (id) => {
+        if (!get().areas.some((area) => area.id === id)) return;
+        set((state) => ({
+          areas: state.areas.filter((area) => area.id !== id),
+          selectedAreaId: state.selectedAreaId === id ? null : state.selectedAreaId,
+          editingAreaId: state.editingAreaId === id ? null : state.editingAreaId,
+        }));
+        get().markChanged();
+      },
+
+      selectArea: (id) => {
+        if (id === null) {
+          if (get().selectedAreaId !== null) set({ selectedAreaId: null });
+          return;
+        }
+        if (!get().areas.some((area) => area.id === id)) return;
+        set({ selectedAreaId: id, selectedDeviceIds: [] });
+      },
+
+      setEditingArea: (id) => {
+        set({ editingAreaId: id });
       },
 
       // Connection Actions
@@ -455,6 +537,10 @@ export const useNetworkStore = create<NetworkStore>()(
         set({
           devices: [],
           connections: [],
+          // (the areas were drawn for the devices that are going)
+          areas: [],
+          selectedAreaId: null,
+          editingAreaId: null,
           selectedDeviceId: null,
           deviceCounter: 0,
           connectionCounter: 0,
@@ -489,6 +575,11 @@ export const useNetworkStore = create<NetworkStore>()(
           return {
             devices: devicesWithNewIds,
             connections: normalizeBindings(devicesWithNewIds, connectionsWithNewIds),
+            // A drawing loaded as a whole takes the place of the one on the
+            // canvas: the areas drawn around the old devices go with them
+            areas: [],
+            selectedAreaId: null,
+            editingAreaId: null,
             selectedDeviceId: null,
             deviceCounter: devCounter,
             connectionCounter: connCounter,
@@ -499,8 +590,16 @@ export const useNetworkStore = create<NetworkStore>()(
 
       // Whole canvas
       getCanvasSnapshot: () => {
-        const { devices, connections, viewport, deviceCounter, connectionCounter } = get();
-        return { devices, connections, viewport, deviceCounter, connectionCounter };
+        const { devices, connections, areas, viewport, deviceCounter, connectionCounter } = get();
+        // (a canvas without areas is stored, and written to a file, without the list)
+        return {
+          devices,
+          connections,
+          areas: areas.length > 0 ? areas : undefined,
+          viewport,
+          deviceCounter,
+          connectionCounter,
+        };
       },
 
       replaceCanvas: (canvasId, canvas, settings) => {
@@ -512,6 +611,9 @@ export const useNetworkStore = create<NetworkStore>()(
           canvasId,
           devices,
           connections: normalizeBindings(devices, canvas.connections),
+          areas: readAreas(canvas.areas).areas,
+          selectedAreaId: null,
+          editingAreaId: null,
           viewport: canvas.viewport,
           deviceCounter: canvas.deviceCounter,
           connectionCounter: canvas.connectionCounter,
@@ -529,6 +631,7 @@ export const useNetworkStore = create<NetworkStore>()(
       partialize: (state): PersistedNetworkState => ({
         devices: state.devices,
         connections: state.connections,
+        areas: state.areas,
         globalNetworkSettings: state.globalNetworkSettings,
         viewport: state.viewport,
         deviceCounter: state.deviceCounter,
@@ -545,6 +648,9 @@ export const useNetworkStore = create<NetworkStore>()(
           ...current,
           devices: saved.devices ?? current.devices,
           connections: saved.connections ?? current.connections,
+          // (none in what an older version wrote; whatever is there is read
+          // as a file is: an area that cannot be drawn is left behind)
+          areas: readAreas(saved.areas).areas,
           globalNetworkSettings: saved.globalNetworkSettings ?? current.globalNetworkSettings,
           viewport: saved.viewport ?? current.viewport,
           deviceCounter: saved.deviceCounter ?? current.deviceCounter,

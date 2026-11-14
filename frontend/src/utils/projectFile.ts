@@ -23,6 +23,7 @@ import { cleanupConnections } from '@/utils/cleanupConnections';
 import { isValidIP } from '@/utils/ipHelpers';
 import { tidyNotes } from '@/utils/deviceNotes';
 import { isVlanId, tidyVlanName, VLAN_NAME_MAX_LENGTH } from '@/utils/vlanNames';
+import { readAreas } from '@/utils/canvasAreas';
 
 export const PROJECT_FILE_EXTENSION = '.pixelcake.json';
 export const DEFAULT_PROJECT_NAME = 'Progetto senza nome';
@@ -188,6 +189,7 @@ const CONNECTION_KEYS = [
   'stpPortState',
   'stpPortPriority',
 ];
+const AREA_KEYS = ['id', 'label', 'color', 'position', 'size'];
 const DEVICE_TEMPLATE_KEYS = [
   'id',
   'name',
@@ -267,6 +269,11 @@ function one(keys: readonly string[]): Reorder {
 /** The DHCP server of an interface, a port or a card: its range, then what it hands out with it */
 const INTERFACE_NESTED: Record<string, Reorder> = { dhcpServer: one(POOL_KEYS) };
 
+const AREA_NESTED: Record<string, Reorder> = {
+  position: one(['x', 'y']),
+  size: one(['width', 'height']),
+};
+
 const DEVICE_NESTED: Record<string, Reorder> = {
   position: one(['x', 'y']),
   stp: one(['enabled', 'mode', 'priority']),
@@ -301,6 +308,10 @@ export function serializeProject(project: ProjectFile): string {
       name: canvas.name,
       devices: canvas.devices.map(device => ordered(device, DEVICE_KEYS, DEVICE_NESTED)),
       connections: canvas.connections.map(connection => ordered(connection, CONNECTION_KEYS)),
+      // (a canvas without areas is written without the list, as before they existed)
+      ...(canvas.areas && canvas.areas.length > 0
+        ? { areas: canvas.areas.map(area => ordered(area, AREA_KEYS, AREA_NESTED)) }
+        : {}),
       viewport: { x: canvas.viewport.x, y: canvas.viewport.y, zoom: canvas.viewport.zoom },
       deviceCounter: canvas.deviceCounter,
       connectionCounter: canvas.connectionCounter,
@@ -678,6 +689,19 @@ function parseCanvas(value: unknown, index: number, warnings: string[]): StoredC
 
   const devices = parseDevices(value.devices, where, warnings);
   const connections = parseConnections(value.connections, devices, where, warnings);
+  // The areas behind the devices: one that cannot be drawn (no place, no
+  // size) is left out, the rest of one is completed
+  const drawn = readAreas(value.areas);
+  if (drawn.dropped > 0) {
+    warnings.push(
+      `${where}: ${plural(drawn.dropped, 'riquadro non valido ignorato', 'riquadri non validi ignorati')}.`
+    );
+  }
+  if (drawn.repaired > 0) {
+    warnings.push(
+      `${where}: ${plural(drawn.repaired, 'riquadro incompleto corretto', 'riquadri incompleti corretti')}.`
+    );
+  }
   const viewport = parseViewport(value.viewport, where, warnings);
 
   const [deviceCounter, deviceCounterRaised] = parseCounter(
@@ -699,6 +723,7 @@ function parseCanvas(value: unknown, index: number, warnings: string[]): StoredC
     name,
     devices,
     connections,
+    ...(drawn.areas.length > 0 ? { areas: drawn.areas } : {}),
     viewport,
     deviceCounter,
     connectionCounter,

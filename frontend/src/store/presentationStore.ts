@@ -111,6 +111,9 @@ export const usePresentationStore = create<PresentationStore>((set, get) => ({
     network.clearSelection();
     network.setSelectedDevice(null);
     network.setHoveredDevice(null);
+    // (an area being worked on is let go too: selecting is not editing)
+    network.selectArea(null);
+    network.setEditingArea(null);
 
     set({ active: true, ...CANVAS_STATE, flow: 'ping', panelOpen: true });
     return true;

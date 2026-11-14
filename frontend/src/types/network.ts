@@ -220,6 +220,28 @@ export interface NetworkConnection {
 }
 
 /**
+ * The colours an area can have: a small palette of calm colours, each with
+ * a value in the light theme and one in the dark (`--area-<name>` in
+ * index.css; the exported picture repeats them).
+ */
+export const AREA_COLOURS = ['slate', 'green', 'amber', 'red', 'violet', 'teal'] as const;
+export type AreaColour = (typeof AREA_COLOURS)[number];
+
+/**
+ * A logical area of a canvas («riquadro»): a rectangle with a short label
+ * in a corner, drawn behind a group of devices to say what they are (Core,
+ * Edge, Access, Internet). It is a drawing and nothing else: no device
+ * belongs to it, the engine never reads it, and moving it moves no device.
+ */
+export interface CanvasArea {
+  id: string;              // Unique within the canvas (area-1, area-2...)
+  label: string;           // Short text in the corner; may be empty
+  color: AreaColour;
+  position: { x: number; y: number }; // Top left corner, in canvas coordinates
+  size: { width: number; height: number };
+}
+
+/**
  * FlowMap Meta Information
  */
 export interface FlowMapMeta {

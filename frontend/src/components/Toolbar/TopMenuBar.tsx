@@ -24,6 +24,7 @@ import SymbolColour from '@/assets/pixelcake-simbolo-colore.svg';
 import SymbolNegative from '@/assets/pixelcake-simbolo-negativo.svg';
 import { APP_NAME } from '@/constants/brand';
 import { useProjectStore } from '@/store/projectStore';
+import { encloseDevices } from '@/utils/areaActions';
 
 const TopMenuBar = () => {
   const darkMode = useUIStore((state) => state.darkMode);
@@ -83,7 +84,8 @@ const TopMenuBar = () => {
   // Aiuto → Mostra la schermata di benvenuto. It only exists on an empty
   // canvas; asking to see it must never empty a drawing.
   const handleShowWelcome = () => {
-    const hasDrawing = useNetworkStore.getState().devices.length > 0;
+    const { devices, areas } = useNetworkStore.getState();
+    const hasDrawing = devices.length > 0 || areas.length > 0;
     if (hasDrawing) {
       toast.info(
         'La schermata di benvenuto compare solo su un canvas vuoto. ' +
@@ -139,6 +141,11 @@ const TopMenuBar = () => {
     paste();
   };
 
+  // Modifica → Racchiudi in un riquadro: an area around the devices that are selected
+  const handleEnclose = () => {
+    encloseDevices(useNetworkStore.getState().selectedDeviceIds);
+  };
+
   return (
     <header className="top-menubar">
       {/* Logo */}
@@ -168,7 +175,7 @@ const TopMenuBar = () => {
         </div>
       </div>
 
-      {/* Modifica Menu: both entries are enabled only when they can do something */}
+      {/* Modifica Menu: every entry is enabled only when it can do something */}
       <div className="menu-item">
         <span>Modifica</span>
         <div className="dropdown-content">
@@ -184,6 +191,13 @@ const TopMenuBar = () => {
               className={!clipboard || clipboard.devices.length === 0 ? 'disabled' : ''}
             >
               Incolla
+            </li>
+            <hr />
+            <li
+              onClick={selectedDeviceIds.length === 0 ? undefined : handleEnclose}
+              className={selectedDeviceIds.length === 0 ? 'disabled' : ''}
+            >
+              Racchiudi in un riquadro
             </li>
           </ul>
         </div>

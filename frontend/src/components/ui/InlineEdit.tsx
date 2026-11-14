@@ -7,6 +7,8 @@ interface InlineEditProps {
   label: string;
   placeholder?: string;
   className?: string;
+  /** The most that can be typed */
+  maxLength?: number;
   onCommit: (value: string) => void;
   onCancel: () => void;
 }
@@ -21,6 +23,7 @@ export const InlineEdit = ({
   label,
   placeholder,
   className = '',
+  maxLength,
   onCommit,
   onCancel,
 }: InlineEditProps) => {
@@ -45,6 +48,7 @@ export const InlineEdit = ({
       className={className}
       aria-label={label}
       placeholder={placeholder}
+      maxLength={maxLength}
       value={draft}
       autoFocus
       onFocus={e => e.currentTarget.select()}

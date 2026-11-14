@@ -35,6 +35,8 @@ interface UIStore {
   inspectorConnection: NetworkConnection | null;
   contextMenuDevice: NetworkDevice | null;
   contextMenuConnection: NetworkConnection | null;
+  /** The area («riquadro») whose menu is open, by its id */
+  contextMenuArea: string | null;
   contextMenuPosition: { x: number; y: number } | null;
 
   // Terminal: device context to start in when opened from a device
@@ -73,6 +75,7 @@ interface UIStore {
   setInspectorConnection: (connection: NetworkConnection | null) => void;
   setContextMenuDevice: (device: NetworkDevice | null, x?: number, y?: number) => void;
   setContextMenuConnection: (connection: NetworkConnection | null, x?: number, y?: number) => void;
+  setContextMenuArea: (areaId: string | null, x?: number, y?: number) => void;
   closeContextMenu: () => void;
   setTerminalContextDevice: (label: string | null) => void;
 
@@ -126,6 +129,7 @@ export const useUIStore = create<UIStore>()(
       inspectorConnection: null,
       contextMenuDevice: null,
       contextMenuConnection: null,
+      contextMenuArea: null,
       contextMenuPosition: null,
       terminalContextDevice: null,
       helpTab: 'guide',
@@ -207,6 +211,7 @@ export const useUIStore = create<UIStore>()(
           set({
             contextMenuDevice: device,
             contextMenuConnection: null,
+            contextMenuArea: null,
             contextMenuPosition: { x, y },
           });
         } else {
@@ -222,6 +227,7 @@ export const useUIStore = create<UIStore>()(
           set({
             contextMenuConnection: connection,
             contextMenuDevice: null,
+            contextMenuArea: null,
             contextMenuPosition: { x, y },
           });
         } else {
@@ -232,10 +238,25 @@ export const useUIStore = create<UIStore>()(
         }
       },
 
+      // One menu at a time: the one of an area takes the place of the others
+      setContextMenuArea: (areaId, x, y) => {
+        if (areaId && x !== undefined && y !== undefined) {
+          set({
+            contextMenuArea: areaId,
+            contextMenuDevice: null,
+            contextMenuConnection: null,
+            contextMenuPosition: { x, y },
+          });
+        } else {
+          set({ contextMenuArea: null, contextMenuPosition: null });
+        }
+      },
+
       closeContextMenu: () => {
         set({
           contextMenuDevice: null,
           contextMenuConnection: null,
+          contextMenuArea: null,
           contextMenuPosition: null,
         });
       },

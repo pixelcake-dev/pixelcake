@@ -78,6 +78,21 @@ const GuideTab = () => (
         interfacce, il tipo, la banda, l&apos;etichetta e il colore.
       </Step>
 
+      <Step title="Raggruppa con i riquadri">
+        Un riquadro è un rettangolo colorato con un nome, disegnato dietro a un gruppo di
+        dispositivi per dire cosa sono: Core, Edge, Uffici, Internet. Nel pannello «Aggiungi
+        Dispositivo» c&apos;è «Riquadro», che ne aggiunge uno al centro della vista; oppure
+        seleziona i dispositivi e scegli Modifica → «Racchiudi in un riquadro» (c&apos;è anche nel
+        clic destro su un dispositivo): il riquadro nasce intorno a loro. Scrivi il nome e premi
+        Invio. Un riquadro si prende dal nome o dal bordo: trascinandolo si sposta, e i dispositivi
+        restano dove sono; quando è selezionato mostra otto maniglie per ridimensionarlo. Un doppio
+        clic sul nome lo rinomina, il clic destro apre un menu con «Rinomina», i colori ed
+        «Elimina», e il tasto Canc elimina il riquadro selezionato. L&apos;interno di un riquadro
+        non intralcia: lì dentro i dispositivi si selezionano, si collegano e si spostano come
+        sempre. I riquadri si vedono anche in presentazione e nell&apos;immagine esportata, e
+        vengono salvati con il progetto.
+      </Step>
+
       <Step title="Configurali">
         Un doppio clic su un dispositivo ne apre la scheda (la stessa di clic destro → «Dettagli
         (Modifica)»). La prima schermata, «Generale», è fatta per il dispositivo: di un PC o di un

@@ -7,7 +7,8 @@ Detailed technical reference for PixelCake. To install and run it, see [README.m
 All stores use Zustand. There is no server: what must survive a reload is kept in the browser's localStorage, and a project is saved for good as a file (see [Projects and files](#projects-and-files)).
 
 ### networkStore (`frontend/src/store/networkStore.ts`)
-- The canvas on screen: devices, connections, viewport (x, y, zoom), device/connection counters
+- The canvas on screen: devices, connections, areas, viewport (x, y, zoom), device/connection counters
+- `areas`: the areas drawn behind the devices («riquadri», see [Areas](#areas-riquadri)); `addArea`, `updateArea`, `removeArea` are edits like any other. `selectedAreaId` and `editingAreaId` (not persisted) say which one is selected and which is being renamed: an area is never in `selectedDeviceIds`, and selecting one empties the other. `clearAllDevices` and `loadTopology` take the areas away with the drawing they were made for
 - Project-wide network settings (`globalNetworkSettings`, see [GlobalNetworkSettings](#globalnetworksettings))
 - **Multi-selection state** (selectedDeviceIds, clipboard) - NOT persisted, resets on reload
 - **Copy/Paste functions** (copySelection, paste) - ID remapping + position offset (+50px)
@@ -52,6 +53,7 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 
 ### Canvas
 - **NetworkCanvas** (`frontend/src/components/Canvas/NetworkCanvas.tsx`) - React Flow wrapper with real-time viewport sync. Delete removes the selected devices and links from the network; Ctrl+C / Ctrl+V act on the drawing only while the user is not typing and has no text selected
+- **AreaNode** (`frontend/src/components/Canvas/AreaNode.tsx`) - An area of the canvas: see [Areas](#areas-riquadri)
 - **NetworkDevice** (`frontend/src/components/Canvas/NetworkDevice.tsx`) - Custom node component. A device that has a note carries it as its `title`: it is read by resting the pointer on the device, and nothing is drawn for it
 - **CustomEdge** (`frontend/src/components/Canvas/CustomEdge.tsx`) - Custom edge with connection type styling
 - **ParticleEdge** (`frontend/src/components/Canvas/ParticleEdge.tsx`) - Particle flow animation wrapper with CSS offset-path
@@ -64,6 +66,18 @@ The connection points of a device (`.connect-point`) are hidden at rest: they sh
 Bringing the whole drawing into view is a request (`fitViewRequest` in networkStore, raised by `triggerFitView`). The canvas answers each request once, after React Flow has measured the devices, so a drawing that has just been loaded (a sample network) is fitted too.
 
 While presenting, NetworkCanvas makes the drawing read-only (nothing is selected, moved, joined, deleted or pasted; dragging pans), a click on a device or a cable opens the presentation menu, the drawing is fitted to the window, and the view saved with the drawing is not touched. NetworkDevice and CustomEdge mark the ends of the question, a broken device and a cut cable. The way of the answer is not painted: the packet shows it, and a cable lights up in the colour of its kind while the packet is on it, as while building.
+
+### Areas («riquadri»)
+
+An area is a rectangle with a label, drawn behind a group of devices to say what they are (Core, Edge, Uffici). It is a drawing: no device belongs to it, the engine never reads it, moving it moves nothing else.
+
+- **Data**: `CanvasArea` (`id`, `label`, `color`, `position`, `size`) in `types/network.ts`; a canvas keeps a list of them next to its devices (`CanvasData.areas`, left out when empty, so that a canvas without areas is stored and written as before). `utils/canvasAreas.ts` (pure) names, numbers, colours and places them, and reads a list from outside (`readAreas`: a file, the browser's storage)
+- **On the canvas** they are React Flow nodes of their own kind, first in the list and at depth -1: under the cables, which React Flow draws at depth 0, and under the devices. They are **not** React Flow's to select, drag, join or delete (`selectable`, `draggable`, `connectable`, `focusable`, `deletable` all false): a selection box leaves out what is not selectable, so the selection of the devices, copy and paste and Delete never see an area, and `onSelectionChange` is as it was. Which area is selected is kept in networkStore; NetworkCanvas lets go of React Flow's own selection when one is (`unselectNodesAndEdges`), deletes it on the Delete key, and lets go of it on a click or a selection box on the empty canvas
+- **AreaNode** lets the pointer through its inside (`pointer-events: none` on the node; the label and four strips over the border take it back). A press there selects the area and moves it: the pointer is followed on the window, not by React Flow's drag (which would carry the selected devices along) and not with pointer capture (which does not hold inside the canvas). Selected, it shows eight `NodeResizeControl` handles, React Flow's own: `onResize` writes position and size to the store. A double click on the label renames it in place (`ui/InlineEdit`); the right button opens `ui/AreaContextMenu` (rename, the six colours, delete after a question)
+- **Added** from the panel «Aggiungi» («Riquadro», in the middle of the view) or around the selected devices («Racchiudi in un riquadro», in Modifica and in the menu of a device): `utils/areaActions.ts`, which reads the view and the size of the devices from the screen. A new area is selected, with its name ready to be typed, in the first colour of the palette the canvas does not use
+- **Colours**: six, by name (`slate`, `green`, `amber`, `red`, `violet`, `teal`), each a variable of the theme (`--area-<name>`) with a value in light and in dark, dark or light enough for the label to be read on the tint. The border and the label take the colour, the inside a tenth of it. `AREA_PALETTE` in `utils/canvasAreas.ts` repeats the values for the exported picture and the small map; tests hold it to the style sheet
+- **While presenting** an area is shown and nothing else: no handle, no side to take it by, no menu. **The small map** shows it as a faint rectangle of its colour, under the devices. **The exported picture** draws the areas first, in the colours of the theme it is made in (`AREA_METRICS` repeats the numbers of the style sheet)
+- The four sample networks have none
 
 ### Presentation (`frontend/src/components/Presentation/`)
 - **PresentationBar** - Takes the place of the menu bar: project and canvases, pace of the packet, terminal, the picture of what is on screen, full screen, exit (also Esc)
@@ -148,6 +162,7 @@ Three test files keep it in one piece: `styleSheet.colours.test.ts` (no fixed pa
 | A choice among a few | `.segmented` (buttons side by side, the chosen one `.active`) |
 | Explorer | `.explorer-button`, `.explorer-button-accent`, `.explorer-button-dashed`, `.explorer-canvas-card` |
 | NIC list | `.nic-list`, `.nic-card`, `.nic-card-selected` |
+| Areas of the canvas | `.area-node` with `.area-<colour>`, `.area-label`, `.area-edge`, `.area-resize-handle`; `.area-colour-swatch` in the menu |
 
 ## Key Algorithms
 
@@ -281,7 +296,7 @@ document from the same data. That is what lets it be whole whatever the zoom,
 light or dark whatever the theme, a vector file, and a sharp PNG of any size.
 
 - `drawingImage.ts` — pure (no React, no stores, no DOM). `layoutDrawing()`
-  places devices and cables in canvas coordinates; `renderDrawingImage()`
+  places areas, devices and cables in canvas coordinates; `renderDrawingImage()`
   writes the document, with an optional title above and caption below. The
   caller gives the size each device has on screen, the shapes of the icons and
   a way to measure text.
@@ -401,6 +416,9 @@ dns?: string,                           // the DNS server the card asks (not on 
 dhcp?: boolean,                         // address from a DHCP server (ip/subnet/gateway then empty)
 dhcpServer?: { start, end, gateway?, dns? }   // DHCP pool, on a card of a server
 ```
+
+### CanvasArea
+- `id` (`area-N`), `label` (one line, 40 characters at most, may be empty), `color` (one of `AREA_COLOURS`), `position: { x, y }`, `size: { width, height }` (120 by 80 at least)
 
 ### NetworkConnection
 - Basic: `id, source, target, sourceHandle, targetHandle, type, bandwidth, label, color`

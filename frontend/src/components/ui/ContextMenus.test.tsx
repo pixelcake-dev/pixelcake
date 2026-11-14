@@ -59,10 +59,15 @@ describe('context menus', () => {
       return { device, ...render(<ContextMenu />) };
     }
 
-    it('offers details, console and delete, and nothing switched off', () => {
+    it('offers details, console, an area around it and delete, and nothing switched off', () => {
       const { container } = openOn('PC-1');
 
-      expect(entries(container)).toEqual(['Dettagli (Modifica)', 'Console', 'Elimina']);
+      expect(entries(container)).toEqual([
+        'Dettagli (Modifica)',
+        'Console',
+        'Racchiudi in un riquadro',
+        'Elimina',
+      ]);
       expect(container.querySelector('li.disabled')).toBeNull();
       expect(screen.queryByText('Configurazione...')).toBeNull();
     });

@@ -22,9 +22,9 @@ const SHORTCUTS: Array<{ action: string; keys: string }> = [
   { action: 'Salva il progetto su file', keys: 'Ctrl + S' },
   { action: 'Copia i dispositivi selezionati', keys: 'Ctrl + C' },
   { action: 'Incolla i dispositivi copiati', keys: 'Ctrl + V' },
-  { action: 'Elimina i dispositivi selezionati', keys: 'Canc' },
+  { action: 'Elimina i dispositivi selezionati, o il riquadro selezionato', keys: 'Canc' },
   { action: 'Aggiungi o togli un dispositivo dalla selezione', keys: 'Ctrl + Clic' },
-  { action: 'Seleziona più dispositivi con un riquadro', keys: "Trascina su un'area vuota" },
+  { action: 'Seleziona più dispositivi con un riquadro di selezione', keys: "Trascina su un'area vuota" },
   { action: 'Sposta la vista', keys: 'Tasto destro + trascina' },
   { action: 'Zoom', keys: 'Rotellina del mouse' },
 ];

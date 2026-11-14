@@ -5,6 +5,7 @@
  */
 
 import type {
+  CanvasArea,
   ConnectionTemplate,
   DeviceTemplate,
   GlobalNetworkSettings,
@@ -22,6 +23,8 @@ export interface CanvasViewport {
 export interface CanvasData {
   devices: NetworkDevice[];
   connections: NetworkConnection[];
+  /** The areas drawn behind the devices; left out when the canvas has none */
+  areas?: CanvasArea[];
   viewport: CanvasViewport;
   /** Number used by the next `dev-N` id */
   deviceCounter: number;

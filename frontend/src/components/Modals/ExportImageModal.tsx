@@ -71,6 +71,7 @@ const ExportImageModal = () => {
 const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
   const devices = useNetworkStore((state) => state.devices);
   const connections = useNetworkStore((state) => state.connections);
+  const areas = useNetworkStore((state) => state.areas);
   const emailMode = useNetworkStore((state) => state.globalNetworkSettings.emailMode ?? 'auto');
   const deviceTemplates = useTemplateStore((state) => state.templates);
   const connectionTemplates = useTemplateStore((state) => state.connectionTemplates);
@@ -172,6 +173,7 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
         {
           devices: drawnDevices,
           connections,
+          areas,
           deviceTemplates,
           connectionTemplates,
           sizes,
@@ -189,6 +191,7 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
     [
       drawnDevices,
       connections,
+      areas,
       deviceTemplates,
       connectionTemplates,
       sizes,

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { askConfirm } from '@/store/confirmStore';
+import { encloseDevices } from '@/utils/areaActions';
 
 const ContextMenu = () => {
   const contextMenuDevice = useUIStore((state) => state.contextMenuDevice);
@@ -46,6 +47,18 @@ const ContextMenu = () => {
     closeContextMenu();
   };
 
+  // An area («riquadro») around the devices that are selected, when this
+  // one is among them; around this one alone otherwise
+  const handleEnclose = () => {
+    if (!contextMenuDevice) return;
+    const { selectedDeviceIds } = useNetworkStore.getState();
+    const chosen = selectedDeviceIds.includes(contextMenuDevice.id)
+      ? selectedDeviceIds
+      : [contextMenuDevice.id];
+    closeContextMenu();
+    encloseDevices(chosen);
+  };
+
   const handleDelete = async () => {
     if (!contextMenuDevice) return;
     // The menu has done its job: the question takes its place
@@ -75,6 +88,7 @@ const ContextMenu = () => {
       <ul>
         <li onClick={handleDetails}>Dettagli (Modifica)</li>
         <li onClick={handleConsole}>Console</li>
+        <li onClick={handleEnclose}>Racchiudi in un riquadro</li>
         <hr />
         <li className="danger" onClick={handleDelete}>
           Elimina

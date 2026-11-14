@@ -120,6 +120,7 @@ The reference implementation is `frontend/src/utils/projectFile.ts`
 | `name` | string | Name shown in the explorer. |
 | `devices` | array | Devices on the canvas. |
 | `connections` | array | Links between devices of the same canvas. |
+| `areas` | array | Optional. The areas drawn behind the devices, in the order they are drawn, see below. Left out when the canvas has none. |
 | `viewport` | object | Pan and zoom of the view: `x`, `y` (numbers) and `zoom` (number greater than 0). |
 | `deviceCounter` | integer | Number the next device id (`dev-N`) will use. |
 | `connectionCounter` | integer | Number the next connection id (`conn-N`) will use. |
@@ -273,6 +274,22 @@ question uses it, by a request to the `dns` address of the card that asks.
 An end of a connection is attached to at most one interface: a port or a NIC,
 never both. An interface is used by at most one connection.
 
+### Area
+
+An area is a rectangle with a short label, drawn behind a group of devices to
+say what they are (`Core`, `Edge`, `Uffici`). It is a drawing and nothing
+else: no device belongs to it, and nothing that follows a packet reads it.
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `id` | string | Unique within the canvas. The application creates ids of the form `area-N`. |
+| `label` | string | The text in its corner: one line of 40 characters at most. May be empty. |
+| `color` | `slate`, `green`, `amber`, `red`, `violet`, `teal` | One of the six colours of the palette. Each has a value in the light theme and one in the dark. |
+| `position` | object | `x`, `y` of its top left corner on the canvas. |
+| `size` | object | `width`, `height` (numbers greater than 0; the application makes none smaller than 120 by 80). |
+
+Fields this document does not list are not kept on an area.
+
 ## Templates
 
 `templates.devices` and `templates.connections` hold the custom templates
@@ -329,6 +346,8 @@ Everything else is repaired, and each repair is reported to the user:
 | A route without `id`, `destination` or `nextHop`; a rule without `id`, with an `action` other than `allow` / `deny`, an unknown `service`, or no `source` / `destination`; a port forward without `id`, with an unknown `service`, a `port` that is not an integer, or no `to` | Dropped: the other routes, rules and forwards keep their order. |
 | A `dhcpServer` that is not an object, or without `start` or `end` as text, or with a `gateway` or a `dns` that is not text; a `dhcp` that is not a boolean; a `dns` of a NIC that is not text | Dropped: the port or NIC keeps everything else. |
 | A DNS record without `id`, `name` or `address` as text | Dropped: the other records keep their order. |
+| An area that is not an object, or without a `position` or a `size` made of numbers (a `size` of 0 or less included); an `areas` that is not an array | Dropped: there is nothing to draw. |
+| An area without `id`, or with one an earlier area has; with a `color` that is not of the palette; with a `label` that is not text; smaller than 120 by 80 | Completed: a new `area-N` id, the colour `slate`, an empty label, the smallest size. |
 | A connection that is not an object or has no `id`, `source` or `target` | Dropped. |
 | Connections sharing an `id` | The first one is kept. |
 | A connection whose `source` or `target` is not a device of the canvas | Dropped. |
@@ -336,7 +355,7 @@ Everything else is repaired, and each repair is reported to the user:
 | No `templates` | None. |
 | A template missing a required field | Dropped. |
 
-Five normalisations are applied silently, so that files written by earlier
+Six normalisations are applied silently, so that files written by earlier
 versions (or by hand) keep working:
 
 - a connection end attached to a port or NIC its device does not have, or to
@@ -354,7 +373,9 @@ versions (or by hand) keep working:
 - the `notes` of a device lose the white space around them and get one kind
   of line end (`\n`); notes left empty are dropped;
 - the `vlans` of the settings are put in the order of their `id`, their names
-  lose the white space around them, and an empty list is dropped.
+  lose the white space around them, and an empty list is dropped;
+- the `label` of an area is made one line, without the white space around
+  it, and an empty `areas` list is dropped.
 
 A file that is already in this form is read back exactly as it was written.
 
@@ -366,8 +387,8 @@ A file that is already in this form is read back exactly as it was written.
 - Fields without a value are omitted, not written as `null` (`sourceHandle`
   and `targetHandle` are the exception: `null` is a value for them).
 - Fields this document does not list are kept on devices, ports, NICs,
-  connections and templates. At the top level and on a canvas they are not
-  preserved.
+  connections and templates. At the top level, on a canvas, in the settings
+  and on an area they are not preserved.
 
 ## Versioning
 
