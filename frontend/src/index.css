@@ -2596,20 +2596,22 @@ legend {
 .presentation-ends {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   margin-bottom: 10px;
 }
 
 /* The two ends of the question, one under the other. Their names share a
    column as wide as the longer of the two, whatever the language («Da» and
-   «A», "From" and "To"), so the two menus start on one line */
+   «A», "From" and "To"), so the two menus start on one line. The spaces
+   are kept small: with the longer names a menu has just the room for the
+   name of a device of the samples and its address */
 .presentation-ends-fields {
   flex: 1;
   min-width: 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 /* One end of the question: its name and its menu on one line */
