@@ -11,20 +11,21 @@
 
 import { vi } from 'vitest';
 
+interface Size {
+  width: number;
+  height: number;
+}
+
 /** The size every node of the canvas is given */
-export const NODE_SIZE = { width: 70, height: 68 };
+export const NODE_SIZE: Size = { width: 70, height: 68 };
 /** The size of the canvas itself */
-export const CANVAS_SIZE = { width: 1000, height: 600 };
+export const CANVAS_SIZE: Size = { width: 1000, height: 600 };
 
 export interface Measurements {
   /** How many times React Flow has asked for the size of a node so far */
   asked: () => number;
-}
-
-function sizeOf(element: HTMLElement, side: 'width' | 'height'): number {
-  if (element.classList.contains('react-flow__node')) return NODE_SIZE[side];
-  if (element.classList.contains('react-flow__renderer')) return CANVAS_SIZE[side];
-  return 0;
+  /** Give a node another size and tell whoever watches it, as a browser does when it grows */
+  resize: (node: Element, size: Size) => void;
 }
 
 /**
@@ -33,6 +34,18 @@ function sizeOf(element: HTMLElement, side: 'width' | 'height'): number {
  */
 export function stubMeasuringBrowser(): Measurements {
   let asked = 0;
+  const resized = new WeakMap<Element, Size>();
+  const watchers = new Set<{ tell: (target: Element) => void; targets: Set<Element> }>();
+
+  const sizeOf = (element: HTMLElement, side: keyof Size): number => {
+    const own = resized.get(element);
+    if (own) return own[side];
+    // (a node that is given a size in its style, as an area is, has that one)
+    if (element.classList.contains('react-flow__node')) return parseFloat(element.style[side]) || NODE_SIZE[side];
+    if (element.classList.contains('react-flow__renderer')) return CANVAS_SIZE[side];
+    return 0;
+  };
+
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
@@ -42,6 +55,14 @@ export function stubMeasuringBrowser(): Measurements {
   });
   vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
     return sizeOf(this, 'height');
+  });
+  // The canvas has a place on the page too: React Flow moves the view by
+  // itself while something is dragged near its border, and a canvas of no
+  // size is all border
+  const placeOf = HTMLElement.prototype.getBoundingClientRect;
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    if (!this.classList.contains('react-flow')) return placeOf.call(this);
+    return new DOMRect(0, 0, CANVAS_SIZE.width, CANVAS_SIZE.height);
   });
   // (React Flow reads the zoom of the view from the transform of the drawing)
   vi.stubGlobal(
@@ -53,27 +74,43 @@ export function stubMeasuringBrowser(): Measurements {
   vi.stubGlobal(
     'ResizeObserver',
     class {
-      private readonly report: ResizeObserverCallback;
-      private watching = true;
+      private readonly watcher: { tell: (target: Element) => void; targets: Set<Element> };
 
       constructor(report: ResizeObserverCallback) {
-        this.report = report;
+        this.watcher = {
+          targets: new Set(),
+          tell: (target) => report([{ target } as ResizeObserverEntry], this as unknown as ResizeObserver),
+        };
+        watchers.add(this.watcher);
       }
 
       observe(target: Element) {
         if (target.classList.contains('react-flow__node')) asked++;
+        this.watcher.targets.add(target);
+        // (a browser reports the first size a moment later, not at once)
         setTimeout(() => {
-          if (!this.watching || !target.isConnected) return;
-          this.report([{ target } as ResizeObserverEntry], this as unknown as ResizeObserver);
+          if (this.watcher.targets.has(target) && target.isConnected) this.watcher.tell(target);
         }, 0);
       }
 
-      unobserve() {}
+      unobserve(target: Element) {
+        this.watcher.targets.delete(target);
+      }
 
       disconnect() {
-        this.watching = false;
+        this.watcher.targets.clear();
+        watchers.delete(this.watcher);
       }
     }
   );
-  return { asked: () => asked };
+
+  return {
+    asked: () => asked,
+    resize: (node, size) => {
+      resized.set(node, size);
+      watchers.forEach((watcher) => {
+        if (watcher.targets.has(node)) watcher.tell(node);
+      });
+    },
+  };
 }

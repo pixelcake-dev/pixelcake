@@ -67,8 +67,8 @@ const miniMapNodeColour = (node: Node): string =>
 
 /**
  * True once React Flow knows the size of every device on screen, which is
- * what fitting the view needs. The sizes are lost, and measured again a
- * moment later, each time the list of devices is handed to React Flow.
+ * what fitting the view needs. A device that has just come on the canvas
+ * has none until React Flow has measured it, a moment later.
  */
 const allNodesMeasured = (state: ReactFlowState): boolean => {
   if (state.nodeInternals.size === 0) return false;
@@ -304,8 +304,25 @@ const NetworkCanvas = () => {
     [areaNodes, deviceNodes]
   );
 
+  // The list is made anew from the store at every change, and React Flow
+  // takes a node as it is handed over: without the size it had measured,
+  // which it then has to measure again. Until it has, the device counts as
+  // inside any selection box, and the rectangle around a group taken with a
+  // box is as large as the places of its devices alone: of no height for
+  // two in a row. React Flow then takes the rectangle away, and the one it
+  // draws next cannot be dragged. So a device that stays on the canvas is
+  // handed over with the size it had (a size that changes is still told by
+  // React Flow, which goes on watching the device)
   useEffect(() => {
-    setNodes(reactFlowNodes);
+    setNodes((shown) => {
+      const before = new Map(shown.map((node) => [node.id, node]));
+      return reactFlowNodes.map((node) => {
+        const had = before.get(node.id);
+        return node.width === undefined && had?.width && had.height
+          ? { ...node, width: had.width, height: had.height }
+          : node;
+      });
+    });
   }, [reactFlowNodes, setNodes]);
 
   // Sync Zustand connections to React Flow edges
