@@ -15,7 +15,11 @@ import TopMenuBar from '@/components/Toolbar/TopMenuBar';
 import SettingsModal from '@/components/Modals/SettingsModal';
 import HelpModal from '@/components/Modals/HelpModal';
 import Logo from '@/components/ui/Logo';
-import { APP_DESCRIPTOR, APP_MOTTO, APP_NAME, APP_TITLE } from './brand';
+import { APP_DESCRIPTOR, APP_NAME, APP_TITLE } from './brand';
+import { dictionaryOf } from '@/i18n';
+
+/** The motto of the Italian interface, the language these tests run in */
+const APP_MOTTO = dictionaryOf('it').common.brand.motto;
 
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
