@@ -39,28 +39,21 @@ const SAME_IN_BOTH = new Set([
   'sidebar.buttons.console',
   'sidebar.buttons.importExport',
   'sidebar.panels.explorer',
-  'devicePanel.descriptions.database',
   'simulation.flowModels.ping',
   'contextMenu.device.console',
   'addDevice.identity.vendor',
   'addDevice.network.gateway',
   'inspector.general.identity.vendor',
   'interfaces.fields.gateway',
-  'interfaces.port.defaultName',
   'dhcp.panel.ranges.fieldOf',
+  'networkSettings.simulation.cloud',
   'advanced.shortcuts.rows.save.keys',
   'advanced.shortcuts.rows.copy.keys',
   'advanced.shortcuts.rows.paste.keys',
   'advanced.shortcuts.rows.zoom.action',
-  'templates.devices.editor.preview',
-  'exportImage.picture.untitled',
   'help.about.licenceText',
   'help.about.repository',
   'presentation.caption.failuresLine',
-  'terminal.title',
-  'terminal.output',
-  'terminal.input',
-  'ui.clearSearch',
 ]);
 
 describe('the two dictionaries', () => {
@@ -135,6 +128,19 @@ describe('the two dictionaries', () => {
       .map((leaf) => leaf.path);
 
     expect(uneven).toEqual([]);
+  });
+
+  it('what is said of the ports or of the cards names the ones it is about', () => {
+    for (const [language, ports, cards] of [
+      ['it', 'porte', 'schede'],
+      ['en', 'ports', 'cards'],
+    ] as const) {
+      const said = dictionaryOf(language).dhcp.panel.ranges.onlyAddressed;
+      expect(said('port')).toContain(` ${ports} `);
+      expect(said('port')).not.toContain(` ${cards} `);
+      expect(said('card')).toContain(` ${cards} `);
+      expect(said('card')).not.toContain(` ${ports} `);
+    }
   });
 
   it('the English one keeps to the glossary: board, image, path, connected to, network card', () => {

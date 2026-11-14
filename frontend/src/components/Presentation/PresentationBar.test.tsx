@@ -98,7 +98,7 @@ describe('PresentationBar', () => {
   it('switches the theme', () => {
     render(<PresentationBar />);
     const dark = useUIStore.getState().darkMode;
-    fireEvent.click(screen.getByRole('button', { name: /Passa a tema/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Passa al tema/ }));
     expect(useUIStore.getState().darkMode).toBe(!dark);
   });
 
@@ -217,9 +217,9 @@ describe('PresentationBar', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Schermo intero' }));
       expect(request).toHaveBeenCalledTimes(1);
-      expect(screen.getByRole('button', { name: 'Esci da schermo intero' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Esci dallo schermo intero' })).toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Esci da schermo intero' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Esci dallo schermo intero' }));
       expect(leave).toHaveBeenCalledTimes(1);
       expect(screen.getByRole('button', { name: 'Schermo intero' })).toBeInTheDocument();
 

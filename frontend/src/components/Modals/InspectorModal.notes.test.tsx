@@ -112,7 +112,7 @@ describe('the note of a device — in its window', () => {
   it('saving a device without touching the note keeps it, whatever else is changed', () => {
     store().updateDevice(device('Web-01').id, { notes: 'backup ogni notte' });
     openInspector('Web-01');
-    fireEvent.change(screen.getByLabelText('Nome Dispositivo'), { target: { value: 'Web-02' } });
+    fireEvent.change(screen.getByLabelText('Nome del Dispositivo'), { target: { value: 'Web-02' } });
     save();
     expect(device('Web-02').notes).toBe('backup ogni notte');
   });

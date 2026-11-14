@@ -389,7 +389,7 @@ describe('parseYamlTopology', () => {
       const result = parseYamlTopology(yaml);
 
       expect(result.warnings).toEqual([
-        'Connessione 1: porta 7 non trovata su "SW", estremità non assegnata',
+        'Connessione 1: porta 7 non trovata su «SW», estremità non assegnata',
       ]);
       expect(result.connections).toHaveLength(1); // the link itself is kept
       expect(result.connections[0].sourceNic).toBe('nic-1');
@@ -402,7 +402,7 @@ describe('parseYamlTopology', () => {
       const result = parseYamlTopology(yaml);
 
       expect(result.warnings).toEqual([
-        'Connessione 1: interfaccia "wlan0" non trovata su "PC-A", estremità non assegnata',
+        'Connessione 1: interfaccia «wlan0» non trovata su «PC-A», estremità non assegnata',
       ]);
       expect(result.connections[0].sourceNic).toBeUndefined();
       expect(result.connections[0].targetPort).toBe(1);
@@ -414,7 +414,7 @@ describe('parseYamlTopology', () => {
       const result = parseYamlTopology(yaml);
 
       expect(result.warnings).toEqual([
-        'Connessione 1: porta 1 non trovata su "PC-A", estremità non assegnata',
+        'Connessione 1: porta 1 non trovata su «PC-A», estremità non assegnata',
       ]);
       expect(result.connections[0].sourcePort).toBeUndefined();
       expect(result.connections[0].targetPort).toBe(1);
@@ -436,7 +436,7 @@ describe('parseYamlTopology', () => {
       const result = parseYamlTopology(yaml);
 
       expect(result.warnings).toEqual([
-        'Connessione 2: porta 2 di "SW" già usata da un\'altra connessione, estremità non assegnata',
+        'Connessione 2: porta 2 di «SW» già usata da un\'altra connessione, estremità non assegnata',
       ]);
       expect(result.connections[0]).toMatchObject({ sourceNic: 'nic-1', targetPort: 2 });
       // PC-B has its own eth0: only the contested switch port is refused
@@ -489,14 +489,14 @@ describe('parseYamlTopology', () => {
       expect(result.devices).toEqual([]);
       expect(result.connections).toEqual([]);
       expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0]).toMatch(/^Errore parsing YAML: /);
+      expect(result.warnings[0]).toMatch(/^Errore di lettura del file YAML: /);
     });
 
     it('does not throw on garbage flow-map input', () => {
       expect(() => parseYamlTopology('{{{ not: yaml')).not.toThrow();
       const result = parseYamlTopology('{{{ not: yaml');
       expect(result.devices).toEqual([]);
-      expect(result.warnings[0]).toMatch(/^Errore parsing YAML: /);
+      expect(result.warnings[0]).toMatch(/^Errore di lettura del file YAML: /);
     });
 
     it('reports non-object YAML (plain scalar) as invalid data', () => {
@@ -543,8 +543,8 @@ describe('parseYamlTopology', () => {
 
       expect(result.devices).toHaveLength(1);
       expect(result.connections).toEqual([]);
-      expect(result.warnings).toContain('Connessione 1: destinazione "Ghost" non trovata');
-      expect(result.warnings).toContain('Connessione 2: sorgente "Phantom" non trovata');
+      expect(result.warnings).toContain('Connessione 1: dispositivo di destinazione «Ghost» non trovato');
+      expect(result.warnings).toContain('Connessione 2: dispositivo di partenza «Phantom» non trovato');
     });
   });
 });

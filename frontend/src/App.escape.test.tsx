@@ -152,15 +152,15 @@ describe('App — Esc closes the window on top', () => {
     act(() => ui().openModal('settings'));
     fireEvent.click(tab('Template'));
     fireEvent.click(tab('Dispositivi'));
-    fireEvent.click(screen.getByRole('button', { name: /Aggiungi Nuovo Template/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Nuovo Template/ }));
     expect(windows()).toBe(2);
     expect(screen.getByRole('heading', { name: 'Nuovo Template Generico' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Select icon' }));
-    expect(screen.getByPlaceholderText('Cerca icone...')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Seleziona un\'icona' }));
+    expect(screen.getByPlaceholderText('Cerca icone…')).toBeInTheDocument();
 
     esc();
-    expect(screen.queryByPlaceholderText('Cerca icone...')).toBeNull();
+    expect(screen.queryByPlaceholderText('Cerca icone…')).toBeNull();
     expect(windows()).toBe(2);
 
     esc();
@@ -191,7 +191,7 @@ describe('App — Esc and the terminal', () => {
   it('Esc does nothing in the terminal: it stays open, with what was typed', () => {
     render(<App />);
     act(() => ui().openModal('codeTerminal'));
-    const input = screen.getByLabelText<HTMLInputElement>('Terminal input');
+    const input = screen.getByLabelText<HTMLInputElement>('Riga di comando del terminale');
     fireEvent.change(input, { target: { value: 'show devices' } });
 
     fireEvent.keyDown(input, { key: 'Escape' });
@@ -208,7 +208,7 @@ describe('App — Esc and the terminal', () => {
     act(() => ui().openModal('settings'));
     expect(windows()).toBe(1);
 
-    fireEvent.keyDown(screen.getByLabelText('Terminal input'), { key: 'Escape' });
+    fireEvent.keyDown(screen.getByLabelText('Riga di comando del terminale'), { key: 'Escape' });
 
     expect(windows()).toBe(0);
     expect(ui().modals.settings).toBe(false);

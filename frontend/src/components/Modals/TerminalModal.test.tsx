@@ -32,7 +32,7 @@ const setTerminalOpen = (open: boolean) => {
 const openTerminal = (): HTMLInputElement => {
   setTerminalOpen(true);
   render(<TerminalModal />);
-  return screen.getByLabelText<HTMLInputElement>('Terminal input');
+  return screen.getByLabelText<HTMLInputElement>('Riga di comando del terminale');
 };
 
 /** Type a command and press Enter */
@@ -61,7 +61,7 @@ describe('TerminalModal', () => {
     setTerminalOpen(false);
     render(<TerminalModal />);
     expect(screen.queryByText("type 'help' to list commands")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Terminal input')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Riga di comando del terminale')).not.toBeInTheDocument();
   });
 
   it('renders the welcome banner and the default prompt when open', () => {
@@ -315,7 +315,7 @@ describe('TerminalModal', () => {
     expect(screen.queryByText('Trace complete.')).not.toBeInTheDocument();
 
     // The prompt is blocked while the command runs (real-terminal behavior)
-    expect(screen.queryByLabelText('Terminal input')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Riga di comando del terminale')).not.toBeInTheDocument();
     expect(screen.getByTestId('terminal-busy')).toBeInTheDocument();
 
     // Packet reaches the second node
@@ -332,7 +332,7 @@ describe('TerminalModal', () => {
     expect(screen.getByText('hop 3 C')).toBeInTheDocument();
     expect(screen.getByText('Trace complete.')).toBeInTheDocument();
     expect(screen.queryByTestId('terminal-busy')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Terminal input')).toBeInTheDocument();
+    expect(screen.getByLabelText('Riga di comando del terminale')).toBeInTheDocument();
   });
 
   it('prints what a name lookup found when the packet is back from it, then the hops of the flow', () => {
@@ -405,7 +405,7 @@ describe('TerminalModal', () => {
     expect(screen.getByText('hop 3 C')).toBeInTheDocument();
     expect(screen.getByText('Trace complete.')).toBeInTheDocument();
     expect(screen.getAllByText('name is 10.0.0.2')).toHaveLength(1);
-    expect(screen.getByLabelText('Terminal input')).toBeInTheDocument();
+    expect(screen.getByLabelText('Riga di comando del terminale')).toBeInTheDocument();
   });
 
   it('an animation that ends before the lookup is back prints everything, in order', () => {
@@ -511,7 +511,7 @@ describe('TerminalModal', () => {
     expect(screen.queryByText('hop 2 B')).not.toBeInTheDocument();
     expect(screen.queryByText('Trace complete.')).not.toBeInTheDocument();
     expect(screen.queryByTestId('terminal-busy')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Terminal input')).toBeInTheDocument();
+    expect(screen.getByLabelText('Riga di comando del terminale')).toBeInTheDocument();
     expect(useSimulationStore.getState().isRunning).toBe(false);
   });
 });

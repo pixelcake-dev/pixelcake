@@ -117,8 +117,8 @@ export const dhcp = {
       noAddress: 'Non ha un indirizzo: gli indirizzi da assegnare sono quelli della sua rete.',
       /** Under the list, when ports without an address are left out of it */
       onlyAddressed: (kind: Kind) =>
-        "Sono elencate le porte che hanno un indirizzo. Per darne uno a un'altra: " +
-        `<link>scheda «${tabOf(kind)}»</link>.`,
+        `Sono elencate solo le ${kind === 'port' ? 'porte' : 'schede'} che hanno un indirizzo. ` +
+        `Per darne uno a un'altra: <link>scheda «${tabOf(kind)}»</link>.`,
     },
 
     leases: {
@@ -148,14 +148,14 @@ export const dhcp = {
 
   /** The DHCP server in the panel of one port or of one card */
   server: {
-    enabled: 'Server DHCP Abilitato',
+    enabled: 'Server DHCP Attivo',
     enabledHint:
       'I dispositivi di questa rete con la scheda su «Automatico (DHCP)» prendono da qui ' +
       'indirizzo, subnet mask e gateway; gli indirizzi scritti a mano nel disegno vengono ' +
       `saltati. Chi ha preso quale indirizzo si vede nella scheda «${common.deviceTabs.dhcp}».`,
-    gateway: 'Gateway consegnato (opzionale)',
+    gateway: 'Gateway consegnato (facoltativo)',
     gatewayPlaceholder: example('192.168.10.1'),
-    dns: 'Server DNS consegnato (opzionale)',
+    dns: 'Server DNS consegnato (facoltativo)',
     dnsPlaceholder: example('192.168.30.10'),
     dnsHint: "Vuoto: nessuno. Può stare in un'altra rete.",
   },

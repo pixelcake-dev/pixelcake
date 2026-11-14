@@ -55,7 +55,7 @@ describe('the summary of a switch', () => {
       'VLAN 10 «Uffici»: porte 2, 3',
       'VLAN 20 «Wi-Fi»: porta 4',
       'VLAN 30: porta 5',
-      'Trunk: porta 1, porta le VLAN 10 «Uffici», 20 «Wi-Fi», 30',
+      'Trunk: porta 1, trasporta le VLAN 10 «Uffici», 20 «Wi-Fi», 30',
     ]);
   });
 
@@ -66,7 +66,7 @@ describe('the summary of a switch', () => {
       'VLAN 10: porte 2, 3',
       'VLAN 20: porta 4',
       'VLAN 30: porta 5',
-      'Trunk: porta 1, porta le VLAN 10, 20, 30',
+      'Trunk: porta 1, trasporta le VLAN 10, 20, 30',
     ]);
   });
 
@@ -115,7 +115,7 @@ describe('the settings of a switch port', () => {
   it('a trunk says the names of what it carries, in the order typed', () => {
     nameVlans(NAMES);
     render(<Editor start={PORTS[0]} />);
-    expect(screen.getByLabelText('VLANs (separati da virgola)')).toHaveValue('20, 10, 30');
+    expect(screen.getByLabelText('VLAN (separate da virgola)')).toHaveValue('20, 10, 30');
     expect(names()).toBe('VLAN 20 «Wi-Fi», 10 «Uffici», 30');
   });
 
@@ -134,18 +134,18 @@ describe('a port under the pointer', () => {
   it('says its VLAN with its name, after its own name and before what it is linked to', () => {
     nameVlans(NAMES);
     show(PORTS, new Map([[2, 'PC-1 (eth0)']]));
-    expect(titleOf(2)).toBe('Port 2 — VLAN 10 «Uffici» — collegata a PC-1 (eth0)');
-    expect(titleOf(3)).toBe('Port 3 — VLAN 10 «Uffici»');
+    expect(titleOf(2)).toBe('Porta 2 — VLAN 10 «Uffici» — collegata a PC-1 (eth0)');
+    expect(titleOf(3)).toBe('Porta 3 — VLAN 10 «Uffici»');
     expect(titleOf(4)).toBe('Access point — VLAN 20 «Wi-Fi»');
-    expect(titleOf(5)).toBe('Port 5 — VLAN 30');
-    expect(titleOf(6)).toBe('Port 6 — VLAN 1');
-    expect(titleOf(1)).toBe('Port 1 — trunk: VLAN 10 «Uffici», 20 «Wi-Fi», 30');
+    expect(titleOf(5)).toBe('Porta 5 — VLAN 30');
+    expect(titleOf(6)).toBe('Porta 6 — VLAN 1');
+    expect(titleOf(1)).toBe('Porta 1 — trunk: VLAN 10 «Uffici», 20 «Wi-Fi», 30');
   });
 
   it('without names says the numbers', () => {
     show(PORTS);
-    expect(titleOf(3)).toBe('Port 3 — VLAN 10');
-    expect(titleOf(1)).toBe('Port 1 — trunk: VLAN 10, 20, 30');
+    expect(titleOf(3)).toBe('Porta 3 — VLAN 10');
+    expect(titleOf(1)).toBe('Porta 1 — trunk: VLAN 10, 20, 30');
   });
 
   it('says nothing of VLANs where the device applies none', () => {
@@ -153,7 +153,7 @@ describe('a port under the pointer', () => {
     const routed = [port(1, { portType: 'wan', name: 'Internet' }), port(2, { portType: 'lan' })];
     show(routed, new Map([[2, 'SW-1 (porta 8)']]));
     expect(titleOf(1)).toBe('Internet');
-    expect(titleOf(2)).toBe('Port 2 — collegata a SW-1 (porta 8)');
+    expect(titleOf(2)).toBe('Porta 2 — collegata a SW-1 (porta 8)');
   });
 });
 

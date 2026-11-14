@@ -195,7 +195,7 @@ const NetworkSettingsTab = () => {
           >
             <option value="auto">{words.simulation.auto}</option>
             <option value="internal">{words.simulation.internal}</option>
-            <option value="cloud">Cloud (M365, Gmail...)</option>
+            <option value="cloud">{words.simulation.cloud}</option>
           </SelectField>
           <span className={`col-span-2 pt-[18px] ${hintClass}`}>{words.simulation.hint}</span>
         </FieldRow>

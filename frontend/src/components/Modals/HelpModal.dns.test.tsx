@@ -92,8 +92,8 @@ describe('the guide — DNS', () => {
       'Aggiungi record',
       'Schede di rete',
       'Server DNS',
-      'Server DNS di Default',
-      'Server DNS consegnato (opzionale)',
+      'Server DNS Predefinito',
+      'Server DNS consegnato (facoltativo)',
       'DNS',
     ]);
   });
@@ -121,7 +121,7 @@ describe('the guide — DNS', () => {
     openInspector('Router-Core');
     fireEvent.click(screen.getByRole('button', { name: /^Porte/ }));
     fireEvent.click(screen.getByText('2', { selector: '.port-number' }));
-    expect(screen.getByLabelText('Server DNS consegnato (opzionale)')).toHaveValue('192.168.30.10');
+    expect(screen.getByLabelText('Server DNS consegnato (facoltativo)')).toHaveValue('192.168.30.10');
 
     openInspector('Portatile-1');
     fireEvent.click(screen.getByRole('button', { name: /^Schede di rete/ }));
@@ -132,18 +132,18 @@ describe('the guide — DNS', () => {
 
   it('the settings have the field it names: saved, new devices start with it and it is offered to those that have none', async () => {
     expect(step(TITLE).text).toContain(
-      'in Impostazioni → Rete c\'è «Server DNS di Default»: i nuovi dispositivi nascono con quello sulla scheda e, una volta salvato, lì sotto si può assegnarlo anche ai dispositivi del canvas che non ne hanno uno.'
+      'in Impostazioni → Rete c\'è «Server DNS Predefinito»: i nuovi dispositivi nascono con quello sulla scheda e, una volta salvato, lì sotto si può assegnarlo anche ai dispositivi del canvas che non ne hanno uno.'
     );
     cleanup();
     ui().openModal('settings');
     const settings = render(<SettingsModal />);
     // Rete is the tab the settings open on
-    expect(screen.getByText('Impostazioni Rete Globale')).toBeInTheDocument();
-    const field = screen.getByLabelText('Server DNS di Default');
+    expect(screen.getByText('Impostazioni di Rete Globali')).toBeInTheDocument();
+    const field = screen.getByLabelText('Server DNS Predefinito');
     // not saved yet: nothing is offered
     expect(screen.queryByRole('button', { name: /^Assegna/ })).not.toBeInTheDocument();
     fireEvent.change(field, { target: { value: '192.168.30.10' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Salva Impostazioni Rete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Salva le Impostazioni di Rete' }));
 
     // under it, in the same group: the devices of the sample that ask nobody
     const offer = screen.getByRole('button', { name: 'Assegna 192.168.30.10' });
@@ -198,7 +198,7 @@ describe('the guide — DNS', () => {
 
   it('the sample of the welcome screen is made the way the step says', () => {
     expect(step(TITLE).text).toContain(
-      'Nella rete di esempio della schermata iniziale Srv-Auth conosce tre nomi, gli uffici e i portatili chiedono a lui, e Cliente-Remoto non ha nessuno a cui chiedere.'
+      'Nella rete di esempio della schermata di benvenuto Srv-Auth conosce tre nomi, gli uffici e i portatili chiedono a lui, e Cliente-Remoto non ha nessuno a cui chiedere.'
     );
     expect(device('Srv-Auth').dnsRecords).toHaveLength(3);
     const { devices, connections } = useNetworkStore.getState();
@@ -221,6 +221,6 @@ describe('the guide — DNS', () => {
   });
 
   it('the step on the firewall names the service too', () => {
-    expect(step('Filtra con il firewall').text).toContain('per servizio (ping, web, email, DNS), origine e destinazione');
+    expect(step('Filtra con il firewall').text).toContain('per servizio (ping, web, email, DNS), partenza e destinazione');
   });
 });

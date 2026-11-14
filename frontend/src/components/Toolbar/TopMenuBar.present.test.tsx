@@ -52,7 +52,7 @@ describe('TopMenuBar — presentation mode', () => {
     fireEvent.click(screen.getByRole('button', { name: /Presenta/ }));
 
     expect(presentation().active).toBe(false);
-    expect(toast.info).toHaveBeenCalledWith("Il canvas è vuoto: non c'è nulla da presentare.");
+    expect(toast.info).toHaveBeenCalledWith("Il canvas è vuoto: non c'è nulla da presentare");
   });
 
   it('Vista → Modalità presentazione does the same', () => {

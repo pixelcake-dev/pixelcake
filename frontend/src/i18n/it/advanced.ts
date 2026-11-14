@@ -1,23 +1,23 @@
 /** Settings, advanced tab: figures and shortcuts */
 export const advanced = {
   usage: {
-    title: 'Statistiche Utilizzo',
+    title: 'Statistiche di Utilizzo',
     intro: "Statistiche sull'utilizzo corrente dell'applicazione.",
     devices: {
-      title: 'Dispositivi nel Canvas',
-      caption: 'Dispositivi nel canvas aperto',
+      title: 'Dispositivi sul Canvas',
+      caption: 'Dispositivi sul canvas aperto',
     },
     links: {
-      title: 'Connessioni nel Canvas',
-      caption: 'Connessioni attive tra dispositivi',
+      title: 'Connessioni sul Canvas',
+      caption: 'Connessioni tra dispositivi',
     },
     deviceTemplates: {
-      title: 'Template Dispositivi Custom',
+      title: 'Template di Dispositivi Personalizzati',
       caption: 'Template personalizzati creati',
     },
     linkTemplates: {
-      title: 'Template Connessioni Custom',
-      caption: 'Template connessioni personalizzati',
+      title: 'Template di Connessioni Personalizzati',
+      caption: 'Template di connessioni creati',
     },
   },
 
@@ -30,7 +30,8 @@ export const advanced = {
       copy: { action: 'Copia i dispositivi selezionati', keys: 'Ctrl + C' },
       paste: { action: 'Incolla i dispositivi copiati', keys: 'Ctrl + V' },
       delete: { action: 'Elimina i dispositivi selezionati, o il riquadro selezionato', keys: 'Canc' },
-      toggleSelection: { action: 'Aggiungi o togli un dispositivo dalla selezione', keys: 'Ctrl + Clic' },
+      toggleSelection: { action: 'Aggiungi o togli un dispositivo dalla selezione', keys:
+        'Ctrl + clic' },
       selectionBox: {
         action: 'Seleziona più dispositivi con un riquadro di selezione',
         keys: "Trascina su un'area vuota",

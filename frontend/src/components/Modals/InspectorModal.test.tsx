@@ -253,11 +253,11 @@ describe('InspectorModal — Regole', () => {
 
     add();
     type('Servizio della regola 1', 'web');
-    type('Origine della regola 1', 'untrust');
+    type('Partenza della regola 1', 'untrust');
     type('Destinazione della regola 1', '192.168.20.10');
     add();
     type('Azione della regola 2', 'deny');
-    type('Origine della regola 2', '203.0.113.0/24');
+    type('Partenza della regola 2', '203.0.113.0/24');
 
     // the deny goes first, and is switched off for now
     fireEvent.click(screen.getByRole('button', { name: 'Sposta in su la regola 2' }));
@@ -276,7 +276,7 @@ describe('InspectorModal — Regole', () => {
     openInspector('FW-1');
     openTab('Regole');
     fireEvent.click(screen.getByRole('button', { name: 'Aggiungi regola' }));
-    type('Origine della regola 1', 'internet');
+    type('Partenza della regola 1', 'internet');
     expect(screen.getByRole('alert')).toHaveTextContent(
       '«Da»: "internet" non è any, una zona (trust, untrust, dmz), un indirizzo o una rete'
     );
@@ -291,7 +291,7 @@ describe('InspectorModal — Regole', () => {
     openInspector('FW-1');
     openTab('Regole');
     fireEvent.click(screen.getByRole('button', { name: 'Aggiungi regola' }));
-    type('Origine della regola 1', ' Untrust ');
+    type('Partenza della regola 1', ' Untrust ');
     type('Destinazione della regola 1', 'TRUST');
     save();
     expect(device('FW-1').firewallRules).toMatchObject([{ source: 'untrust', destination: 'trust' }]);
@@ -366,7 +366,7 @@ describe('InspectorModal — what is saved reaches the engine', () => {
     openTab('Regole');
     fireEvent.click(screen.getByRole('button', { name: 'Aggiungi regola' }));
     type('Servizio della regola 1', 'web');
-    type('Origine della regola 1', 'untrust');
+    type('Partenza della regola 1', 'untrust');
     type('Destinazione della regola 1', '192.168.20.10');
     save();
 
@@ -458,15 +458,15 @@ describe('InspectorModal — NAT', () => {
     expect(natOf(2)).toBe(false);
   });
 
-  it('the tick of the tab and «NAT Abilitato» of the port are one setting', () => {
+  it('the tick of the tab and «NAT Attivo» of the port are one setting', () => {
     openInspector('Router-1');
     openTab('NAT');
     fireEvent.click(screen.getByLabelText('NAT sulla porta 2'));
     openTab(/^Porte/);
     fireEvent.click(screen.getByText('2', { selector: '.port-number' }));
-    expect(screen.getByLabelText(/^NAT Abilitato/)).toBeChecked();
+    expect(screen.getByLabelText(/^NAT Attivo/)).toBeChecked();
     // and back: off on the port, off in the tab
-    fireEvent.click(screen.getByLabelText(/^NAT Abilitato/));
+    fireEvent.click(screen.getByLabelText(/^NAT Attivo/));
     openTab('NAT');
     expect(screen.getByLabelText('NAT sulla porta 2')).not.toBeChecked();
   });
@@ -490,13 +490,13 @@ describe('InspectorModal — NAT', () => {
     openInspector('Router-1');
     openTab('NAT');
     const natPorts = screen.getByRole('region', { name: 'Porte con NAT' });
-    expect(natPorts).toHaveTextContent('Sono elencate le porte che hanno un indirizzo.');
+    expect(natPorts).toHaveTextContent('Sono elencate solo le porte che hanno un indirizzo.');
     fireEvent.click(within(natPorts).getByRole('button', { name: 'scheda «Porte»' }));
 
     expect(openedTab()).toHaveTextContent(/^Porte/);
     // no port is picked: which one gets an address is not the tab's to say
     expect(
-      screen.getByText('Seleziona una porta per visualizzare e modificare le sue impostazioni.')
+      screen.getByText('Scegli una porta per vederne e cambiarne le impostazioni.')
     ).toBeInTheDocument();
   });
 

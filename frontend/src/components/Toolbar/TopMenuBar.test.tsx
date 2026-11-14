@@ -217,8 +217,8 @@ describe('TopMenuBar', () => {
 
       // an empty canvas: nothing to fit, to lay out or to connect
       click('Adatta alla finestra');
-      click('Hierarchical Verticale');
-      click('Auto-Connect Rete');
+      click('Gerarchica, verticale');
+      click('Connessione Automatica');
 
       expect(toastInfoMock).toHaveBeenCalledTimes(3);
       for (const [message] of toastInfoMock.mock.calls) {

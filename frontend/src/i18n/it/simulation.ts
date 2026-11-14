@@ -12,15 +12,15 @@ const flowNames: Record<FlowModelType, string> = {
 
 export const simulation = {
   source: 'Partenza',
-  sourcePlaceholder: 'Cerca dispositivo di partenza...',
+  sourcePlaceholder: 'Cerca dispositivo di partenza…',
   destination: 'Destinazione',
-  destinationPlaceholder: 'Cerca dispositivo di destinazione...',
-  flowModel: 'Modello di Flusso',
+  destinationPlaceholder: 'Cerca dispositivo di destinazione…',
+  flowModel: 'Tipo di Traffico',
   flowModels: {
     ping: 'Ping (ICMP)',
     email: 'Messaggio Email (SMTP)',
     web: 'Pagina Web (HTTP)',
-    download: 'Download File (FTP)',
+    download: 'Download di un File (FTP)',
   },
   start: 'Avvia Simulazione',
   stop: 'Ferma Simulazione',
@@ -28,9 +28,9 @@ export const simulation = {
 
   /** What a simulation that is refused, or that fails, says in a notice */
   notices: {
-    addTwoDevices: 'Aggiungi almeno due dispositivi per avviare una simulazione.',
-    chooseBothEnds: 'Seleziona dispositivo di partenza e destinazione.',
-    sameDevice: 'Il dispositivo di partenza e destinazione non possono coincidere.',
+    addTwoDevices: 'Aggiungi almeno due dispositivi per avviare una simulazione',
+    chooseBothEnds: 'Seleziona il dispositivo di partenza e quello di destinazione',
+    sameDevice: 'Il dispositivo di partenza e quello di destinazione non possono coincidere',
     failed: (flow: FlowModelType) => `Simulazione ${flowNames[flow]} fallita`,
     /** In place of the reason, when the engine gives none */
     unknownReason: 'motivo sconosciuto',

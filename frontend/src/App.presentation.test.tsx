@@ -128,7 +128,7 @@ describe('App — presentation mode', () => {
     act(() => presentation().toggleDeviceFailure(id('SW-Core')));
 
     fireEvent.click(screen.getByRole('button', { name: 'Terminale' }));
-    const input = screen.getByLabelText<HTMLInputElement>('Terminal input');
+    const input = screen.getByLabelText<HTMLInputElement>('Riga di comando del terminale');
     fireEvent.change(input, { target: { value: 'ping Srv-File from PC-Sede-1' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     // the packet goes as far as it gets; stop it to have the verdict printed

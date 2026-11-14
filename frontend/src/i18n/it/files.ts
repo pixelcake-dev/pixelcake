@@ -5,15 +5,15 @@ export const files = {
 
   saved: 'Progetto salvato su file',
   downloaded: (fileName: string) => `Progetto scaricato come ${fileName}`,
-  cannotChooseWhere: 'Impossibile scegliere dove salvare il file',
-  cannotSaveTo: (fileName: string) => `Impossibile salvare su "${fileName}"`,
+  cannotChooseWhere: 'Impossibile aprire la finestra di salvataggio',
+  cannotSaveTo: (fileName: string) => `Impossibile salvare su «${fileName}»`,
   useSaveAs: 'Usa File → Salva con nome… per scegliere un altro file.',
 
   cannotRead: 'Impossibile leggere il file',
-  cannotOpen: (fileName: string) => `Impossibile aprire "${fileName}"`,
-  opened: (projectName: string) => `Progetto "${projectName}" aperto`,
-  openedWithRepairs: (projectName: string) => `Progetto "${projectName}" aperto con alcune correzioni`,
-  created: (projectName: string) => `Progetto "${projectName}" creato`,
+  cannotOpen: (fileName: string) => `Impossibile aprire «${fileName}»`,
+  opened: (projectName: string) => `Progetto «${projectName}» aperto`,
+  openedWithRepairs: (projectName: string) => `Progetto «${projectName}» aperto con alcune correzioni`,
+  created: (projectName: string) => `Progetto «${projectName}» creato`,
 
   discardChanges: {
     title: 'Continuare senza salvare?',

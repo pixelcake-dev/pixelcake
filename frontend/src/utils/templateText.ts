@@ -4,11 +4,15 @@
  * The link types the app comes with are stored with a description, and the
  * user can rewrite it. For as long as it is one the app wrote (in any of its
  * languages: a link type saved from the English interface keeps the English
- * one), the description follows the language of the interface. Once the
- * user has changed it, it is content, and is shown as typed.
+ * one; in any of its versions: the words have been changed since, and a
+ * browser may still hold the earlier ones), the description follows the
+ * language of the interface. Once the user has changed it, it is content,
+ * and is shown as typed.
  */
 
 import { LANGUAGES, dictionaryOf, type Dictionary } from '@/i18n';
+import { formerLinkTypeDescriptions as formerItalian } from '@/i18n/it/former';
+import { formerLinkTypeDescriptions as formerEnglish } from '@/i18n/en/former';
 import type { ConnectionTemplate } from '@/types/network';
 
 type BuiltInLinkType = keyof Dictionary['templates']['links']['builtInDescriptions'];
@@ -34,8 +38,9 @@ export function linkTypeDescription(
   const builtIn = BUILT_IN_LINK_TYPES.get(template.id);
   if (!builtIn || !description) return description;
 
-  const writtenByTheApp = LANGUAGES.some(
-    (language) => dictionaryOf(language).templates.links.builtInDescriptions[builtIn] === description
-  );
+  const writtenByTheApp =
+    LANGUAGES.some(
+      (language) => dictionaryOf(language).templates.links.builtInDescriptions[builtIn] === description
+    ) || [formerItalian, formerEnglish].some((former) => former[builtIn]?.includes(description));
   return writtenByTheApp ? t.templates.links.builtInDescriptions[builtIn] : description;
 }

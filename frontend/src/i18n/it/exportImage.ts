@@ -58,8 +58,8 @@ export const exportImage = {
     cannotCopy: "Impossibile copiare l'immagine",
     cannotCopyDetail: 'Il browser non lo ha permesso. Puoi salvarla su file.',
     downloaded: (fileName: string) => `Immagine scaricata come ${fileName}`,
-    cannotChooseWhere: "Impossibile scegliere dove salvare l'immagine",
-    cannotSaveTo: (fileName: string) => `Impossibile salvare su "${fileName}"`,
+    cannotChooseWhere: 'Impossibile aprire la finestra di salvataggio',
+    cannotSaveTo: (fileName: string) => `Impossibile salvare su «${fileName}»`,
     tryElsewhere: "Riprova scegliendo un altro file o un'altra cartella.",
     saved: 'Immagine salvata',
   },
@@ -79,7 +79,7 @@ export const exportImage = {
     from: 'DA',
     to: 'A',
     /** What a picture without a title is called (the name a screen reader gives it) */
-    untitled: 'Network',
+    untitled: 'Rete',
     /** A cut cable, in the caption under the drawing; `name` is its two devices or its id */
     cable: (name: string) => `cavo ${name}`,
   },

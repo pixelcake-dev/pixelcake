@@ -128,7 +128,7 @@ describe('where the switch is', () => {
     render(<TopMenuBar />);
     expect(screen.getByText('Modifica')).toBeInTheDocument();
     expect(screen.getByText('Nuovo progetto…')).toBeInTheDocument();
-    const theme = screen.getByTitle('Passa a tema scuro');
+    const theme = screen.getByTitle('Passa al tema scuro');
     const group = screen.getByRole('group', { name: 'Lingua' });
     // (the switch comes right before the theme button)
     expect(group.nextElementSibling).toBe(theme);
@@ -151,7 +151,7 @@ describe('where the switch is', () => {
       usePresentationStore.getState().enter();
     });
     render(<PresentationBar />);
-    const theme = screen.getByRole('button', { name: 'Passa a tema scuro' });
+    const theme = screen.getByRole('button', { name: 'Passa al tema scuro' });
     expect(screen.getByRole('group', { name: 'Lingua' }).nextElementSibling).toBe(theme);
     expect(screen.getByRole('button', { name: 'Esci' })).toBeInTheDocument();
 
@@ -191,7 +191,7 @@ describe('where the switch is', () => {
 describe('text made outside React', () => {
   it('a notice is written in the language of the moment it is given', () => {
     createNewProject({ name: 'Uno' });
-    expect(toast.success).toHaveBeenLastCalledWith('Progetto "Uno" creato');
+    expect(toast.success).toHaveBeenLastCalledWith('Progetto «Uno» creato');
 
     setLanguage('en');
     createNewProject({ name: 'Two' });
@@ -199,7 +199,7 @@ describe('text made outside React', () => {
 
     setLanguage('it');
     createNewProject({ name: 'Tre' });
-    expect(toast.success).toHaveBeenLastCalledWith('Progetto "Tre" creato');
+    expect(toast.success).toHaveBeenLastCalledWith('Progetto «Tre» creato');
   });
 
   it('a question is asked in the language of the moment, and its window follows a change', async () => {

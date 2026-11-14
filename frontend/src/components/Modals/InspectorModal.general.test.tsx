@@ -88,7 +88,7 @@ describe('InspectorModal — the first screen of an end device', () => {
 
     const identity = section('Identità');
     expect(within(identity).getByLabelText('Tipo')).toHaveTextContent('PC');
-    expect(within(identity).getByLabelText('Nome Dispositivo')).toHaveValue('PC-1');
+    expect(within(identity).getByLabelText('Nome del Dispositivo')).toHaveValue('PC-1');
     // a PC is not asked who made it or where it is
     expect(within(identity).queryByLabelText('Vendor')).not.toBeInTheDocument();
 
@@ -122,7 +122,7 @@ describe('InspectorModal — the first screen of an end device', () => {
     fireEvent.click(screen.getByRole('button', { name: 'scheda «Schede di rete»' }));
     expect(openedTab()).toHaveTextContent(/^Schede di rete/);
     // a device with one card shows its settings at once
-    expect(screen.getByLabelText('Nome Interfaccia')).toHaveValue('eth0');
+    expect(screen.getByLabelText('Nome dell\'Interfaccia')).toHaveValue('eth0');
     expect(screen.getByLabelText('Indirizzo MAC')).toBeInTheDocument();
   });
 
@@ -137,7 +137,7 @@ describe('InspectorModal — the first screen of an end device', () => {
 
   it('a name is asked for', () => {
     openInspector('PC-1');
-    type('Nome Dispositivo', '  ');
+    type('Nome del Dispositivo', '  ');
     save();
     expect(toast.error).toHaveBeenCalledWith('Il nome è obbligatorio');
     expect(device('PC-1').label).toBe('PC-1');
@@ -209,7 +209,7 @@ describe('InspectorModal — the first screen of a switch', () => {
     openInspector('SW-Office');
     const lines = within(section('Porte')).getAllByRole('listitem').map(item => item.textContent);
     expect(lines.slice(0, 3)).toEqual(['VLAN 1: porte 4–7', 'VLAN 10: porte 1, 2', 'VLAN 20: porta 3']);
-    expect(lines).toContain('Trunk: porta 8, porta le VLAN 10, 20');
+    expect(lines).toContain('Trunk: porta 8, trasporta le VLAN 10, 20');
   });
 
   it('the summary follows the ports as they are typed, and opens «Porte»', () => {
@@ -241,7 +241,7 @@ describe('InspectorModal — the first screen of a router or a firewall', () => 
       'Porta',
       'Indirizzo',
       'Collegata a',
-      'Fa',
+      'Ruolo',
     ]);
     const rows = within(table)
       .getAllByRole('row')
@@ -287,7 +287,7 @@ describe('InspectorModal — the first screen of a router or a firewall', () => 
       'Indirizzo',
       'Zona',
       'Collegata a',
-      'Fa',
+      'Ruolo',
     ]);
     const rows = within(table)
       .getAllByRole('row')
@@ -321,9 +321,9 @@ describe('InspectorModal — ports are typed straight into the form', () => {
     openTab(/^Porte/);
     selectPort(3);
     expect(screen.getAllByRole('button', { name: 'Salva' })).toHaveLength(1);
-    type('Nome Porta (opzionale)', ' Internet ');
+    type('Nome della Porta (facoltativo)', ' Internet ');
     type('Indirizzo IP', '203.0.113.2');
-    fireEvent.click(screen.getByLabelText('NAT Abilitato'));
+    fireEvent.click(screen.getByLabelText('NAT Attivo'));
     // nothing reaches the drawing before the device is saved
     expect(device('Router-1').ports?.[2].ip).toBeUndefined();
 
@@ -341,13 +341,13 @@ describe('InspectorModal — ports are typed straight into the form', () => {
     openInspector('Router-1');
     openTab(/^Porte/);
     selectPort(3);
-    type('Nome Porta (opzionale)', 'Internet');
+    type('Nome della Porta (facoltativo)', 'Internet');
     selectPort(4);
-    expect(screen.getByLabelText('Nome Porta (opzionale)')).toHaveValue('');
+    expect(screen.getByLabelText('Nome della Porta (facoltativo)')).toHaveValue('');
     openTab('Generale');
     openTab(/^Porte/);
     selectPort(3);
-    expect(screen.getByLabelText('Nome Porta (opzionale)')).toHaveValue('Internet');
+    expect(screen.getByLabelText('Nome della Porta (facoltativo)')).toHaveValue('Internet');
   });
 
   it('an address that is not one is said under its field, and the device is not saved with it', () => {
@@ -377,8 +377,8 @@ describe('InspectorModal — ports are typed straight into the form', () => {
     openInspector('Router-1');
     openTab(/^Porte/);
     selectPort(2);
-    expect(screen.getByLabelText('Porta Abilitata')).not.toBeChecked();
-    fireEvent.click(screen.getByLabelText('Porta Abilitata'));
+    expect(screen.getByLabelText('Porta Attiva')).not.toBeChecked();
+    fireEvent.click(screen.getByLabelText('Porta Attiva'));
     save();
     expect(device('Router-1').ports?.[1].enabled).toBe(true);
   });
@@ -433,7 +433,7 @@ describe('InspectorModal — the number of ports', () => {
     expect(toast.error).not.toHaveBeenCalled();
     expect(boxes()).toBe(2);
     // the port that was open is gone: nothing is open
-    expect(screen.getByText('Seleziona una porta per visualizzare e modificare le sue impostazioni.')).toBeInTheDocument();
+    expect(screen.getByText('Scegli una porta per vederne e cambiarne le impostazioni.')).toBeInTheDocument();
 
     save();
     expect(device('Router-1').ports?.map(port => port.id)).toEqual([1, 2]);
@@ -469,7 +469,7 @@ describe('InspectorModal — the number of ports', () => {
   it('a device saved without touching the number keeps the one it had written', () => {
     const before = device('Router-1').portCount;
     openInspector('Router-1');
-    type('Nome Dispositivo', 'Router-A');
+    type('Nome del Dispositivo', 'Router-A');
     save();
     expect(device('Router-A').portCount).toBe(before);
   });
@@ -485,7 +485,7 @@ describe('InspectorModal — the cards of a device', () => {
     expect(rowNames()).toEqual(['eth0', 'eth1']);
     expect(screen.getByRole('button', { name: 'Schede di rete (2)' })).toBeInTheDocument();
     // the new card is the one open
-    expect(screen.getByLabelText('Nome Interfaccia')).toHaveValue('eth1');
+    expect(screen.getByLabelText('Nome dell\'Interfaccia')).toHaveValue('eth1');
     type('Indirizzo IP', '10.0.0.10');
 
     save();
@@ -501,7 +501,7 @@ describe('InspectorModal — the cards of a device', () => {
     openInspector('Web-01');
     openTab(/^Schede di rete/);
     fireEvent.click(screen.getByRole('button', { name: 'Aggiungi scheda' }));
-    type('Nome Interfaccia', 'eth0');
+    type('Nome dell\'Interfaccia', 'eth0');
     save();
     expect(toast.error).toHaveBeenCalledWith('Due schede si chiamano eth0: ogni scheda ha un nome suo');
     expect(device('Web-01').nics).toHaveLength(1);
@@ -511,9 +511,9 @@ describe('InspectorModal — the cards of a device', () => {
     openInspector('Web-01');
     openTab(/^Schede di rete/);
     fireEvent.click(screen.getByRole('button', { name: 'Aggiungi scheda' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Rimuovi la scheda eth1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Elimina la scheda eth1' }));
     expect(rowNames()).toEqual(['eth0']);
-    expect(screen.queryByRole('button', { name: /^Rimuovi la scheda/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Elimina la scheda/ })).not.toBeInTheDocument();
   });
 
   it('the first screen says that the first of several cards is the one the device is named by', () => {

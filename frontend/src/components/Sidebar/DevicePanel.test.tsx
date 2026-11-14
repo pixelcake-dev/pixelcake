@@ -1,5 +1,5 @@
 /**
- * DevicePanel tests — the sample networks of the "Topologie" tab, and the
+ * DevicePanel tests — the sample networks of the "Esempi" tab, and the
  * custom templates in the device list (they could be created, never placed).
  */
 
@@ -15,7 +15,7 @@ const labels = () => useNetworkStore.getState().devices.map(d => d.label);
 
 function openSamples() {
   render(<DevicePanel />);
-  fireEvent.click(screen.getByRole('button', { name: 'Topologie' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Esempi' }));
 }
 
 beforeEach(() => {

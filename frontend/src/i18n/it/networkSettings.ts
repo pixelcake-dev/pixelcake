@@ -12,24 +12,24 @@ const listOf = (names: string[]) => {
 };
 
 export const networkSettings = {
-  title: 'Impostazioni Rete Globale',
+  title: 'Impostazioni di Rete Globali',
   intro: 'Valgono per tutto il progetto. Cambiarle non tocca i dispositivi che ci sono già.',
 
   newDevices: {
     legend: 'Nuovi dispositivi',
-    network: 'Classe IP di Partenza',
+    network: 'Rete',
     networkPlaceholder: example('192.168.1.0'),
-    mask: 'Subnet Mask di Default',
+    mask: 'Subnet Mask Predefinita',
     maskPlaceholder: example('255.255.255.0'),
-    gateway: 'Gateway di Default',
+    gateway: 'Gateway Predefinito',
     gatewayPlaceholder: example('192.168.1.1'),
-    dns: 'Server DNS di Default',
+    dns: 'Server DNS Predefinito',
     dnsPlaceholder: 'facoltativo',
     hint:
       'A un dispositivo nuovo viene proposto il primo indirizzo libero di questa rete, con ' +
-      'questa subnet mask e questo gateway. Un router o un firewall nasce senza gateway: la ' +
-      "sua rotta predefinita si sceglie nella sua scheda. Il server DNS, se c'è, viene " +
-      'scritto sulla scheda di rete dei nuovi PC, server e degli altri dispositivi finali.',
+      'questa subnet mask e questo gateway. Un router o un firewall nasce senza gateway: la sua ' +
+      "rotta predefinita si sceglie nella sua scheda. Il server DNS, se c'è, viene scritto sulla " +
+      'scheda di rete dei nuovi PC, dei nuovi server e degli altri dispositivi finali.',
   },
 
   /** Under a field that must not be left empty */
@@ -73,13 +73,14 @@ export const networkSettings = {
     legend: 'Simulazione',
     emailMode: 'Modalità Email (SMTP)',
     auto: 'Auto (rileva automaticamente)',
-    internal: 'Mail server interno',
+    internal: 'Server di posta interno',
+    cloud: 'Cloud (M365, Gmail…)',
     hint:
-      'Determina come viaggiano le email in simulazione: tramite un Mail Server interno o ' +
-      "attraverso l'uscita internet.",
+      'Determina come viaggiano le email in simulazione: tramite un server di posta interno ' +
+      "oppure un servizio esterno (Cloud), attraverso l'uscita verso Internet.",
   },
 
-  save: 'Salva Impostazioni Rete',
+  save: 'Salva le Impostazioni di Rete',
   allRequired: 'Tutti i campi sono obbligatori',
   saved: 'Impostazioni di rete salvate',
 };

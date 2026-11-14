@@ -298,10 +298,10 @@ const DEFAULT_TEMPLATES: DeviceTemplate[] = [
 
 /**
  * What each built-in link type is for, as it is kept in the browser with the
- * template: the Italian words, whatever the language of the interface, so
- * that what is stored is what it has always been. On screen the description
- * follows the language of the interface for as long as the user has not
- * rewritten it (utils/templateText.ts).
+ * template: the Italian words, whatever the language of the interface. On
+ * screen the description follows the language of the interface for as long
+ * as the user has not rewritten it (utils/templateText.ts, which also knows
+ * the words stored by earlier versions).
  */
 const BUILT_IN_DESCRIPTIONS = dictionaryOf('it').templates.links.builtInDescriptions;
 

@@ -2,7 +2,7 @@
 export const addDevice = {
   /** In both windows: the type of a device, and a number of ports to choose from a list */
   type: 'Tipo',
-  ports: (count: number) => `${count} porte`,
+  ports: (count: number) => (count === 1 ? '1 porta' : `${count} porte`),
 
   /** The window that adds one device, of the type picked in the panel */
   title: (typeName: string) => `Aggiungi Nuovo ${typeName}`,
@@ -10,12 +10,12 @@ export const addDevice = {
 
   identity: {
     legend: 'Identità',
-    name: 'Nome Dispositivo',
+    name: 'Nome del Dispositivo',
     namePlaceholder: (type: string) => `es. ${type}-Ufficio-01`,
     vendor: 'Vendor',
-    vendorPlaceholder: 'es. Cisco, HP...',
+    vendorPlaceholder: 'es. Cisco, HP…',
     location: 'Posizione',
-    locationPlaceholder: 'es. Rack 01...',
+    locationPlaceholder: 'es. Rack 01…',
     portCount: 'Numero di Porte',
     portCountHint: 'Si può cambiare anche dopo.',
   },
@@ -41,11 +41,11 @@ export const addDevice = {
   /** The window that adds many devices at once */
   bulk: {
     title: 'Aggiungi Dispositivi in Blocco',
-    searchPlaceholder: 'Cerca per tipo o configurazione...',
+    searchPlaceholder: 'Cerca per tipo o porte…',
     noDevicesFor: (query: string) => `Nessun dispositivo trovato per "${query}"`,
 
-    configurableHeading: 'DISPOSITIVI CONFIGURABILI',
-    standardHeading: 'DISPOSITIVI STANDARD (1 NIC di default)',
+    configurableHeading: 'Dispositivi configurabili',
+    standardHeading: 'Dispositivi standard (1 scheda di rete predefinita)',
     columns: {
       configuration: 'Configurazione',
       quantity: 'Quantità',
@@ -53,12 +53,12 @@ export const addDevice = {
       controls: 'Controlli',
     },
     addRow: 'Aggiungi Switch/Router/Firewall',
-    removeRow: 'Rimuovi riga',
+    removeRow: 'Elimina riga',
     decrease: 'Diminuisci',
     increase: 'Aumenta',
     total: 'Totale Dispositivi:',
 
-    selectAtLeastOne: 'Seleziona almeno un dispositivo da aggiungere.',
+    selectAtLeastOne: 'Seleziona almeno un dispositivo da aggiungere',
     added: (count: number) =>
       count === 1 ? '1 dispositivo aggiunto' : `${count} dispositivi aggiunti`,
   },

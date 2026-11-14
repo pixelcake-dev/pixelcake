@@ -6,7 +6,7 @@ export const contextMenu = {
     enclose: 'Racchiudi in un riquadro',
     deleteQuestion: {
       title: (name: string) => `Eliminare «${name}»?`,
-      detail: 'Con il dispositivo vengono tolti anche i suoi collegamenti.',
+      detail: 'Con il dispositivo vengono tolte anche le sue connessioni.',
     },
   },
 
@@ -34,7 +34,7 @@ export const contextMenu = {
     deleteQuestion: {
       /** `name` is empty for an area without a name */
       title: (name: string) => (name ? `Eliminare il riquadro «${name}»?` : 'Eliminare il riquadro?'),
-      detail: 'I dispositivi che ha intorno restano dove sono.',
+      detail: 'I dispositivi che racchiude restano dove sono.',
     },
   },
 };

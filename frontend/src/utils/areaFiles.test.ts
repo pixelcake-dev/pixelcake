@@ -136,7 +136,7 @@ describe('the areas of a canvas in a project file', () => {
     ]);
     expect(canvas.areas).toEqual(AREAS);
     expect(canvas.devices.map((d) => d.id)).toEqual(['dev-0']);
-    expect(warnings).toEqual(['Canvas "Canvas 1": 2 riquadri non validi ignorati.']);
+    expect(warnings).toEqual(['Canvas «Canvas 1»: 2 riquadri non validi ignorati.']);
   });
 
   it('one that is incomplete is completed, and the user is told', () => {
@@ -148,21 +148,21 @@ describe('the areas of a canvas in a project file', () => {
       { ...AREAS[0], color: 'slate' },
       { ...AREAS[1], id: 'area-2' },
     ]);
-    expect(warnings).toEqual(['Canvas "Canvas 1": 2 riquadri incompleti corretti.']);
+    expect(warnings).toEqual(['Canvas «Canvas 1»: 2 riquadri incompleti corretti.']);
   });
 
   it('one left out and one completed are said each in its own words, in the singular', () => {
     const { warnings } = readWith([{ label: 'Rotto' }, { ...AREAS[0], color: 7 }]);
     expect(warnings).toEqual([
-      'Canvas "Canvas 1": 1 riquadro non valido ignorato.',
-      'Canvas "Canvas 1": 1 riquadro incompleto corretto.',
+      'Canvas «Canvas 1»: 1 riquadro non valido ignorato.',
+      'Canvas «Canvas 1»: 1 riquadro incompleto corretto.',
     ]);
   });
 
   it('what is not a list is no area, and the user is told', () => {
     const { canvas, warnings } = readWith({ core: AREAS[0] });
     expect('areas' in canvas).toBe(false);
-    expect(warnings).toEqual(['Canvas "Canvas 1": 1 riquadro non valido ignorato.']);
+    expect(warnings).toEqual(['Canvas «Canvas 1»: 1 riquadro non valido ignorato.']);
   });
 });
 

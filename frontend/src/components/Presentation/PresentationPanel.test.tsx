@@ -89,10 +89,10 @@ describe('PresentationPanel — the question', () => {
 
   it('swaps the two ends', () => {
     render(<PresentationPanel />);
-    expect(screen.getByRole('button', { name: 'Inverti partenza e arrivo' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Inverti partenza e destinazione' })).toBeDisabled();
 
     act(() => presentation().ask(id('PC-Sede-1'), id('Srv-File')));
-    fireEvent.click(screen.getByRole('button', { name: 'Inverti partenza e arrivo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inverti partenza e destinazione' }));
 
     expect(presentation()).toMatchObject({ sourceId: id('Srv-File'), targetId: id('PC-Sede-1') });
     expect(verdict()).toHaveTextContent('PC-Sede-1 risponde a Srv-File.');

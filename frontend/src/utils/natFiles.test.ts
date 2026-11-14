@@ -171,7 +171,7 @@ describe('NAT and port forwards in a project file', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(firewallOf(result.project.canvases[0].devices)?.portForwards).toEqual([FORWARDS[1], FORWARDS[0]]);
-    expect(result.warnings).toEqual(['Canvas "Canvas 1": 1 dispositivo incompleto corretto.']);
+    expect(result.warnings).toEqual(['Canvas «Canvas 1»: 1 dispositivo incompleto corretto.']);
   });
 
   it('a list that is no list at all is left out, and nothing else is touched', () => {

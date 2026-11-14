@@ -53,7 +53,7 @@ describe('the guide — "Presenta la rete"', () => {
 
     // the way in, on the menu bar, with the sample of the guide loaded from the panel it names
     render(<DevicePanel />);
-    fireEvent.click(screen.getByRole('button', { name: 'Topologie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Esempi' }));
     fireEvent.click(screen.getByRole('button', { name: /Due sedi: linea principale e di riserva/ }));
     cleanup();
     render(<TopMenuBar />);
@@ -89,7 +89,7 @@ describe('the guide — "Presenta la rete"', () => {
     expect(step('Presenta la rete')).toContain('il pacchetto parte da solo');
 
     render(<DevicePanel />);
-    fireEvent.click(screen.getByRole('button', { name: 'Topologie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Esempi' }));
     fireEvent.click(screen.getByRole('button', { name: /Due sedi: linea principale e di riserva/ }));
     cleanup();
     act(() => {
@@ -115,7 +115,7 @@ describe('the guide — "Chiedi cosa succede se qualcosa si rompe"', () => {
     ]);
 
     render(<DevicePanel />);
-    fireEvent.click(screen.getByRole('button', { name: 'Topologie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Esempi' }));
     fireEvent.click(screen.getByRole('button', { name: new RegExp(names[2]) }));
     cleanup();
     act(() => {
@@ -142,7 +142,7 @@ describe('the guide — "Chiedi cosa succede se qualcosa si rompe"', () => {
     expect(text).toContain("all'uscita il guasto sparisce");
 
     render(<DevicePanel />);
-    fireEvent.click(screen.getByRole('button', { name: 'Topologie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Esempi' }));
     fireEvent.click(screen.getByRole('button', { name: /Due sedi/ }));
     cleanup();
     const before = JSON.stringify([network().devices, network().connections]);
@@ -166,7 +166,7 @@ describe('the guide — "Chiedi cosa succede se qualcosa si rompe"', () => {
     expect(text).toContain('quante comunicazioni tra i dispositivi finali si interrompono');
 
     render(<DevicePanel />);
-    fireEvent.click(screen.getByRole('button', { name: 'Topologie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Esempi' }));
     fireEvent.click(screen.getByRole('button', { name: /Due sedi/ }));
     cleanup();
     act(() => {
@@ -193,7 +193,7 @@ describe('the guide — the samples and the backup route', () => {
     expect(step('Aggiungi i dispositivi')).toContain('quattro reti di esempio');
 
     render(<DevicePanel />);
-    fireEvent.click(screen.getByRole('button', { name: 'Topologie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Esempi' }));
     const samples = screen.getAllByRole('button').filter(button => button.className.includes('sidebar-panel-item'));
     expect(samples).toHaveLength(4);
   });

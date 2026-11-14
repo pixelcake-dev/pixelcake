@@ -16,7 +16,7 @@ export const interfaces = {
     subnetMask: 'Subnet Mask',
     gateway: 'Gateway',
     dnsServer: 'Server DNS',
-    linkSpeed: 'Velocità Link',
+    linkSpeed: 'Velocità',
     notes: 'Note / Descrizione',
   },
 
@@ -37,24 +37,24 @@ export const interfaces = {
       return `${linked} ${linkedPorts} su ${total}. Scegli una porta per vederne e cambiarne le impostazioni.`;
     },
     count: 'Numero di porte',
-    countOption: (count: number) => `${count} porte`,
-    nonePicked: 'Seleziona una porta per visualizzare e modificare le sue impostazioni.',
+    countOption: (count: number) => (count === 1 ? '1 porta' : `${count} porte`),
+    nonePicked: 'Scegli una porta per vederne e cambiarne le impostazioni.',
     none: 'Nessuna porta configurata per questo dispositivo.',
   },
 
   /** The settings of a port */
   port: {
     /** What a port is called until it is given a name */
-    defaultName: (id: number) => `Port ${id}`,
-    enabled: 'Porta Abilitata',
-    name: 'Nome Porta (opzionale)',
-    mode: 'Modalità Porta',
+    defaultName: (id: number) => `Porta ${id}`,
+    enabled: 'Porta Attiva',
+    name: 'Nome della Porta (facoltativo)',
+    mode: 'Modalità della Porta',
     modes: {
       access: 'Access (dispositivo finale)',
-      trunk: 'Trunk (link tra switch)',
+      trunk: 'Trunk (tra switch)',
       wan: 'WAN (Wide Area Network)',
       lan: 'LAN (Local Area Network)',
-      dmz: 'DMZ (Demilitarized Zone)',
+      dmz: 'DMZ (Zona Demilitarizzata)',
     },
     /** On a router and on a firewall the mode of a port decides nothing */
     modeHint: 'Solo descrittiva: non cambia il comportamento della porta.',
@@ -64,7 +64,7 @@ export const interfaces = {
     /** A switch: the VLAN of the port */
     vlan: {
       labelAccess: 'VLAN (singola)',
-      labelTrunk: 'VLANs (separati da virgola)',
+      labelTrunk: 'VLAN (separate da virgola)',
       hintAccess:
         'La porta appartiene a questa VLAN (numero da 1 a 4094). Vuoto: nessuna VLAN propria. Appena una porta dello switch ha una VLAN, quelle senza sono nella VLAN 1.',
       hintTrunk:
@@ -72,7 +72,7 @@ export const interfaces = {
       /** Several VLANs as typed, each with the name the project gave it: `VLAN 10 «Uffici», 20` */
       typedList: (vlans: readonly string[]) => `VLAN ${vlans.join(', ')}`,
     },
-    poe: 'PoE Abilitato (Power over Ethernet)',
+    poe: 'PoE Attivo (Power over Ethernet)',
 
     /** A router, a firewall: the address of the port, what leaves by it */
     addressHint: (defaultMask: string) =>
@@ -84,14 +84,14 @@ export const interfaces = {
       untrust: 'Untrust (Rete Non Fidata)',
       dmz: 'DMZ (Zona Demilitarizzata)',
     },
-    nat: 'NAT Abilitato',
+    nat: 'NAT Attivo',
     natHint: `Con il NAT ciò che esce da questa porta prende il suo indirizzo: serve verso Internet, che non trasporta gli indirizzi privati. I servizi da raggiungere da fuori si pubblicano nella scheda ${natTab}.`,
     natWithoutAddress: 'La porta non ha un indirizzo: finché non ne ha uno il NAT non traduce nulla.',
     /** Under the gateway that the DHCP server of the port hands out */
     dhcpGatewayHint: "Vuoto: l'indirizzo di questa porta.",
-    ips: 'IPS/IDS Abilitato (Intrusion Prevention/Detection)',
+    ips: 'IPS/IDS Attivo (Intrusion Prevention/Detection)',
     ipsHint: 'Resta come documentazione: il motore non lo simula.',
-    notesPlaceholder: 'es. Uplink a core switch, Server VLAN 10...',
+    notesPlaceholder: 'es. Uplink a core switch, Server VLAN 10…',
   },
 
   /** The grid of the ports */
@@ -99,7 +99,7 @@ export const interfaces = {
     /** What a port says under the pointer: its name, its VLAN when it has one, what it is linked to */
     title: (name: string, vlan: string, linkedTo: string | undefined) =>
       [name, vlan, linkedTo ? `collegata a ${linkedTo}` : ''].filter(Boolean).join(' — '),
-    poe: 'PoE Enabled',
+    poe: 'PoE Attivo',
   },
 
   /** The VLANs of a trunk port in a few words */
@@ -114,14 +114,17 @@ export const interfaces = {
     openPortsTab: `Apri la scheda ${portsTab}`,
 
     /** A router, a firewall: the ports in use */
-    noneInUse: (portCount: number) =>
-      `Nessuna delle ${portCount} porte ha un indirizzo o un cavo: il dispositivo non è ancora collegato a nessuna rete.`,
+    noneInUse: (portCount: number) => {
+      const notAttached = 'il dispositivo non è ancora collegato a nessuna rete.';
+      if (portCount === 1) return `La porta non ha né un indirizzo né un cavo: ${notAttached}`;
+      return `Nessuna delle ${portCount} porte ha un indirizzo o un cavo: ${notAttached}`;
+    },
     columns: {
       port: 'Porta',
       address: 'Indirizzo',
       zone: 'Zona',
       linkedTo: 'Collegata a',
-      does: 'Fa',
+      does: 'Ruolo',
     },
     /** What a port does, besides NAT */
     does: {
@@ -136,7 +139,7 @@ export const interfaces = {
     /** A switch: how many ports, and how they are split among the VLANs */
     switchCounts: (total: number, linked: number, disabled: number) =>
       [
-        `${total} porte`,
+        total === 1 ? '1 porta' : `${total} porte`,
         linked === 1 ? `${linked} collegata` : `${linked} collegate`,
         ...(disabled === 0 ? [] : [disabled === 1 ? `${disabled} disabilitata` : `${disabled} disabilitate`]),
       ].join(' · ') + '.',
@@ -146,21 +149,23 @@ export const interfaces = {
     /** `<port/>` is the number of the trunk port, `<vlans/>` the VLANs it lists (none: it carries them all) */
     trunk: (vlanCount: number): string =>
       vlanCount === 0
-        ? '<trunk>Trunk</trunk>: porta <port/>, porta tutte le VLAN'
-        : '<trunk>Trunk</trunk>: porta <port/>, porta le VLAN <vlans/>',
+        ? '<trunk>Trunk</trunk>: porta <port/>, trasporta tutte le VLAN'
+        : vlanCount === 1
+          ? '<trunk>Trunk</trunk>: porta <port/>, trasporta la VLAN <vlans/>'
+          : '<trunk>Trunk</trunk>: porta <port/>, trasporta le VLAN <vlans/>',
     noVlans: 'Nessuna porta ha una VLAN: tutte le porte sono nella stessa rete.',
   },
 
   /** The settings of a network card */
   card: {
-    enabled: 'Scheda Abilitata',
-    name: 'Nome Interfaccia',
-    namePlaceholder: 'es. eth0, eth1, ens192...',
+    enabled: 'Scheda Attiva',
+    name: "Nome dell'Interfaccia",
+    namePlaceholder: 'es. eth0, eth1, ens192…',
     mac: 'Indirizzo MAC',
     generateMac: 'Genera un MAC',
     /** Under the gateway that the DHCP server of the card hands out */
     dhcpGatewayHint: "Vuoto: nessun gateway. Di solito è l'indirizzo del router.",
-    notesPlaceholder: 'es. Connessione primaria, Backup link...',
+    notesPlaceholder: 'es. Connessione primaria, connessione di riserva…',
 
     /** Where the card takes its address from, and the address */
     address: {
@@ -175,7 +180,10 @@ export const interfaces = {
       },
       fromDhcpServer: "L'indirizzo arriva dal server DHCP della rete a cui la scheda è collegata.",
       automaticHint:
-        "Indirizzo, subnet mask e gateway li assegna un server DHCP della stessa rete: una porta di router o firewall, o un server, con «Server DHCP Abilitato». Si calcolano dal disegno, sempre allo stesso modo. Il server DNS arriva con l'indirizzo, se quel server ne consegna uno.",
+        'Indirizzo, subnet mask e gateway li assegna un server DHCP della stessa rete: una porta ' +
+        'di router o firewall, o un server, con «Server DHCP Attivo». Si calcolano dal disegno, ' +
+        "sempre allo stesso modo. Il server DNS arriva con l'indirizzo, se quel server ne " +
+        'consegna uno.',
       dnsHint:
         "L'indirizzo del server a cui la scheda chiede a quale indirizzo corrisponde un nome. Vuoto: nessuno, e un nome usato al posto di un indirizzo non trova risposta.",
     },
@@ -187,8 +195,8 @@ export const interfaces = {
     noAddress: 'nessun indirizzo',
     noMac: 'MAC non indicato',
     disabled: 'Disabilitata',
-    remove: 'Rimuovi scheda',
-    removeNamed: (name: string) => `Rimuovi la scheda ${name}`,
+    remove: 'Elimina scheda',
+    removeNamed: (name: string) => `Elimina la scheda ${name}`,
     add: 'Aggiungi scheda',
   },
 

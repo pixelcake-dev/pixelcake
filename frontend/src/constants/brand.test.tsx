@@ -76,7 +76,7 @@ describe('the interface', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(APP_NAME);
     expect(screen.getByText(APP_DESCRIPTOR)).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent(APP_MOTTO);
-    expect(screen.getByAltText(`${APP_NAME} Logo`)).toBeInTheDocument();
+    expect(screen.getByAltText(`Logo di ${APP_NAME}`)).toBeInTheDocument();
   });
 
   it('the settings and the guide end with the same motto as the welcome screen, in Italian', () => {
@@ -115,6 +115,6 @@ describe('the interface', () => {
     expect(names.length).toBeGreaterThan(3);
     expect(names.filter(name => name !== APP_NAME)).toEqual([]);
     // (the symbol alone: on the menu bar, and at the foot of the guide)
-    expect(screen.getAllByAltText(`${APP_NAME} Icon`).length).toBeGreaterThan(0);
+    expect(screen.getAllByAltText(`Simbolo di ${APP_NAME}`).length).toBeGreaterThan(0);
   });
 });

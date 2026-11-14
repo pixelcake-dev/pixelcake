@@ -1,7 +1,7 @@
 /** Reading a project file: what was repaired, what is wrong */
 
 /** What is said of one canvas of the file: its name comes first */
-const inCanvas = (canvasName: string, what: string) => `Canvas "${canvasName}": ${what}`;
+const inCanvas = (canvasName: string, what: string) => `Canvas «${canvasName}»: ${what}`;
 
 export const projectFile = {
   /** A file that cannot be opened: what is wrong with it */
@@ -24,7 +24,7 @@ export const projectFile = {
   /** A file that was opened: what was put right on the way */
   repairs: {
     noVersion: 'Versione del formato non indicata: il file è stato letto come versione 1.',
-    noProjectName: (givenName: string) => `Nome del progetto mancante: usato "${givenName}".`,
+    noProjectName: (givenName: string) => `Nome del progetto mancante: usato «${givenName}».`,
     noDescription: 'Descrizione del progetto mancante: lasciata vuota.',
 
     noSettings: 'Impostazioni di rete mancanti: usati i valori predefiniti.',
@@ -41,7 +41,7 @@ export const projectFile = {
         : `${count} nomi di VLAN troppo lunghi accorciati a ${maxLength} caratteri.`,
 
     canvasUnnamed: (number: number, givenName: string) =>
-      `Canvas n. ${number} senza nome: chiamato "${givenName}".`,
+      `Canvas n. ${number} senza nome: chiamato «${givenName}».`,
     devicesDropped: (canvasName: string, count: number) =>
       inCanvas(
         canvasName,
@@ -67,8 +67,8 @@ export const projectFile = {
       inCanvas(
         canvasName,
         count === 1
-          ? '1 connessione con id duplicato rimossa.'
-          : `${count} connessioni con id duplicato rimosse.`
+          ? '1 connessione con ID duplicato rimossa.'
+          : `${count} connessioni con ID duplicato rimosse.`
       ),
     connectionsDetached: (canvasName: string, count: number) =>
       inCanvas(
@@ -94,12 +94,12 @@ export const projectFile = {
     viewReset: (canvasName: string) =>
       inCanvas(canvasName, 'vista mancante o non valida, riportata alla posizione iniziale.'),
     countersRaised: (canvasName: string) =>
-      inCanvas(canvasName, 'contatori degli id mancanti o troppo bassi, ricalcolati.'),
+      inCanvas(canvasName, 'contatori degli ID mancanti o troppo bassi, ricalcolati.'),
     canvasIdsGiven: (count: number) =>
       count === 1
-        ? '1 canvas con id mancante o duplicato: assegnato un nuovo id.'
-        : `${count} canvas con id mancante o duplicato: assegnati nuovi id.`,
-    activeCanvasNotFound: (openedName: string) => `Canvas attivo non trovato: aperto "${openedName}".`,
+        ? '1 canvas con ID mancante o duplicato: assegnato un nuovo ID.'
+        : `${count} canvas con ID mancante o duplicato: assegnati nuovi ID.`,
+    activeCanvasNotFound: (openedName: string) => `Canvas attivo non trovato: aperto «${openedName}».`,
 
     noTemplateList: 'Elenco dei template personalizzati mancante: nessun template importato.',
     templatesDropped: (count: number) =>

@@ -35,15 +35,15 @@ describe('AppearanceSettingsTab', () => {
     const mode = screen.getByRole('switch');
 
     expect(mode).toHaveAttribute('aria-checked', 'false');
-    expect(mode).toHaveTextContent('Modalità Chiara Attiva');
-    expect(mode).toHaveTextContent('Clicca per passare alla modalità scura');
+    expect(mode).toHaveTextContent('Tema Chiaro Attivo');
+    expect(mode).toHaveTextContent('Clicca per passare al tema scuro');
     expect(pageIsDark()).toBe(false);
 
     fireEvent.click(mode);
 
     expect(mode).toHaveAttribute('aria-checked', 'true');
-    expect(mode).toHaveTextContent('Modalità Scura Attiva');
-    expect(mode).toHaveTextContent('Clicca per passare alla modalità chiara');
+    expect(mode).toHaveTextContent('Tema Scuro Attivo');
+    expect(mode).toHaveTextContent('Clicca per passare al tema chiaro');
     expect(useUIStore.getState().darkMode).toBe(true);
     expect(pageIsDark()).toBe(true);
 

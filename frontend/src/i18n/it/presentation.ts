@@ -41,7 +41,7 @@ export const presentation = {
   flowHints: {
     ping: 'Una domanda e la sua risposta: il modo più semplice per sapere se due dispositivi si vedono',
     web: 'La richiesta di una pagina e la pagina che torna indietro',
-    email: 'Una mail: dal mittente al server di posta, dal server al destinatario',
+    email: "Un'email: dal mittente al server di posta, dal server al destinatario",
   },
 
   /** The legs of an exchange (the engine names them in English) */
@@ -71,9 +71,9 @@ export const presentation = {
     terminal: 'Terminale',
     exportPicture: 'Esporta immagine',
     fullScreen: 'Schermo intero',
-    exitFullScreen: 'Esci da schermo intero',
-    lightTheme: 'Passa a tema chiaro',
-    darkTheme: 'Passa a tema scuro',
+    exitFullScreen: 'Esci dallo schermo intero',
+    lightTheme: 'Passa al tema chiaro',
+    darkTheme: 'Passa al tema scuro',
     exit: 'Esci',
   },
 
@@ -90,8 +90,8 @@ export const presentation = {
     to: 'A',
     fromPlaceholder: 'Da dove parte…',
     toPlaceholder: 'Dove arriva…',
-    swapEnds: 'Inverti partenza e arrivo',
-    exchangeType: 'Tipo di scambio',
+    swapEnds: 'Inverti partenza e destinazione',
+    exchangeType: 'Tipo di traffico',
     stop: 'Ferma',
     showAgain: 'Mostra di nuovo',
   },
@@ -109,10 +109,10 @@ export const presentation = {
     arrives: {
       ping: (source: string, target: string) => `${target} risponde a ${source}.`,
       web: (source: string, target: string) => `${source} apre la pagina di ${target}.`,
-      email: (source: string, target: string) => `La mail di ${source} arriva a ${target}.`,
+      email: (source: string, target: string) => `L'email di ${source} arriva a ${target}.`,
     },
     cannotTry: 'Manca qualcosa per fare la prova.',
-    noCable: 'Nessun cavo collega i due dispositivi.',
+    noCable: 'Nessun percorso di cavi collega i due dispositivi.',
     lost: 'Il pacchetto si perde per strada.',
     /** `leg` is the title of the leg it happens on */
     neverLeaves: (device: string, leg: string) => `Non esce nemmeno da ${device} (${leg.toLowerCase()}).`,
@@ -158,8 +158,8 @@ export const presentation = {
       'Il motore prende la strada più corta che funziona; protocolli come lo spanning tree non sono simulati.',
 
     show: (source: string, target: string) => `Mostra da ${source} a ${target}`,
-    andMore: (count: number) => `e altri ${count}`,
-    andMoreDevices: (count: number) => `e altri ${count} dispositivi`,
+    andMore: (count: number) => (count === 1 ? 'e un altro' : `e altri ${count}`),
+    andMoreDevices: (count: number) => (count === 1 ? 'e un altro dispositivo' : `e altri ${count} dispositivi`),
     showAll: 'Mostra tutto',
     showLess: 'Mostra meno',
 

@@ -22,7 +22,7 @@ export const firewall = {
   },
   actionOf: (n: number) => `Azione della regola ${n}`,
   serviceOf: (n: number) => `Servizio della regola ${n}`,
-  sourceOf: (n: number) => `Origine della regola ${n}`,
+  sourceOf: (n: number) => `Partenza della regola ${n}`,
   destinationOf: (n: number) => `Destinazione della regola ${n}`,
   enabledOf: (n: number) => `Regola ${n} attiva`,
   moveUp: 'Sposta in su',

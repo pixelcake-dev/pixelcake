@@ -92,7 +92,7 @@ describe('the panel «Aggiungi»', () => {
     store().addArea(CORE);
     const answers = answerConfirms(false);
     render(<DevicePanel />);
-    fireEvent.click(screen.getByRole('button', { name: 'Topologie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Esempi' }));
 
     fireEvent.click(screen.getByRole('button', { name: /Ufficio: due reti e un router/ }));
     await settled();
@@ -112,7 +112,7 @@ describe('the panel «Aggiungi»', () => {
   it('a sample network on an empty canvas is loaded without asking, and brings no area', async () => {
     const answers = answerConfirms(true);
     render(<DevicePanel />);
-    fireEvent.click(screen.getByRole('button', { name: 'Topologie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Esempi' }));
     for (const name of [/Azienda:/, /Ufficio:/, /Sede:/, /Due sedi:/]) {
       act(() => store().clearAllDevices());
       answers.asked.length = 0;

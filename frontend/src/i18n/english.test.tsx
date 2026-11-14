@@ -156,7 +156,7 @@ afterEach(() => {
 describe('the interface in English', () => {
   it('the scan finds Italian where there is some, and none in English', () => {
     document.body.innerHTML =
-      '<p>Nessun dispositivo</p><button title="Chiudi la finestra"></button><input placeholder="Cerca dispositivo..." />' +
+      '<p>Nessun dispositivo</p><button title="Chiudi la finestra"></button><input placeholder="Cerca dispositivo…" />' +
       '<img alt="Anteprima" /><span aria-label="Elimina la regola 2"></span><button lang="it" title="Italiano">it</button>';
     expect(italianOnScreen()).toHaveLength(5);
 

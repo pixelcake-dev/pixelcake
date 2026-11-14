@@ -56,7 +56,7 @@ describe('a window and Esc', () => {
     esc();
     expect(onClose).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close modal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Chiudi la finestra' }));
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
@@ -210,11 +210,11 @@ describe('what is open inside a window goes first', () => {
       </Modal>
     );
     fireEvent.click(screen.getByRole('button', { name: /Server/ }));
-    expect(screen.getByPlaceholderText('Cerca icone...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Cerca icone…')).toBeInTheDocument();
 
     // wherever the keyboard is: the list is what was opened last
     esc();
-    expect(screen.queryByPlaceholderText('Cerca icone...')).toBeNull();
+    expect(screen.queryByPlaceholderText('Cerca icone…')).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
 
     esc();

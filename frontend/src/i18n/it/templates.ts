@@ -1,7 +1,7 @@
 /** Device and link templates: lists and editors */
 
 /** The button that adds a link type: the empty list names it */
-const newLinkType = 'Nuovo Tipo Connessione';
+const newLinkType = 'Nuovo Tipo di Connessione';
 
 export const templates = {
   title: 'Template',
@@ -15,16 +15,16 @@ export const templates = {
   devices: {
     tabs: {
       generic: 'Dispositivi Generici',
-      custom: 'Dispositivi Custom',
+      custom: 'Dispositivi Personalizzati',
     },
 
     /** Fields the editor of a generic template and the form of a custom one share */
-    baseType: 'Tipo Base',
+    baseType: 'Tipo di Base',
     colour: 'Colore',
 
     generic: {
       intro: 'Dispositivi predefiniti disponibili per uso rapido',
-      add: 'Aggiungi Nuovo Template',
+      add: 'Nuovo Template',
       edit: 'Modifica template',
       delete: 'Elimina template',
       deleteQuestion: {
@@ -39,66 +39,68 @@ export const templates = {
       saveChanges: 'Salva Modifiche',
       create: 'Crea Template',
       name: 'Nome',
-      namePlaceholder: 'es: PC, Printer, IoT Device',
+      namePlaceholder: 'es. PC, Stampante, Dispositivo IoT',
       chooseType: '-- Seleziona tipo --',
-      typeLocked: 'Il tipo non può essere modificato per evitare problemi con i dispositivi esistenti',
+      typeLocked:
+        'Il tipo non può essere modificato, per evitare problemi con i dispositivi esistenti.',
       icon: 'Icona (Iconify)',
-      preview: 'Preview',
+      preview: 'Anteprima',
       errors: {
-        nameRequired: 'Nome obbligatorio',
-        typeRequired: 'Tipo base obbligatorio',
-        typeExists: 'Tipo già esistente tra i template generici',
-        iconRequired: 'Icona obbligatoria',
+        nameRequired: 'Il nome è obbligatorio',
+        typeRequired: 'Il tipo di base è obbligatorio',
+        typeExists: 'Questo tipo esiste già tra i template generici',
+        iconRequired: "L'icona è obbligatoria",
       },
     },
 
     custom: {
       intro: 'Template personalizzati con campi Terraform',
-      add: '+ Nuovo Template',
+      add: 'Nuovo Template',
       formTitle: 'Crea Nuovo Template',
-      name: 'Nome Template',
-      namePlaceholder: 'es: AWS EC2 Instance',
+      name: 'Nome del Template',
+      namePlaceholder: 'es. AWS EC2 Instance',
       icon: 'Icona Iconify',
-      iconPlaceholder: 'es: mdi:server',
+      iconPlaceholder: 'es. mdi:server',
       save: 'Salva Template',
-      empty: 'Nessun template personalizzato. Creane uno!',
+      empty: 'Nessun template personalizzato. Creane uno.',
       deleteQuestion: 'Eliminare questo template?',
     },
   },
 
   links: {
-    intro: 'Tipi di connessione disponibili per i collegamenti tra dispositivi',
+    intro: 'Tipi di connessione disponibili tra i dispositivi',
     add: newLinkType,
-    edit: 'Modifica tipo connessione',
-    delete: 'Elimina tipo connessione',
+    edit: 'Modifica tipo di connessione',
+    delete: 'Elimina tipo di connessione',
     empty: 'Nessun tipo di connessione disponibile',
-    emptyHint: `Clicca su "${newLinkType}" per iniziare`,
+    emptyHint: `Clicca su «${newLinkType}» per iniziare`,
     deleteQuestion: {
       title: (name: string) => `Eliminare il tipo di connessione «${name}»?`,
       detail: 'Le connessioni esistenti di questo tipo potrebbero non essere più disegnate come prima.',
     },
 
     editor: {
-      titleEdit: 'Modifica Tipo Connessione',
+      titleEdit: 'Modifica Tipo di Connessione',
       titleNew: newLinkType,
       saveChanges: 'Salva Modifiche',
       create: 'Crea Tipo',
-      name: 'Nome *',
-      namePlaceholder: 'es: Trunk, Access, WAN',
-      typeId: 'Tipo ID *',
-      typeIdPlaceholder: 'es: trunk, access, wan',
-      typeIdHint: 'Identificatore univoco (minuscolo, no spazi). Non modificabile dopo la creazione.',
+      name: 'Nome',
+      namePlaceholder: 'es. Trunk, Access, WAN',
+      typeId: 'ID del Tipo',
+      typeIdPlaceholder: 'es. trunk, access, wan',
+      typeIdHint:
+        'Identificatore univoco (minuscolo, senza spazi). Non modificabile dopo la creazione.',
       description: 'Descrizione',
-      descriptionPlaceholder: 'es: Link trunk tra switch',
-      colour: 'Colore *',
-      lineStyle: 'Stile Linea *',
+      descriptionPlaceholder: 'es. Connessione trunk tra switch',
+      colour: 'Colore',
+      lineStyle: 'Stile della Linea',
       lineStyles: {
-        solid: 'Solida',
+        solid: 'Continua',
         dashed: 'Tratteggiata',
-        dotted: 'Puntinata',
+        dotted: 'Punteggiata',
       },
-      thickness: 'Spessore *',
-      thicknessHint: 'Da 1 a 10 pixel',
+      thickness: 'Spessore',
+      thicknessHint: 'Da 1 a 10 pixel.',
       preview: 'Anteprima',
       errors: {
         nameRequired: 'Il nome è obbligatorio',
@@ -116,9 +118,9 @@ export const templates = {
      * as long as the user has not rewritten them.
      */
     builtInDescriptions: {
-      access: 'Porta di accesso a dispositivi finali',
-      trunk: 'Link trunk tra switch',
-      uplink: 'Uplink a core/internet',
+      access: 'Connessione di accesso ai dispositivi finali',
+      trunk: 'Connessione trunk tra switch',
+      uplink: 'Uplink a core/Internet',
       backbone: 'Infrastruttura critica',
       mpls: 'Connessione MPLS WAN',
     },

@@ -8,12 +8,12 @@ export const explorer = {
   projectName: 'Nome del progetto',
   renameProject: 'Rinomina progetto',
   projectDescription: 'Descrizione del progetto',
-  descriptionPlaceholder: 'Descrizione...',
+  descriptionPlaceholder: 'Descrizione…',
   editDescription: 'Modifica descrizione',
   addDescription: 'Aggiungi una descrizione…',
   unsavedChanges: 'Modifiche non salvate su file',
 
-  heading: 'CANVASES',
+  heading: 'Canvas',
   canvasName: (name: string) => `Nome del canvas ${name}`,
   renameCanvas: 'Rinomina canvas',
   renameCanvasNamed: (name: string) => `Rinomina canvas ${name}`,
@@ -25,7 +25,7 @@ export const explorer = {
   },
 
   newCanvas: 'Nuovo Canvas',
-  newCanvasPlaceholder: 'Nome canvas...',
+  newCanvasPlaceholder: 'Nome del canvas…',
   newCanvasName: 'Nome del nuovo canvas',
   createCanvas: 'Crea canvas',
   cancelNewCanvas: 'Annulla nuovo canvas',

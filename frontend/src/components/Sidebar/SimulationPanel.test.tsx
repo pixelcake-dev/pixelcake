@@ -55,7 +55,7 @@ describe('SimulationPanel', () => {
     const inOrder = [
       screen.getByRole('button', { name: /Partenza/ }),
       screen.getByRole('button', { name: /Destinazione/ }),
-      screen.getByLabelText('Modello di Flusso'),
+      screen.getByLabelText('Tipo di Traffico'),
       start(),
     ];
     for (let i = 1; i < inOrder.length; i++) {
@@ -80,7 +80,7 @@ describe('SimulationPanel', () => {
     const { devices } = loadSample();
     render(<SimulationPanel />);
 
-    fireEvent.change(screen.getByLabelText('Modello di Flusso'), { target: { value: 'web' } });
+    fireEvent.change(screen.getByLabelText('Tipo di Traffico'), { target: { value: 'web' } });
     fireEvent.click(start());
 
     // The panel proposes the first PC and the first server of the drawing,

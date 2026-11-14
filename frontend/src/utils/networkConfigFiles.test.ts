@@ -192,7 +192,7 @@ describe('routes, rules and VLANs in a project file', () => {
     expect(openedFw?.firewallRules).toEqual([lab().devices.find(d => d.id === 'fw')?.firewallRules?.[1]]);
     expect(openedFw?.routes).toBeUndefined();
     expect(opened.find(d => d.id === 'r1')?.routes).toBeUndefined();
-    expect(result.warnings).toEqual(['Canvas "Canvas 1": 2 dispositivi incompleti corretti.']);
+    expect(result.warnings).toEqual(['Canvas «Canvas 1»: 2 dispositivi incompleti corretti.']);
 
     // nothing in the opened file can make a trace throw
     const t = { devices: opened, connections: result.project.canvases[0].connections };

@@ -76,6 +76,7 @@ export const networkSettings: Dictionary['networkSettings'] = {
     emailMode: 'Email mode (SMTP)',
     auto: 'Auto (detect automatically)',
     internal: 'Internal mail server',
+    cloud: 'Cloud (M365, Gmail…)',
     hint:
       'Decides how emails travel in a simulation: through an internal mail server, or through an ' +
       'external service (Cloud), out through the Internet.',

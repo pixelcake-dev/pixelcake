@@ -10,14 +10,14 @@ export const settings = {
   },
 
   appearance: {
-    title: 'Impostazioni Aspetto',
+    title: "Impostazioni dell'Aspetto",
     intro: 'Interfaccia chiara o scura. La scelta resta salvata in questo browser.',
-    darkMode: 'Modalità Scura',
+    darkMode: 'Tema Scuro',
     /** The switch says which of the two is on, and what a click does */
     modeOn: (mode: 'light' | 'dark'): string =>
-      mode === 'dark' ? 'Modalità Scura Attiva' : 'Modalità Chiara Attiva',
+      mode === 'dark' ? 'Tema Scuro Attivo' : 'Tema Chiaro Attivo',
     switchTo: (mode: 'light' | 'dark'): string =>
-      mode === 'dark' ? 'Clicca per passare alla modalità scura' : 'Clicca per passare alla modalità chiara',
+      mode === 'dark' ? 'Clicca per passare al tema scuro' : 'Clicca per passare al tema chiaro',
     language: 'Lingua',
     languageHint: "L'interfaccia cambia subito. La scelta resta salvata in questo browser.",
   },

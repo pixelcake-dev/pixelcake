@@ -14,11 +14,11 @@ export const inspector = {
     identity: {
       legend: 'Identità',
       type: 'Tipo',
-      name: 'Nome Dispositivo',
+      name: 'Nome del Dispositivo',
       vendor: 'Vendor',
-      vendorPlaceholder: 'es. Cisco, HP, Dell...',
+      vendorPlaceholder: 'es. Cisco, HP, Dell…',
       location: 'Posizione',
-      locationPlaceholder: 'es. Rack 01, Ufficio 102...',
+      locationPlaceholder: 'es. Rack 01, Ufficio 102…',
       notes: 'Note',
       notesPlaceholder: 'Testo libero. Si legge anche sul disegno, fermando il puntatore sul dispositivo.',
     },
@@ -68,7 +68,7 @@ export const inspector = {
     portsWithCable: (portIds: number[]) =>
       portIds.length === 1
         ? `La porta ${portIds[0]} ha un cavo collegato: scollegalo prima di togliere la porta`
-        : `Le porte ${portIds.join(', ')} hanno un cavo collegato: scollegali prima di togliere le porte`,
+        : `Le porte ${portIds.join(', ')} hanno un cavo collegato: scollega i cavi prima di togliere le porte`,
     /** A row of a tab that cannot be saved: which one, then what is wrong with it */
     routeProblem: (row: number, problem: string) => `Rotta ${row}: ${problem}`,
     ruleProblem: (row: number, problem: string) => `Regola ${row}: ${problem}`,

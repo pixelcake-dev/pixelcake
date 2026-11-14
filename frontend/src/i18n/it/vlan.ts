@@ -9,10 +9,10 @@ export const vlan = {
   /** The field that takes several VLAN numbers, each shown as a tag */
   input: {
     placeholder: example('10, 20, 30'),
-    outOfRange: 'VLAN deve essere tra 1 e 4094',
+    outOfRange: 'La VLAN deve essere tra 1 e 4094',
     duplicate: 'VLAN già presente',
     remove: (id: number) => `Togli la VLAN ${id}`,
-    hint: 'Premi Enter o virgola per aggiungere VLAN (1-4094)',
+    hint: 'Premi Invio o virgola per aggiungere una VLAN (1–4094).',
   },
 
   /** The table of the VLANs of the project and of their names (Impostazioni → Rete) */

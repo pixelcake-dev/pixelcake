@@ -23,7 +23,7 @@ export const nat = {
     giveAddress: 'Dagliene uno',
     /** Drawn with Rich: <link> opens the «Porte» tab */
     onlyAddressed:
-      "Sono elencate le porte che hanno un indirizzo. Per darne uno a un'altra: " +
+      "Sono elencate solo le porte che hanno un indirizzo. Per darne uno a un'altra: " +
       '<link>scheda «Porte»</link>.',
   },
 

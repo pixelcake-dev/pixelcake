@@ -49,10 +49,10 @@ const type = (label: string, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
 const ACCESS = 'VLAN (singola)';
-const TRUNK = 'VLANs (separati da virgola)';
-const MODE = 'Modalità Porta';
-const NAT = 'NAT Abilitato';
-const SERVER = 'Server DHCP Abilitato';
+const TRUNK = 'VLAN (separate da virgola)';
+const MODE = 'Modalità della Porta';
+const NAT = 'NAT Attivo';
+const SERVER = 'Server DHCP Attivo';
 const MASK = '255.255.255.0';
 
 describe('PortEditor — port address', () => {
@@ -120,7 +120,7 @@ describe('PortEditor — port address', () => {
 
   it('does not write address fields for a Switch port', () => {
     const { kept } = renderEditor({ id: 1, enabled: true, portType: 'access' }, 'Switch');
-    type('Nome Porta (opzionale)', 'PC-1');
+    type('Nome della Porta (facoltativo)', 'PC-1');
     expect(kept().name).toBe('PC-1');
     expect('ip' in kept()).toBe(false);
     expect('subnet' in kept()).toBe(false);
@@ -131,15 +131,15 @@ describe('PortEditor — what every port has', () => {
   it('names the port in its title, with the name it is given', () => {
     renderEditor({ id: 3, enabled: true }, 'Router');
     expect(screen.getByRole('heading', { name: 'Porta 3' })).toBeInTheDocument();
-    type('Nome Porta (opzionale)', 'Internet');
+    type('Nome della Porta (facoltativo)', 'Internet');
     expect(screen.getByRole('heading', { name: 'Porta 3 «Internet»' })).toBeInTheDocument();
   });
 
   it('is switched off and on, and its speed and note go to the port', () => {
     const { port, kept } = renderEditor({ id: 3, enabled: true }, 'Switch');
-    fireEvent.click(screen.getByLabelText('Porta Abilitata'));
+    fireEvent.click(screen.getByLabelText('Porta Attiva'));
     expect(port().enabled).toBe(false);
-    type('Velocità Link', '1G');
+    type('Velocità', '1G');
     type('Note / Descrizione', ' uplink ');
     expect(kept()).toMatchObject({ enabled: false, speed: '1G', description: 'uplink' });
   });
@@ -257,7 +257,7 @@ describe('PortEditor — security zone of a firewall port', () => {
     // a name must not put the port in "trust" behind the user's back
     const { kept } = renderEditor({ id: 3, enabled: true, portType: 'lan' }, 'Firewall');
     expect(screen.getByLabelText(ZONE)).toHaveValue('');
-    type('Nome Porta (opzionale)', 'Riserva');
+    type('Nome della Porta (facoltativo)', 'Riserva');
     expect(kept().name).toBe('Riserva');
     expect(kept().securityZone).toBeUndefined();
   });
@@ -333,7 +333,7 @@ describe('PortEditor — the DHCP server of a port', () => {
     fireEvent.click(screen.getByLabelText(SERVER));
     type('Primo indirizzo', ' 192.168.10.50 ');
     type('Ultimo indirizzo', '192.168.10.59');
-    type('Gateway consegnato (opzionale)', '192.168.10.254');
+    type('Gateway consegnato (facoltativo)', '192.168.10.254');
     expect(kept().dhcpServer).toEqual({ start: '192.168.10.50', end: '192.168.10.59', gateway: '192.168.10.254' });
 
     fireEvent.click(screen.getByLabelText(SERVER));
@@ -400,7 +400,7 @@ describe('PortGrid — link markers', () => {
     expect(screen.queryByTestId('port-link-marker-1')).not.toBeInTheDocument();
     expect(screen.queryByTestId('port-link-marker-3')).not.toBeInTheDocument();
     // the tooltip of the port itself says it too
-    expect(screen.getByTitle('Port 2 — collegata a SW-Servers (porta 8)')).toBeInTheDocument();
+    expect(screen.getByTitle('Porta 2 — collegata a SW-Servers (porta 8)')).toBeInTheDocument();
   });
 
   it('renders without markers when no link info is given', () => {

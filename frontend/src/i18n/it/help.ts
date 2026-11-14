@@ -24,13 +24,14 @@ export const help = {
       title: 'Aggiungi i dispositivi',
       text:
         'Nella barra a sinistra apri «Aggiungi Dispositivo» (il pulsante +) e scegli un tipo ' +
-        "dall'elenco: controlla il nome e conferma, l'indirizzo IP viene proposto in automatico e si " +
-        'può cambiare, o lasciare al DHCP. Il dispositivo compare al centro della parte di canvas che ' +
-        'stai guardando (o nel primo posto libero lì accanto) ed è già selezionato. «Aggiungi in ' +
-        'Blocco» ne crea molti in una volta. Nella scheda «Topologie» dello stesso pannello ci sono ' +
-        'quattro reti di esempio già pronte: quella di una piccola azienda (la stessa della schermata ' +
-        'iniziale), una semplice, una con VLAN, DMZ e firewall, e una con due sedi e una linea di ' +
-        'riserva. Caricarne una prende il posto di quanto è sul canvas.',
+        "dall'elenco: controlla il nome e conferma, l'indirizzo IP viene proposto in automatico " +
+        'e si può cambiare, o lasciare al DHCP. Il dispositivo compare al centro della parte di ' +
+        'canvas che stai guardando (o nel primo posto libero lì accanto) ed è già selezionato. ' +
+        '«Aggiungi in Blocco» ne crea molti in una volta. Nella scheda «Esempi» dello stesso ' +
+        'pannello ci sono quattro reti di esempio già pronte: quella di una piccola azienda (la ' +
+        'stessa della schermata di benvenuto), una semplice, una con VLAN, DMZ e firewall, e una ' +
+        'con due sedi e una linea di riserva. Caricarne una prende il posto di quanto è sul ' +
+        'canvas.',
     },
     moveAndSelect: {
       title: 'Spostali e selezionali',
@@ -43,12 +44,12 @@ export const help = {
     connect: {
       title: 'Collegali',
       text:
-        'Ogni dispositivo ha quattro punti di connessione, uno per lato: compaiono quando ci passi ' +
-        'sopra con il mouse o lo selezioni. Trascina da un punto fino a un punto di un altro ' +
-        'dispositivo: a ciascun capo il collegamento viene assegnato a una porta o a una scheda di ' +
-        'rete libera. Su un firewall con zone di sicurezza la porta va scelta a mano. Con un clic ' +
-        'destro sul collegamento, «Modifica Connessione» permette di cambiare le interfacce, il tipo, ' +
-        "la banda, l'etichetta e il colore.",
+        'Ogni dispositivo ha quattro punti di connessione, uno per lato: compaiono quando ci ' +
+        'passi sopra con il mouse o lo selezioni. Trascina da un punto fino a un punto di un ' +
+        'altro dispositivo: a ciascun capo la connessione viene assegnata a una porta o a una ' +
+        'scheda di rete libera. Su un firewall con zone di sicurezza la porta va scelta a mano. ' +
+        'Con un clic destro sulla connessione, «Modifica Connessione» permette di cambiare le ' +
+        "interfacce, il tipo, la banda, l'etichetta e il colore.",
     },
     areas: {
       title: 'Raggruppa con i riquadri',
@@ -68,17 +69,17 @@ export const help = {
     configure: {
       title: 'Configurali',
       text:
-        'Un doppio clic su un dispositivo ne apre la scheda (la stessa di clic destro → «Dettagli ' +
-        '(Modifica)»). La prima schermata, «Generale», è fatta per il dispositivo: di un PC o di un ' +
-        'server mostra nome e indirizzo, che si scrive lì; di uno switch le VLAN e come sono divise ' +
-        'le porte; di un router o di un firewall le porte in uso, ciascuna con indirizzo, ' +
-        'collegamento e cosa fa. Switch, router e firewall hanno anche la scheda «Porte»: scegli una ' +
-        'porta e sotto compaiono le sue impostazioni; lì si cambia anche il «Numero di porte». Gli ' +
-        'altri dispositivi hanno «Schede di rete», con nome, velocità e MAC di ogni scheda. Su ' +
-        '«Generale» ogni dispositivo ha anche le «Note»: un testo libero, di più righe, per ciò che ' +
-        'non sta in un campo. Sul disegno le leggi fermando il puntatore sul dispositivo. Quello che ' +
-        'non va viene detto sotto il campo mentre scrivi; le modifiche valgono solo dopo aver premuto ' +
-        '«Salva».',
+        'Un doppio clic su un dispositivo ne apre la scheda (la stessa di clic destro → ' +
+        '«Dettagli (Modifica)»). La prima schermata, «Generale», è fatta per il dispositivo: di ' +
+        'un PC o di un server mostra nome e indirizzo, che si scrive lì; di uno switch le VLAN e ' +
+        'come sono divise le porte; di un router o di un firewall le porte in uso, ciascuna con ' +
+        'indirizzo, a cosa è collegata e ruolo. Switch, router e firewall hanno anche la scheda ' +
+        '«Porte»: scegli una porta e sotto compaiono le sue impostazioni; lì si cambia anche il ' +
+        '«Numero di porte». Gli altri dispositivi hanno «Schede di rete», con nome, velocità e ' +
+        'MAC di ogni scheda. Su «Generale» ogni dispositivo ha anche le «Note»: un testo libero, ' +
+        'di più righe, per ciò che non sta in un campo. Sul disegno le leggi fermando il ' +
+        'puntatore sul dispositivo. Quello che non va viene detto sotto il campo mentre scrivi; ' +
+        'le modifiche valgono solo dopo aver premuto «Salva».',
     },
     route: {
       title: 'Instrada tra le reti',
@@ -105,95 +106,98 @@ export const help = {
     firewall: {
       title: 'Filtra con il firewall',
       text:
-        'Le porte di un firewall si mettono in una zona: trust, untrust o dmz. Senza regole decide la ' +
-        'politica delle zone: verso una zona più fidata il traffico è negato, il resto passa. Nella ' +
-        "scheda «Regole» si scrivono le eccezioni, lette dall'alto in basso: decide la prima che " +
-        'corrisponde, per servizio (ping, web, email, DNS), origine e destinazione. La risposta a un ' +
-        'flusso permesso passa sempre.',
+        'Le porte di un firewall si mettono in una zona: trust, untrust o dmz. Senza regole ' +
+        'decide la politica delle zone: verso una zona più fidata il traffico è negato, il resto ' +
+        "passa. Nella scheda «Regole» si scrivono le eccezioni, lette dall'alto in basso: decide " +
+        'la prima che corrisponde, per servizio (ping, web, email, DNS), partenza e ' +
+        'destinazione. La risposta a un flusso permesso passa sempre.',
     },
     nat: {
       title: 'Esci su Internet con il NAT',
       text:
-        'Un simbolo Cloud chiamato «Internet» non trasporta gli indirizzi privati (10.x, 172.16-31.x, ' +
-        '192.168.x): chi sta dentro non esce e chi sta fuori non entra, finché un router o un ' +
-        'firewall non traduce gli indirizzi. Nella scheda «NAT» del router o del firewall spunta la ' +
-        'porta rivolta a Internet (è la stessa scelta di «NAT Abilitato» sulla porta, nella scheda ' +
-        "«Porte»): ciò che esce prende l'indirizzo di quella porta, e la risposta torna a chi aveva " +
-        'chiesto. Per raggiungere da fuori un server che sta dentro, lì sotto premi «Aggiungi ' +
-        "inoltro»: servizio, porta su cui arriva, indirizzo interno. Chi è fuori chiede all'indirizzo " +
-        'della porta e la risposta gli torna da lì. Su un firewall serve anche la regola che lo ' +
-        'permette, nella scheda «Regole». La rete di esempio della schermata iniziale è fatta così.',
+        'Un simbolo Cloud chiamato «Internet» non trasporta gli indirizzi privati (10.x, ' +
+        '172.16–31.x, 192.168.x): chi sta dentro non esce e chi sta fuori non entra, finché un ' +
+        'router o un firewall non traduce gli indirizzi. Nella scheda «NAT» del router o del ' +
+        'firewall spunta la porta rivolta a Internet (è la stessa scelta di «NAT Attivo» sulla ' +
+        "porta, nella scheda «Porte»): ciò che esce prende l'indirizzo di quella porta, e la " +
+        'risposta torna a chi aveva chiesto. Per raggiungere da fuori un server che sta dentro, ' +
+        'lì sotto premi «Aggiungi inoltro»: servizio, porta su cui arriva, indirizzo interno. ' +
+        "Chi è fuori chiede all'indirizzo della porta e la risposta gli torna da lì. Su un " +
+        'firewall serve anche la regola che lo permette, nella scheda «Regole». La rete di ' +
+        'esempio della schermata di benvenuto è fatta così.',
     },
     dhcp: {
       title: 'Dai gli indirizzi con il DHCP',
       text:
-        "Un dispositivo può prendere l'indirizzo da solo: nella scheda «Schede di rete», alla voce " +
-        '«Indirizzo», scegli «Automatico (DHCP)» al posto di «Manuale». Glielo dà un server DHCP ' +
-        'della stessa rete: una porta di router o di firewall, oppure la scheda di un server. Si ' +
-        'accende nella scheda «DHCP» di quel dispositivo, con la spunta accanto alla porta o alla ' +
-        "scheda: l'intervallo da «Primo indirizzo» a «Ultimo indirizzo» viene proposto, e si può " +
-        'cambiare (è la stessa scelta di «Server DHCP Abilitato» sulla porta o sulla scheda). Con ' +
-        "l'indirizzo arrivano la subnet mask e il gateway. Gli indirizzi si calcolano dal disegno, " +
-        "sempre allo stesso modo: i dispositivi vengono serviti nell'ordine in cui compaiono e " +
-        'ciascuno prende il primo indirizzo libero, saltando quelli scritti a mano. La scheda «DHCP» ' +
-        'elenca anche chi ha preso quale indirizzo, e sul disegno un indirizzo assegnato è seguito da ' +
-        '«DHCP». Una scheda che non trova un server resta senza indirizzo, e la sua finestra dice ' +
-        "perché. Un router non passa la richiesta a un'altra rete: il relay non è simulato, e nemmeno " +
-        'le prenotazioni e le scadenze. Nella rete di esempio della schermata iniziale i due ' +
-        "portatili prendono l'indirizzo così, da Router-Core.",
+        "Un dispositivo può prendere l'indirizzo da solo: nella scheda «Schede di rete», alla " +
+        'voce «Indirizzo», scegli «Automatico (DHCP)» al posto di «Manuale». Glielo dà un server ' +
+        'DHCP della stessa rete: una porta di router o di firewall, oppure la scheda di un ' +
+        'server. Si attiva nella scheda «DHCP» di quel dispositivo, con la spunta accanto alla ' +
+        "porta o alla scheda: l'intervallo da «Primo indirizzo» a «Ultimo indirizzo» viene " +
+        'proposto, e si può cambiare (è la stessa scelta di «Server DHCP Attivo» sulla porta o ' +
+        "sulla scheda). Con l'indirizzo arrivano la subnet mask e il gateway. Gli indirizzi si " +
+        'calcolano dal disegno, sempre allo stesso modo: i dispositivi vengono serviti ' +
+        "nell'ordine in cui compaiono e ciascuno prende il primo indirizzo libero, saltando " +
+        'quelli scritti a mano. La scheda «DHCP» elenca anche chi ha preso quale indirizzo, e ' +
+        'sul disegno un indirizzo assegnato è seguito da «DHCP». Una scheda che non trova un ' +
+        'server resta senza indirizzo, e la sua finestra dice perché. Un router non passa la ' +
+        "richiesta a un'altra rete: il relay non è simulato, e nemmeno le prenotazioni e le " +
+        'scadenze. Nella rete di esempio della schermata di benvenuto i due portatili prendono ' +
+        "l'indirizzo così, da Router-Core.",
     },
     dns: {
       title: 'Chiama i dispositivi per nome con il DNS',
       text:
-        'Un server può fare da server DNS: nella sua scheda «DNS» premi «Aggiungi record» e scrivi un ' +
-        "nome, per esempio `gestionale.azienda.example`, e l'indirizzo a cui corrisponde. A chi " +
-        'chiedere lo decide ogni dispositivo: nella scheda «Schede di rete» il campo «Server DNS» ' +
-        "contiene l'indirizzo del server. Per non scriverlo ogni volta, in Impostazioni → Rete c'è " +
-        '«Server DNS di Default»: i nuovi dispositivi nascono con quello sulla scheda e, una volta ' +
-        'salvato, lì sotto si può assegnarlo anche ai dispositivi del canvas che non ne hanno uno. ' +
-        "Chi prende l'indirizzo dal DHCP riceve anche quello, se nel server DHCP è compilato «Server " +
-        'DNS consegnato (opzionale)». Un nome si usa nel terminale al posto di un indirizzo: `ping ' +
-        "gestionale.azienda.example from PC-Vendite` chiede prima l'indirizzo al server DNS, con una " +
-        'domanda che attraversa la rete come ogni altro scambio e può fermarsi allo stesso modo, e ' +
-        'poi fa il ping; `resolve gestionale.azienda.example from PC-Vendite` fa soltanto la domanda. ' +
-        'Per un firewall la domanda è il servizio «DNS», che si sceglie nelle regole e negli inoltri. ' +
+        'Un server può fare da server DNS: nella sua scheda «DNS» premi «Aggiungi record» e ' +
+        "scrivi un nome, per esempio `gestionale.azienda.example`, e l'indirizzo a cui " +
+        'corrisponde. A chi chiedere lo decide ogni dispositivo: nella scheda «Schede di rete» ' +
+        "il campo «Server DNS» contiene l'indirizzo del server. Per non scriverlo ogni volta, in " +
+        "Impostazioni → Rete c'è «Server DNS Predefinito»: i nuovi dispositivi nascono con " +
+        'quello sulla scheda e, una volta salvato, lì sotto si può assegnarlo anche ai ' +
+        "dispositivi del canvas che non ne hanno uno. Chi prende l'indirizzo dal DHCP riceve " +
+        'anche quello, se nel server DHCP è compilato «Server DNS consegnato (facoltativo)». Un ' +
+        'nome si usa nel terminale al posto di un indirizzo: `ping gestionale.azienda.example ' +
+        "from PC-Vendite` chiede prima l'indirizzo al server DNS, con una domanda che attraversa " +
+        'la rete come ogni altro scambio e può fermarsi allo stesso modo, e poi fa il ping; ' +
+        '`resolve gestionale.azienda.example from PC-Vendite` fa soltanto la domanda. Per un ' +
+        'firewall la domanda è il servizio «DNS», che si sceglie nelle regole e negli inoltri. ' +
         'Nulla viene ricordato: il nome viene chiesto di nuovo ogni volta. Non sono simulati un ' +
         "secondo server DNS di riserva, l'inoltro ad altri server e la ricerca inversa; la " +
-        'simulazione e la presentazione scelgono i dispositivi dai menu e non usano i nomi. Nella ' +
-        'rete di esempio della schermata iniziale Srv-Auth conosce tre nomi, gli uffici e i portatili ' +
-        'chiedono a lui, e Cliente-Remoto non ha nessuno a cui chiedere.',
+        'simulazione e la presentazione scelgono i dispositivi dai menu e non usano i nomi. ' +
+        'Nella rete di esempio della schermata di benvenuto Srv-Auth conosce tre nomi, gli ' +
+        'uffici e i portatili chiedono a lui, e Cliente-Remoto non ha nessuno a cui chiedere.',
     },
     ask: {
       title: 'Chiedi se un dispositivo ne raggiunge un altro',
       text:
         'Apri «Simulazione» (il pulsante con il fulmine), scegli «Partenza», «Destinazione» e il ' +
-        '«Modello di Flusso» (ping, email, pagina web o download), poi premi «Avvia Simulazione». Il ' +
-        "pacchetto percorre la rete sul disegno. Se non arriva, l'animazione si ferma dove il " +
-        'traffico viene bloccato e un messaggio ne spiega il motivo: quale apparato, quale porta, ' +
-        'quale rotta o quale regola.',
+        '«Tipo di Traffico» (ping, email, pagina web o download), poi premi «Avvia Simulazione». ' +
+        "Il pacchetto percorre la rete sul disegno. Se non arriva, l'animazione si ferma dove il " +
+        'traffico viene bloccato e un messaggio ne spiega il motivo: quale dispositivo, quale ' +
+        'porta, quale rotta o quale regola.',
     },
     terminal: {
       title: 'Usa il terminale',
       text:
-        '«Console», nella barra a sinistra, apre il terminale. Con un clic destro su un dispositivo → ' +
-        '«Console» si apre già posizionato su quel dispositivo. I comandi sono in inglese, per ' +
-        'esempio, sulla rete di esempio della schermata iniziale, `ping Web-Gestionale from ' +
-        'PC-Vendite`, `trace Web-Gestionale from Portatile-1 as web` oppure `show routes ' +
-        'Router-Core`. Quelli che cambiano la rete, come `add route 192.168.40.0/24 via 10.0.0.2 on ' +
-        "Router-Core`, modificano lo stesso disegno che vedi. L'elenco è nella scheda «Comandi del " +
-        'terminale».',
+        '«Console», nella barra a sinistra, apre il terminale. Con un clic destro su un ' +
+        'dispositivo → «Console» si apre già posizionato su quel dispositivo. I comandi sono in ' +
+        'inglese, per esempio, sulla rete di esempio della schermata di benvenuto, `ping ' +
+        'Web-Gestionale from PC-Vendite`, `trace Web-Gestionale from Portatile-1 as web` oppure ' +
+        '`show routes Router-Core`. Quelli che cambiano la rete, come `add route 192.168.40.0/24 ' +
+        "via 10.0.0.2 on Router-Core`, modificano lo stesso disegno che vedi. L'elenco è nella " +
+        'scheda «Comandi del terminale».',
     },
     present: {
       title: 'Presenta la rete',
       text:
         '«Presenta», in alto a destra, mette via gli strumenti per disegnare: resta il disegno, ' +
-        'adattato alla finestra e non più modificabile con il mouse, con un pannello accanto. Un clic ' +
-        'su un dispositivo apre un piccolo menu: «Parti da qui» e «Arriva qui» scelgono i due capi ' +
-        'della domanda, che si possono scegliere anche dai menu «Da» e «A» del pannello. Scelto il ' +
-        'tipo di scambio (Ping, Web o Email) il pacchetto parte da solo e il pannello dice se arriva, ' +
-        'per quali dispositivi passa e, se si ferma, dove e perché. Nella barra in alto si regola la ' +
-        'velocità del pacchetto, si apre il terminale e si passa a schermo intero. Si esce con «Esci» ' +
-        'o con il tasto Esc.',
+        'adattato alla finestra e non più modificabile con il mouse, con un pannello accanto. Un ' +
+        'clic su un dispositivo apre un piccolo menu: «Parti da qui» e «Arriva qui» scelgono i ' +
+        'due capi della domanda, che si possono scegliere anche dai menu «Da» e «A» del ' +
+        'pannello. Scelto il tipo di traffico (Ping, Web o Email) il pacchetto parte da solo e ' +
+        'il pannello dice se arriva, per quali dispositivi passa e, se si ferma, dove e perché. ' +
+        'Nella barra in alto si regola la velocità del pacchetto, si apre il terminale e si ' +
+        'passa a schermo intero. Si esce con «Esci» o con il tasto Esc.',
     },
     failures: {
       title: 'Chiedi cosa succede se qualcosa si rompe',
@@ -211,16 +215,16 @@ export const help = {
     picture: {
       title: 'Esporta il disegno come immagine',
       text:
-        "File → Esporta immagine… mostra l'anteprima del disegno intero, senza selezioni né punti di " +
-        'connessione. Scegli il formato: PNG, per documenti, presentazioni e messaggi, in tre ' +
-        'dimensioni, oppure SVG, vettoriale. Scegli il tema, chiaro o scuro qualunque sia quello ' +
-        "dello schermo, e con «Nome del progetto in alto» e «Sfondo trasparente» cosa c'è intorno al " +
-        'disegno. «Salva PNG…» chiede dove salvare il file; nei browser che non possono chiederlo il ' +
-        'pulsante è «Scarica PNG». Dove il browser lo permette, «Copia negli appunti» lascia ' +
-        "l'immagine pronta da incollare. In presentazione la stessa finestra si apre dal pulsante " +
-        "«Esporta immagine» della barra in alto: l'immagine mostra i guasti simulati e il percorso " +
-        'della risposta e, con «Domanda e risposta sotto il disegno», riporta la domanda e la sua ' +
-        'risposta.',
+        "File → Esporta immagine… mostra l'anteprima del disegno intero, senza selezioni né " +
+        'punti di connessione. Scegli il formato: PNG, per documenti, presentazioni e messaggi, ' +
+        'in tre grandezze, oppure SVG, vettoriale. Scegli il tema, chiaro o scuro qualunque sia ' +
+        "quello dello schermo, e con «Nome del progetto in alto» e «Sfondo trasparente» cosa c'è " +
+        'intorno al disegno. «Salva PNG…» chiede dove salvare il file; nei browser che non ' +
+        'possono chiederlo il pulsante è «Scarica PNG». Dove il browser lo permette, «Copia ' +
+        "negli appunti» lascia l'immagine pronta da incollare. In presentazione la stessa " +
+        "finestra si apre dal pulsante «Esporta immagine» della barra in alto: l'immagine mostra " +
+        'i guasti simulati e il percorso della risposta e, con «Domanda e risposta sotto il ' +
+        'disegno», riporta la domanda e la sua risposta.',
     },
     canvases: {
       title: 'Dividi il progetto in canvas',
@@ -232,11 +236,11 @@ export const help = {
     save: {
       title: 'Salva su file',
       text:
-        'Il lavoro resta nel browser anche dopo aver ricaricato la pagina. Per conservarlo, o per ' +
-        'portarlo su un altro computer, usa File → Salva (Ctrl + S): il progetto, con tutti i suoi ' +
-        'canvas, viene scritto in un file `.pixelcake.json` che si riapre con File → Apri…. In Chrome ' +
-        'e in Edge il file scelto viene aggiornato a ogni salvataggio, negli altri browser viene ' +
-        'scaricato.',
+        'Il lavoro resta nel browser anche dopo aver ricaricato la pagina. Per conservarlo, o ' +
+        'per portarlo su un altro computer, usa File → Salva (Ctrl + S): il progetto, con tutti ' +
+        'i suoi canvas, viene scritto in un file `.pixelcake.json`, che si riapre con la voce ' +
+        'File → Apri… In Chrome e in Edge il file scelto viene aggiornato a ogni salvataggio, ' +
+        'negli altri browser viene scaricato.',
     },
     yaml: {
       title: 'Importa ed esporta in YAML',

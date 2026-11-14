@@ -360,7 +360,7 @@ describe('App', () => {
       fireEvent.click(screen.getByText('Nuovo Progetto'));
       // (nothing to lose, so nothing is asked: the form opens a moment later)
       await settled();
-      fireEvent.change(screen.getByLabelText('Nome Progetto *'), {
+      fireEvent.change(screen.getByLabelText('Nome del Progetto'), {
         target: { value: 'Sede Torino' },
       });
       fireEvent.click(screen.getByRole('button', { name: 'Crea Progetto' }));
@@ -368,7 +368,7 @@ describe('App', () => {
       // the name of the project, in the bar at the top (and in the Explorer when it is open)
       expect(document.querySelector('.topbar-project-name')).toHaveTextContent('Sede Torino');
       expect(screen.queryByText('Visual Network Designer')).toBeNull();
-      expect(screen.queryByLabelText('Nome Progetto *')).toBeNull();
+      expect(screen.queryByLabelText('Nome del Progetto')).toBeNull();
       expect(useProjectStore.getState().canvases).toHaveLength(1);
     });
   });
@@ -394,7 +394,7 @@ describe('App', () => {
       await settled();
 
       expect(confirms.asked).toHaveLength(1);
-      expect(screen.queryByLabelText('Nome Progetto *')).toBeNull();
+      expect(screen.queryByLabelText('Nome del Progetto')).toBeNull();
       expect(screen.getByText('PC-1')).toBeInTheDocument();
     });
 

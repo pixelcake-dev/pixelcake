@@ -2,10 +2,10 @@
 export const devicePanel = {
   tabs: {
     devices: 'Dispositivi',
-    samples: 'Topologie',
+    samples: 'Esempi',
   },
 
-  searchPlaceholder: 'Cerca dispositivo...',
+  searchPlaceholder: 'Cerca dispositivo…',
   noDevicesFor: (query: string) => `Nessun dispositivo trovato per "${query}"`,
   bulkAdd: 'Aggiungi in Blocco',
   area: {
@@ -15,14 +15,14 @@ export const devicePanel = {
 
   /** What a device of each built-in type is, under its name in the list; `other` for the rest */
   descriptions: {
-    pc: 'Dispositivo endpoint per utenti',
-    switch: 'Aggregatore di rete locale',
+    pc: 'Dispositivo finale per gli utenti',
+    switch: 'Collega i dispositivi di una rete locale',
     router: 'Gateway e routing tra reti',
     server: 'Server applicativo o dati',
     firewall: 'Protezione e sicurezza di rete',
-    accessPoint: 'Punto di accesso WiFi',
+    accessPoint: 'Punto di accesso Wi-Fi',
     loadBalancer: 'Bilanciatore di carico',
-    database: 'Database server',
+    database: 'Server database',
     cloud: 'Servizio cloud o virtuale',
     other: 'Dispositivo di rete',
   },

@@ -153,6 +153,7 @@ const ExplorerPanel = () => {
             fontWeight: 600,
             color: 'var(--text-color-light)',
             letterSpacing: '0.5px',
+            textTransform: 'uppercase',
             marginBottom: '8px',
             paddingLeft: '4px',
           }}
