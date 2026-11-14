@@ -307,6 +307,40 @@ describe('ExportImageModal — the choices', () => {
     expect(saveButton()).toHaveTextContent('Salva SVG…');
   });
 
+  it('draws the lamps as the canvas shows them: who waits for an address, the answer the last question left', async () => {
+    const lit = (state: keyof typeof DEVICE_STATE_COLORS) =>
+      picture().querySelectorAll(`[fill="${DEVICE_STATE_COLORS[state]}"]`).length;
+    const framed = (state: keyof typeof DEVICE_STATE_COLORS) =>
+      picture().querySelectorAll(`rect[stroke="${DEVICE_STATE_COLORS[state]}"]`).length;
+
+    render(<ExportImageModal />);
+    await openDialog();
+    expect([lit('warning'), lit('ok'), lit('error'), lit('off')]).toEqual([0, 0, 0, 0]);
+
+    // a computer put on DHCP where no server answers, and a ping that got to the file server
+    const pc = network().devices.find((d) => d.label === 'PC-Sede-1')!;
+    act(() => {
+      network().updateDevice(pc.id, {
+        nics: pc.nics?.map((nic) => ({ ...nic, dhcp: true, ip: '', subnet: '', gateway: '' })),
+      });
+      useSimulationStore.getState().leaveAnswer({ arrives: true, deviceId: id('Srv-File') });
+    });
+    await settle();
+
+    expect(pictureTexts()).toContain('DHCP: nessun indirizzo');
+    expect(lit('warning')).toBeGreaterThan(0);
+    expect(framed('warning')).toBe(0);
+    expect(lit('ok')).toBeGreaterThan(0);
+    expect(framed('ok')).toBe(1);
+    expect(lit('error')).toBe(0);
+
+    // the answer taken off the canvas is off the picture too
+    act(() => useSimulationStore.getState().clearAnswer());
+    await settle();
+    expect([lit('ok'), framed('ok')]).toEqual([0, 0]);
+    expect(lit('warning')).toBeGreaterThan(0);
+  });
+
   it('draws every device in its frame, the same whatever its name: nothing is read from the screen', async () => {
     // (a device on the page that is not laid out as the picture expects changes nothing)
     const node = document.createElement('div');
@@ -638,6 +672,10 @@ describe('ExportImageModal — while presenting', () => {
     expect(strokes(MARK_COLORS.failure)).toHaveLength(1);
     expect(strokes(MARK_COLORS.arrives)).toHaveLength(presentation().route?.links.length ?? 0);
     expect(strokes(MARK_COLORS.arrives).length).toBeGreaterThan(3);
+    // and the device the question was asked of has its lamp green, and its frame
+    expect(picture().querySelectorAll(`rect[stroke="${DEVICE_STATE_COLORS.ok}"]`)).toHaveLength(1);
+    expect(picture().querySelector(`[fill="${DEVICE_STATE_COLORS.ok}"]`)).not.toBeNull();
+    expect(picture().querySelector(`[fill="${DEVICE_STATE_COLORS.error}"]`)).toBeNull();
     // the name of the cut cable gives way to the mark of the cut
     expect(texts).not.toContain('Linea principale');
 

@@ -39,6 +39,7 @@ import { useNetworkStore } from '@/store/networkStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useUIStore } from '@/store/uiStore';
 import { usePresentationStore } from '@/store/presentationStore';
+import { useSimulationStore } from '@/store/simulationStore';
 import type { CanvasArea, NetworkDevice as NetworkDeviceType } from '@/types/network';
 
 // Define node and edge types outside component to prevent re-renders
@@ -168,6 +169,9 @@ const NetworkCanvas = () => {
       .getState()
       .openMenu({ kind: 'connection', id: edge.id, x: event.clientX, y: event.clientY });
   }, []);
+
+  // A click on the empty canvas takes away the answer the last question left on a device
+  const clearAnswer = useSimulationStore((state) => state.clearAnswer);
 
   const closePresentationMenu = useCallback(() => {
     usePresentationStore.getState().closeMenu();
@@ -598,7 +602,7 @@ const NetworkCanvas = () => {
         onEdgeContextMenu={handleEdgeContextMenu}
         onNodeClick={presenting ? handlePresentationNodeClick : undefined}
         onEdgeClick={presenting ? handlePresentationEdgeClick : undefined}
-        onPaneClick={presenting ? closePresentationMenu : undefined}
+        onPaneClick={presenting ? closePresentationMenu : clearAnswer}
         onSelectionStart={presenting ? undefined : deselectArea}
         onMoveStart={presenting ? closePresentationMenu : undefined}
         onError={handleError}

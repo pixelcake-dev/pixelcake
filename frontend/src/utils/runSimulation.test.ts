@@ -58,6 +58,9 @@ describe('runFlowSimulation', () => {
     expect(simulation().links).toHaveLength(6);
     expect(simulation().links[1]).toBe(cable('SW-Piano-1', 'SW-Core'));
     expect(toast.error).not.toHaveBeenCalled();
+    // the run knows how the question ends: the server answers. Nothing is on the canvas yet
+    expect(simulation().outcome).toEqual({ arrives: true, deviceId: id('Srv-File') });
+    expect(simulation().answer).toBeNull();
   });
 
   it('refuses a question with a missing end, or from a device to itself, and says why', () => {
@@ -84,6 +87,9 @@ describe('runFlowSimulation', () => {
 
     expect(simulation().path).toEqual(['PC-Sede-1', 'SW-Piano-1', 'SW-Core'].map(id));
     expect(simulation().links).toHaveLength(2);
+    // and where it stops, for the device to say once the packet is there
+    expect(simulation().outcome).toEqual({ arrives: false, deviceId: id('SW-Core') });
+    expect(simulation().answer).toBeNull();
     expect(toast.error).toHaveBeenCalledWith('Simulazione Ping fallita', {
       description: 'request: port 1 on SW-Core is disabled',
     });
@@ -96,6 +102,8 @@ describe('runFlowSimulation', () => {
     expect(runFlowSimulation(id('PC-Sede-1'), id('Srv-File'), 'ping')).toBe(false);
     expect(simulation().isRunning).toBe(false);
     expect(toast.error).toHaveBeenCalledTimes(1);
+    // nothing travels: the device the question stops on says so at once
+    expect(simulation().answer).toEqual({ arrives: false, deviceId: id('PC-Sede-1') });
   });
 
   it('sees the failures simulated in a presentation, and only while it lasts', () => {

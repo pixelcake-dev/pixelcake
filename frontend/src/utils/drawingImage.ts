@@ -19,6 +19,7 @@
 import { Position, getSmoothStepPath } from 'reactflow';
 import { DEVICE_DRAWING_SIZE, type DeviceDrawingId } from '@/data/deviceDrawings';
 import {
+  deviceState,
   drawingMarkup,
   drawingOfDevice,
   drawingWindows,
@@ -88,6 +89,10 @@ export interface DrawingInput {
   connectionTemplates: ConnectionTemplate[];
   measureText: TextMeasure;
   marks?: DrawingMarks;
+  /** The devices that wait for an address nobody gave them: their lamp says so, as on screen */
+  waiting?: readonly string[];
+  /** Outside a presentation: the answer the last question asked left on a device */
+  answer?: { arrives: boolean; deviceId: string } | null;
 }
 
 export interface ImageTitle {
@@ -410,8 +415,14 @@ export function layoutDrawing(input: DrawingInput): Scene {
   const devices: SceneDevice[] = input.devices.map(device => {
     const size = deviceSize(device.ip !== '');
     const failed = marks?.failedDevices.includes(device.id) ?? false;
+    // Where the answer on screen ends: the one of the presentation, or the
+    // one the last question left on the canvas
+    const left = input.answer?.deviceId === device.id ? input.answer : null;
+    const stops = marks?.route?.dropDeviceId === device.id || left?.arrives === false;
+    const arrives =
+      (marks?.route?.arrives === true && marks.targetId === device.id) || left?.arrives === true;
     // A broken device is where the packet stops only for the one before it
-    const drop = !failed && marks?.route?.dropDeviceId === device.id;
+    const drop = !failed && stops;
 
     const scene: SceneDevice = {
       id: device.id,
@@ -421,7 +432,12 @@ export function layoutDrawing(input: DrawingInput): Scene {
       // Same choice as the canvas: the template by id, else by type
       drawing: drawingOfDevice(device, input.deviceTemplates),
       // What the upper layer says, as on the canvas (a selection is not of the picture)
-      state: failed ? 'off' : drop ? 'error' : 'rest',
+      state: deviceState({
+        failed,
+        stopsHere: stops,
+        arrivesHere: arrives,
+        waiting: input.waiting?.includes(device.id),
+      }),
       role:
         marks?.sourceId === device.id ? 'source' : marks?.targetId === device.id ? 'target' : null,
       failed,
@@ -619,6 +635,14 @@ function deviceSvg(device: SceneDevice, look: DeviceLook): string {
   const { x, y, width } = device.box;
   const centre = x + width / 2;
   const parts: string[] = [];
+
+  // The answer ends on this device: its frame shows, in the colour of its lamp
+  if (device.state === 'ok' || device.state === 'error') {
+    const line = m.border;
+    parts.push(
+      `<rect x="${num(x + line / 2)}" y="${num(y + line / 2)}" width="${num(width - line)}" height="${num(device.box.height - line)}" rx="${num(m.radius - line / 2)}" fill="none" stroke="${stateColour(device.state, palette)}" stroke-width="${line}"/>`
+    );
+  }
 
   // The drawing, in the colours of the theme: what is drawn on its layers
   // is the canvas, and its upper layer says the state

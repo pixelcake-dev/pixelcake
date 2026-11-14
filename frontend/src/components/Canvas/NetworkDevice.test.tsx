@@ -38,6 +38,7 @@ function stubBrowser() {
 
 const network = () => useNetworkStore.getState();
 const presentation = () => usePresentationStore.getState();
+const simulation = () => useSimulationStore.getState();
 
 function add(label: string, type = 'PC', more: { ip?: string; templateId?: string; notes?: string } = {}) {
   return network().addDevice({
@@ -243,6 +244,9 @@ describe('the four places a cable ends on', () => {
 describe('what the upper layer of a device says', () => {
   const stateOf = (label: string) =>
     [...drawingOf(label).classList].filter((name) => name.startsWith('is-'));
+  /** What the device says of the answer on screen in words, for who cannot see its lamp */
+  const wordsOf = (label: string) =>
+    [...frameOf(label).children].filter((child) => child.className === 'sr-only').map((child) => child.textContent);
 
   it('nothing at rest; "selected" on a selected device, and on that one alone', async () => {
     add('PC-1');
@@ -286,6 +290,11 @@ describe('what the upper layer of a device says', () => {
 
     expect(stateOf('PC-2')).toEqual(['is-error']);
     expect(stateOf('PC-1')).toEqual(['is-rest']);
+    // its frame shows too, and words say it to who cannot see the colour
+    expect(frameOf('PC-2').className).toContain('device-drop');
+    expect(wordsOf('PC-2')).toEqual(['Qui si ferma']);
+    expect(frameOf('PC-1').className).not.toContain('device-drop');
+    expect(wordsOf('PC-1')).toEqual([]);
 
     // the same answer, with the device itself taken as broken
     act(() => {
@@ -294,5 +303,163 @@ describe('what the upper layer of a device says', () => {
     });
     await settle();
     expect(stateOf('PC-2')).toEqual(['is-off']);
+    expect(frameOf('PC-2').className).not.toContain('device-drop');
+  });
+
+  it('"ok" on the device the question is asked of, while the answer on screen arrives', async () => {
+    const first = add('PC-1');
+    const second = add('PC-2');
+    add('PC-3');
+    await renderCanvas();
+    act(() => {
+      presentation().enter();
+      presentation().ask(first, second);
+      presentation().setRoute({ links: [], arrives: true, dropDeviceId: null });
+    });
+    await settle();
+
+    expect(stateOf('PC-2')).toEqual(['is-ok']);
+    expect(frameOf('PC-2').className).toContain('device-arrival');
+    expect(wordsOf('PC-2')).toEqual(['Qui arriva']);
+    // not on the device it starts from, nor on any other
+    expect(stateOf('PC-1')).toEqual(['is-rest']);
+    expect(stateOf('PC-3')).toEqual(['is-rest']);
+
+    // an answer that does not arrive lights no device green
+    act(() => presentation().setRoute({ links: [], arrives: false, dropDeviceId: null }));
+    await settle();
+    expect(stateOf('PC-2')).toEqual(['is-rest']);
+    expect(document.querySelector('.device-arrival')).toBeNull();
+
+    // and outside the presentation nothing of it is left
+    act(() => {
+      presentation().setRoute({ links: [], arrives: true, dropDeviceId: null });
+      presentation().exit();
+    });
+    await settle();
+    expect(stateOf('PC-2')).toEqual(['is-rest']);
+  });
+
+  it('outside a presentation: what the last question asked left on the canvas', async () => {
+    add('PC-1');
+    const second = add('PC-2');
+    const third = add('PC-3');
+    await renderCanvas();
+
+    act(() => simulation().leaveAnswer({ arrives: true, deviceId: second }));
+    expect(stateOf('PC-2')).toEqual(['is-ok']);
+    expect(frameOf('PC-2').className).toContain('device-arrival');
+    expect(wordsOf('PC-2')).toEqual(['Qui arriva']);
+    expect(stateOf('PC-1')).toEqual(['is-rest']);
+
+    act(() => simulation().leaveAnswer({ arrives: false, deviceId: third }));
+    expect(stateOf('PC-3')).toEqual(['is-error']);
+    expect(frameOf('PC-3').className).toContain('device-drop');
+    expect(wordsOf('PC-3')).toEqual(['Qui si ferma']);
+    expect(stateOf('PC-2')).toEqual(['is-rest']);
+  });
+
+  it('while the packet of a question travels no device says how it ends', async () => {
+    const first = add('PC-1');
+    const second = add('PC-2');
+    network().addConnection({ source: first, target: second });
+    await renderCanvas();
+
+    act(() => {
+      simulation().startSimulation([first, second], 'ping', [], { arrives: true, deviceId: second });
+    });
+    expect(stateOf('PC-2')).toEqual(['is-rest']);
+
+    // the packet gets to the end of its way
+    act(() => simulation().finishSimulation());
+    expect(stateOf('PC-2')).toEqual(['is-ok']);
+  });
+
+  it('the answer is taken away by a click on the empty canvas, and by any change to the drawing', async () => {
+    const first = add('PC-1');
+    const second = add('PC-2');
+    await renderCanvas();
+    const pane = document.querySelector<HTMLElement>('.react-flow__pane')!;
+
+    act(() => simulation().leaveAnswer({ arrives: false, deviceId: second }));
+    expect(stateOf('PC-2')).toEqual(['is-error']);
+    // (a press and a release on an empty spot, as a hand does them)
+    const at = { button: LEFT, clientX: 700, clientY: 400, view: view() };
+    fireEvent.mouseDown(pane, at);
+    fireEvent.mouseUp(pane, at);
+    fireEvent.click(pane, at);
+    await settle();
+    expect(simulation().answer).toBeNull();
+    expect(stateOf('PC-2')).toEqual(['is-rest']);
+
+    // a device edited: the answer was about the drawing as it was
+    act(() => simulation().leaveAnswer({ arrives: false, deviceId: second }));
+    act(() => network().updateDevice(first, { gateway: '192.168.1.254' }));
+    await settle();
+    expect(simulation().answer).toBeNull();
+
+    // a cable added
+    act(() => simulation().leaveAnswer({ arrives: true, deviceId: second }));
+    act(() => {
+      network().addConnection({ source: first, target: second });
+    });
+    await settle();
+    expect(simulation().answer).toBeNull();
+
+    // selecting a device changes nothing of the drawing: the answer stays
+    act(() => simulation().leaveAnswer({ arrives: true, deviceId: second }));
+    await click('PC-1');
+    expect(simulation().answer).toEqual({ arrives: true, deviceId: second });
+    expect(stateOf('PC-2')).toEqual(['is-ok']);
+  });
+
+  it('"warning" on a device that waits for an address nobody gave it: the line under its name says so', async () => {
+    // a card on DHCP, and no server anywhere
+    const waiting = add('Portatile', 'PC', { ip: '' });
+    act(() => {
+      network().updateDevice(waiting, {
+        nics: [{ id: 'nic-1', name: 'eth0', enabled: true, speed: 'auto', ip: '', subnet: '', gateway: '', dhcp: true }],
+      });
+    });
+    add('PC-2');
+    await renderCanvas();
+
+    expect(nodeOf('Portatile').querySelector('.device-ip')?.textContent).toBe('DHCP: nessun indirizzo');
+    expect(stateOf('Portatile')).toEqual(['is-warning']);
+    // the words are under the name: no frame, nothing else
+    expect(frameOf('Portatile').className).not.toMatch(/device-(drop|arrival)/);
+    expect(wordsOf('Portatile')).toEqual([]);
+    expect(stateOf('PC-2')).toEqual(['is-rest']);
+  });
+
+  it('one thing at a time: off, then where the answer ends, then selected, then what is to be put right', async () => {
+    const waiting = add('Portatile', 'PC', { ip: '' });
+    act(() => {
+      network().updateDevice(waiting, {
+        nics: [{ id: 'nic-1', name: 'eth0', enabled: true, speed: 'auto', ip: '', subnet: '', gateway: '', dhcp: true }],
+      });
+    });
+    await renderCanvas();
+    expect(stateOf('Portatile')).toEqual(['is-warning']);
+
+    // selected wins over what is to be put right
+    await click('Portatile');
+    expect(stateOf('Portatile')).toEqual(['is-selected']);
+
+    // the answer on screen wins over the selection: lamp and frame
+    act(() => simulation().leaveAnswer({ arrives: true, deviceId: waiting }));
+    expect(nodeOf('Portatile').className).toContain('selected');
+    expect(stateOf('Portatile')).toEqual(['is-ok']);
+    act(() => simulation().leaveAnswer({ arrives: false, deviceId: waiting }));
+    expect(stateOf('Portatile')).toEqual(['is-error']);
+
+    // and a device taken as broken is off whatever else is said of it
+    act(() => {
+      presentation().enter();
+      presentation().toggleDeviceFailure(waiting);
+      presentation().setRoute({ links: [], arrives: false, dropDeviceId: waiting });
+    });
+    await settle();
+    expect(stateOf('Portatile')).toEqual(['is-off']);
   });
 });

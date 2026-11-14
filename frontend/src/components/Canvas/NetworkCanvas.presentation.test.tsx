@@ -382,6 +382,36 @@ describe('NetworkCanvas — the packet animation', () => {
     expect(simulation()).toMatchObject({ isRunning: false, activeDeviceId: null, currentConnectionId: null });
   });
 
+  it('a run that was told how its question ends leaves that on the canvas when the packet has got there', async () => {
+    const { a, b } = drawing();
+    renderCanvas();
+    const lamp = (label: string) =>
+      [...nodeOf(label).querySelector('svg.device-drawing')!.classList].filter(name => name.startsWith('is-'));
+
+    act(() => {
+      simulation().startSimulation([a, b], 'ping', [], { arrives: false, deviceId: b });
+    });
+    await advance(HOP);
+    // the packet is on the device: nothing is said yet
+    expect(simulation()).toMatchObject({ isRunning: true, activeDeviceId: b, answer: null });
+    expect(lamp('PC-2')).toEqual(['is-rest']);
+
+    await advance(END_PAUSE_MS);
+    expect(simulation()).toMatchObject({ isRunning: false, answer: { arrives: false, deviceId: b } });
+    expect(lamp('PC-2')).toEqual(['is-error']);
+    expect(lamp('PC-1')).toEqual(['is-rest']);
+
+    // a run that is stopped on its way leaves nothing, and takes that away
+    act(() => {
+      simulation().startSimulation([a, b], 'ping', [], { arrives: true, deviceId: b });
+    });
+    expect(lamp('PC-2')).toEqual(['is-rest']);
+    act(() => simulation().stopSimulation());
+    await advance(HOP + END_PAUSE_MS);
+    expect(simulation().answer).toBeNull();
+    expect(lamp('PC-2')).toEqual(['is-rest']);
+  });
+
   it('takes the cable the engine named, and knows which way it is drawn', async () => {
     const { a, b, second } = drawing();
     renderCanvas();

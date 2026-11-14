@@ -479,7 +479,61 @@ describe('TerminalModal', () => {
       flowModel: 'web',
       path: ['dev-0', 'dev-1'],
       links: ['conn-7'],
+      // (a command that does not say how it ends leaves nothing on the canvas)
+      outcome: null,
+      answer: null,
     });
+  });
+
+  it('tells the run how the question ends, for the device to say once the packet is there', () => {
+    const input = openTerminal();
+    executeCommandMock.mockImplementationOnce((_rawInput, context) => ({
+      lines: [],
+      context,
+      liveTrace: {
+        animationPath: ['dev-0', 'dev-1', 'dev-0'],
+        flowModel: 'ping',
+        hopLines: [],
+        finalLines: [],
+        outcome: { arrives: true, deviceId: 'dev-1' },
+      },
+    }));
+
+    typeCommand(input, 'ping b from a');
+
+    expect(useSimulationStore.getState()).toMatchObject({
+      isRunning: true,
+      outcome: { arrives: true, deviceId: 'dev-1' },
+      answer: null,
+    });
+
+    // interrupted, it leaves nothing
+    act(() => {
+      fireEvent.keyDown(window, { key: 'c', ctrlKey: true });
+    });
+    expect(useSimulationStore.getState()).toMatchObject({ isRunning: false, outcome: null, answer: null });
+  });
+
+  it('a question that sends no packet leaves its end on the canvas at once, and the prompt stays free', () => {
+    const input = openTerminal();
+    executeCommandMock.mockImplementationOnce((_rawInput, context) => ({
+      lines: [{ text: 'Ping failed (blocked): wrong gateway', tone: 'error' }],
+      context,
+      outcome: { arrives: false, deviceId: 'dev-0' },
+    }));
+
+    typeCommand(input, 'ping b from a');
+
+    expect(useSimulationStore.getState()).toMatchObject({
+      isRunning: false,
+      answer: { arrives: false, deviceId: 'dev-0' },
+    });
+    expect(screen.queryByTestId('terminal-busy')).not.toBeInTheDocument();
+
+    // a command that asks nothing of the network leaves it there
+    executeCommandMock.mockImplementationOnce((_rawInput, context) => ({ lines: [], context }));
+    typeCommand(input, 'show ip a');
+    expect(useSimulationStore.getState().answer).toEqual({ arrives: false, deviceId: 'dev-0' });
   });
 
   it('Ctrl+C interrupts a running command without printing the remaining output', () => {

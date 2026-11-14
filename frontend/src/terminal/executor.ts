@@ -7,6 +7,8 @@
  */
 
 import { useNetworkStore } from '@/store/networkStore';
+import type { SimulationOutcome } from '@/store/simulationStore';
+import { flowOutcome, traceOutcome } from '@/utils/answerOutcome';
 import {
   resolveEndpoint,
   suggestEndpoint,
@@ -106,6 +108,11 @@ export interface LiveTrace {
    * belongs to path index `hops + i`.
    */
   lookup?: { hops: number; lines: TerminalLine[] };
+  /**
+   * How the question ends on the canvas: the device that answers, or the
+   * one it stops on, says so with its lamp once the packet has got there
+   */
+  outcome?: SimulationOutcome | null;
 }
 
 export interface ExecutionResult {
@@ -115,6 +122,12 @@ export interface ExecutionResult {
   clear?: boolean;
   /** Present when the command should drive the canvas animation */
   liveTrace?: LiveTrace;
+  /**
+   * How a question that sent no packet ends (it stops on the device it
+   * starts from): left on the canvas at once. One that travels carries its
+   * end in `liveTrace`.
+   */
+  outcome?: SimulationOutcome | null;
 }
 
 /* ── line helpers ─────────────────────────────────────────────────────── */
@@ -209,6 +222,8 @@ function hopLine(hop: TraceResult['hops'][number], index: number): TerminalLine 
 interface Printed {
   lines: TerminalLine[];
   liveTrace?: LiveTrace;
+  /** The end of a question that sent no packet (see ExecutionResult) */
+  outcome?: SimulationOutcome | null;
 }
 
 /** The lines that close a failed flow: where it was dropped */
@@ -295,6 +310,8 @@ function afterLookup(found: NameLookup | undefined, rest: Printed, flowModel: Fl
         flowModel,
         hopLines: [],
         finalLines: after,
+        // (what follows the lookup sent no packet: its end is the end of the run)
+        outcome: rest.outcome,
       },
     };
   }
@@ -414,10 +431,11 @@ function diagnose(kind: 'ping' | 'trace', ends: Ends, flowModel: FlowModelType, 
           flowModel: 'ping',
           hopLines: [],
           finalLines,
+          outcome: flowOutcome(flow, 'ping'),
         },
       };
     }
-    return { lines: [...lines, ...finalLines] };
+    return { lines: [...lines, ...finalLines], outcome: flowOutcome(flow, 'ping') };
   }
 
   // trace: one-way, hop lines revealed as the packet travels
@@ -446,9 +464,19 @@ function diagnose(kind: 'ping' | 'trace', ends: Ends, flowModel: FlowModelType, 
   const animationPath = result.hops.map((h) => h.deviceId);
   if (animationPath.length >= 2) {
     const animationLinks = result.hops.slice(1).map((h) => h.viaConnectionId ?? '');
-    return { lines, liveTrace: { animationPath, animationLinks, flowModel, hopLines, finalLines } };
+    return {
+      lines,
+      liveTrace: {
+        animationPath,
+        animationLinks,
+        flowModel,
+        hopLines,
+        finalLines,
+        outcome: traceOutcome(result),
+      },
+    };
   }
-  return { lines: [...lines, ...hopLines, ...finalLines] };
+  return { lines: [...lines, ...hopLines, ...finalLines], outcome: traceOutcome(result) };
 }
 
 const FLOW_WORDS: Record<'web' | 'email' | 'download', { verb: string; doing: string; done: string; name: string }> = {
@@ -506,10 +534,11 @@ function exchange(model: 'web' | 'email' | 'download', ends: Ends): Printed {
         flowModel: model,
         hopLines: [],
         finalLines,
+        outcome: flowOutcome(flow, model),
       },
     };
   }
-  return { lines: [...lines, ...finalLines] };
+  return { lines: [...lines, ...finalLines], outcome: flowOutcome(flow, model) };
 }
 
 /** `resolve <name>`: the lookup alone — the server asked, the legs, the address or the reason */

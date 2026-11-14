@@ -7,6 +7,10 @@
  *
  * One run at a time: a new `startSimulation`, a stop or an unmount cancels
  * the run in progress at once, so two packets never fight over the store.
+ *
+ * A run that gets to its end leaves its answer on the canvas (see
+ * simulationStore). The answer is about the drawing as it was: any change
+ * to the devices or to the cables takes it away.
  */
 
 import { useEffect } from 'react';
@@ -22,6 +26,18 @@ const PacketAnimation = () => {
 
   const isRunning = useSimulationStore((state) => state.isRunning);
   const runId = useSimulationStore((state) => state.runId);
+
+  // The answer left by a run does not outlive the drawing it was about
+  // (the store is listened to directly: nothing here is drawn again for it)
+  useEffect(
+    () =>
+      useNetworkStore.subscribe((state, before) => {
+        if (state.devices !== before.devices || state.connections !== before.connections) {
+          useSimulationStore.getState().clearAnswer();
+        }
+      }),
+    []
+  );
 
   useEffect(() => {
     if (!isRunning) return;
@@ -87,7 +103,7 @@ const PacketAnimation = () => {
       useSimulationStore.getState().setCurrentConnection(null);
       await wait(END_PAUSE_MS / useSimulationStore.getState().speed);
       if (cancelled) return;
-      useSimulationStore.getState().stopSimulation();
+      useSimulationStore.getState().finishSimulation();
     };
 
     void animate();

@@ -16,13 +16,14 @@ import { useNetworkStore } from '@/store/networkStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { usePresentationStore } from '@/store/presentationStore';
+import { useSimulationStore } from '@/store/simulationStore';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { assessImpact, hasFailures, planAndEvaluateFlow, withFailures } from '@/engine';
 import type { Failures, Topology } from '@/engine';
 import { captionOf } from '@/utils/presentation';
 import { useDhcp } from '@/utils/useDhcp';
-import { shownAddress } from '@/utils/dhcpLabels';
+import { NO_LEASE_LABEL, shownAddress } from '@/utils/dhcpLabels';
 import {
   pixelSize,
   renderDrawingImage,
@@ -114,6 +115,14 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
     [devices, dhcp]
   );
 
+  // What the lamps of the devices say outside a presentation, as on the
+  // canvas: who waits for an address, and the answer the last question left
+  const waiting = useMemo(
+    () => drawnDevices.filter((device) => device.ip === NO_LEASE_LABEL).map((device) => device.id),
+    [drawnDevices]
+  );
+  const answer = useSimulationStore((state) => state.answer);
+
   const measureText = useMemo(() => createTextMeasure(), []);
 
   // While presenting: what is marked on the drawing, and what is said under it.
@@ -175,6 +184,8 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
           connectionTemplates,
           measureText,
           marks,
+          waiting,
+          answer,
         },
         {
           theme,
@@ -191,6 +202,8 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
       connectionTemplates,
       measureText,
       marks,
+      waiting,
+      answer,
       theme,
       transparent,
       withTitle,

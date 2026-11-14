@@ -78,6 +78,21 @@ describe('where a cable starts and ends on a device (style sheet)', () => {
     );
   });
 
+  it('the frame of the device the answer on screen ends on shows in the colour of its lamp, selected or not', () => {
+    const arrival = '.network-device.device-arrival,\n.react-flow__node.selected .network-device.device-arrival';
+    const drop = '.network-device.device-drop,\n.react-flow__node.selected .network-device.device-drop';
+    expect(rule(arrival)).toEqual({ 'border-color': 'var(--state-ok) !important' });
+    expect(rule(drop)).toEqual({ 'border-color': 'var(--state-error) !important' });
+    // (they come after the rules they have to win over: a selected device, a device picked out)
+    for (const other of ['.react-flow__node.selected .network-device {', '.network-device.device-magnified {']) {
+      expect(sheet.indexOf(other)).toBeGreaterThan(-1);
+      expect(sheet.indexOf(arrival)).toBeGreaterThan(sheet.indexOf(other));
+      expect(sheet.indexOf(drop)).toBeGreaterThan(sheet.indexOf(other));
+    }
+    // what is to be put right has no frame: the line under the name says it
+    expect(sheet).not.toMatch(/border-color:\s*var\(--state-warning\)/);
+  });
+
   it('while presenting nothing starts a cable: the bands go, the points stay for the cables that hang on them', () => {
     expect(rule('.presenting .connect-point::before')).toEqual({ display: 'none' });
     expect(() => rule('.presenting .connect-point')).toThrow();

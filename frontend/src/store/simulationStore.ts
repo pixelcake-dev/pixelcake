@@ -5,6 +5,12 @@
  * Whoever wants an animation calls `startSimulation` with the devices to go
  * through (and, when the engine gave them, the cables between them).
  * PacketAnimation owns the timing and moves the packet; CustomEdge draws it.
+ *
+ * A run can be told how its question ends (`outcome`). When the packet gets
+ * to the end of its way that becomes the `answer` left on the canvas: the
+ * device it ended on says it with the lamp of its drawing, until another
+ * run starts, a run is stopped, or the answer is taken away (`clearAnswer`:
+ * a click on the empty canvas, a change to the drawing).
  * Nothing here is saved.
  */
 
@@ -14,6 +20,13 @@ import type { FlowModelType } from '@/types';
 /** How fast the packet travels: 1 is the normal pace */
 export const SIMULATION_SPEEDS = [0.5, 1, 2] as const;
 export type SimulationSpeed = (typeof SIMULATION_SPEEDS)[number];
+
+/** How a question ends on the canvas: on which device, and whether it arrives there */
+export interface SimulationOutcome {
+  arrives: boolean;
+  /** The device that answers, or the one the question stops on */
+  deviceId: string;
+}
 
 interface SimulationStore {
   // State
@@ -40,11 +53,33 @@ interface SimulationStore {
   currentEdgeDuration: number;
   /** True when it travels from the target end of the cable to its source end */
   isPacketReversed: boolean;
+  /** How the run in progress ends, when whoever started it said so */
+  outcome: SimulationOutcome | null;
+  /** What the last run that got to its end left on the canvas */
+  answer: SimulationOutcome | null;
 
   // Actions
-  /** Start an animation (replacing a running one) and return its `runId` */
-  startSimulation: (path: string[], flowModel: FlowModelType, links?: string[]) => number;
+  /**
+   * Start an animation (replacing a running one, and the answer of the one
+   * before) and return its `runId`
+   */
+  startSimulation: (
+    path: string[],
+    flowModel: FlowModelType,
+    links?: string[],
+    outcome?: SimulationOutcome | null
+  ) => number;
+  /** The packet got to the end of its way: the run is over, its answer stays */
+  finishSimulation: () => void;
+  /**
+   * Leave an answer on the canvas with no run: a question that stops on the
+   * very device it starts from sends no packet anywhere
+   */
+  leaveAnswer: (outcome: SimulationOutcome | null) => void;
+  /** Stop a run where it is: it leaves no answer, and takes away the one that was there */
   stopSimulation: () => void;
+  /** Take the answer off the canvas; a run in progress goes on */
+  clearAnswer: () => void;
   setSpeed: (speed: SimulationSpeed) => void;
   setCurrentHop: (hop: number) => void;
   setActiveDevice: (deviceId: string | null) => void;
@@ -59,6 +94,8 @@ const IDLE = {
   currentConnectionId: null,
   currentEdgeDuration: 0,
   isPacketReversed: false,
+  outcome: null,
+  answer: null,
 };
 
 export const useSimulationStore = create<SimulationStore>((set, get) => ({
@@ -71,14 +108,26 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   speed: 1,
 
   // Actions
-  startSimulation: (path, flowModel, links = []) => {
+  startSimulation: (path, flowModel, links = [], outcome = null) => {
     const runId = get().runId + 1;
-    set({ ...IDLE, isRunning: true, runId, flowModel, path, links });
+    set({ ...IDLE, isRunning: true, runId, flowModel, path, links, outcome });
     return runId;
+  },
+
+  finishSimulation: () => {
+    set((state) => ({ ...IDLE, answer: state.outcome }));
+  },
+
+  leaveAnswer: (outcome) => {
+    set({ ...IDLE, answer: outcome });
   },
 
   stopSimulation: () => {
     set({ ...IDLE });
+  },
+
+  clearAnswer: () => {
+    if (get().answer !== null) set({ answer: null });
   },
 
   setSpeed: speed => {

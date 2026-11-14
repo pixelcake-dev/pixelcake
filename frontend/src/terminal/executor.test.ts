@@ -291,4 +291,65 @@ describe('terminal executor — interfaces', () => {
       expect(hops.at(-1)).toContain('✗ Web-01 (Server)');
     });
   });
+
+  // ---------- how a question ends, for the device on the canvas to say ----------
+
+  describe('where a question ends on the canvas', () => {
+    it('a ping that is answered: on the device that answers, told with the packet that travels', () => {
+      const result = run('ping Web-01 from PC-1');
+
+      expect(result.liveTrace?.animationPath.at(-1)).toBe(device('PC-1').id);
+      expect(result.liveTrace?.outcome).toEqual({ arrives: true, deviceId: device('Web-01').id });
+      // (the run carries it: nothing is left on the canvas before the packet is there)
+      expect(result.outcome).toBeUndefined();
+    });
+
+    it('a ping that is dropped on the way: on the device that dropped it', () => {
+      const web = device('Web-01');
+      useNetworkStore.getState().updateDevice(web.id, {
+        nics: (web.nics ?? []).map(n => ({ ...n, enabled: false })),
+      });
+
+      const result = run('ping Web-01 from PC-1');
+
+      expect(result.liveTrace?.animationPath.at(-1)).toBe(web.id);
+      expect(result.liveTrace?.outcome).toEqual({ arrives: false, deviceId: web.id });
+    });
+
+    it('a ping that does not even leave: on the device it starts from, at once, with no packet', () => {
+      output('set gateway of PC-1 to 192.168.10.254');
+
+      const result = run('ping Web-01 from PC-1');
+
+      expect(result.liveTrace).toBeUndefined();
+      expect(result.outcome).toEqual({ arrives: false, deviceId: device('PC-1').id });
+    });
+
+    it('a trace: on its last device, reached or not', () => {
+      expect(run('trace Web-01 from PC-1').liveTrace?.outcome).toEqual({
+        arrives: true,
+        deviceId: device('Web-01').id,
+      });
+
+      const web = device('Web-01');
+      useNetworkStore.getState().updateDevice(web.id, {
+        nics: (web.nics ?? []).map(n => ({ ...n, enabled: false })),
+      });
+      expect(run('trace Web-01 from PC-1').liveTrace?.outcome).toEqual({ arrives: false, deviceId: web.id });
+    });
+
+    it('a page asked for: on the server that sends it', () => {
+      const result = run('browse Web-01 from PC-1');
+
+      expect(result.liveTrace?.flowModel).toBe('web');
+      expect(result.liveTrace?.outcome).toEqual({ arrives: true, deviceId: device('Web-01').id });
+    });
+
+    it('a command that asks nothing of the network says nothing of an end', () => {
+      const result = run('show ip Router-1');
+
+      expect(result.liveTrace).toBeUndefined();
+      expect(result.outcome).toBeUndefined();
+    });
+  });
 });

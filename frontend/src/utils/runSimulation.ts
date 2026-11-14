@@ -5,7 +5,9 @@
  * request+response round trip, ping as echo), evaluates every leg with the
  * network engine, and animates the result. On failure the successful prefix
  * is still animated so the packet visibly dies where the network would drop
- * it, and the reason is surfaced as a toast.
+ * it, and the reason is surfaced as a toast. The run is told how the
+ * question ends: the device that answers, or the one it stops on, says so
+ * with its lamp once the packet has got there.
  */
 
 import { toast } from 'sonner';
@@ -13,6 +15,7 @@ import { useNetworkStore } from '@/store/networkStore';
 import { useSimulationStore } from '@/store/simulationStore';
 import { planAndEvaluateFlow } from '@/engine';
 import { liveTopology } from '@/utils/liveTopology';
+import { flowOutcome } from '@/utils/answerOutcome';
 import type { FlowModelType } from '@/types';
 
 const FLOW_LABELS: Record<FlowModelType, string> = {
@@ -50,16 +53,23 @@ export function runFlowSimulation(
   const start = () =>
     useSimulationStore
       .getState()
-      .startSimulation(result.animationPath, flowModel, result.animationLinks);
+      .startSimulation(
+        result.animationPath,
+        flowModel,
+        result.animationLinks,
+        flowOutcome(result, flowModel)
+      );
 
   if (result.verdict === 'success') {
     start();
     return true;
   }
 
-  // Failure: animate up to the drop point when there is a prefix to show
+  // Failure: animate up to the drop point when there is a prefix to show;
+  // a question that does not even leave says where it stops at once
   const started = result.animationPath.length >= 2;
   if (started) start();
+  else useSimulationStore.getState().leaveAnswer(flowOutcome(result, flowModel));
   toast.error(`Simulazione ${FLOW_LABELS[flowModel]} fallita`, {
     description: result.failureReason ?? 'motivo sconosciuto',
   });

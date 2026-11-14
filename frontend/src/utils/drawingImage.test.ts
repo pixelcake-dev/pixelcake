@@ -107,8 +107,14 @@ const drawing = (doc: Document) => doc.querySelector('svg > g') as SVGGElement;
 const cablePaths = (doc: Document) => [...drawing(doc).children[0].querySelectorAll('path')];
 const deviceGroups = (doc: Document) => [...drawing(doc).children].slice(2);
 const texts = (scope: ParentNode) => [...scope.querySelectorAll('text')].map(t => t.textContent);
+/** The drawing of a device, among what its group holds */
+const pictureOf = (group: Element) =>
+  [...group.children].find(child => (child.getAttribute('transform') ?? '').includes('scale(')) as Element;
 /** What a device is drawn with: its three passes (whole, the upper layer, the cut) */
-const passes = (group: Element) => [...group.children[0].children];
+const passes = (group: Element) => [...pictureOf(group).children];
+/** The frame drawn around a device, when one is */
+const frameOf = (group: Element) =>
+  [...group.children].find(child => child.tagName === 'rect' && child.getAttribute('fill') === 'none');
 /** The colours something is filled with */
 const fills = (scope: Element) =>
   [...new Set([...scope.querySelectorAll('[fill]')].map(shape => shape.getAttribute('fill')))].sort();
@@ -397,6 +403,57 @@ describe('layoutDrawing — what presentation mode marks', () => {
     );
     expect(scene.devices[1]).toMatchObject({ failed: true, drop: false, state: 'off' });
   });
+
+  it('says which device an answer that arrives was asked of: that one, and only while it arrives', () => {
+    const states = (given: DrawingMarks) => triangle(given).devices.map(d => d.state);
+    const asked = { sourceId: 'a', targetId: 'c' };
+
+    expect(states(marks({ ...asked, route: { links: ['ac'], arrives: true, dropDeviceId: null } }))).toEqual([
+      'rest',
+      'rest',
+      'ok',
+    ]);
+    expect(states(marks({ ...asked, route: { links: ['ab'], arrives: false, dropDeviceId: 'b' } }))).toEqual([
+      'rest',
+      'error',
+      'rest',
+    ]);
+    // a question with no answer on screen lights nothing
+    expect(states(marks(asked))).toEqual(['rest', 'rest', 'rest']);
+    // and a broken device is off even when the answer is said to arrive on it
+    expect(
+      states(marks({ ...asked, failedDevices: ['c'], route: { links: [], arrives: true, dropDeviceId: null } }))
+    ).toEqual(['rest', 'rest', 'off']);
+  });
+});
+
+describe('layoutDrawing — what the lamps say outside a presentation', () => {
+  const states = (overrides: Partial<DrawingInput>) => layoutDrawing(pair(overrides)).devices.map(d => d.state);
+
+  it('nothing, for a drawing nothing is said of', () => {
+    expect(states({})).toEqual(['rest', 'rest']);
+    expect(states({ waiting: [], answer: null })).toEqual(['rest', 'rest']);
+  });
+
+  it('a device that waits for an address nobody gave it is to be put right', () => {
+    expect(states({ waiting: ['b'] })).toEqual(['rest', 'warning']);
+    expect(states({ waiting: ['a', 'b', 'ghost'] })).toEqual(['warning', 'warning']);
+  });
+
+  it('the answer the last question left is on its device: where it arrives, where it stops', () => {
+    expect(states({ answer: { arrives: true, deviceId: 'b' } })).toEqual(['rest', 'ok']);
+    expect(states({ answer: { arrives: false, deviceId: 'a' } })).toEqual(['error', 'rest']);
+    expect(states({ answer: { arrives: true, deviceId: 'ghost' } })).toEqual(['rest', 'rest']);
+    // (the device it stops on is where the packet stops, as in a presentation)
+    expect(layoutDrawing(pair({ answer: { arrives: false, deviceId: 'a' } })).devices[0].drop).toBe(true);
+  });
+
+  it('the answer is told before what is to be put right, as on the canvas', () => {
+    expect(states({ waiting: ['a', 'b'], answer: { arrives: false, deviceId: 'b' } })).toEqual([
+      'warning',
+      'error',
+    ]);
+  });
 });
 
 describe('layoutDrawing — bounds', () => {
@@ -496,6 +553,7 @@ describe('renderDrawingImage — the document', () => {
 
     // the drawing: 128 units drawn 48 wide, in the middle of the frame, 8 from its top
     expect(first.children[0].getAttribute('transform')).toBe('translate(28 8) scale(0.375)');
+    expect(first.children[0]).toBe(pictureOf(first));
     const P = PALETTES.light;
     const [whole, upper, cut] = passes(first);
     // whole in the colour of the lower layer, then the upper layer over it,
@@ -886,11 +944,37 @@ describe('renderDrawingImage — a presentation', () => {
 
     const [a, b, c] = deviceGroups(doc);
     expect(lamp(b)).toEqual([DEVICE_STATE_COLORS.error]);
-    // the others are at rest; and only the upper layer says it
+    // the others are at rest; and of the drawing only the upper layer says it
     expect(lamp(a)).toEqual([PALETTES.light.deviceUpper]);
     expect(lamp(c)).toEqual([PALETTES.light.deviceUpper]);
     expect(fills(passes(b)[0])).toEqual(fills(passes(a)[0]));
     expect(fills(passes(b)[2])).toEqual(fills(passes(a)[2]));
+    // its frame shows too, in the colour of its lamp: b is at (300, 0), 104 by 94,
+    // and the line is 2 thick inside it. It is drawn first, under the rest
+    const FRAME = ['x', 'y', 'width', 'height', 'rx', 'stroke', 'stroke-width'];
+    expect(attrs(frameOf(b) as Element, FRAME)).toEqual(['301', '1', '102', '92', '2', DEVICE_STATE_COLORS.error, '2']);
+    expect(b.children[0]).toBe(frameOf(b));
+    expect(frameOf(a)).toBeUndefined();
+    expect(frameOf(c)).toBeUndefined();
+  });
+
+  it('lights in green the device an answer that arrives was asked of, with its frame', () => {
+    const doc = presented(
+      marks({ sourceId: 'a', targetId: 'c', route: { links: ['ac'], arrives: true, dropDeviceId: null } })
+    );
+    const [a, b, c] = deviceGroups(doc);
+    expect(lamp(c)).toEqual([DEVICE_STATE_COLORS.ok]);
+    expect(attrs(frameOf(c) as Element, ['x', 'y', 'width', 'height', 'stroke'])).toEqual([
+      '151',
+      '301',
+      '102',
+      '92',
+      DEVICE_STATE_COLORS.ok,
+    ]);
+    // the device it starts from keeps its tag and is otherwise at rest
+    expect(lamp(a)).toEqual([PALETTES.light.deviceUpper]);
+    expect(frameOf(a)).toBeUndefined();
+    expect(lamp(b)).toEqual([PALETTES.light.deviceUpper]);
   });
 
   it('shows a cut cable broken up and red, with its mark instead of its label', () => {
@@ -937,6 +1021,21 @@ describe('renderDrawingImage — a presentation', () => {
     expect(lamp(a, 'dark')).toEqual([PALETTES.dark.deviceUpper]);
     expect(lamp(b, 'dark')).toEqual([DEVICE_STATE_COLORS.error]);
     expect(lamp(c, 'dark')).toEqual([DEVICE_STATE_COLORS.off]);
+  });
+
+  it('outside a presentation: yellow for a device that waits for an address, and the answer left on the canvas', () => {
+    const doc = parse(
+      renderDrawingImage(pair({ waiting: ['a'], answer: { arrives: true, deviceId: 'b' } }), LIGHT).svg
+    );
+    const [a, b] = deviceGroups(doc);
+    expect(lamp(a)).toEqual([DEVICE_STATE_COLORS.warning]);
+    // (what is to be put right is said under the name: no frame for it)
+    expect(frameOf(a)).toBeUndefined();
+    expect(lamp(b)).toEqual([DEVICE_STATE_COLORS.ok]);
+    expect(frameOf(b)?.getAttribute('stroke')).toBe(DEVICE_STATE_COLORS.ok);
+    // and nothing of a presentation is drawn: no tag, no mark
+    expect(doc.querySelector('[letter-spacing]')).toBeNull();
+    expect(drawing(doc).querySelector('circle')).toBeNull();
   });
 
   it('labels the two ends of the question, in the colours of the theme', () => {

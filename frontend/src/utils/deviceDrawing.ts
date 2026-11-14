@@ -25,6 +25,35 @@ import {
  */
 export type DeviceState = 'rest' | 'selected' | 'ok' | 'warning' | 'error' | 'off';
 
+/** What is true of a device at the moment its state is told */
+export interface DeviceFacts {
+  /** Taken as broken (a simulated failure) */
+  failed?: boolean;
+  /** The answer on screen stops on it */
+  stopsHere?: boolean;
+  /** The answer on screen arrives on it */
+  arrivesHere?: boolean;
+  selected?: boolean;
+  /** It waits for an address nobody gave it (DHCP, and no lease) */
+  waiting?: boolean;
+}
+
+/**
+ * The one state the upper layer of a device tells, when more than one thing
+ * is true of it. A broken device is off whatever else is said of it; then
+ * comes the answer on screen (where it stops, where it arrives), which is
+ * what is being looked at; then the selection; then what is to be put
+ * right, which stays true and is said in words under the name of the device.
+ */
+export function deviceState(facts: DeviceFacts): DeviceState {
+  if (facts.failed) return 'off';
+  if (facts.stopsHere) return 'error';
+  if (facts.arrivesHere) return 'ok';
+  if (facts.selected) return 'selected';
+  if (facts.waiting) return 'warning';
+  return 'rest';
+}
+
 /** The drawing of each template the app comes with */
 export const DRAWING_OF_TEMPLATE: Readonly<Record<string, DeviceDrawingId>> = {
   'tpl-pc': 'pc',

@@ -7,9 +7,51 @@
 
 import { describe, it, expect } from 'vitest';
 import { DEVICE_DRAWINGS, DEVICE_DRAWING_IDS } from '@/data/deviceDrawings';
-import { drawingMarkup, drawingOfDevice, drawingWindows } from './deviceDrawing';
+import {
+  deviceState,
+  drawingMarkup,
+  drawingOfDevice,
+  drawingWindows,
+  type DeviceFacts,
+} from './deviceDrawing';
 
 const COLOURS = { lower: '#111111', state: '#222222', ground: '#eeeeee' };
+
+describe('the one state the upper layer of a device tells', () => {
+  it('is nothing when nothing is true of the device', () => {
+    expect(deviceState({})).toBe('rest');
+    expect(
+      deviceState({ failed: false, stopsHere: false, arrivesHere: false, selected: false, waiting: false })
+    ).toBe('rest');
+  });
+
+  it('is each thing when it alone is true', () => {
+    expect(deviceState({ failed: true })).toBe('off');
+    expect(deviceState({ stopsHere: true })).toBe('error');
+    expect(deviceState({ arrivesHere: true })).toBe('ok');
+    expect(deviceState({ selected: true })).toBe('selected');
+    expect(deviceState({ waiting: true })).toBe('warning');
+  });
+
+  it('when more is true: off, then where the answer stops, where it arrives, selected, to be put right', () => {
+    const order: Array<[keyof DeviceFacts, string]> = [
+      ['failed', 'off'],
+      ['stopsHere', 'error'],
+      ['arrivesHere', 'ok'],
+      ['selected', 'selected'],
+      ['waiting', 'warning'],
+    ];
+    // each wins over all that come after it, however many of them are true
+    order.forEach(([fact, state], index) => {
+      const facts: DeviceFacts = { [fact]: true };
+      for (const [later] of order.slice(index + 1)) {
+        expect(deviceState({ [fact]: true, [later]: true })).toBe(state);
+        facts[later] = true;
+      }
+      expect(deviceState(facts)).toBe(state);
+    });
+  });
+});
 
 function parse(markup: string): Element {
   const doc = new DOMParser().parseFromString(

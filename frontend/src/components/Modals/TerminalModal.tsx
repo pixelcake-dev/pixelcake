@@ -299,7 +299,8 @@ const TerminalModal = () => {
     // subscription above reveal the output hop by hop. The prompt stays
     // blocked (isBusy) until the run completes or Ctrl+C interrupts it.
     if (result.liveTrace) {
-      const { animationPath, animationLinks, flowModel, hopLines, finalLines, lookup } = result.liveTrace;
+      const { animationPath, animationLinks, flowModel, hopLines, finalLines, lookup, outcome } =
+        result.liveTrace;
       const simulation = useSimulationStore.getState();
       if (simulation.isRunning) {
         simulation.stopSimulation();
@@ -312,7 +313,10 @@ const TerminalModal = () => {
         lookupLines: [...(lookup?.lines ?? [])],
       };
       setIsBusy(true);
-      simulation.startSimulation(animationPath, flowModel, animationLinks);
+      simulation.startSimulation(animationPath, flowModel, animationLinks, outcome);
+    } else if (result.outcome) {
+      // A question that stops where it starts: nothing travels, the device says so at once
+      useSimulationStore.getState().leaveAnswer(result.outcome);
     }
 
     if (raw.trim() !== '') {

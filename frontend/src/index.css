@@ -3296,6 +3296,20 @@ legend {
   border-color: var(--accent-color);
 }
 
+/* The answer on screen ends on this device: its lamp says how (the device
+   says so itself, as a state), and its frame shows in the same colour,
+   green where the answer arrives and red where it stops, whatever else the
+   frame would say */
+.network-device.device-arrival,
+.react-flow__node.selected .network-device.device-arrival {
+  border-color: var(--state-ok) !important;
+}
+
+.network-device.device-drop,
+.react-flow__node.selected .network-device.device-drop {
+  border-color: var(--state-error) !important;
+}
+
 /* A device taken as broken: its lamp is off (the device says so itself, as a
    state), its name and its address fade, and a mark says why */
 .network-device.device-failed .device-name,

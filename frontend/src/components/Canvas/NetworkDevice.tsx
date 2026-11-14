@@ -5,7 +5,8 @@ import type { NodeProps } from 'reactflow';
 import { ZapOff } from 'lucide-react';
 import type { NetworkDevice as NetworkDeviceType } from '@/types/network';
 import DeviceDrawing from '@/components/ui/DeviceDrawing';
-import { drawingOf, type DeviceState } from '@/utils/deviceDrawing';
+import { deviceState, drawingOf } from '@/utils/deviceDrawing';
+import { NO_LEASE_LABEL } from '@/utils/dhcpLabels';
 import { DEVICE_METRICS, cableEnd, type Side } from '@/utils/deviceGeometry';
 import type { DeviceDrawingId } from '@/data/deviceDrawings';
 import { useNetworkStore } from '@/store/networkStore';
@@ -111,6 +112,14 @@ const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>
   const isDropPoint = usePresentationStore(
     (state) => state.active && state.route?.dropDeviceId === id
   );
+  const isArrival = usePresentationStore(
+    (state) => state.active && state.route?.arrives === true && state.targetId === id
+  );
+  // Outside a presentation: what the last question asked (simulation panel,
+  // terminal) left on the canvas when its packet got to the end of its way
+  const answered = useSimulationStore((state) =>
+    state.answer?.deviceId === id ? (state.answer.arrives ? 'ok' : 'error') : null
+  );
 
   // Find template by ID (preferred) or fallback to type (backward compatibility)
   const template = data.templateId
@@ -131,10 +140,19 @@ const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>
     updateNodeInternals(id);
   }, [drawing, id, updateNodeInternals]);
 
-  // What the upper layer of the drawing says. A device taken as broken is
-  // off, whatever else is true of it; the one an answer stops on is in
-  // error; then a selected one
-  const state: DeviceState = isFailed ? 'off' : isDropPoint ? 'error' : selected ? 'selected' : 'rest';
+  // What is written under the name: nothing, for a device with no address to show
+  const address = data.address ?? data.ip;
+
+  // What the upper layer of the drawing says: one thing, by the order of
+  // deviceState. A device on DHCP that got no address waits for one, and the
+  // line under its name says so in words
+  const state = deviceState({
+    failed: isFailed,
+    stopsHere: isDropPoint || answered === 'error',
+    arrivesHere: isArrival || answered === 'ok',
+    selected,
+    waiting: address === NO_LEASE_LABEL,
+  });
 
   // Magnification logic
   const isMagnified = magnifiedDeviceTypes.includes(data.type);
@@ -148,9 +166,6 @@ const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>
     ? 'device-dimmed'
     : '';
 
-  // What is written under the name: nothing, for a device with no address to show
-  const address = data.address ?? data.ip;
-
   const stateClasses = [
     // (the frame is a line higher: the style sheet places the sides by it)
     address ? 'device-with-address' : '',
@@ -160,8 +175,10 @@ const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>
     presenting ? 'nopan' : '',
     hasPacket ? 'device-has-packet' : '',
     isFailed ? 'device-failed' : '',
-    // A broken device is where the packet stops only for the one before it
-    isDropPoint && !isFailed ? 'device-drop' : '',
+    // The answer on screen ends here: the frame shows too, in the colour of the lamp
+    // (a broken device is where the packet stops only for the one before it)
+    state === 'error' ? 'device-drop' : '',
+    state === 'ok' ? 'device-arrival' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -231,6 +248,10 @@ const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>
           <span className="sr-only">Guasto simulato</span>
         </span>
       )}
+
+      {/* (what the lamp says of the answer on screen, for who cannot see its colour) */}
+      {state === 'error' && <span className="sr-only">Qui si ferma</span>}
+      {state === 'ok' && <span className="sr-only">Qui arriva</span>}
 
       {/* Device Content */}
       <div className="device-content pointer-events-none">
