@@ -10,6 +10,9 @@ import { useNetworkStore } from '@/store/networkStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useDhcp } from '@/utils/useDhcp';
 import { shownAddress } from '@/utils/dhcpLabels';
+import DeviceDrawing from '@/components/ui/DeviceDrawing';
+import { drawingOfDevice } from '@/utils/deviceDrawing';
+import { useTemplateStore } from '@/store/templateStore';
 
 /** Distance kept from the edges of the window */
 const MARGIN = 8;
@@ -29,6 +32,7 @@ const PresentationMenu = () => {
   const devices = useNetworkStore((state) => state.devices);
   const connections = useNetworkStore((state) => state.connections);
   const dhcp = useDhcp();
+  const templates = useTemplateStore((state) => state.templates);
 
   const ref = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
@@ -79,7 +83,8 @@ const PresentationMenu = () => {
     const address = shownAddress(device, dhcp);
     return (
       <div ref={ref} className="presentation-menu" role="menu" aria-label={device.label} style={style}>
-        <div className="presentation-menu-title">
+        <div className="presentation-menu-title presentation-menu-device">
+          <DeviceDrawing drawing={drawingOfDevice(device, templates)} size={32} />
           <strong>{device.label}</strong>
           <span>{address ? `${device.type} · ${address}` : device.type}</span>
         </div>

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Icon } from '@iconify/react';
+import DeviceDrawing from '@/components/ui/DeviceDrawing';
+import { drawingOf } from '@/utils/deviceDrawing';
 import { Minus, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Scrollbars } from 'react-custom-scrollbars-2';
@@ -279,12 +280,7 @@ const BulkAddDeviceModal = () => {
                           <tr key={row.id}>
                             {/* Type Column */}
                             <td className="type-cell">
-                              <Icon
-                                icon={template.icon}
-                                width={20}
-                                height={20}
-                                style={{ color: template.color }}
-                              />
+                              <DeviceDrawing drawing={drawingOf(template, template.type)} size={24} />
                               <span>{template.name}</span>
                             </td>
 
@@ -354,12 +350,7 @@ const BulkAddDeviceModal = () => {
                           onClick={() => handleAddConfigurableRow(template.id)}
                           className="add-menu-item"
                         >
-                          <Icon
-                            icon={template.icon}
-                            width={18}
-                            height={18}
-                            style={{ color: template.color }}
-                          />
+                          <DeviceDrawing drawing={drawingOf(template, template.type)} size={24} />
                           {template.name}
                         </button>
                       ))}
@@ -388,12 +379,7 @@ const BulkAddDeviceModal = () => {
                         <tr key={template.id}>
                           {/* Type Column */}
                           <td className="type-cell">
-                            <Icon
-                              icon={template.icon}
-                              width={20}
-                              height={20}
-                              style={{ color: template.color }}
-                            />
+                            <DeviceDrawing drawing={drawingOf(template, template.type)} size={24} />
                             <span>{template.name}</span>
                           </td>
 

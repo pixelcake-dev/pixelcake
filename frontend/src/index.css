@@ -600,6 +600,66 @@ button.area-label:focus-visible {
   --device-state: var(--state-off);
 }
 
+/* What is behind a drawing where it is not on the canvas: a panel, a
+   window, a menu, a row under the pointer */
+.sidebar-panel,
+.presentation-menu {
+  --device-ground: var(--bg-menu);
+}
+
+.base-modal {
+  --device-ground: var(--bg-toolbar);
+}
+
+.template-icon-wrapper {
+  --device-ground: var(--bg-component);
+}
+
+.device-list-item:hover,
+.bulk-add-table tbody tr:hover,
+.add-menu-item:hover,
+.template-item:hover {
+  --device-ground: var(--bg-hover);
+}
+
+/* The drawings a template can be given (components/ui/DrawingPicker.tsx):
+   a grid of buttons, the chosen one framed in the accent */
+.drawing-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 44px);
+  gap: 6px;
+}
+
+.drawing-picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.drawing-picker-item:hover {
+  border-color: var(--text-color);
+  background-color: var(--bg-hover);
+  --device-ground: var(--bg-hover);
+}
+
+.drawing-picker-item.chosen {
+  border-color: var(--accent-color);
+  outline: 1px solid var(--accent-color);
+}
+
+.drawing-picker-item:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
 /* Network Device Styles */
 .network-device {
   position: relative;
@@ -615,6 +675,8 @@ button.area-label:focus-visible {
   min-width: 120px;
   text-align: center;
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  /* (what is behind the drawing of the device is its box) */
+  --device-ground: var(--bg-component);
 }
 
 .react-flow__node.dragging .network-device {
@@ -630,14 +692,7 @@ button.area-label:focus-visible {
 }
 
 .device-icon {
-  color: var(--secondary-color);
-  opacity: 0.95;
   margin-bottom: 5px;
-}
-
-.dark .device-icon {
-  color: var(--secondary-color);
-  opacity: 0.9;
 }
 
 .device-name {
@@ -1675,6 +1730,7 @@ legend {
   border-width: 3px !important;
   box-shadow: none;
   background: var(--bg-canvas);
+  --device-ground: var(--bg-canvas);
   z-index: 5 !important;
   transition: all 0.2s ease;
 }
@@ -3044,6 +3100,18 @@ legend {
   display: block;
   font-size: 0.75em;
   color: var(--text-color-light);
+}
+
+/* The device a menu is about: its drawing, then its name and what it is */
+.presentation-menu-device {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  align-items: center;
+}
+
+.presentation-menu-device .device-drawing {
+  grid-row: span 2;
 }
 
 .presentation-menu button {

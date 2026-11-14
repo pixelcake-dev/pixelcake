@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Icon } from '@iconify/react';
+import DeviceDrawing from '@/components/ui/DeviceDrawing';
+import { drawingOf } from '@/utils/deviceDrawing';
 import { Pencil, Trash2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useTemplateStore } from '@/store/templateStore';
@@ -62,12 +63,7 @@ const GenericTemplatesTab = ({ templates }: GenericTemplatesTabProps) => {
         {templates.map((template) => (
           <div key={template.id} className="template-card editable">
             <div className="template-icon-wrapper">
-              <Icon
-                icon={template.icon}
-                width={40}
-                height={40}
-                style={{ color: template.color }}
-              />
+              <DeviceDrawing drawing={drawingOf(template, template.type)} size={40} />
             </div>
             <div className="template-info">
               <span className="template-name font-semibold">{template.name}</span>

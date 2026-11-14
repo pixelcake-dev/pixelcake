@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Icon } from '@iconify/react';
 import { Modal } from '@/components/ui/Modal';
+import DeviceDrawing from '@/components/ui/DeviceDrawing';
+import { drawingOf } from '@/utils/deviceDrawing';
 import { Button } from '@/components/ui/Button';
 import { FormFieldset } from '@/components/ui/FormContainer';
 import TabContainer, { type Tab } from '@/components/ui/TabContainer';
@@ -463,12 +464,7 @@ const InspectorModal = () => {
           <FormFieldset legend="Identità" className="first:mt-0">
             <FieldRow>
               <ReadOnlyField label="Tipo">
-                <Icon
-                  icon={template?.icon || 'mdi:help-circle'}
-                  width={18}
-                  height={18}
-                  className="text-[var(--accent-text)] shrink-0"
-                />
+                <DeviceDrawing drawing={drawingOf(template, inspectorDevice.type)} size={24} />
                 <span className="font-medium truncate">{template?.name || inspectorDevice.type}</span>
               </ReadOnlyField>
               <TextField

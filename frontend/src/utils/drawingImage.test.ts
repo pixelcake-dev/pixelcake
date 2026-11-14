@@ -1069,8 +1069,6 @@ describe('the numbers repeated from the style sheet', () => {
     };
     check(':root', PALETTES.light);
     check('.dark', PALETTES.dark);
-    expect(value('.device-icon', 'opacity')).toBe(String(PALETTES.light.iconOpacity));
-    expect(value('.dark .device-icon', 'opacity')).toBe(String(PALETTES.dark.iconOpacity));
     expect(value('.presentation-verdict.tone-ok', 'color')).toBe(PALETTES.light.toneOk);
     expect(value('.presentation-verdict.tone-ko', 'color')).toBe(PALETTES.light.toneKo);
     expect(value('.presentation-verdict.tone-unknown', 'color')).toBe(PALETTES.light.toneUnknown);

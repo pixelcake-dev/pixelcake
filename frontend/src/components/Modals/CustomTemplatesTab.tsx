@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { Icon } from '@iconify/react';
 import { Button } from '@/components/ui/Button';
+import DeviceDrawing from '@/components/ui/DeviceDrawing';
+import DrawingPicker from '@/components/ui/DrawingPicker';
+import { drawingOf } from '@/utils/deviceDrawing';
+import type { DeviceDrawingId } from '@/data/deviceDrawings';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { useTemplateStore } from '@/store/templateStore';
@@ -16,11 +19,11 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
   const deleteTemplate = useTemplateStore((state) => state.deleteTemplate);
 
   const [isCreating, setIsCreating] = useState(false);
+  // (a new template starts with the drawing of its base type)
   const [formData, setFormData] = useState({
     name: '',
     type: 'Server' as DeviceType,
-    icon: 'mdi:server',
-    color: '#5E8096',
+    icon: 'server' as DeviceDrawingId,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -35,7 +38,7 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
       name: formData.name,
       type: formData.type,
       icon: formData.icon,
-      color: formData.color,
+      color: '#5E8096',
       isCustom: true,
       supportsVLAN,
       supportsSTP,
@@ -47,8 +50,7 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
     setFormData({
       name: '',
       type: 'Server',
-      icon: 'mdi:server',
-      color: '#5E8096',
+      icon: 'server',
     });
     setIsCreating(false);
   };
@@ -95,7 +97,11 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
               label="Tipo Base"
               value={formData.type}
               onChange={(e) =>
-                setFormData({ ...formData, type: e.target.value as DeviceType })
+                setFormData({
+                  ...formData,
+                  type: e.target.value as DeviceType,
+                  icon: drawingOf(undefined, e.target.value),
+                })
               }
             >
               <option value="Server">Server</option>
@@ -107,32 +113,12 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
               <option value="Switch">Switch</option>
             </Select>
 
-            <Input
-              label="Icona Iconify"
-              value={formData.icon}
-              onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-              placeholder="es: mdi:server"
-              required
-            />
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Colore
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="color"
-                  value={formData.color}
-                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                  className="h-10 w-20 border border-[var(--border-color)] rounded cursor-pointer"
-                />
-                <Icon
-                  icon={formData.icon}
-                  width={40}
-                  height={40}
-                  style={{ color: formData.color }}
-                />
-              </div>
+            <div className="col-span-2">
+              <DrawingPicker
+                label="Disegno"
+                value={formData.icon}
+                onChange={(icon) => setFormData({ ...formData, icon })}
+              />
             </div>
           </div>
 
@@ -160,12 +146,7 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
               className="template-item flex items-center justify-between p-3 border border-[var(--border-color)] rounded-lg hover:bg-[var(--bg-menu)] transition"
             >
               <div className="flex items-center gap-3">
-                <Icon
-                  icon={template.icon}
-                  width={32}
-                  height={32}
-                  style={{ color: template.color }}
-                />
+                <DeviceDrawing drawing={drawingOf(template, template.type)} size={32} />
                 <div>
                   <div className="font-semibold">{template.name}</div>
                   <div className="text-xs text-[var(--text-color-light)]">

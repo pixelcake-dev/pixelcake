@@ -147,7 +147,7 @@ describe('App — Esc closes the window on top', () => {
     expect(screen.getByLabelText('Formato:')).toBeInTheDocument();
   });
 
-  it('a window opened from another: the list of icons, then that window, then the one under it', () => {
+  it('a window opened from another: that window, then the one under it', () => {
     render(<App />);
     act(() => ui().openModal('settings'));
     fireEvent.click(tab('Template'));
@@ -155,13 +155,8 @@ describe('App — Esc closes the window on top', () => {
     fireEvent.click(screen.getByRole('button', { name: /Aggiungi Nuovo Template/ }));
     expect(windows()).toBe(2);
     expect(screen.getByRole('heading', { name: 'Nuovo Template Generico' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Select icon' }));
-    expect(screen.getByPlaceholderText('Cerca icone...')).toBeInTheDocument();
-
-    esc();
-    expect(screen.queryByPlaceholderText('Cerca icone...')).toBeNull();
-    expect(windows()).toBe(2);
+    // (its drawings are all on show: there is no list to close first)
+    expect(screen.getAllByRole('radio').length).toBeGreaterThan(20);
 
     esc();
     expect(windows()).toBe(1);

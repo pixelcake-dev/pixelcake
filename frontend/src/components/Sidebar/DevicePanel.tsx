@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Icon } from '@iconify/react';
 import { SearchInput } from '@/components/ui/SearchInput';
+import DeviceDrawing from '@/components/ui/DeviceDrawing';
+import { drawingOf } from '@/utils/deviceDrawing';
 import { useUIStore } from '@/store/uiStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { useNetworkStore } from '@/store/networkStore';
@@ -56,8 +57,7 @@ const DevicePanel = () => {
         description: template.isCustom
           ? `Template personalizzato (${template.type})`
           : getDeviceDescription(template.type),
-        icon: template.icon,
-        color: template.color,
+        drawing: drawingOf(template, template.type),
       })),
     [templates]
   );
@@ -169,12 +169,7 @@ const DevicePanel = () => {
                   onClick={() => handleDeviceSelect(device.type, device.id)}
                 >
                   <div className="device-list-icon">
-                    <Icon
-                      icon={device.icon}
-                      width={28}
-                      height={28}
-                      style={{ color: device.color }}
-                    />
+                    <DeviceDrawing drawing={device.drawing} size={32} />
                   </div>
                   <div className="device-list-info">
                     <div className="device-list-name">{device.name}</div>

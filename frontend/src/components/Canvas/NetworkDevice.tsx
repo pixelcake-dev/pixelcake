@@ -1,10 +1,10 @@
 import { memo } from 'react';
-import { Icon } from '@iconify/react';
 import { Handle, Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
 import { ZapOff } from 'lucide-react';
 import type { NetworkDevice as NetworkDeviceType } from '@/types/network';
-import { DEVICE_ICONS } from '@/types/network';
+import DeviceDrawing from '@/components/ui/DeviceDrawing';
+import { drawingOf } from '@/utils/deviceDrawing';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { useUIStore } from '@/store/uiStore';
@@ -67,9 +67,8 @@ const NetworkDevice = memo(({ data, id }: NodeProps<NetworkDeviceData>) => {
     ? templates.find((t) => t.id === data.templateId)
     : templates.find((t) => t.type === data.type);
 
-  // Fallback to DEVICE_ICONS if template not found (backward compatibility)
-  const deviceIcon = template?.icon || DEVICE_ICONS[data.type] || 'mdi:help-circle-outline';
-  const deviceColor = template?.color || '#5E8096';
+  // The drawing of the device: the one of its template, else the one of its type
+  const drawing = drawingOf(template, data.type);
 
   // Magnification logic
   const isMagnified = magnifiedDeviceTypes.includes(data.type);
@@ -179,13 +178,7 @@ const NetworkDevice = memo(({ data, id }: NodeProps<NetworkDeviceData>) => {
 
       {/* Device Content */}
       <div className="device-content pointer-events-none">
-        <Icon
-          icon={deviceIcon}
-          width={48}
-          height={48}
-          className="device-icon mb-1"
-          style={{ color: deviceColor }}
-        />
+        <DeviceDrawing drawing={drawing} className="device-icon" />
         <span className="device-name font-semibold text-sm">
           {data.label}
         </span>

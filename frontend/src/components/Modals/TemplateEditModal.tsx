@@ -1,13 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Icon } from '@iconify/react';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { FormContainer } from '@/components/ui/FormContainer';
-import IconPicker from '@/components/ui/IconPicker';
+import DrawingPicker from '@/components/ui/DrawingPicker';
+import { drawingOf } from '@/utils/deviceDrawing';
+import type { DeviceDrawingId } from '@/data/deviceDrawings';
 import { useTemplateStore } from '@/store/templateStore';
 import type { DeviceTemplate } from '@/types/network';
+
+/** What the form holds: the drawing is one of the app's, the one of the base type until another is chosen */
+interface TemplateForm {
+  name: string;
+  type: string;
+  icon: DeviceDrawingId | '';
+}
+
+const EMPTY_FORM: TemplateForm = { name: '', type: '', icon: '' };
 
 interface TemplateEditModalProps {
   isOpen: boolean;
@@ -23,12 +33,7 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
   const isEditMode = template !== null;
 
   // Form state
-  const [formData, setFormData] = useState({
-    name: '',
-    type: '',
-    icon: '',
-    color: '#5E8096',
-  });
+  const [formData, setFormData] = useState<TemplateForm>(EMPTY_FORM);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -38,19 +43,17 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
       setFormData({
         name: template.name,
         type: template.type,
-        icon: template.icon,
-        color: template.color,
+        // (a template of before the drawings shows the one it is drawn with)
+        icon: drawingOf(template, template.type),
       });
     } else {
-      setFormData({
-        name: '',
-        type: '',
-        icon: '',
-        color: '#5E8096',
-      });
+      setFormData(EMPTY_FORM);
     }
     setErrors({});
   }, [template, isOpen]);
+
+  /** The drawing the form shows as chosen */
+  const drawing = formData.icon || drawingOf(undefined, formData.type);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -71,10 +74,6 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
       }
     }
 
-    if (!formData.icon.trim()) {
-      newErrors.icon = 'Icona obbligatoria';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -87,8 +86,7 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
       updateTemplate(template.id, {
         name: formData.name,
         // type: formData.type, // Don't change type in edit mode to avoid breaking references
-        icon: formData.icon,
-        color: formData.color,
+        icon: drawing,
       });
     } else {
       // Create new template
@@ -114,8 +112,8 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
       addTemplate({
         name: formData.name,
         type: formData.type,
-        icon: formData.icon,
-        color: formData.color,
+        icon: drawing,
+        color: '#5E8096',
         isCustom: false,
         supportsVLAN,
         supportsSTP,
@@ -130,12 +128,7 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
   };
 
   const handleCancel = () => {
-    setFormData({
-      name: '',
-      type: '',
-      icon: '',
-      color: '#5E8096',
-    });
+    setFormData(EMPTY_FORM);
     setErrors({});
     onClose();
   };
@@ -181,7 +174,7 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
           <Select
             label="Tipo Base"
             value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, type: e.target.value, icon: '' })}
             size="md"
             disabled={isEditMode}
             required
@@ -205,57 +198,12 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
           )}
         </div>
 
-        {/* Icona */}
-        <div className="flex gap-3 items-start">
-          <div className="flex-1">
-            <IconPicker
-              label="Icona (Iconify)"
-              value={formData.icon}
-              onChange={(icon) => setFormData({ ...formData, icon })}
-              color={formData.color}
-              error={errors.icon}
-            />
-          </div>
-          {/* Live Preview */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--text-color-light)] mb-1.5">
-              Preview
-            </label>
-            <div className="w-12 h-12 flex items-center justify-center bg-[var(--bg-component)] rounded-lg border border-[var(--border-color)]">
-              {formData.icon && (
-                <Icon
-                  icon={formData.icon}
-                  width={32}
-                  height={32}
-                  style={{ color: formData.color }}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Colore */}
-        <div>
-          <label className="block text-sm font-medium text-[var(--text-color-light)] mb-1.5">
-            Colore
-          </label>
-          <div className="flex gap-3">
-            <input
-              type="color"
-              value={formData.color}
-              onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-              className="w-20 h-10 rounded-lg border border-[var(--border-color)] cursor-pointer"
-            />
-            <Input
-              type="text"
-              value={formData.color}
-              onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-              placeholder="#5E8096"
-              size="xs"
-              className="flex-1"
-            />
-          </div>
-        </div>
+        {/* The drawing a device of this template is shown with */}
+        <DrawingPicker
+          label="Disegno"
+          value={drawing}
+          onChange={(icon) => setFormData({ ...formData, icon })}
+        />
       </FormContainer>
     </Modal>
   );

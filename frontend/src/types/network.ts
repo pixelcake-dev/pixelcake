@@ -304,7 +304,15 @@ export interface DeviceTemplate {
   id: string;
   name: string;
   type: DeviceType;
-  icon: string; // Iconify icon name
+  /**
+   * The drawing a device of this template is shown with: the name of one of
+   * the drawings of data/deviceDrawings.ts. A template made before the
+   * drawings has the name of an icon here: it is shown with its own drawing
+   * if the app comes with it, else with the one of its base type
+   * (utils/deviceDrawing.ts)
+   */
+  icon: string;
+  /** No longer shown: a drawing has the colours of the theme. Kept for the files that carry it */
   color: string;
   terraformFields?: Record<string, string | number | boolean>;
   isCustom: boolean;
