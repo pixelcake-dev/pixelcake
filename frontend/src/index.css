@@ -2349,11 +2349,15 @@ legend {
   font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .presentation-project {
   font-weight: 600;
   max-width: 28ch;
+  min-width: 0;
+  /* (cut short well before the canvases next to it start to scroll) */
+  flex-shrink: 6;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2364,6 +2368,13 @@ legend {
   gap: 4px;
   min-width: 0;
   overflow-x: auto;
+  /* (when they do not all fit they scroll, by wheel, touch or keyboard: a
+     scroll bar inside a bar this low would push the names out of line) */
+  scrollbar-width: none;
+}
+
+.presentation-canvases::-webkit-scrollbar {
+  display: none;
 }
 
 .presentation-canvases button {
@@ -2393,6 +2404,44 @@ legend {
   display: flex;
   align-items: center;
   gap: 8px;
+  /* (the tools and the way out are never the ones to give way) */
+  flex-shrink: 0;
+}
+
+/* A narrow window. What matters less gives way first, so that the tools and
+   the way out stay inside the window: the name of the project is cut short
+   as the bar narrows (and the canvases scroll); then the badge keeps its
+   symbol alone and the spaces tighten; last, the name of the project goes,
+   as it does on the menu bar. */
+@media (max-width: 800px) {
+  .presentation-bar {
+    gap: 8px;
+    padding: 0 8px;
+  }
+
+  .presentation-bar-tools {
+    gap: 4px;
+  }
+
+  .presentation-badge {
+    padding: 3px 6px;
+  }
+
+  /* (out of sight, still read aloud) */
+  .presentation-badge-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .presentation-project {
+    display: none;
+  }
 }
 
 .presentation-exit {

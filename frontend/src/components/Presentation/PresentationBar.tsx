@@ -98,8 +98,10 @@ const PresentationBar = () => {
 
   return (
     <header className="presentation-bar">
-      <span className="presentation-badge">
-        <Presentation size={16} aria-hidden="true" /> {t.presentation.bar.badge}
+      {/* (in a narrow window the badge keeps its symbol alone: the word stays for who cannot see it) */}
+      <span className="presentation-badge" title={t.presentation.bar.badge}>
+        <Presentation size={16} aria-hidden="true" />
+        <span className="presentation-badge-label">{t.presentation.bar.badge}</span>
       </span>
       <span className="presentation-project" title={projectName}>
         {projectName}

@@ -56,6 +56,19 @@ describe('PresentationBar', () => {
     expect(screen.getByText('Sede Milano')).toBeInTheDocument();
   });
 
+  it('the badge keeps its word when a narrow window leaves it the symbol alone', () => {
+    render(<PresentationBar />);
+    // The style sheet takes the word out of sight below 800 px (it is still
+    // read aloud, and the pointer finds it): it is a piece of its own, and
+    // the badge is named by it. That the bar fits is measured in a browser.
+    const word = screen.getByText('Presentazione');
+    expect(word).toHaveClass('presentation-badge-label');
+    expect(word.parentElement).toHaveClass('presentation-badge');
+    expect(word.parentElement).toHaveAttribute('title', 'Presentazione');
+    // The way out is a button with its word, never the symbol alone
+    expect(screen.getByRole('button', { name: 'Esci' })).toHaveTextContent('Esci');
+  });
+
   it('shows the canvases only when the project has more than one, and switches between them', () => {
     const { unmount } = render(<PresentationBar />);
     expect(screen.queryByRole('navigation', { name: 'Canvas del progetto' })).toBeNull();
