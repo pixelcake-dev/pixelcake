@@ -271,15 +271,15 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
       maxHeight="calc(90vh - 120px)"
       verticalAlign="start"
       fixedContent={
-        <div className="modal-header flex items-center justify-between px-6 pt-6 pb-3 flex-shrink-0">
-          <h3 className="text-lg font-semibold" style={{ color: 'var(--text-color)' }}>
+        <div className="modal-header flex items-center justify-between px-6 pt-5 pb-3 flex-shrink-0">
+          <h3 className="text-base font-semibold tracking-tight" style={{ color: 'var(--text-color)' }}>
             Esporta immagine
           </h3>
           <button
             type="button"
             onClick={onClose}
             aria-label="Chiudi"
-            className="p-1 hover:bg-[var(--bg-canvas)] rounded"
+            className="p-1 text-[var(--text-color-light)] hover:text-[var(--text-color)] hover:bg-[var(--bg-hover)] rounded transition-colors"
             style={{ color: 'var(--text-color-light)' }}
           >
             <X size={20} />

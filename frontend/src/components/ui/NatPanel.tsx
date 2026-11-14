@@ -84,7 +84,7 @@ const NatPanel: React.FC<NatPanelProps> = ({ ports, forwards, isFirewall, onChan
                     ciò che esce prende l&apos;indirizzo <code className="font-mono">{port.ip}</code>
                   </>
                 ) : (
-                  <span className="text-red-500" role="alert">
+                  <span className="text-[var(--danger-color)]" role="alert">
                     non ha un indirizzo, quindi non traduce nulla. Dagliene uno nella scheda
                     «Porte».
                   </span>
@@ -216,7 +216,7 @@ const NatPanel: React.FC<NatPanelProps> = ({ ports, forwards, isFirewall, onChan
                           type="button"
                           aria-label={`Elimina l'inoltro ${n}`}
                           title="Elimina l'inoltro"
-                          className={`${iconButton} hover:text-red-500`}
+                          className={`${iconButton} hover:text-[var(--danger-color)]`}
                           onClick={() => onChange(forwards.filter((entry) => entry.id !== forward.id))}
                         >
                           <Trash2 size={16} />
@@ -226,7 +226,7 @@ const NatPanel: React.FC<NatPanelProps> = ({ ports, forwards, isFirewall, onChan
                     {problem && (
                       <tr>
                         <td />
-                        <td colSpan={5} className="pb-1 text-xs text-red-500" role="alert">
+                        <td colSpan={5} className="pb-1 text-xs text-[var(--danger-color)]" role="alert">
                           {problem}
                         </td>
                       </tr>

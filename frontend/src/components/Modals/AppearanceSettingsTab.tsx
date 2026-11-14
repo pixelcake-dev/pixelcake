@@ -23,14 +23,14 @@ const AppearanceSettingsTab = () => {
         type="button"
         role="switch"
         aria-checked={darkMode}
-        className="w-full text-left flex items-center justify-between p-4 bg-[var(--bg-canvas)] border border-[var(--border-color)] rounded-lg cursor-pointer hover:border-[var(--accent-color)] transition-colors"
+        className="w-full text-left flex items-center justify-between p-4 bg-[var(--bg-canvas)] border border-[var(--border-color)] rounded-lg cursor-pointer hover:border-[var(--text-color)] transition-colors"
         onClick={toggleDarkMode}
       >
         <span className="flex items-center gap-3">
           <Icon
             icon={darkMode ? 'mdi:weather-night' : 'mdi:weather-sunny'}
             width={24}
-            className="text-[var(--accent-color)]"
+            className="text-[var(--text-color-light)]"
           />
           <span>
             <span className="block font-medium">
@@ -43,12 +43,12 @@ const AppearanceSettingsTab = () => {
         </span>
         <span
           aria-hidden="true"
-          className={`relative w-14 h-7 rounded-full transition-colors ${
+          className={`relative w-12 h-6 rounded transition-colors ${
             darkMode ? 'bg-[var(--accent-color)]' : 'bg-[var(--border-color)]'
           }`}
         >
           <span
-            className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
+            className={`absolute top-1 w-4 h-4 bg-white rounded-sm transition-transform ${
               darkMode ? 'right-1' : 'left-1'
             }`}
           />

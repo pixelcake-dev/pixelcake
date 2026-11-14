@@ -36,7 +36,7 @@ const NICList: React.FC<NICListProps> = ({
 }) => {
   const getNicStatusColor = (nic: NetworkInterfaceCard): string => {
     if (!nic.enabled) return 'var(--text-color-light)';
-    return '#10b981'; // Green for enabled
+    return 'var(--ok-color)';
   };
 
   const getNicStatusClass = (nic: NetworkInterfaceCard): string => {
@@ -78,8 +78,8 @@ const NICList: React.FC<NICListProps> = ({
             {...props}
             style={{
               ...style,
-              backgroundColor: 'var(--accent-color)',
-              borderRadius: '6px',
+              backgroundColor: 'var(--scroll-thumb)',
+              borderRadius: 'var(--radius)',
               cursor: 'pointer',
               border: '2px solid transparent',
               backgroundClip: 'padding-box',
@@ -123,7 +123,7 @@ const NICList: React.FC<NICListProps> = ({
                   {/* Link Marker: a connection is attached to this NIC */}
                   {linkedNics?.has(nic.id) && (
                     <span
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold uppercase bg-[rgba(59,130,246,0.15)] text-[var(--accent-color)]"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold uppercase bg-[var(--bg-hover)] text-[var(--text-color-light)]"
                       title={`Collegata a ${linkedNics.get(nic.id)}`}
                       data-testid={`nic-link-marker-${nic.id}`}
                     >

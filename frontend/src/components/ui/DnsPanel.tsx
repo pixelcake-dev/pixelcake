@@ -22,7 +22,7 @@ const cell =
   'w-full px-2 py-1 text-sm bg-[var(--bg-canvas)] border border-[var(--border-color)] rounded ' +
   'text-[var(--text-color)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]';
 const iconButton =
-  'p-1 rounded hover:bg-[var(--bg-canvas)] text-[var(--text-color-light)] hover:text-red-500';
+  'p-1 rounded hover:bg-[var(--bg-canvas)] text-[var(--text-color-light)] hover:text-[var(--danger-color)]';
 
 /**
  * DnsPanel
@@ -111,7 +111,7 @@ const DnsPanel: React.FC<DnsPanelProps> = ({ records, onChange, addresses }) => 
                     {problem && (
                       <tr>
                         <td />
-                        <td colSpan={3} className="pb-1 text-xs text-red-500" role="alert">
+                        <td colSpan={3} className="pb-1 text-xs text-[var(--danger-color)]" role="alert">
                           {problem}
                         </td>
                       </tr>
@@ -143,7 +143,7 @@ const DnsPanel: React.FC<DnsPanelProps> = ({ records, onChange, addresses }) => 
               <code className="font-mono">{addresses.join(', ')}</code>.
             </>
           ) : (
-            <span className="text-red-500" role="alert">
+            <span className="text-[var(--danger-color)]" role="alert">
               Questo server non ha un indirizzo: nessuno può chiedergli nulla.
             </span>
           )}

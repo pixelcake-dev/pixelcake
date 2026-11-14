@@ -60,7 +60,7 @@ export const SearchInput = ({
   return (
     <div className={className}>
       <div
-        className={`inline-flex items-center ${styles.gap} ${styles.container} rounded-full border border-[var(--border-color)] bg-[var(--bg-color-secondary)]`}
+        className={`inline-flex items-center ${styles.gap} ${styles.container} rounded-md border border-[var(--border-color)] bg-[var(--bg-canvas)]`}
       >
         <Search
           size={iconSize}

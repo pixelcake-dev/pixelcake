@@ -443,7 +443,7 @@ const PortConfigPanel: React.FC<PortConfigPanelProps> = ({
             trasporta gli indirizzi privati. I servizi da raggiungere da fuori si pubblicano nella
             scheda «NAT».
             {formData.nat && !(formData.ip ?? '').trim() && (
-              <span className="block text-red-500" role="alert">
+              <span className="block text-[var(--danger-color)]" role="alert">
                 La porta non ha un indirizzo: finché non ne ha uno il NAT non traduce nulla.
               </span>
             )}

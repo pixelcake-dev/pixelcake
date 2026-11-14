@@ -71,7 +71,7 @@ const ExplorerPanel = () => {
           <Icon
             icon="lucide:folder"
             width={18}
-            style={{ color: 'var(--accent-color)', flexShrink: 0 }}
+            style={{ color: 'var(--accent-text)', flexShrink: 0 }}
           />
           {editing?.kind === 'projectName' ? (
             <InlineEdit
@@ -263,7 +263,7 @@ const ExplorerPanel = () => {
                 padding: '6px 8px',
                 background: 'var(--bg-component)',
                 border: '1px solid var(--border-color)',
-                borderRadius: '4px',
+                borderRadius: 'var(--radius-small)',
                 color: 'var(--text-color)',
                 fontSize: '0.85em',
                 outline: 'none',
@@ -276,10 +276,10 @@ const ExplorerPanel = () => {
               aria-label="Crea canvas"
               style={{
                 padding: '6px 10px',
-                background: 'var(--accent-color)',
-                color: 'white',
+                background: 'var(--text-color)',
+                color: 'var(--bg-canvas)',
                 border: 'none',
-                borderRadius: '4px',
+                borderRadius: 'var(--radius-small)',
                 cursor: 'pointer',
                 fontSize: '0.85em',
               }}
@@ -298,7 +298,7 @@ const ExplorerPanel = () => {
                 background: 'var(--bg-component)',
                 color: 'var(--text-color)',
                 border: '1px solid var(--border-color)',
-                borderRadius: '4px',
+                borderRadius: 'var(--radius-small)',
                 cursor: 'pointer',
                 fontSize: '0.85em',
               }}

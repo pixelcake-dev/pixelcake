@@ -20,7 +20,8 @@ import {
   Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import PixelCakeIcon from '@/assets/PixelCakeIcon.svg';
+import SymbolColour from '@/assets/pixelcake-simbolo-colore.svg';
+import SymbolNegative from '@/assets/pixelcake-simbolo-negativo.svg';
 import { APP_NAME } from '@/constants/brand';
 import { useProjectStore } from '@/store/projectStore';
 
@@ -141,9 +142,9 @@ const TopMenuBar = () => {
     <header className="top-menubar">
       {/* Logo */}
       <img
-        src={PixelCakeIcon}
+        src={darkMode ? SymbolNegative : SymbolColour}
         alt={`${APP_NAME} Icon`}
-        className="h-10 mr-4 ml-[-2px]"
+        className="h-8 mr-4"
         onError={(e) => {
           // Hide image if not found
           e.currentTarget.style.display = 'none';

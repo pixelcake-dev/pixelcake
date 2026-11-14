@@ -38,7 +38,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
         <select
           ref={ref}
           id={selectId}
-          className={`${widthClass} px-3 py-1.5 rounded-md border border-[var(--border-color)] bg-[var(--bg-canvas)] text-[var(--text-color)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] ${className}`}
+          className={`${widthClass} px-3 py-1.5 text-sm rounded-md border border-[var(--border-color)] bg-[var(--bg-canvas)] text-[var(--text-color)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] ${className}`}
           {...props}
         >
           {children}

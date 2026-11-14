@@ -88,8 +88,8 @@ describe('the panels React Flow draws follow the theme (style sheet)', () => {
     );
     expect([...used].sort()).toEqual([
       '--accent-color',
-      '--accent-color-light',
       '--bg-canvas',
+      '--bg-hover',
       '--bg-toolbar',
       '--border-color',
       '--shadow-color',

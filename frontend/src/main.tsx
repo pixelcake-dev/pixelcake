@@ -1,5 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+// The two typefaces of the interface travel with the app: no request to a font service
+import '@fontsource-variable/inter'
+import '@fontsource/jetbrains-mono/400.css'
+import '@fontsource/jetbrains-mono/500.css'
 import './index.css'
 import App from './App.tsx'
 import { registerBundledIcons } from './utils/bundledIcons'

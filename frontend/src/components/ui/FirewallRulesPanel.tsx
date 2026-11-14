@@ -194,7 +194,7 @@ const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, o
                           type="button"
                           aria-label={`Elimina la regola ${n}`}
                           title="Elimina la regola"
-                          className={`${iconButton} hover:text-red-500`}
+                          className={`${iconButton} hover:text-[var(--danger-color)]`}
                           onClick={() => onChange(rules.filter((entry) => entry.id !== rule.id))}
                         >
                           <Trash2 size={16} />
@@ -204,7 +204,7 @@ const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, o
                     {problem && (
                       <tr>
                         <td />
-                        <td colSpan={6} className="pb-1 text-xs text-red-500" role="alert">
+                        <td colSpan={6} className="pb-1 text-xs text-[var(--danger-color)]" role="alert">
                           {problem}
                         </td>
                       </tr>

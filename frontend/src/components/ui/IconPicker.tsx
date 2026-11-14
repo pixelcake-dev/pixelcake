@@ -96,7 +96,7 @@ const IconPicker = ({
         ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-3 py-2 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg text-left flex items-center justify-between gap-2 hover:border-[var(--accent-color)] transition-colors"
+        className="w-full px-3 py-2 bg-[var(--bg-canvas)] border border-[var(--border-color)] rounded-lg text-left flex items-center justify-between gap-2 hover:border-[var(--text-color)] transition-colors"
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {value && (
@@ -112,13 +112,13 @@ const IconPicker = ({
         />
       </button>
 
-      {error && <span className="text-sm text-red-500 mt-1 block">{error}</span>}
+      {error && <span className="text-sm text-[var(--danger-color)] mt-1 block">{error}</span>}
 
       {/* Dropdown */}
       {isOpen && (
         <div
           ref={dropdownRef}
-          className="fixed z-[9999] bg-[var(--bg-canvas)] border border-[var(--border-color)] rounded-lg shadow-2xl overflow-hidden"
+          className="fixed z-[9999] bg-[var(--bg-canvas)] border border-[var(--border-color)] rounded-lg shadow-modal overflow-hidden"
           style={{
             top: `${dropdownPosition.top}px`,
             left: `${dropdownPosition.left}px`,
@@ -133,7 +133,7 @@ const IconPicker = ({
               placeholder="Cerca icone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-1.5 bg-[var(--input-bg)] border border-[var(--border-color)] rounded text-sm text-[var(--text-color)] placeholder:text-[var(--text-color-light)] focus:outline-none focus:border-[var(--accent-color)]"
+              className="w-full px-3 py-1.5 bg-[var(--bg-canvas)] border border-[var(--border-color)] rounded text-sm text-[var(--text-color)] placeholder:text-[var(--text-color-light)] focus:outline-none focus:border-[var(--accent-color)]"
               autoFocus
             />
           </div>
@@ -151,9 +151,9 @@ const IconPicker = ({
                     key={icon.name}
                     type="button"
                     onClick={() => handleSelect(icon.name)}
-                    className={`flex flex-col items-center gap-1 p-2 rounded hover:bg-[var(--accent-color-light)] transition-colors group ${
+                    className={`flex flex-col items-center gap-1 p-2 rounded hover:bg-[var(--bg-hover)] transition-colors group ${
                       value === icon.name
-                        ? 'bg-[var(--accent-color-light)] ring-2 ring-[var(--accent-color)]'
+                        ? 'bg-[var(--bg-hover)] ring-2 ring-[var(--accent-color)]'
                         : ''
                     }`}
                     title={icon.label}
@@ -179,7 +179,7 @@ const IconPicker = ({
           ===================================================================
           Uncomment this section to allow manual input of any Iconify icon
 
-          <div className="p-3 border-t border-[var(--border-color)] bg-[var(--color-canvas)]">
+          <div className="p-3 border-t border-[var(--border-color)] bg-[var(--bg-canvas)]">
             <label className="block text-xs font-medium text-[var(--text-color-light)] mb-1.5">
               Inserimento Manuale (Iconify)
             </label>
@@ -194,7 +194,7 @@ const IconPicker = ({
                     handleSelect(searchQuery.trim());
                   }
                 }}
-                className="flex-1 px-3 py-1.5 bg-[var(--input-bg)] border border-[var(--border-color)] rounded text-sm text-[var(--text-color)] placeholder:text-[var(--text-color-light)] focus:outline-none focus:border-[var(--accent-color)]"
+                className="flex-1 px-3 py-1.5 bg-[var(--bg-canvas)] border border-[var(--border-color)] rounded text-sm text-[var(--text-color)] placeholder:text-[var(--text-color-light)] focus:outline-none focus:border-[var(--accent-color)]"
               />
               <button
                 type="button"
@@ -204,7 +204,7 @@ const IconPicker = ({
                   }
                 }}
                 disabled={!searchQuery.trim()}
-                className="px-3 py-1.5 bg-[var(--accent-color)] text-white rounded text-sm font-medium hover:bg-[var(--accent-color-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-3 py-1.5 bg-[var(--text-color)] text-[var(--bg-canvas)] rounded text-sm font-semibold enabled:hover:bg-[var(--accent-color)] enabled:hover:text-[var(--on-accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 OK
               </button>
@@ -215,7 +215,7 @@ const IconPicker = ({
                 href="https://icon-sets.iconify.design/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[var(--accent-color)] underline"
+                className="text-[var(--accent-text)] underline"
               >
                 icon-sets.iconify.design
               </a>

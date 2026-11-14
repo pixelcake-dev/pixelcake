@@ -344,7 +344,7 @@ const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel, 
           />
           <button
             onClick={handleGenerateMac}
-            className="mt-2 text-xs text-[var(--accent-color)] hover:underline cursor-pointer"
+            className="mt-2 text-xs text-[var(--accent-text)] underline cursor-pointer"
             type="button"
           >
             Genera MAC Random

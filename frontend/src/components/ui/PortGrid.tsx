@@ -25,8 +25,8 @@ const PortGrid: React.FC<PortGridProps> = ({ ports, selectedPortId, onPortSelect
 
   const getPortStatusColor = (port: Port): string => {
     if (!port.enabled) return 'var(--text-color-light)';
-    if (port.portType === 'trunk') return '#9333ea'; // Purple
-    return '#10b981'; // Green
+    if (port.portType === 'trunk') return 'var(--trunk-color)';
+    return 'var(--ok-color)';
   };
 
   return (
@@ -75,7 +75,7 @@ const PortGrid: React.FC<PortGridProps> = ({ ports, selectedPortId, onPortSelect
             {/* Link Marker: a connection is attached to this port */}
             {linkedTo && (
               <div
-                className="absolute top-1/2 -right-2 -translate-y-1/2 flex items-center justify-center w-4 h-4 rounded-full bg-[var(--accent-color)] text-white shadow"
+                className="absolute top-1/2 -right-2 -translate-y-1/2 flex items-center justify-center w-4 h-4 rounded-full bg-[var(--accent-color)] text-[var(--on-accent)]"
                 title={`Collegata a ${linkedTo}`}
                 data-testid={`port-link-marker-${port.id}`}
               >

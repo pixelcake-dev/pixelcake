@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { X } from 'lucide-react';
 import type {
   ChangeEvent,
   CSSProperties,
@@ -48,22 +49,24 @@ const pendingLines = (live: LiveSession): TerminalLine[] => [
   ...live.finalLines,
 ];
 
-/** Fixed console palette — the pane stays dark regardless of app theme */
-const CONSOLE_BG = '#16181d';
-const CONSOLE_INPUT_COLOR = '#e6edf3';
-const CONSOLE_CARET = '#4dd0e1';
+/** Fixed console palette — the pane stays dark regardless of app theme.
+ *  The colours are those of the terminal shown on the site; the caret is the
+ *  orange of the logo */
+const CONSOLE_BG = '#161b1f';
+const CONSOLE_INPUT_COLOR = '#ffffff';
+const CONSOLE_CARET = '#F07D2A';
 
 const MONO_FONT =
   "'JetBrains Mono', 'Cascadia Code', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace";
 
 /** Tone → color mapping for scrollback lines (on the fixed dark background) */
 const TONE_STYLES: Record<TerminalLine['tone'], CSSProperties> = {
-  normal: { color: '#d4d8de' },
-  success: { color: '#3fb950' },
-  error: { color: '#f85149' },
-  muted: { color: '#8b949e' },
-  heading: { color: '#e3b341', fontWeight: 700 },
-  command: { color: '#4dd0e1' },
+  normal: { color: '#dde3e8' },
+  success: { color: '#63d391' },
+  error: { color: '#ff8370' },
+  muted: { color: '#808d97' },
+  heading: { color: '#ffffff', fontWeight: 700 },
+  command: { color: '#ffffff', fontWeight: 500 },
 };
 
 /** Shown once, on first open (persists in scrollback until `clear`) */
@@ -145,9 +148,9 @@ const capturePointer = (element: Element, pointerId: number): void => {
 const SCROLLBAR_CSS = `
 .pc-terminal-scroll::-webkit-scrollbar { width: 8px; }
 .pc-terminal-scroll::-webkit-scrollbar-track { background: transparent; }
-.pc-terminal-scroll::-webkit-scrollbar-thumb { background-color: #3a3f4b; border-radius: 4px; }
-.pc-terminal-scroll::-webkit-scrollbar-thumb:hover { background-color: #4a5161; }
-.pc-terminal-scroll { scrollbar-width: thin; scrollbar-color: #3a3f4b transparent; }
+.pc-terminal-scroll::-webkit-scrollbar-thumb { background-color: #333d44; border-radius: 2px; }
+.pc-terminal-scroll::-webkit-scrollbar-thumb:hover { background-color: #47535b; }
+.pc-terminal-scroll { scrollbar-width: thin; scrollbar-color: #333d44 transparent; }
 `;
 
 const TerminalModal = () => {
@@ -438,43 +441,42 @@ const TerminalModal = () => {
         zIndex: 500, // above sidebar (100) and menubar (200)
         display: 'flex',
         flexDirection: 'column',
-        borderRadius: '12px',
+        borderRadius: 'var(--radius)',
         overflow: 'hidden',
         border: '1px solid var(--terminal-border)',
-        boxShadow: '0 16px 48px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.25)',
+        boxShadow: '0 16px 48px rgba(0, 0, 0, 0.28)',
         backgroundColor: CONSOLE_BG,
       }}
     >
       <style>{SCROLLBAR_CSS}</style>
 
-      {/* Header con pallini stile Apple — doubles as the drag handle */}
+      {/* Header: the title on the left, the way out on the right — doubles as the drag handle */}
       <div
         data-testid="terminal-drag-handle"
         onPointerDown={handleDragPointerDown}
         onPointerMove={handleDragPointerMove}
         onPointerUp={handleDragPointerEnd}
         onPointerCancel={handleDragPointerEnd}
-        className="terminal-header flex items-center gap-2 px-4 py-3 bg-[var(--terminal-header-bg)] border-b border-[var(--terminal-border)]"
+        className="terminal-header flex items-center gap-2 pl-4 pr-2 py-1.5 bg-[var(--terminal-header-bg)] border-b border-[var(--terminal-border)]"
         style={{ cursor: 'move', touchAction: 'none', userSelect: 'none', flexShrink: 0 }}
       >
-        {/* Pallini rosso, giallo, verde (pointerdown stopped so clicks don't drag) */}
-        <div className="flex items-center gap-2" onPointerDown={(e) => e.stopPropagation()}>
-          <div
-            className="w-3 h-3 rounded-full bg-[#ff5f56] hover:bg-[#ff6b63] transition-colors cursor-pointer"
-            title="Chiudi"
-            role="button"
-            aria-label="Chiudi il terminale"
-            onClick={handleClose}
-          ></div>
-        </div>
-
-        {/* Titolo centrato */}
-        <div className="flex-1 text-center text-sm font-medium text-[var(--terminal-title-color)]">
+        {/* The title, set as a label */}
+        <div className="flex-1 text-[12px] font-semibold uppercase tracking-[0.07em] text-[var(--terminal-title-color)]">
           Terminal
         </div>
 
-        {/* Spazio per bilanciare i pallini */}
-        <div className="w-[68px]"></div>
+        {/* The way out (pointerdown stopped so a click does not start a drag) */}
+        <div className="flex items-center" onPointerDown={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className="p-1 rounded text-[var(--terminal-title-color)] hover:text-[var(--text-color)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
+            title="Chiudi"
+            aria-label="Chiudi il terminale"
+            onClick={handleClose}
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
       {/* Corpo del terminale: scrollback + input line in un unico pannello scrollabile */}
@@ -578,7 +580,7 @@ const TerminalModal = () => {
         <svg width="18" height="18" viewBox="0 0 18 18" style={{ display: 'block', opacity: 0.6 }}>
           <path
             d="M14 7 L7 14 M14 11.5 L11.5 14"
-            stroke="#8b949e"
+            stroke="#808d97"
             strokeWidth="1.5"
             strokeLinecap="round"
             fill="none"

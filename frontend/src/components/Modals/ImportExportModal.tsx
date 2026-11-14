@@ -238,13 +238,13 @@ const ImportExportModal = () => {
       fixedContent={
         <>
           {/* Header */}
-          <div className="modal-header flex items-center justify-between px-6 pt-6 pb-3 flex-shrink-0">
-            <h3 className="text-lg font-semibold" style={{ color: 'var(--text-color)' }}>
+          <div className="modal-header flex items-center justify-between px-6 pt-5 pb-3 flex-shrink-0">
+            <h3 className="text-base font-semibold tracking-tight" style={{ color: 'var(--text-color)' }}>
               Import / Export
             </h3>
             <button
               onClick={handleClose}
-              className="p-1 hover:bg-[var(--bg-canvas)] rounded"
+              className="p-1 text-[var(--text-color-light)] hover:text-[var(--text-color)] hover:bg-[var(--bg-hover)] rounded transition-colors"
               style={{ color: 'var(--text-color-light)' }}
             >
               <X size={20} />
@@ -252,7 +252,7 @@ const ImportExportModal = () => {
           </div>
 
           {/* Tab Buttons */}
-          <div className="settings-tabs px-6 pt-2 pb-3 border-b border-[var(--border-color)]">
+          <div className="settings-tabs px-6 pt-1 border-b border-[var(--border-color)]">
             <button
               className={`settings-tab ${activeTab === 'export' ? 'active' : ''}`}
               onClick={() => setActiveTab('export')}
@@ -356,7 +356,7 @@ const ExportTab = ({ format, onFormatChange, content, deviceCount, connectionCou
           onChange={(e) => onFormatChange(e.target.value as ExportFormat)}
           style={{
             padding: '6px 12px',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius)',
             border: '1px solid var(--border-color)',
             background: 'var(--bg-toolbar)',
             color: 'var(--text-color)',
@@ -393,7 +393,7 @@ const ExportTab = ({ format, onFormatChange, content, deviceCount, connectionCou
       <div
         style={{
           position: 'relative',
-          borderRadius: '8px',
+          borderRadius: 'var(--radius)',
           border: '1px solid var(--border-color)',
           overflow: 'hidden',
         }}
@@ -475,7 +475,7 @@ const ImportTab = ({
       onClick={() => fileInputRef.current?.click()}
       style={{
         padding: '32px',
-        borderRadius: '8px',
+        borderRadius: 'var(--radius)',
         border: `2px dashed ${isDragging ? 'var(--accent-color)' : 'var(--border-color)'}`,
         background: isDragging ? 'rgba(var(--accent-color-rgb), 0.05)' : 'var(--bg-canvas)',
         textAlign: 'center',
@@ -513,13 +513,13 @@ const ImportTab = ({
         <div
           style={{
             padding: '12px 16px',
-            borderRadius: '8px',
+            borderRadius: 'var(--radius)',
             background: 'var(--bg-toolbar)',
             border: '1px solid var(--border-color)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <FileText size={16} style={{ color: 'var(--accent-color)' }} />
+            <FileText size={16} style={{ color: 'var(--text-color-light)' }} />
             <span style={{ fontWeight: 600, color: 'var(--text-color)', fontSize: '0.9em' }}>
               {importFileName}
             </span>
@@ -538,7 +538,7 @@ const ImportTab = ({
         {importResult.devices.length > 0 && (
           <div
             style={{
-              borderRadius: '8px',
+              borderRadius: 'var(--radius)',
               border: '1px solid var(--border-color)',
               overflow: 'hidden',
             }}

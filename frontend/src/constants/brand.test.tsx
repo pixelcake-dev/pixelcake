@@ -110,6 +110,7 @@ describe('the interface', () => {
 
     expect(names.length).toBeGreaterThan(3);
     expect(names.filter(name => name !== APP_NAME)).toEqual([]);
-    expect(screen.getByAltText(`${APP_NAME} Icon`)).toBeInTheDocument();
+    // (the symbol alone: on the menu bar, and at the foot of the guide)
+    expect(screen.getAllByAltText(`${APP_NAME} Icon`).length).toBeGreaterThan(0);
   });
 });

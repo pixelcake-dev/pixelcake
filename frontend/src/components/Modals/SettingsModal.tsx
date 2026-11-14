@@ -48,11 +48,11 @@ const SettingsModal = () => {
       fixedContent={
         <>
           {/* Header with Title and Close Button */}
-          <div className="modal-header flex items-center justify-between px-6 pt-6 pb-3 flex-shrink-0">
-            <h3 className="text-lg font-semibold">Impostazioni</h3>
+          <div className="modal-header flex items-center justify-between px-6 pt-5 pb-3 flex-shrink-0">
+            <h3 className="text-base font-semibold tracking-tight">Impostazioni</h3>
             <button
               onClick={handleClose}
-              className="p-1 hover:bg-[var(--bg-canvas)] rounded transition-colors"
+              className="p-1 text-[var(--text-color-light)] hover:text-[var(--text-color)] hover:bg-[var(--bg-hover)] rounded transition-colors"
               aria-label="Close modal"
             >
               <X size={20} />
@@ -60,7 +60,7 @@ const SettingsModal = () => {
           </div>
 
           {/* Tabs */}
-          <div className="settings-tabs px-6 pt-2 pb-3 border-b border-[var(--border-color)]">
+          <div className="settings-tabs px-6 pt-1 border-b border-[var(--border-color)]">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -76,7 +76,7 @@ const SettingsModal = () => {
       footer={
         <div className="modal-actions px-6 pb-6 pt-4">
           <div className="flex items-center justify-center gap-2 w-full">
-            <Logo size={24} />
+            <Logo symbol size={18} />
             <p className="text-sm text-[var(--text-color-light)] italic">«{APP_MOTTO}»</p>
           </div>
         </div>

@@ -171,7 +171,7 @@ describe('layoutDrawing — devices', () => {
       ['mdi:nas', '#222222'],
       ['mdi:monitor', '#111111'],
       // no template for a router here: the icon of its type, the neutral colour
-      ['mdi:router-network', '#5B7C8D'],
+      ['mdi:router-network', '#5E8096'],
       ['x:gone', '#333333'],
     ]);
     // an icon the app does not have gives way to the "unknown" one
@@ -462,13 +462,13 @@ describe('renderDrawingImage — the document', () => {
 
     // the drawing is moved by the margin: the box of the first device starts there
     expect(drawing(doc).getAttribute('transform')).toBe('translate(24 24)');
-    const box = first.querySelectorAll('rect')[1];
+    const box = first.querySelectorAll('rect')[0];
     expect(['x', 'y', 'width', 'height', 'rx'].map(name => box.getAttribute(name))).toEqual([
       '1',
       '1',
       '118',
       '115',
-      '7',
+      '2',
     ]);
     expect(box.getAttribute('fill')).toBe(PALETTES.light.component);
     expect(box.getAttribute('stroke')).toBe(PALETTES.light.border);
@@ -643,7 +643,7 @@ describe('renderDrawingImage — what the user typed', () => {
       ).svg
     );
     const path = deviceGroups(doc)[0].querySelector('g > g path');
-    expect(path?.getAttribute('fill')).toBe('#5B7C8D');
+    expect(path?.getAttribute('fill')).toBe('#5E8096');
     expect(doc.querySelector('[onload]')).toBeNull();
   });
 
@@ -664,7 +664,7 @@ describe('renderDrawingImage — what the user typed', () => {
     expect(fillOf('#A1B2C3')).toBe('#A1B2C3');
     expect(fillOf('rgb(10, 20, 30)')).toBe('rgb(10, 20, 30)');
     expect(fillOf('tomato')).toBe('tomato');
-    expect(fillOf('url(#x)')).toBe('#5B7C8D');
+    expect(fillOf('url(#x)')).toBe('#5E8096');
   });
 });
 
@@ -676,13 +676,13 @@ describe('renderDrawingImage — theme and background', () => {
     const dark = parse(renderDrawingImage(pair(), { theme: 'dark' }).svg);
 
     expect(background(light)?.getAttribute('fill')).toBe('#ffffff');
-    expect(background(dark)?.getAttribute('fill')).toBe('#252525');
+    expect(background(dark)?.getAttribute('fill')).toBe('#111315');
     expect(['width', 'height'].map(n => background(dark)?.getAttribute(n))).toEqual(['168', '465']);
 
     const name = (doc: Document) => deviceGroups(doc)[0].querySelector('text')?.getAttribute('fill');
-    expect(name(light)).toBe('#222222');
-    expect(name(dark)).toBe('#eeeeee');
-    expect(cablePaths(dark)[0].getAttribute('stroke')).toBe('#777777');
+    expect(name(light)).toBe('#22313b');
+    expect(name(dark)).toBe('#f4f6f8');
+    expect(cablePaths(dark)[0].getAttribute('stroke')).toBe('#6f7c86');
   });
 
   it('has no background when asked for none, and is otherwise the same picture', () => {
@@ -819,16 +819,16 @@ describe('renderDrawingImage — a presentation', () => {
     expect(attrs(cablePaths(doc)[0], LINE)).toEqual([MARK_COLORS.stops, '5.5', '8 4', null]);
 
     const [a, b] = deviceGroups(doc);
-    expect(b.querySelectorAll('rect')[1].getAttribute('stroke')).toBe(MARK_COLORS.stops);
+    expect(b.querySelectorAll('rect')[0].getAttribute('stroke')).toBe(MARK_COLORS.stops);
     // the ring around it
-    const ring = b.querySelectorAll('rect')[2];
+    const ring = b.querySelectorAll('rect')[1];
     expect(attrs(ring, ['fill', 'stroke', 'stroke-width', 'stroke-opacity'])).toEqual([
       'none',
       MARK_COLORS.stops,
       '3',
       '0.4',
     ]);
-    expect(a.querySelectorAll('rect')).toHaveLength(2);
+    expect(a.querySelectorAll('rect')).toHaveLength(1);
   });
 
   it('shows a cut cable broken up and red, with its mark instead of its label', () => {
@@ -852,9 +852,9 @@ describe('renderDrawingImage — a presentation', () => {
     expect(texts(drawing(doc).children[1])).toEqual(['1 Gbps']);
 
     const [a, b] = deviceGroups(doc);
-    const box = b.querySelectorAll('rect')[1];
+    const box = b.querySelectorAll('rect')[0];
     expect(attrs(box, ['stroke', 'stroke-dasharray'])).toEqual([MARK_COLORS.failure, '6 4']);
-    expect(b.querySelectorAll('rect')[2].getAttribute('fill')).toBe('url(#pc-hatch)');
+    expect(b.querySelectorAll('rect')[1].getAttribute('fill')).toBe('url(#pc-hatch)');
     expect(doc.querySelector('pattern#pc-hatch')).not.toBeNull();
     // what is inside is greyed out
     const content = b.querySelector('g > g[opacity="0.45"]');
@@ -870,22 +870,26 @@ describe('renderDrawingImage — a presentation', () => {
   });
 
   it('labels the two ends of the question, in the colours of the theme', () => {
+    // the mark: its letters, the colour under them, the colour they are written in
     const badges = (doc: Document) =>
       deviceGroups(doc).map(group => {
-        const text = [...group.querySelectorAll('text')].find(t => t.getAttribute('fill') === '#ffffff');
-        return text ? [text.textContent, text.previousElementSibling?.getAttribute('fill')] : null;
+        // (a device can be called "A" too: the mark is the text set with its letters apart)
+        const text = [...group.querySelectorAll('text')].find(t => t.hasAttribute('letter-spacing'));
+        return text
+          ? [text.textContent, text.previousElementSibling?.getAttribute('fill'), text.getAttribute('fill')]
+          : null;
       });
     const asked = marks({ sourceId: 'a', targetId: 'c' });
 
     expect(badges(presented(asked))).toEqual([
-      ['DA', ACCENTS.light.accent],
+      ['DA', ACCENTS.light.accent, ACCENTS.light.onAccent],
       null,
-      ['A', ACCENTS.light.secondary],
+      ['A', ACCENTS.light.secondary, ACCENTS.light.onSecondary],
     ]);
     expect(badges(presented(asked, { theme: 'dark' }))).toEqual([
-      ['DA', ACCENTS.dark.accent],
+      ['DA', ACCENTS.dark.accent, ACCENTS.dark.onAccent],
       null,
-      ['A', ACCENTS.dark.secondary],
+      ['A', ACCENTS.dark.secondary, ACCENTS.dark.onSecondary],
     ]);
     expect(badges(presented(marks()))).toEqual([null, null, null]);
   });
@@ -1025,7 +1029,8 @@ describe('the numbers repeated from the style sheet', () => {
     expect(value('.network-device', 'border-radius')).toBe(`${m.radius}px`);
     expect(value('.network-device', 'min-width')).toBe(`${m.minWidth}px`);
     expect(value('.network-device', 'background-color')).toBe('var(--bg-component)');
-    expect(value('.network-device', 'box-shadow')).toBe('0 3px 6px var(--shadow-color)');
+    // flat on the page: a border, no shadow, and the picture draws none
+    expect(value('.network-device', 'box-shadow')).toBe('none');
     expect(value('.device-icon', 'margin-bottom')).toBe(`${m.iconGap}px`);
     expect(value('.device-ip', 'margin-top')).toBe(`${m.ipGap}px`);
     // the address: 0.85 of the 0.9 em of the device, on the 16 px of the page
@@ -1053,7 +1058,14 @@ describe('the numbers repeated from the style sheet', () => {
       expect(hex(value(selector, '--text-color'))).toBe(palette.text);
       expect(hex(value(selector, '--text-color-light'))).toBe(palette.textLight);
       expect(hex(value(selector, '--line-color'))).toBe(palette.line);
-      expect(value(selector, '--shadow-color')).toBe(`rgba(0, 0, 0, ${palette.shadow})`);
+      // the label of a cable: on screen it takes these four from the theme by name
+      // (see the test of the colours of the interface), the picture repeats them
+      expect(palette.pillFill).toBe(palette.canvas);
+      expect(palette.pillBorder).toBe(palette.border);
+      expect(palette.pillStrong).toBe(palette.text);
+      expect(palette.pillSoft).toBe(palette.textLight);
+      // and the address under the name of a device
+      expect(palette.address).toBe(palette.textLight);
     };
     check(':root', PALETTES.light);
     check('.dark', PALETTES.dark);
@@ -1068,9 +1080,12 @@ describe('the numbers repeated from the style sheet', () => {
   });
 
   it('the app, in light and in dark, has the accents of the picture', () => {
-    const check = (selector: string, colors: { accent: string; secondary: string }) => {
+    const check = (selector: string, colors: (typeof ACCENTS)['light']) => {
       expect(value(selector, '--accent-color')).toBe(colors.accent);
       expect(value(selector, '--secondary-color')).toBe(colors.secondary);
+      // what is written on each of the two can be read on it
+      expect(value(selector, '--on-accent')).toBe(colors.onAccent);
+      expect(value(selector, '--on-secondary')).toBe(colors.onSecondary);
     };
     check(':root', ACCENTS.light);
     check('.dark', ACCENTS.dark);
@@ -1078,6 +1093,8 @@ describe('the numbers repeated from the style sheet', () => {
     expect(css).not.toContain('data-theme');
     expect(value('.device-role-source', 'background-color')).toBe('var(--accent-color)');
     expect(value('.device-role-target', 'background-color')).toBe('var(--secondary-color)');
+    expect(value('.device-role', 'color')).toBe('var(--on-accent)');
+    expect(value('.device-role-target', 'color')).toBe('var(--on-secondary)');
   });
 
   it('a failure and a stop have the colours of the picture', () => {

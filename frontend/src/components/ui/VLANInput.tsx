@@ -72,7 +72,7 @@ export const VLANInput = ({ label, value, onChange, placeholder = 'es. 10, 20, 3
       <div
         style={{
           border: '1px solid var(--border-color)',
-          borderRadius: '6px',
+          borderRadius: 'var(--radius)',
           padding: '6px 8px',
           minHeight: '38px',
           display: 'flex',
@@ -93,9 +93,10 @@ export const VLANInput = ({ label, value, onChange, placeholder = 'es. 10, 20, 3
               alignItems: 'center',
               gap: '4px',
               padding: '2px 8px',
-              backgroundColor: 'var(--accent-color)',
-              color: 'white',
-              borderRadius: '4px',
+              backgroundColor: 'var(--bg-component)',
+              color: 'var(--text-color)',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-small)',
               fontSize: '13px',
               fontWeight: 500,
             }}
@@ -149,7 +150,7 @@ export const VLANInput = ({ label, value, onChange, placeholder = 'es. 10, 20, 3
 
       {/* Error Message */}
       {error && (
-        <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>
+        <p style={{ color: 'var(--danger-color)', fontSize: '12px', marginTop: '4px' }}>
           {error}
         </p>
       )}

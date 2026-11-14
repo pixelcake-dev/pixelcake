@@ -70,7 +70,8 @@ describe('SimulationPanel', () => {
     loadSample();
     render(<SimulationPanel />);
 
-    expect(start().className).toContain('bg-[var(--accent-color)]');
+    // (the main button of the interface is a block of ink)
+    expect(start().className).toContain('bg-[var(--text-color)]');
     expect(start().className).toContain('w-full');
     expect(start().className).not.toContain('sidebar-panel-item');
   });

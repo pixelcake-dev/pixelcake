@@ -27,7 +27,7 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
     name: '',
     type: '',
     icon: '',
-    color: '#5B7C8D',
+    color: '#5E8096',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -46,7 +46,7 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
         name: '',
         type: '',
         icon: '',
-        color: '#5B7C8D',
+        color: '#5E8096',
       });
     }
     setErrors({});
@@ -134,7 +134,7 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
       name: '',
       type: '',
       icon: '',
-      color: '#5B7C8D',
+      color: '#5E8096',
     });
     setErrors({});
     onClose();
@@ -173,7 +173,7 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
             size="md"
             autoFocus
           />
-          {errors.name && <span className="text-sm text-red-500">{errors.name}</span>}
+          {errors.name && <span className="text-sm text-[var(--danger-color)]">{errors.name}</span>}
         </div>
 
         {/* Tipo Base */}
@@ -197,7 +197,7 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
             <option value="Database">Database</option>
             <option value="Cloud">Cloud</option>
           </Select>
-          {errors.type && <span className="text-sm text-red-500">{errors.type}</span>}
+          {errors.type && <span className="text-sm text-[var(--danger-color)]">{errors.type}</span>}
           {isEditMode && (
             <span className="text-xs text-[var(--text-color-light)] mt-1">
               Il tipo non può essere modificato per evitare problemi con i dispositivi esistenti
@@ -221,7 +221,7 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
             <label className="block text-sm font-medium text-[var(--text-color-light)] mb-1.5">
               Preview
             </label>
-            <div className="w-12 h-12 flex items-center justify-center bg-[var(--accent-color-light)] rounded-lg border border-[var(--border-color)]">
+            <div className="w-12 h-12 flex items-center justify-center bg-[var(--bg-component)] rounded-lg border border-[var(--border-color)]">
               {formData.icon && (
                 <Icon
                   icon={formData.icon}
@@ -250,7 +250,7 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
               type="text"
               value={formData.color}
               onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-              placeholder="#5B7C8D"
+              placeholder="#5E8096"
               size="xs"
               className="flex-1"
             />

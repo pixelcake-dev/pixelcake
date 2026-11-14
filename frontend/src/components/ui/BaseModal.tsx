@@ -177,8 +177,8 @@ export const BaseModal: React.FC<BaseModalProps> = ({
               {...props}
               style={{
                 ...style,
-                backgroundColor: 'var(--accent-color)',
-                borderRadius: '6px',
+                backgroundColor: 'var(--scroll-thumb)',
+                borderRadius: 'var(--radius)',
                 cursor: 'pointer',
                 border: '2px solid transparent',
                 backgroundClip: 'padding-box',
@@ -224,8 +224,8 @@ export const BaseModal: React.FC<BaseModalProps> = ({
             {...props}
             style={{
               ...style,
-              backgroundColor: 'var(--accent-color)',
-              borderRadius: '6px',
+              backgroundColor: 'var(--scroll-thumb)',
+              borderRadius: 'var(--radius)',
               cursor: 'pointer',
               border: '2px solid transparent',
               backgroundClip: 'padding-box',
@@ -270,12 +270,12 @@ export const BaseModal: React.FC<BaseModalProps> = ({
       >
         {/* Header - Fixed */}
         {!header && (
-          <div className="modal-header flex items-center justify-between px-6 pt-6 pb-3 flex-shrink-0">
-            <h3 className="text-lg font-semibold">{title}</h3>
+          <div className="modal-header flex items-center justify-between px-6 pt-5 pb-3 flex-shrink-0">
+            <h3 className="text-base font-semibold tracking-tight">{title}</h3>
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="p-1 hover:bg-[var(--bg-canvas)] rounded transition-colors"
+                className="p-1 text-[var(--text-color-light)] hover:text-[var(--text-color)] hover:bg-[var(--bg-hover)] rounded transition-colors"
                 aria-label="Close modal"
               >
                 <X size={20} />

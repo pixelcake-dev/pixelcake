@@ -48,22 +48,6 @@ const edgeTypes = {
   particle: ParticleEdge, // Particle animations with CSS offset-path
 };
 
-// Colour of a device on the small map, by device type
-const MINI_MAP_COLORS: Record<string, string> = {
-  PC: '#3b82f6', // Blue
-  Switch: '#10b981', // Green
-  Router: '#f59e0b', // Amber
-  Server: '#8b5cf6', // Violet
-  Firewall: '#ef4444', // Red
-  AccessPoint: '#06b6d4', // Cyan
-  LoadBalancer: '#ec4899', // Pink
-  Database: '#f97316', // Orange
-  Cloud: '#6366f1', // Indigo
-};
-
-const miniMapColor = (node: Node): string =>
-  MINI_MAP_COLORS[(node.data as NetworkDeviceType).type] || '#6b7280'; // Gray fallback
-
 /**
  * True once React Flow knows the size of every device on screen, which is
  * what fitting the view needs. The sizes are lost, and measured again a
@@ -558,7 +542,8 @@ const NetworkCanvas = () => {
         {/* The small map is a tool for finding one's way while building. Its
             background and the veil outside the view follow the theme: they
             are in index.css, like those of the zoom buttons and the credit */}
-        {!presenting && <MiniMap nodeColor={miniMapColor} />}
+        {/* (the devices on the small map take their one colour from the style sheet) */}
+        {!presenting && <MiniMap />}
         {/* Packet Animation Logic */}
         <PacketAnimation />
       </ReactFlow>

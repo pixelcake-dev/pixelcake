@@ -137,7 +137,7 @@ describe(`the guide — "${TITLE}"`, () => {
     );
     const borders = [...picture.querySelectorAll('svg > g > g')]
       .slice(2)
-      .map((group) => group.querySelectorAll('rect')[1].getAttribute('stroke'));
+      .map((group) => group.querySelectorAll('rect')[0].getAttribute('stroke'));
     expect(borders).toHaveLength(12);
     expect(new Set(borders).size).toBe(1);
     // a connection point would be a circle on the device (icons have circles of their own, inside)

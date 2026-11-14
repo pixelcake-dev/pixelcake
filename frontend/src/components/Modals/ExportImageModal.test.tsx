@@ -326,7 +326,7 @@ describe('ExportImageModal — the choices', () => {
       .slice(2)
       .map((group) => [
         group.querySelector('text')?.textContent,
-        Number(group.querySelectorAll('rect')[1].getAttribute('width')) + 2,
+        Number(group.querySelectorAll('rect')[0].getAttribute('width')) + 2,
       ]);
     expect(widths).toContainEqual(['R-Sede', 200]);
     expect(widths).toContainEqual(['R-Filiale', 120]);

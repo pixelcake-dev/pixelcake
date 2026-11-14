@@ -574,8 +574,8 @@ const InspectorModal = () => {
                       {...props}
                       style={{
                         ...style,
-                        backgroundColor: 'var(--accent-color)',
-                        borderRadius: '6px',
+                        backgroundColor: 'var(--scroll-thumb)',
+                        borderRadius: 'var(--radius)',
                         cursor: 'pointer',
                         border: '2px solid transparent',
                         backgroundClip: 'padding-box',
@@ -624,8 +624,8 @@ const InspectorModal = () => {
                       {...props}
                       style={{
                         ...style,
-                        backgroundColor: 'var(--accent-color)',
-                        borderRadius: '6px',
+                        backgroundColor: 'var(--scroll-thumb)',
+                        borderRadius: 'var(--radius)',
                         cursor: 'pointer',
                         border: '2px solid transparent',
                         backgroundClip: 'padding-box',
@@ -704,8 +704,8 @@ const InspectorModal = () => {
                       {...props}
                       style={{
                         ...style,
-                        backgroundColor: 'var(--accent-color)',
-                        borderRadius: '6px',
+                        backgroundColor: 'var(--scroll-thumb)',
+                        borderRadius: 'var(--radius)',
                         cursor: 'pointer',
                         border: '2px solid transparent',
                         backgroundClip: 'padding-box',
@@ -757,8 +757,8 @@ const InspectorModal = () => {
                       {...props}
                       style={{
                         ...style,
-                        backgroundColor: 'var(--accent-color)',
-                        borderRadius: '6px',
+                        backgroundColor: 'var(--scroll-thumb)',
+                        borderRadius: 'var(--radius)',
                         cursor: 'pointer',
                         border: '2px solid transparent',
                         backgroundClip: 'padding-box',

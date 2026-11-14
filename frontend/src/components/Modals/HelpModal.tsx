@@ -286,7 +286,7 @@ const AboutRow = ({
   children: ReactNode;
 }) => (
   <div className="flex items-center gap-3">
-    <Icon icon={icon} className="text-[var(--accent-color)] flex-shrink-0" width={24} />
+    <Icon icon={icon} className="text-[var(--text-color-light)] flex-shrink-0" width={24} />
     <div>
       <p className="font-semibold">{title}</p>
       <div className="text-sm text-[var(--text-color-light)]">{children}</div>
@@ -314,7 +314,7 @@ const AboutTab = () => (
           href={GITHUB_REPO}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[var(--accent-color)] hover:underline"
+          className="text-[var(--accent-text)] underline"
         >
           {GITHUB_REPO.replace('https://', '')}
         </a>
@@ -358,11 +358,11 @@ const HelpModal = () => {
       fixedContent={
         <>
           {/* Header with Title and Close Button */}
-          <div className="modal-header flex items-center justify-between px-6 pt-6 pb-3 flex-shrink-0">
-            <h3 className="text-lg font-semibold">Guida</h3>
+          <div className="modal-header flex items-center justify-between px-6 pt-5 pb-3 flex-shrink-0">
+            <h3 className="text-base font-semibold tracking-tight">Guida</h3>
             <button
               onClick={handleClose}
-              className="p-1 hover:bg-[var(--bg-canvas)] rounded transition-colors"
+              className="p-1 text-[var(--text-color-light)] hover:text-[var(--text-color)] hover:bg-[var(--bg-hover)] rounded transition-colors"
               aria-label="Chiudi la guida"
             >
               <X size={20} />
@@ -373,7 +373,7 @@ const HelpModal = () => {
           <div
             role="tablist"
             aria-label="Sezioni della guida"
-            className="settings-tabs px-6 pt-2 pb-3 border-b border-[var(--border-color)]"
+            className="settings-tabs px-6 pt-1 border-b border-[var(--border-color)]"
           >
             {TABS.map(tab => (
               <button
@@ -392,7 +392,7 @@ const HelpModal = () => {
       footer={
         <div className="modal-actions px-6 pb-6 pt-4">
           <div className="flex items-center justify-center gap-2 w-full">
-            <Logo size={24} />
+            <Logo symbol size={18} />
             <p className="text-sm text-[var(--text-color-light)] italic">«{APP_MOTTO}»</p>
           </div>
         </div>

@@ -67,7 +67,7 @@ const DhcpPanel: React.FC<DhcpPanelProps> = ({ deviceId, dhcp, setIn }) => {
                 <code className="font-mono">{pool.pool.start}</code> a{' '}
                 <code className="font-mono">{pool.pool.end}</code>
                 {pool.problem ? (
-                  <span className="block text-red-500" role="alert">
+                  <span className="block text-[var(--danger-color)]" role="alert">
                     Non utilizzabile: {poolProblemLabel(pool.problem, pool.iface, pool.pool)}.
                   </span>
                 ) : (
@@ -126,7 +126,7 @@ const DhcpPanel: React.FC<DhcpPanelProps> = ({ deviceId, dhcp, setIn }) => {
       </section>
 
       {(waiting.length > 0 || rivals.length > 0) && (
-        <section aria-label="Avvisi" className="flex flex-col gap-1 text-red-500">
+        <section aria-label="Avvisi" className="flex flex-col gap-1 text-[var(--danger-color)]">
           {waiting.map((entry) => {
             const device = devices.get(entry.deviceId);
             return (

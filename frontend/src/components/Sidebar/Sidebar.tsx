@@ -89,7 +89,7 @@ const Sidebar = () => {
           active={activeSidebarPanel === 'explorer'}
           onClick={() => handleSectionClick('explorer')}
         >
-          <Files size={28} />
+          <Files size={20} strokeWidth={1.75} />
         </SidebarButton>
 
         <div className="sidebar-divider" />
@@ -100,7 +100,7 @@ const Sidebar = () => {
           active={activeSidebarPanel === 'simulation'}
           onClick={() => handleSectionClick('simulation')}
         >
-          <Zap size={28} style={{ color: '#8b5cf6' }} />
+          <Zap size={20} strokeWidth={1.75} />
         </SidebarButton>
 
         {/* Add Device */}
@@ -109,17 +109,17 @@ const Sidebar = () => {
           active={activeSidebarPanel === 'devices'}
           onClick={() => handleSectionClick('devices')}
         >
-          <Plus size={28} style={{ color: '#3b82f6' }} />
+          <Plus size={20} strokeWidth={1.75} />
         </SidebarButton>
 
         {/* Console */}
         <SidebarButton label="Console" onClick={() => openModal('codeTerminal')}>
-          <Terminal size={28} style={{ color: '#10b981' }} />
+          <Terminal size={20} strokeWidth={1.75} />
         </SidebarButton>
 
         {/* Import/Export */}
         <SidebarButton label="Import/Export" onClick={() => openModal('importExport')}>
-          <ArrowUpDown size={28} style={{ color: '#f59e0b' }} />
+          <ArrowUpDown size={20} strokeWidth={1.75} />
         </SidebarButton>
       </div>
 
@@ -129,7 +129,7 @@ const Sidebar = () => {
           label="Impostazioni"
           onClick={() => (isSettingsOpen ? closeModal('settings') : openModal('settings'))}
         >
-          <Settings size={28} />
+          <Settings size={20} strokeWidth={1.75} />
         </SidebarButton>
       </div>
     </div>

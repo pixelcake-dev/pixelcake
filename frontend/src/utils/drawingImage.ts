@@ -119,7 +119,7 @@ export const DEVICE_METRICS = {
   ipLine: 16,
   ipSize: 12.24,
   minWidth: 120,
-  radius: 8,
+  radius: 3,
   /** How far outside the box the screen hangs a cable (the connection points) */
   handleReach: 12,
 } as const;
@@ -137,10 +137,10 @@ const DETAIL_FONT: FontSpec = { size: 12.5, weight: 400 };
 const HEADING_FONT: FontSpec = { size: 14, weight: 600 };
 const CAPTION_FONT: FontSpec = { size: 12.5, weight: 400 };
 
-const PILL = { line: 16, padX: 8, padY: 4, border: 1, radius: 4 } as const;
+const PILL = { line: 16, padX: 8, padY: 4, border: 1, radius: 3 } as const;
 const CUT_MARK_RADIUS = 11;
 const FALLBACK_ICON = 'mdi:help-circle-outline';
-const FALLBACK_ICON_COLOR = '#5B7C8D';
+const FALLBACK_ICON_COLOR = '#5E8096';
 const FALLBACK_CABLE_WIDTH = 2.5;
 
 /** Colours of presentation mode: the same on both themes */
@@ -159,7 +159,6 @@ export interface Palette {
   /** The address under the name of a device */
   address: string;
   line: string;
-  shadow: number;
   iconOpacity: number;
   pillFill: string;
   pillBorder: string;
@@ -173,46 +172,52 @@ export interface Palette {
 export const PALETTES: Record<ImageTheme, Palette> = {
   light: {
     canvas: '#ffffff',
-    component: '#fff4eb',
-    border: '#dddddd',
-    text: '#222222',
-    textLight: '#888888',
-    address: '#888888',
-    line: '#888888',
-    shadow: 0.1,
+    component: '#f4f6f8',
+    border: '#d5dbe0',
+    text: '#22313b',
+    textLight: '#5c6b76',
+    address: '#5c6b76',
+    line: '#7b8791',
     iconOpacity: 0.95,
     pillFill: '#ffffff',
-    pillBorder: '#d1d5db',
-    pillStrong: '#374151',
-    pillSoft: '#6b7280',
+    pillBorder: '#d5dbe0',
+    pillStrong: '#22313b',
+    pillSoft: '#5c6b76',
     toneOk: '#047857',
     toneKo: '#b91c1c',
     toneUnknown: '#b45309',
   },
   dark: {
-    canvas: '#252525',
-    component: '#444444',
-    border: '#555555',
-    text: '#eeeeee',
-    textLight: '#888888',
-    address: '#9ca3af',
-    line: '#777777',
-    shadow: 0.3,
+    canvas: '#111315',
+    component: '#1c2226',
+    border: '#2a3238',
+    text: '#f4f6f8',
+    textLight: '#93a0aa',
+    address: '#93a0aa',
+    line: '#6f7c86',
     iconOpacity: 0.9,
-    pillFill: '#1f2937',
-    pillBorder: '#4b5563',
-    pillStrong: '#e5e7eb',
-    pillSoft: '#9ca3af',
+    pillFill: '#111315',
+    pillBorder: '#2a3238',
+    pillStrong: '#f4f6f8',
+    pillSoft: '#93a0aa',
     toneOk: '#6ee7b7',
     toneKo: '#fca5a5',
     toneUnknown: '#fcd34d',
   },
 };
 
-/** The two colours of the app, in light and in dark: where the question starts, where it ends */
-export const ACCENTS: Record<ImageTheme, { accent: string; secondary: string }> = {
-  light: { accent: '#5B7C8D', secondary: '#F47920' },
-  dark: { accent: '#F47920', secondary: '#5B7C8D' },
+/** The two colours of the app, in light and in dark: where the question
+ *  starts, where it ends, and the colour of what is written on each */
+export interface Accents {
+  accent: string;
+  secondary: string;
+  onAccent: string;
+  onSecondary: string;
+}
+
+export const ACCENTS: Record<ImageTheme, Accents> = {
+  light: { accent: '#F07D2A', secondary: '#5E8096', onAccent: '#22313b', onSecondary: '#ffffff' },
+  dark: { accent: '#F07D2A', secondary: '#8FB0C6', onAccent: '#22313b', onSecondary: '#111315' },
 };
 
 // ---------- the scene: where everything is ----------
@@ -552,7 +557,7 @@ function iconMarkup(shape: IconShape, color: string, prefix: string): string {
 function deviceSvg(
   device: SceneDevice,
   palette: Palette,
-  accents: { accent: string; secondary: string },
+  accents: Accents,
   iconPrefix: string,
   measureText: TextMeasure
 ): string {
@@ -560,11 +565,6 @@ function deviceSvg(
   const { x, y, width, height } = device.box;
   const centre = x + width / 2;
   const parts: string[] = [];
-
-  // Shadow (a shape of its own: a viewer that cannot blur still draws the box)
-  parts.push(
-    `<rect x="${num(x)}" y="${num(y + 3)}" width="${num(width)}" height="${num(height)}" rx="${m.radius}" fill="#000000" opacity="${palette.shadow}" filter="url(#pc-shadow)"/>`
-  );
 
   const stroke = device.failed
     ? MARK_COLORS.failure
@@ -633,13 +633,13 @@ function deviceSvg(
     const left = x - 6;
     const top = y - 9;
     parts.push(
-      `<rect x="${num(left)}" y="${num(top)}" width="${num(pillWidth)}" height="${pillHeight}" rx="${pillHeight / 2}" fill="${device.role === 'source' ? accents.accent : accents.secondary}"/>`,
+      `<rect x="${num(left)}" y="${num(top)}" width="${num(pillWidth)}" height="${pillHeight}" rx="2" fill="${device.role === 'source' ? accents.accent : accents.secondary}"/>`,
       textElement(
         text,
         left + pillWidth / 2,
         baseline(top, pillHeight, ROLE_FONT.size),
         ROLE_FONT,
-        '#ffffff',
+        device.role === 'source' ? accents.onAccent : accents.onSecondary,
         ` text-anchor="middle" letter-spacing="${num(spacing)}"`
       )
     );
@@ -874,7 +874,6 @@ export function renderDrawingImage(input: DrawingInput, options: ImageOptions): 
     `${SVG_OPEN} width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" font-family="${FONT_FAMILY}" role="img" aria-label="${escapeXml(name)}">`,
     `<title>${escapeXml(name)}</title>`,
     '<defs>',
-    '<filter id="pc-shadow" x="-20%" y="-20%" width="140%" height="150%"><feGaussianBlur stdDeviation="3"/></filter>',
     scene.devices.some(device => device.failed)
       ? `<pattern id="pc-hatch" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="16" fill="${MARK_COLORS.failure}" fill-opacity="0.1"/></pattern>`
       : '',

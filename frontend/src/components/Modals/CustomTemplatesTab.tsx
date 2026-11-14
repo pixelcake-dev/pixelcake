@@ -19,7 +19,7 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
     name: '',
     type: 'Server' as DeviceType,
     icon: 'mdi:server',
-    color: '#5B7C8D',
+    color: '#5E8096',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -47,7 +47,7 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
       name: '',
       type: 'Server',
       icon: 'mdi:server',
-      color: '#5B7C8D',
+      color: '#5E8096',
     });
     setIsCreating(false);
   };

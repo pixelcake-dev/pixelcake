@@ -137,7 +137,7 @@ const RoutesPanel: React.FC<RoutesPanelProps> = ({ device, routes, onChange }) =
                           type="button"
                           aria-label={`Elimina la rotta ${index + 1}`}
                           title="Elimina la rotta"
-                          className="p-1 rounded hover:bg-[var(--bg-canvas)] text-[var(--text-color-light)] hover:text-red-500"
+                          className="p-1 rounded hover:bg-[var(--bg-canvas)] text-[var(--text-color-light)] hover:text-[var(--danger-color)]"
                           onClick={() => onChange(routes.filter((entry) => entry.id !== route.id))}
                         >
                           <Trash2 size={16} />
@@ -146,7 +146,7 @@ const RoutesPanel: React.FC<RoutesPanelProps> = ({ device, routes, onChange }) =
                     </tr>
                     {problem && (
                       <tr>
-                        <td colSpan={4} className="pb-1 text-xs text-red-500" role="alert">
+                        <td colSpan={4} className="pb-1 text-xs text-[var(--danger-color)]" role="alert">
                           {problem}
                         </td>
                       </tr>
@@ -206,7 +206,7 @@ const RoutesPanel: React.FC<RoutesPanelProps> = ({ device, routes, onChange }) =
                   <tr
                     key={`${formatNetwork(entry.network)}-${entry.kind}-${index}`}
                     className={`border-b border-[var(--border-color)] ${
-                      unreachable ? 'text-red-500' : down ? 'opacity-50' : ''
+                      unreachable ? 'text-[var(--danger-color)]' : down ? 'opacity-50' : ''
                     }`}
                   >
                     <td className="py-1 pr-3">{formatNetwork(entry.network)}</td>

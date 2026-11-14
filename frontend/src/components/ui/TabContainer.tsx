@@ -26,8 +26,8 @@ const TabContainer = ({ tabs, defaultTab, className = '' }: TabContainerProps) =
       {/* Tab Headers */}
       <div className="tab-headers" style={{
         display: 'flex',
-        gap: '8px',
-        borderBottom: '2px solid var(--border-color)',
+        gap: '4px',
+        borderBottom: '1px solid var(--border-color)',
         marginBottom: '20px',
       }}>
         {tabs.map((tab) => (
@@ -36,16 +36,16 @@ const TabContainer = ({ tabs, defaultTab, className = '' }: TabContainerProps) =
             className={`tab-header ${activeTab === tab.id ? 'active' : ''}`}
             onClick={() => setActiveTab(tab.id)}
             style={{
-              padding: '10px 20px',
+              padding: '8px 14px',
               border: 'none',
               background: 'transparent',
-              color: activeTab === tab.id ? 'var(--accent-color)' : 'var(--text-color-light)',
+              color: activeTab === tab.id ? 'var(--text-color)' : 'var(--text-color-light)',
               fontWeight: activeTab === tab.id ? 600 : 400,
               fontSize: '14px',
               cursor: 'pointer',
               borderBottom: activeTab === tab.id ? '2px solid var(--accent-color)' : '2px solid transparent',
-              marginBottom: '-2px',
-              transition: 'all 0.2s ease',
+              marginBottom: '-1px',
+              transition: 'color 0.12s ease',
             }}
           >
             {tab.label}

@@ -16,7 +16,7 @@ export const DeviceTypeDisplay = ({ deviceType, label }: DeviceTypeDisplayProps)
 
   // Fallback if template not found
   const icon = template?.icon || 'mdi:help-circle';
-  const color = template?.color || '#5B7C8D';
+  const color = template?.color || '#5E8096';
   const name = template?.name || deviceType;
 
   return (
@@ -30,7 +30,7 @@ export const DeviceTypeDisplay = ({ deviceType, label }: DeviceTypeDisplayProps)
       <div
         style={{
           border: '2px solid var(--border-color)',
-          borderRadius: '8px',
+          borderRadius: 'var(--radius)',
           padding: '12px 16px',
           display: 'flex',
           alignItems: 'center',
@@ -43,7 +43,7 @@ export const DeviceTypeDisplay = ({ deviceType, label }: DeviceTypeDisplayProps)
           style={{
             width: '40px',
             height: '40px',
-            borderRadius: '8px',
+            borderRadius: 'var(--radius)',
             backgroundColor: `${color}20`,
             display: 'flex',
             alignItems: 'center',

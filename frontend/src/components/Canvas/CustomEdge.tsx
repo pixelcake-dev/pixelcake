@@ -273,14 +273,14 @@ const CustomEdge = ({
             className="edge-label nodrag nopan"
             onClick={openCableMenu}
           >
-            <div className="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs shadow-sm">
+            <div className="px-2 py-1 bg-[var(--bg-canvas)] border border-[var(--border-color)] rounded text-xs">
               {data.bandwidth && (
-                <div className="font-semibold text-gray-700 dark:text-gray-200">
+                <div className="font-semibold text-[var(--text-color)]">
                   {data.bandwidth}
                 </div>
               )}
               {data.label && (
-                <div className="text-gray-500 dark:text-gray-400">{data.label}</div>
+                <div className="text-[var(--text-color-light)]">{data.label}</div>
               )}
             </div>
           </div>

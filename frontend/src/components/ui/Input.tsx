@@ -42,7 +42,7 @@ export const Input: React.FC<InputProps> = ({
       )}
       <input
         id={inputId}
-        className={`${widthClass} px-3 py-1.5 bg-[var(--bg-canvas)] border border-[var(--border-color)] rounded-lg text-[var(--text-color)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+        className={`${widthClass} px-3 py-1.5 text-sm bg-[var(--bg-canvas)] border border-[var(--border-color)] rounded-lg text-[var(--text-color)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
         {...props}
       />
     </div>

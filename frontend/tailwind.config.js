@@ -31,12 +31,23 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        sans: ['"Inter Variable"', 'Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
       },
+      // Corners are barely rounded, as in the style sheet (--radius, --radius-small)
+      borderRadius: {
+        sm: '2px',
+        DEFAULT: '3px',
+        md: '4px',
+        lg: '4px',
+        xl: '6px',
+        '2xl': '6px',
+      },
+      // Only what floats over the page keeps a shadow
       boxShadow: {
-        'device': '0 3px 6px rgba(0, 0, 0, 0.1)',
-        'device-hover': '0 8px 20px rgba(0, 0, 0, 0.15)',
-        'modal': '0 5px 20px rgba(0, 0, 0, 0.2)',
+        'device': 'none',
+        'device-hover': 'none',
+        'modal': '0 16px 48px rgba(0, 0, 0, 0.18)',
       },
     },
   },

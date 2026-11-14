@@ -227,8 +227,8 @@ const BulkAddDeviceModal = () => {
                 {...props}
                 style={{
                   ...style,
-                  backgroundColor: 'var(--accent-color)',
-                  borderRadius: '6px',
+                  backgroundColor: 'var(--scroll-thumb)',
+                  borderRadius: 'var(--radius)',
                   cursor: 'pointer',
                   border: '2px solid transparent',
                   backgroundClip: 'padding-box',
@@ -437,7 +437,7 @@ const BulkAddDeviceModal = () => {
         <div className="pt-3 border-t border-[var(--border-color)] flex-shrink-0">
           <div className="flex items-center justify-between text-sm">
             <span className="font-medium text-[var(--text-color)]">Totale Dispositivi:</span>
-            <span className="text-lg font-bold text-[var(--accent-color)]">
+            <span className="text-lg font-bold text-[var(--text-color)]">
               {totalCount}
             </span>
           </div>
@@ -448,7 +448,7 @@ const BulkAddDeviceModal = () => {
           <button
             type="button"
             onClick={handleClose}
-            className="flex-1 px-4 py-2 rounded-md border border-[var(--border-color)] bg-[var(--bg-color-secondary)] text-[var(--text-color)] hover:bg-[var(--bg-color-hover)] transition-colors"
+            className="flex-1 px-4 py-1.5 text-sm font-semibold rounded-md border border-[var(--border-color)] bg-transparent text-[var(--text-color)] hover:border-[var(--text-color)] transition-colors"
           >
             Annulla
           </button>
@@ -456,7 +456,7 @@ const BulkAddDeviceModal = () => {
             type="button"
             onClick={handleAddDevices}
             disabled={totalCount === 0}
-            className="flex-1 px-4 py-2 rounded-md bg-[var(--accent-color)] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity font-medium"
+            className="flex-1 px-4 py-1.5 text-sm font-semibold rounded-md border border-[var(--text-color)] bg-[var(--text-color)] text-[var(--bg-canvas)] enabled:hover:bg-[var(--accent-color)] enabled:hover:border-[var(--accent-color)] enabled:hover:text-[var(--on-accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Aggiungi ({totalCount})
           </button>
@@ -506,7 +506,7 @@ const BulkAddDeviceModal = () => {
         }
 
         .bulk-add-table tbody tr:hover {
-          background-color: var(--bg-color-hover);
+          background-color: var(--bg-hover);
         }
 
         .bulk-add-table td {
@@ -529,22 +529,22 @@ const BulkAddDeviceModal = () => {
           width: 100%;
           padding: 6px 10px;
           border: 1px solid var(--border-color);
-          border-radius: 6px;
+          border-radius: var(--radius);
           background-color: var(--bg-canvas);
           color: var(--text-color);
           font-size: 13px;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
         }
 
         .config-select:hover {
-          border-color: var(--accent-color);
+          border-color: var(--text-color);
         }
 
         .config-select:focus {
           outline: none;
           border-color: var(--accent-color);
-          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+          box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.3);
         }
 
         /* Quantity Cell */
@@ -557,21 +557,21 @@ const BulkAddDeviceModal = () => {
           padding: 6px 10px;
           text-align: center;
           border: 1px solid var(--border-color);
-          border-radius: 6px;
+          border-radius: var(--radius);
           background-color: var(--bg-canvas);
           color: var(--text-color);
           font-size: 14px;
-          transition: all 0.2s ease;
+          transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
         }
 
         .quantity-input:hover {
-          border-color: var(--accent-color);
+          border-color: var(--text-color);
         }
 
         .quantity-input:focus {
           outline: none;
           border-color: var(--accent-color);
-          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+          box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.3);
         }
 
         /* Actions Cell */
@@ -582,20 +582,20 @@ const BulkAddDeviceModal = () => {
         .remove-btn {
           padding: 6px;
           border: 1px solid var(--border-color);
-          border-radius: 6px;
+          border-radius: var(--radius);
           background-color: transparent;
           color: var(--text-color-light);
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
           display: inline-flex;
           align-items: center;
           justify-content: center;
         }
 
         .remove-btn:hover {
-          background-color: #ef4444;
+          background-color: var(--danger-color);
           color: white;
-          border-color: #ef4444;
+          border-color: var(--danger-color);
         }
 
         /* Controls Cell */
@@ -612,20 +612,20 @@ const BulkAddDeviceModal = () => {
         .quantity-btn {
           padding: 6px 10px;
           border: 1px solid var(--border-color);
-          border-radius: 6px;
+          border-radius: var(--radius);
           background-color: var(--bg-canvas);
           color: var(--text-color);
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
           display: inline-flex;
           align-items: center;
           justify-content: center;
         }
 
         .quantity-btn:hover:not(:disabled) {
-          background-color: var(--bg-color-hover);
-          border-color: var(--accent-color);
-          color: var(--accent-color);
+          background-color: var(--bg-hover);
+          border-color: var(--text-color);
+          color: var(--text-color);
         }
 
         .quantity-btn:disabled {
@@ -646,20 +646,20 @@ const BulkAddDeviceModal = () => {
           gap: 8px;
           padding: 10px 16px;
           border: 1px dashed var(--border-color);
-          border-radius: 8px;
+          border-radius: var(--radius);
           background-color: transparent;
           color: var(--text-color-light);
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
           width: 100%;
           font-size: 13px;
           font-weight: 500;
         }
 
         .add-row-btn:hover {
-          border-color: var(--accent-color);
-          color: var(--accent-color);
-          background-color: rgba(59, 130, 246, 0.05);
+          border-color: var(--text-color);
+          color: var(--text-color);
+          background-color: var(--bg-hover);
         }
 
         /* Add Menu Dropdown */
@@ -671,8 +671,8 @@ const BulkAddDeviceModal = () => {
           min-width: 200px;
           background-color: var(--bg-menu);
           border: 1px solid var(--border-color);
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          border-radius: var(--radius);
+          box-shadow: 0 8px 24px var(--shadow-color);
           z-index: 10;
           overflow: hidden;
         }
@@ -688,14 +688,14 @@ const BulkAddDeviceModal = () => {
           color: var(--text-color);
           text-align: left;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
           font-size: 14px;
           font-weight: 500;
         }
 
         .add-menu-item:hover {
-          background-color: var(--bg-color-hover);
-          color: var(--accent-color);
+          background-color: var(--bg-hover);
+          color: var(--text-color);
         }
 
         .add-menu-item:not(:last-child) {

@@ -68,7 +68,7 @@ const NetworkDevice = memo(({ data, id }: NodeProps<NetworkDeviceData>) => {
 
   // Fallback to DEVICE_ICONS if template not found (backward compatibility)
   const deviceIcon = template?.icon || DEVICE_ICONS[data.type] || 'mdi:help-circle-outline';
-  const deviceColor = template?.color || '#5B7C8D';
+  const deviceColor = template?.color || '#5E8096';
 
   // Magnification logic
   const isMagnified = magnifiedDeviceTypes.includes(data.type);
@@ -185,7 +185,7 @@ const NetworkDevice = memo(({ data, id }: NodeProps<NetworkDeviceData>) => {
         <span className="device-name font-semibold text-sm">
           {data.label}
         </span>
-        <span className="device-ip text-xs text-gray-500 dark:text-gray-400 mt-1">
+        <span className="device-ip text-xs mt-1">
           {data.address ?? data.ip}
         </span>
       </div>

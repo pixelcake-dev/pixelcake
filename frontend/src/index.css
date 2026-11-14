@@ -3,69 +3,100 @@
 @tailwind utilities;
 
 :root {
-  --bg-page: #faf6f2;
+  /* The neutrals lean to the slate of the logo: white and ice white for the
+     surfaces, graphite for the text. Never to cream. */
+  --bg-page: #f4f6f8;
   --bg-canvas: #ffffff;
-  --bg-toolbar: #fefdfb;
-  --bg-menu: #fefdfb;
-  --bg-sidebar: #f9f6f3;
-  --bg-component: #fff4eb;
-  --bg-modal-backdrop: rgba(0, 0, 0, 0.4);
-  --text-color: #222;
-  --text-color-light: #888;
-  --border-color: #ddd;
-  --danger-color: #ff3b30;
+  --bg-toolbar: #ffffff;
+  --bg-menu: #ffffff;
+  --bg-sidebar: #ffffff;
+  --bg-component: #f4f6f8;
+  /* What is under the pointer: a flat grey, nothing that glows or moves */
+  --bg-hover: #eceff2;
+  --bg-modal-backdrop: rgba(11, 11, 11, 0.4);
+  --text-color: #22313b;
+  --text-color-light: #5c6b76;
+  --border-color: #d5dbe0;
+  --danger-color: #d92d20; /* (dark enough to be read as text on white) */
   --danger-color-light: #ffe5e3;
-  --line-color: #888;
-  --packet-color-default: #ff4500;
-  --shadow-color: rgba(0, 0, 0, 0.1);
+  --line-color: #7b8791;
+  --scroll-thumb: #c3ccd3;
+  --packet-color-default: #f07d2a;
+  --shadow-color: rgba(0, 0, 0, 0.12);
 
-  /* The two colours of the logo. In light the slate leads and the orange
-     seconds it; in dark it is the other way round */
-  --accent-color: #5B7C8D;
-  --accent-color-light: #e8f0f3;
-  --accent-color-rgb: 91, 124, 141; /* RGB values for rgba() */
-  --secondary-color: #F47920;
-  --connector-color: #5B7C8D;
+  /* Corners are barely rounded: one size for what one presses or fills in,
+     a smaller one for labels and marks */
+  --radius: 4px;
+  --radius-small: 2px;
+
+  /* The colours of the logo, each with one job. The orange marks a state:
+     what is selected, where the focus is, where the packet is. The slate is
+     for coloured text and for icons. What one presses to go on is a block
+     of ink, as on the site. */
+  --accent-color: #F07D2A;
+  --accent-color-light: #fdf1e7;
+  --accent-color-rgb: 240, 125, 42; /* RGB values for rgba() */
+  --on-accent: #22313b; /* text on the orange */
+  --accent-text: #4a6b7f; /* a link, an icon: the slate, dark enough to read on white */
+  --secondary-color: #5E8096;
+  --on-secondary: #ffffff;
+  --connector-color: #F07D2A;
+
+  /* It works, it is a trunk */
+  --ok-color: #1f8a4c;
+  --ok-color-rgb: 31, 138, 76;
+  --trunk-color: #6d5bb8;
+  --trunk-color-rgb: 109, 91, 184;
 
   /* Terminal Colors (Light Mode) */
   --terminal-bg: #ffffff;
-  --terminal-text: #222;
-  --terminal-text-muted: #888;
-  --terminal-header-bg: #f5f5f5;
-  --terminal-title-color: #666;
-  --terminal-border: #ddd;
+  --terminal-text: #22313b;
+  --terminal-text-muted: #5c6b76;
+  --terminal-header-bg: #f4f6f8;
+  --terminal-title-color: #5c6b76;
+  --terminal-border: #d5dbe0;
 }
 
 .dark {
-  --bg-page: #1a1a1a;
-  --bg-canvas: #252525;
-  --bg-toolbar: #333;
-  --bg-menu: #3a3a3a;
-  --bg-sidebar: #2a2a2a;
-  --bg-component: #444;
+  --bg-page: #0b0b0b;
+  --bg-canvas: #111315;
+  --bg-toolbar: #0f1113;
+  --bg-menu: #171b1e;
+  --bg-sidebar: #0f1113;
+  --bg-component: #1c2226;
+  --bg-hover: #20272c;
   --bg-modal-backdrop: rgba(0, 0, 0, 0.6);
-  --text-color: #eee;
-  --text-color-light: #888;
-  --border-color: #555;
+  --text-color: #f4f6f8;
+  --text-color-light: #93a0aa;
+  --border-color: #2a3238;
   --danger-color: #ff453a;
   --danger-color-light: #553333;
-  --line-color: #777;
-  --packet-color-default: #ff6a00;
-  --shadow-color: rgba(0, 0, 0, 0.3);
+  --line-color: #6f7c86;
+  --scroll-thumb: #3a444c;
+  --packet-color-default: #f07d2a;
+  --shadow-color: rgba(0, 0, 0, 0.45);
 
-  --accent-color: #F47920;
-  --accent-color-light: #3d2814;
-  --accent-color-rgb: 244, 121, 32; /* RGB values for rgba() */
-  --secondary-color: #5B7C8D;
-  --connector-color: #F47920;
+  --accent-color: #F07D2A;
+  --accent-color-light: #3a2413;
+  --accent-color-rgb: 240, 125, 42; /* RGB values for rgba() */
+  --on-accent: #22313b;
+  --accent-text: #8FB0C6;
+  --secondary-color: #8FB0C6;
+  --on-secondary: #111315;
+  --connector-color: #F07D2A;
+
+  --ok-color: #4cc38a;
+  --ok-color-rgb: 76, 195, 138;
+  --trunk-color: #a595e6;
+  --trunk-color-rgb: 165, 149, 230;
 
   /* Terminal Colors (Dark Mode) */
-  --terminal-bg: #1e1e1e;
-  --terminal-text: #d4d4d4;
-  --terminal-text-muted: #888;
-  --terminal-header-bg: #2d2d2d;
-  --terminal-title-color: #999;
-  --terminal-border: #444;
+  --terminal-bg: #111315;
+  --terminal-text: #dde3e8;
+  --terminal-text-muted: #808d97;
+  --terminal-header-bg: #171b1e;
+  --terminal-title-color: #93a0aa;
+  --terminal-border: #2a3238;
 }
 
 * {
@@ -80,8 +111,14 @@ html, body {
   overflow: hidden;
   background-color: var(--bg-page);
   color: var(--text-color);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Ticks and choices take the colour of the theme, not the blue of the browser */
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--accent-color);
 }
 
 #root {
@@ -122,8 +159,8 @@ html, body {
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb {
-  background-color: var(--accent-color);
-  border-radius: 6px;
+  background-color: var(--scroll-thumb);
+  border-radius: var(--radius);
   border: 2px solid transparent;
   background-clip: padding-box;
   cursor: pointer;
@@ -144,8 +181,8 @@ html, body {
 }
 
 .sidebar-panel-content::-webkit-scrollbar-thumb {
-  background-color: var(--accent-color);
-  border-radius: 6px;
+  background-color: var(--scroll-thumb);
+  border-radius: var(--radius);
   border: 2px solid transparent;
   background-clip: padding-box;
   cursor: pointer;
@@ -182,8 +219,8 @@ html, body {
 }
 
 .template-content::-webkit-scrollbar-thumb {
-  background-color: var(--accent-color);
-  border-radius: 6px;
+  background-color: var(--scroll-thumb);
+  border-radius: var(--radius);
   border: 2px solid transparent;
   background-clip: padding-box;
   cursor: pointer;
@@ -219,8 +256,7 @@ html, body {
    this one and gives them fixed light colours, with one class in each
    selector: the ancestor in front of these makes them win */
 .react-flow .react-flow__controls {
-  border: 1px solid var(--border-color);
-  box-shadow: 0 0 2px 1px var(--shadow-color);
+  box-shadow: 0 0 0 1px var(--border-color);
 }
 
 .react-flow .react-flow__controls-button {
@@ -238,7 +274,7 @@ html, body {
 }
 
 .react-flow .react-flow__controls-button:hover {
-  background: var(--accent-color-light);
+  background: var(--bg-hover);
 }
 
 .react-flow .react-flow__controls-button:hover svg {
@@ -249,6 +285,12 @@ html, body {
   background-color: var(--bg-toolbar);
   border: 1px solid var(--border-color);
 }
+/* The devices on the small map: one grey, the map is for finding one's place */
+.react-flow .react-flow__minimap-node {
+  fill: var(--line-color);
+  stroke: none;
+}
+
 
 /* The veil over what is outside the view: the view itself stays clear */
 .react-flow .react-flow__minimap-mask {
@@ -276,8 +318,8 @@ html, body {
   padding: 10px;
   background-color: var(--bg-component);
   border: 2px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: 0 3px 6px var(--shadow-color);
+  border-radius: 3px;
+  box-shadow: none;
   font-size: 0.9em;
   min-width: 120px;
   text-align: center;
@@ -285,7 +327,7 @@ html, body {
 }
 
 .react-flow__node.dragging .network-device {
-  box-shadow: 0 8px 20px var(--shadow-color);
+  box-shadow: 0 6px 16px var(--shadow-color);
   border-color: var(--accent-color);
 }
 
@@ -303,7 +345,7 @@ html, body {
 }
 
 .dark .device-icon {
-  color: #7B9CAD;
+  color: var(--secondary-color);
   opacity: 0.9;
 }
 
@@ -360,14 +402,14 @@ html, body {
 }
 
 
-/* Yellow color during React Flow drag-and-drop mode */
-/* Using body class added by onConnectStart/onConnectEnd */
+/* While a cable is being dragged every point it can land on is filled with
+   the accent (the class on the body is added by onConnectStart/onConnectEnd) */
 body.react-flow-connecting .connect-point::after {
   opacity: 1 !important;
-  background-color: #fbbf24 !important;
-  border-color: #f59e0b !important;
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.6) !important;
-  transform: translate(-50%, -50%) scale(1.3) !important;
+  background-color: var(--accent-color) !important;
+  border-color: var(--bg-canvas) !important;
+  box-shadow: none !important;
+  transform: translate(-50%, -50%) scale(1.25) !important;
   transition: none !important;
 }
 
@@ -375,10 +417,10 @@ body.react-flow-connecting .connect-point::after {
 .react-flow.connecting .connect-point::after,
 .react-flow .react-flow__node.connecting .connect-point::after {
   opacity: 1 !important;
-  background-color: #fbbf24 !important;
-  border-color: #f59e0b !important;
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.6) !important;
-  transform: translate(-50%, -50%) scale(1.3) !important;
+  background-color: var(--accent-color) !important;
+  border-color: var(--bg-canvas) !important;
+  box-shadow: none !important;
+  transform: translate(-50%, -50%) scale(1.25) !important;
   transition: none !important;
 }
 
@@ -445,7 +487,7 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   background-color: var(--bg-toolbar);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
-  font-size: 1em;
+  font-size: 14px;
   z-index: 200; /* Sopra sidebar (100) per permettere ai dropdown di apparire sopra */
   height: 44px;
   position: relative; /* the name of the project is centred on it */
@@ -468,10 +510,10 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   max-width: calc(100vw - 640px);
   padding: 4px 10px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: transparent;
   color: var(--text-color);
-  font-size: 0.9em;
+  font-size: 1em;
   cursor: pointer;
 }
 
@@ -498,7 +540,7 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
 }
 
 .topbar-project:hover .topbar-project-name {
-  color: var(--accent-color);
+  color: var(--accent-text);
 }
 
 @media (max-width: 800px) {
@@ -509,36 +551,15 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
 
 .menu-item {
   position: relative;
-  padding: 8px 10px;
+  padding: 6px 10px;
   cursor: default;
   user-select: none;
-  border-radius: 6px;
-  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  border-radius: var(--radius);
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
-/* Top Menu hover - Light Mode: Glassmorphism subtle */
-:not(.dark) .menu-item:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(var(--accent-color-rgb), 0.08) 0%,
-    rgba(var(--accent-color-rgb), 0.12) 100%
-  );
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  color: var(--accent-color);
-  box-shadow:
-    0 2px 6px rgba(var(--accent-color-rgb), 0.12),
-    0 0 0 1px rgba(var(--accent-color-rgb), 0.08);
-}
-
-/* Top Menu hover - Dark Mode: Glow subtle */
-.dark .menu-item:hover {
-  background: rgba(var(--accent-color-rgb), 0.12);
-  color: var(--accent-color);
-  box-shadow:
-    0 0 12px rgba(var(--accent-color-rgb), 0.25),
-    0 2px 6px rgba(var(--accent-color-rgb), 0.15);
-  text-shadow: 0 0 8px rgba(var(--accent-color-rgb), 0.3);
+.menu-item:hover {
+  background-color: var(--bg-hover);
 }
 
 .dropdown-content {
@@ -549,10 +570,10 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   min-width: 220px;
   background-color: var(--bg-menu);
   border: 1px solid var(--border-color);
-  border-radius: 0 0 8px 8px;
-  box-shadow: 0 4px 12px var(--shadow-color);
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: 0 8px 24px var(--shadow-color);
   z-index: 10000; /* Altissimo, sicuramente sopra tutto tranne modali */
-  padding: 5px;
+  padding: 4px;
 }
 
 .menu-item:hover .dropdown-content {
@@ -566,37 +587,15 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
 }
 
 .dropdown-content li {
-  padding: 10px 15px;
+  padding: 7px 12px;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: var(--radius-small);
   white-space: nowrap;
-  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
-/* Dropdown hover - Light Mode: Gradient + Dynamic Shadow */
-:not(.dark) .dropdown-content li:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(var(--accent-color-rgb), 0.1) 0%,
-    rgba(var(--accent-color-rgb), 0.14) 100%
-  );
-  color: var(--accent-color);
-  box-shadow:
-    0 3px 8px rgba(var(--accent-color-rgb), 0.15),
-    0 1px 3px rgba(var(--accent-color-rgb), 0.1),
-    inset 0 0 0 1px rgba(var(--accent-color-rgb), 0.1);
-  transform: translateX(2px);
-}
-
-/* Dropdown hover - Dark Mode: Glow + Border */
-.dark .dropdown-content li:hover {
-  background: rgba(var(--accent-color-rgb), 0.15);
-  color: var(--accent-color);
-  box-shadow:
-    0 0 10px rgba(var(--accent-color-rgb), 0.3),
-    0 2px 6px rgba(var(--accent-color-rgb), 0.2),
-    inset 0 0 0 1px rgba(var(--accent-color-rgb), 0.2);
-  transform: scale(1.01) translateX(1px);
+.dropdown-content li:hover {
+  background-color: var(--bg-hover);
 }
 
 /* Dropdown item - Disabled state */
@@ -634,10 +633,10 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   min-width: 200px;
   background-color: var(--bg-menu);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px var(--shadow-color);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px var(--shadow-color);
   z-index: 102;
-  padding: 5px;
+  padding: 4px;
 }
 
 .dropdown-content li:hover > .nested-dropdown {
@@ -673,38 +672,19 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
 }
 
 .device-card {
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
   padding: 20px 16px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
   text-align: center;
   background-color: var(--bg-canvas);
 }
 
 /* Device card hover */
-:not(.dark) .device-card:hover {
-  border-color: var(--accent-color);
-  background: linear-gradient(
-    135deg,
-    rgba(var(--accent-color-rgb), 0.08) 0%,
-    rgba(var(--accent-color-rgb), 0.12) 100%
-  );
-  transform: translateY(-3px);
-  box-shadow:
-    0 6px 16px rgba(var(--accent-color-rgb), 0.2),
-    0 2px 6px rgba(var(--accent-color-rgb), 0.1),
-    inset 0 0 0 1px rgba(var(--accent-color-rgb), 0.1);
-}
-
-.dark .device-card:hover {
-  border-color: var(--accent-color);
-  background: rgba(var(--accent-color-rgb), 0.12);
-  transform: translateY(-3px) scale(1.01);
-  box-shadow:
-    0 0 20px rgba(var(--accent-color-rgb), 0.3),
-    0 6px 16px rgba(var(--accent-color-rgb), 0.2),
-    inset 0 0 0 1px rgba(var(--accent-color-rgb), 0.15);
+.device-card:hover {
+  border-color: var(--text-color);
+  background-color: var(--bg-hover);
 }
 
 .device-card-icon {
@@ -712,7 +692,7 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   justify-content: center;
   align-items: center;
   margin-bottom: 12px;
-  color: var(--accent-color);
+  color: var(--accent-text);
 }
 
 .device-card-name {
@@ -728,9 +708,9 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   line-height: 1.3;
 }
 
-/* Sidebar (VSCode-style) */
+/* Sidebar: a column of icons in one colour, the one that is open has the mark */
 .sidebar {
-  width: 52px;
+  width: 48px;
   height: 100%;
   background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
@@ -756,71 +736,30 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
 }
 
 .sidebar-icon {
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px;
+  padding: 0;
   background: transparent;
   border: none;
-  border-left: 3px solid transparent;
+  border-left: 2px solid transparent;
+  border-right: 2px solid transparent;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
   color: var(--text-color-light);
 }
 
-/* Sidebar hover - Light Mode: Glassmorphism + Gradient Shadow */
-:not(.dark) .sidebar-icon:hover:not(:disabled) {
-  background: linear-gradient(
-    135deg,
-    rgba(var(--accent-color-rgb), 0.08) 0%,
-    rgba(var(--accent-color-rgb), 0.12) 100%
-  );
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-left-color: var(--accent-color);
-  box-shadow:
-    0 2px 8px rgba(var(--accent-color-rgb), 0.15),
-    0 0 0 1px rgba(var(--accent-color-rgb), 0.1),
-    inset -1px 0 0 0 rgba(var(--accent-color-rgb), 0.2);
-  transform: translateX(2px);
-  color: var(--accent-color);
+.sidebar-icon:hover:not(:disabled) {
+  background-color: var(--bg-hover);
+  color: var(--text-color);
 }
 
-/* Sidebar hover - Dark Mode: Glow + Scale */
-.dark .sidebar-icon:hover:not(:disabled) {
-  background: rgba(var(--accent-color-rgb), 0.15);
+/* The panel that is open */
+.sidebar-icon.active {
   border-left-color: var(--accent-color);
-  box-shadow:
-    0 0 16px rgba(var(--accent-color-rgb), 0.3),
-    0 0 8px rgba(var(--accent-color-rgb), 0.4),
-    inset -2px 0 8px rgba(var(--accent-color-rgb), 0.2);
-  transform: scale(1.02) translateX(1px);
-  color: var(--accent-color);
-}
-
-/* Sidebar active state - matches hover effect */
-:not(.dark) .sidebar-icon.active {
-  background: linear-gradient(
-    135deg,
-    rgba(var(--accent-color-rgb), 0.12) 0%,
-    rgba(var(--accent-color-rgb), 0.16) 100%
-  );
-  border-left-color: var(--accent-color);
-  box-shadow:
-    0 2px 8px rgba(var(--accent-color-rgb), 0.2),
-    inset -1px 0 0 0 rgba(var(--accent-color-rgb), 0.3);
-  color: var(--accent-color);
-}
-
-.dark .sidebar-icon.active {
-  background: rgba(var(--accent-color-rgb), 0.2);
-  border-left-color: var(--accent-color);
-  box-shadow:
-    0 0 12px rgba(var(--accent-color-rgb), 0.4),
-    inset -2px 0 8px rgba(var(--accent-color-rgb), 0.25);
-  color: var(--accent-color);
+  color: var(--text-color);
 }
 
 .sidebar-icon:disabled {
@@ -835,7 +774,7 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
 .sidebar-divider {
   height: 1px;
   background-color: var(--border-color);
-  margin: 2px 8px 1px 8px;
+  margin: 2px 10px 1px 10px;
 }
 
 /* The name of a sidebar button, beside it while the pointer or the keyboard
@@ -847,14 +786,14 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   z-index: 300;
   transform: translateY(-50%);
   padding: 5px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background-color: var(--text-color);
   color: var(--bg-canvas);
   font-size: 0.8rem;
   font-weight: 500;
   line-height: 1.2;
   white-space: nowrap;
-  box-shadow: 0 2px 8px var(--shadow-color);
+  box-shadow: none;
   pointer-events: none;
   animation: sidebar-tooltip-in 0.12s ease-out;
 }
@@ -879,7 +818,7 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   height: calc(100% - 44px); /* Adjust height to account for top bar */
   background-color: var(--bg-menu);
   border-right: 1px solid var(--border-color);
-  box-shadow: 2px 0 8px var(--shadow-color);
+  box-shadow: none;
   transform: translateX(-100%);
   transition: transform 0.2s ease;
   z-index: 150;
@@ -895,14 +834,17 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 0 12px 0 16px;
   border-bottom: 1px solid var(--border-color);
   background-color: var(--bg-toolbar);
+  min-height: 40px;
 }
 
 .sidebar-panel-title {
-  font-size: 0.95em;
+  font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   color: var(--text-color);
   margin: 0;
 }
@@ -912,26 +854,14 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   border: none;
   cursor: pointer;
   padding: 4px;
-  border-radius: 4px;
+  border-radius: var(--radius-small);
   color: var(--text-color-light);
-  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
-/* Sidebar panel close button hover */
-:not(.dark) .sidebar-panel-close:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(var(--accent-color-rgb), 0.1) 0%,
-    rgba(var(--accent-color-rgb), 0.14) 100%
-  );
-  color: var(--accent-color);
-  box-shadow: 0 2px 6px rgba(var(--accent-color-rgb), 0.12);
-}
-
-.dark .sidebar-panel-close:hover {
-  background: rgba(var(--accent-color-rgb), 0.15);
-  color: var(--accent-color);
-  box-shadow: 0 0 10px rgba(var(--accent-color-rgb), 0.25);
+.sidebar-panel-close:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-color);
 }
 
 .sidebar-panel-content {
@@ -945,10 +875,10 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
 }
 
 .sidebar-section-title {
-  font-size: 0.7em;
+  font-size: 11px;
   color: var(--text-color-light);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.07em;
   margin-bottom: 8px;
   font-weight: 600;
 }
@@ -958,83 +888,45 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius);
   cursor: pointer;
   text-align: left;
   font-size: 0.9em;
   color: var(--text-color);
-  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
   margin-bottom: 4px;
 }
 
-/* Sidebar panel item hover */
-:not(.dark) .sidebar-panel-item:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(var(--accent-color-rgb), 0.1) 0%,
-    rgba(var(--accent-color-rgb), 0.14) 100%
-  );
-  color: var(--accent-color);
-  box-shadow:
-    0 2px 6px rgba(var(--accent-color-rgb), 0.12),
-    inset 0 0 0 1px rgba(var(--accent-color-rgb), 0.1);
-  transform: translateX(2px);
-}
-
-.dark .sidebar-panel-item:hover {
-  background: rgba(var(--accent-color-rgb), 0.15);
-  color: var(--accent-color);
-  box-shadow:
-    0 0 10px rgba(var(--accent-color-rgb), 0.25),
-    inset 0 0 0 1px rgba(var(--accent-color-rgb), 0.15);
-  transform: scale(1.01) translateX(1px);
+.sidebar-panel-item:hover {
+  background-color: var(--bg-hover);
 }
 
 /* Device List in Sidebar */
 .device-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .device-list-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
+  padding: 9px 10px;
   background: transparent;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius);
   cursor: pointer;
   text-align: left;
-  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
-/* Device list item hover */
-:not(.dark) .device-list-item:hover {
-  border-color: var(--accent-color);
-  background: linear-gradient(
-    135deg,
-    rgba(var(--accent-color-rgb), 0.08) 0%,
-    rgba(var(--accent-color-rgb), 0.12) 100%
-  );
-  box-shadow:
-    0 3px 8px rgba(var(--accent-color-rgb), 0.15),
-    inset 0 0 0 1px rgba(var(--accent-color-rgb), 0.1);
-  transform: translateY(-1px);
-}
-
-.dark .device-list-item:hover {
-  border-color: var(--accent-color);
-  background: rgba(var(--accent-color-rgb), 0.12);
-  box-shadow:
-    0 0 12px rgba(var(--accent-color-rgb), 0.25),
-    0 3px 8px rgba(var(--accent-color-rgb), 0.15),
-    inset 0 0 0 1px rgba(var(--accent-color-rgb), 0.15);
-  transform: scale(1.01);
+.device-list-item:hover {
+  border-color: var(--text-color);
+  background-color: var(--bg-hover);
 }
 
 .device-list-icon {
@@ -1042,7 +934,7 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--accent-color);
+  color: var(--accent-text);
 }
 
 .device-list-info {
@@ -1069,11 +961,11 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   display: none;
   width: 200px;
   background-color: var(--bg-menu);
-  border-radius: 8px;
+  border-radius: var(--radius);
   border: 1px solid var(--border-color);
-  box-shadow: 0 4px 12px var(--shadow-color);
+  box-shadow: 0 8px 24px var(--shadow-color);
   z-index: 9000;
-  padding: 5px;
+  padding: 4px;
 }
 
 .context-menu.show {
@@ -1087,34 +979,15 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
 }
 
 .context-menu li {
-  padding: 10px 15px;
+  padding: 7px 12px;
   cursor: pointer;
-  border-radius: 6px;
-  font-size: 0.9em;
-  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  border-radius: var(--radius-small);
+  font-size: 0.875em;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
-/* Context menu item hover */
-:not(.dark) .context-menu li:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(var(--accent-color-rgb), 0.1) 0%,
-    rgba(var(--accent-color-rgb), 0.14) 100%
-  );
-  color: var(--accent-color);
-  box-shadow:
-    0 2px 6px rgba(var(--accent-color-rgb), 0.12),
-    inset 0 0 0 1px rgba(var(--accent-color-rgb), 0.1);
-  transform: translateX(2px);
-}
-
-.dark .context-menu li:hover {
-  background: rgba(var(--accent-color-rgb), 0.15);
-  color: var(--accent-color);
-  box-shadow:
-    0 0 10px rgba(var(--accent-color-rgb), 0.25),
-    inset 0 0 0 1px rgba(var(--accent-color-rgb), 0.15);
-  transform: scale(1.01) translateX(1px);
+.context-menu li:hover {
+  background-color: var(--bg-hover);
 }
 
 .context-menu li.danger:hover {
@@ -1123,8 +996,14 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
 }
 
 /* Modal Styles */
+/* A window is a sheet with a thin frame: in dark the frame is what tells it
+   from the page behind */
+.base-modal {
+  border: 1px solid var(--border-color);
+}
+
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 12px;
 }
 
 .form-group.hidden {
@@ -1133,28 +1012,28 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
 
 .form-group label {
   display: block;
-  font-size: 0.9em;
+  font-size: 0.8em;
   font-weight: 500;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   color: var(--text-color-light);
 }
 
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 10px;
-  border-radius: 6px;
+  padding: 7px 10px;
+  border-radius: var(--radius);
   border: 1px solid var(--border-color);
   background-color: var(--bg-canvas);
   color: var(--text-color);
-  font-size: 1em;
+  font-size: 0.875em;
 }
 
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.15);
+  box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.3);
 }
 
 .form-group input[readonly] {
@@ -1184,33 +1063,14 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   gap: 8px;
   padding: 16px;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  border-radius: var(--radius);
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
   cursor: default;
 }
 
-/* Template card hover */
-:not(.dark) .template-card:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(var(--accent-color-rgb), 0.06) 0%,
-    rgba(var(--accent-color-rgb), 0.1) 100%
-  );
-  border-color: var(--accent-color);
-  box-shadow:
-    0 4px 12px rgba(var(--accent-color-rgb), 0.15),
-    inset 0 0 0 1px rgba(var(--accent-color-rgb), 0.08);
-  transform: translateY(-2px);
-}
-
-.dark .template-card:hover {
-  background: rgba(var(--accent-color-rgb), 0.1);
-  border-color: var(--accent-color);
-  box-shadow:
-    0 0 16px rgba(var(--accent-color-rgb), 0.25),
-    0 4px 12px rgba(var(--accent-color-rgb), 0.15),
-    inset 0 0 0 1px rgba(var(--accent-color-rgb), 0.12);
-  transform: translateY(-2px) scale(1.01);
+.template-card:hover {
+  border-color: var(--text-color);
+  background-color: var(--bg-hover);
 }
 
 .template-icon-wrapper {
@@ -1219,8 +1079,8 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   justify-content: center;
   width: 60px;
   height: 60px;
-  background-color: var(--accent-color-light);
-  border-radius: 8px;
+  background-color: var(--bg-component);
+  border-radius: var(--radius);
 }
 
 .template-info {
@@ -1247,12 +1107,9 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   margin-bottom: 16px;
 }
 
+/* (a button like the others: it only keeps its width next to the text) */
 .add-template-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  font-size: 0.9em;
+  flex-shrink: 0;
 }
 
 /* Editable Template Card */
@@ -1284,14 +1141,14 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
   padding: 0;
   background: var(--bg-menu);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: var(--radius-small);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
 .template-actions .action-btn:hover {
-  background: var(--accent-color-light);
-  border-color: var(--accent-color);
+  background: var(--bg-hover);
+  border-color: var(--text-color);
 }
 
 .template-actions .action-btn.delete-btn:hover {
@@ -1326,7 +1183,7 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
 }
 
 .template-form .form-hint a {
-  color: var(--accent-color);
+  color: var(--accent-text);
   text-decoration: underline;
 }
 
@@ -1347,36 +1204,25 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
 }
 
 .settings-tab {
-  padding: 10px 16px;
+  padding: 8px 14px;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  font-size: 0.9em;
+  font-size: 0.875em;
   color: var(--text-color-light);
-  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-  border-radius: 6px 6px 0 0;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  /* (the mark of the open tab lies on the line under the row of tabs) */
+  margin-bottom: -1px;
 }
 
-/* Settings tab hover */
-:not(.dark) .settings-tab:hover {
+.settings-tab:hover {
   color: var(--text-color);
-  background: linear-gradient(
-    180deg,
-    rgba(var(--accent-color-rgb), 0.08) 0%,
-    rgba(var(--accent-color-rgb), 0.12) 100%
-  );
-  box-shadow: 0 -2px 6px rgba(var(--accent-color-rgb), 0.1);
-}
-
-.dark .settings-tab:hover {
-  color: var(--text-color);
-  background: rgba(var(--accent-color-rgb), 0.12);
-  box-shadow: 0 -2px 8px rgba(var(--accent-color-rgb), 0.2);
 }
 
 .settings-tab.active {
-  color: var(--accent-color);
+  color: var(--text-color);
+  font-weight: 600;
   border-bottom-color: var(--accent-color);
 }
 
@@ -1392,16 +1238,18 @@ body.react-flow-connecting .react-flow__node.selected .connect-point::after,
 
 fieldset {
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 10px 15px 15px 15px;
   margin-top: 20px;
 }
 
 legend {
+  font-size: 11px;
   font-weight: 600;
-  font-size: 0.9em;
-  color: var(--accent-color);
-  padding: 0 5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-color-light);
+  padding: 0 6px;
 }
 
 /* Magnification Effects */
@@ -1440,22 +1288,8 @@ legend {
   --magnify-color-backbone: #f87171;
 }
 
-/* Pulse glow animation */
-@keyframes pulse-glow {
-  0%, 100% {
-    filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 16px currentColor);
-    transform: scale(1);
-  }
-  50% {
-    filter: drop-shadow(0 0 12px currentColor) drop-shadow(0 0 24px currentColor);
-    transform: scale(1.02);
-  }
-}
-
 /* Device magnification states */
 .network-device.device-magnified {
-  animation: pulse-glow 2s ease-in-out infinite;
-  filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 16px currentColor);
   z-index: 10 !important;
   border-color: currentColor !important;
   border-width: 3px !important;
@@ -1471,8 +1305,8 @@ legend {
 .react-flow__node.selected .network-device {
   border-color: var(--accent-color) !important;
   border-width: 3px !important;
-  box-shadow: 0 0 0 2px var(--accent-color-light), 0 4px 12px var(--shadow-color);
-  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-canvas) 100%);
+  box-shadow: none;
+  background: var(--bg-canvas);
   z-index: 5 !important;
   transition: all 0.2s ease;
 }
@@ -1480,7 +1314,6 @@ legend {
 /* Edge/Connection magnification states */
 .react-flow__edge.edge-magnified .react-flow__edge-path {
   stroke-width: 5 !important;
-  filter: drop-shadow(0 0 6px currentColor) drop-shadow(0 0 12px currentColor);
 }
 
 .react-flow__edge.edge-dimmed .react-flow__edge-path {
@@ -1572,25 +1405,11 @@ legend {
   }
 }
 
-/* Particle glow animation: pulsing glow effect similar to device magnification */
-@keyframes particle-glow {
-  0%, 100% {
-    filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 0 8px currentColor);
-  }
-  50% {
-    filter: drop-shadow(0 0 6px currentColor) drop-shadow(0 0 12px currentColor);
-  }
-}
-
 /* Animated particle class */
 .animated-particle {
-  /* Apply all animations: flow (movement) + fade (opacity) + particle-glow (pulsing glow) */
+  /* Two animations: flow (movement) + fade (opacity) */
   animation: flow var(--animation-duration) linear infinite,
-             fade var(--animation-duration) ease-in-out infinite,
-             particle-glow 1.5s ease-in-out infinite;
-
-  /* Glow effect filter */
-  filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 0 8px currentColor);
+             fade var(--animation-duration) ease-in-out infinite;
 
   /* Initial state */
   opacity: 0;
@@ -1611,7 +1430,7 @@ legend {
   gap: 12px;
   padding: 16px;
   background-color: var(--bg-toolbar);
-  border-radius: 8px;
+  border-radius: var(--radius);
   width: 100%;
 }
 
@@ -1624,29 +1443,28 @@ legend {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
-  border: 2px solid var(--border-color);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
   background-color: var(--bg-canvas);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
   font-size: 12px;
   font-weight: 600;
 }
 
 .port-box:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-color: var(--text-color);
 }
 
 /* Port Status Colors */
 .port-box-access {
-  border-color: #10b981;
-  background-color: rgba(16, 185, 129, 0.1);
+  border-color: var(--ok-color);
+  background-color: rgba(var(--ok-color-rgb), 0.08);
 }
 
 .port-box-trunk {
-  border-color: #9333ea;
-  background-color: rgba(147, 51, 234, 0.1);
+  border-color: var(--trunk-color);
+  background-color: rgba(var(--trunk-color-rgb), 0.08);
 }
 
 .port-box-disabled {
@@ -1657,15 +1475,15 @@ legend {
 }
 
 .port-box-disabled:hover {
-  transform: none;
-  box-shadow: none;
+  border-color: var(--border-color);
 }
 
 /* Selected Port Highlight */
-.port-box-selected {
-  border-width: 3px;
+/* (said with two classes: it also holds while the pointer is on the port) */
+.port-box.port-box-selected,
+.port-box.port-box-selected:hover {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  box-shadow: inset 0 0 0 1px var(--accent-color);
 }
 
 /* Port Number */
@@ -1706,7 +1524,7 @@ legend {
   left: 2px;
   width: 14px;
   height: 14px;
-  border-radius: 3px;
+  border-radius: var(--radius-small);
   font-size: 9px;
   font-weight: 700;
   display: flex;
@@ -1775,22 +1593,21 @@ legend {
 .nic-card {
   position: relative;
   padding: 14px;
-  border: 2px solid var(--border-color);
-  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
   background-color: var(--bg-canvas);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
 .nic-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  border-color: var(--text-color);
 }
 
 /* NIC Card States */
 .nic-card-enabled {
-  border-color: #10b981;
-  background-color: rgba(16, 185, 129, 0.05);
+  border-color: var(--ok-color);
+  background-color: rgba(var(--ok-color-rgb), 0.05);
 }
 
 .nic-card-disabled {
@@ -1800,15 +1617,14 @@ legend {
 }
 
 .nic-card-disabled:hover {
-  transform: none;
-  box-shadow: none;
+  border-color: var(--border-color);
 }
 
 /* Selected NIC Highlight */
-.nic-card-selected {
-  border-width: 3px;
+.nic-card.nic-card-selected,
+.nic-card.nic-card-selected:hover {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  box-shadow: inset 0 0 0 1px var(--accent-color);
 }
 
 /* NIC Card Header */
@@ -1835,15 +1651,15 @@ legend {
 /* NIC Status Badge */
 .nic-status-badge {
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-small);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
 }
 
 .nic-status-badge.enabled {
-  background-color: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  background-color: rgba(var(--ok-color-rgb), 0.14);
+  color: var(--ok-color);
 }
 
 .nic-status-badge.disabled {
@@ -1871,7 +1687,7 @@ legend {
 
 .nic-detail-value {
   color: var(--text-color);
-  font-family: 'Courier New', monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .nic-description {
@@ -1891,17 +1707,16 @@ legend {
   padding: 6px 12px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--accent-color);
-  background-color: rgba(59, 130, 246, 0.1);
-  border: 1px solid var(--accent-color);
-  border-radius: 6px;
+  color: var(--text-color);
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
 .nic-add-button:hover {
-  background-color: rgba(59, 130, 246, 0.2);
-  transform: translateY(-1px);
+  border-color: var(--text-color);
 }
 
 /* NIC Remove Button */
@@ -1911,17 +1726,17 @@ legend {
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: 4px;
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-small);
+  background-color: transparent;
+  color: var(--text-color-light);
+  border: 1px solid var(--border-color);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
 .nic-remove-button:hover {
-  background-color: rgba(239, 68, 68, 0.2);
-  transform: scale(1.1);
+  border-color: var(--danger-color);
+  color: var(--danger-color);
 }
 
 /* NIC Configuration Panel */
@@ -1966,20 +1781,22 @@ legend {
 
 /* Error Message Box */
 .modal-error-box {
-  padding: 12px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 8px;
-  color: #ef4444;
-  font-size: 0.9em;
+  padding: 10px 12px;
+  background: var(--bg-component);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--danger-color);
+  border-radius: var(--radius-small);
+  color: var(--text-color);
+  font-size: 0.875em;
 }
 
 /* Info Message Box */
 .modal-info-box {
-  padding: 12px;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--bg-component);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--secondary-color);
+  border-radius: var(--radius-small);
   color: var(--text-color-light);
   font-size: 0.85em;
 }
@@ -1992,22 +1809,21 @@ legend {
 .explorer-button {
   width: 100%;
   padding: 8px 12px;
-  background: var(--bg-component);
+  background: transparent;
   color: var(--text-color);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--radius);
   cursor: pointer;
   font-size: 0.85em;
   font-weight: 500;
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.2s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
 .explorer-button:hover {
-  background: rgba(var(--accent-color-rgb), 0.1);
-  border-color: var(--accent-color);
+  border-color: var(--text-color);
 }
 
 .explorer-button:disabled {
@@ -2017,13 +1833,16 @@ legend {
 
 /* Explorer Button - Accent variant (for primary actions) */
 .explorer-button-accent {
-  background: var(--accent-color);
-  color: white;
-  border: none;
+  background: var(--text-color);
+  color: var(--bg-canvas);
+  border: 1px solid var(--text-color);
+  font-weight: 600;
 }
 
 .explorer-button-accent:hover {
-  opacity: 0.9;
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: var(--on-accent);
 }
 
 /* Explorer Button - Dashed variant (for "add new" actions) */
@@ -2034,8 +1853,8 @@ legend {
 }
 
 .explorer-button-dashed:hover {
-  background: rgba(var(--accent-color-rgb), 0.05);
-  border-color: var(--accent-color);
+  border-color: var(--text-color);
+  color: var(--text-color);
 }
 
 /* Canvas Card */
@@ -2044,20 +1863,21 @@ legend {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   cursor: pointer;
   background: transparent;
   color: var(--text-color);
-  transition: all 0.2s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
 .explorer-canvas-card:hover {
-  background: rgba(var(--accent-color-rgb), 0.1);
+  background: var(--bg-hover);
 }
 
 .explorer-canvas-card.active {
-  background: var(--accent-color);
-  color: white;
+  background: var(--bg-hover);
+  box-shadow: inset 2px 0 0 var(--accent-color);
+  font-weight: 600;
 }
 
 /* Small icon-only action (rename, delete) */
@@ -2067,7 +1887,7 @@ legend {
   padding: 4px;
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-small);
   cursor: pointer;
   color: inherit;
   opacity: 0.6;
@@ -2087,7 +1907,7 @@ legend {
   padding: 3px 6px;
   background: var(--bg-component);
   border: 1px solid var(--accent-color);
-  border-radius: 4px;
+  border-radius: var(--radius-small);
   color: var(--text-color);
   font-size: inherit;
   outline: none;
@@ -2132,17 +1952,23 @@ legend {
 /* Welcome Screen Styles (Canvas Integration)  */
 /* ============================================ */
 
+/* A sheet on the board, set as a page of the site: the logo over a line of
+   ink, the motto, the three steps in a numbered list, a block of ink to
+   start and two outlines next to it */
 .welcome-screen-container {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  text-align: center;
-  color: var(--text-color-light);
-  max-width: 500px;
+  width: min(620px, calc(100% - 48px));
+  padding: 28px 32px 22px;
+  background-color: var(--bg-canvas);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  color: var(--text-color);
   z-index: 10;
   pointer-events: none;
-  animation: welcomeFadeIn 500ms ease-out;
+  animation: welcomeFadeIn 300ms ease-out;
 }
 
 .welcome-screen-container > * {
@@ -2160,111 +1986,137 @@ legend {
 
 /* Header */
 .welcome-header {
-  margin-bottom: 32px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--text-color);
 }
 
 .welcome-logo {
-  width: 60px;
+  width: 168px;
   height: auto;
-  opacity: 0.4;
-  margin: 0 auto 16px;
   display: block;
 }
 
-.welcome-header h1 {
-  font-size: 2em;
-  color: var(--text-color);
-  margin: 8px 0;
-  font-weight: 600;
-  letter-spacing: -0.5px;
-}
-
 .welcome-header p {
-  font-size: 1em;
-  color: var(--accent-color);
-  margin: 0;
-  opacity: 0.9;
-}
-
-/* Process Section */
-.welcome-process {
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
-  padding: 24px 0;
-  margin: 24px 0;
-}
-
-.welcome-process h3 {
-  font-size: 1.1em;
-  color: var(--text-color);
-  margin-bottom: 16px;
-  font-weight: 500;
-}
-
-.process-steps {
-  text-align: left;
-  display: inline-block;
-  font-size: 0.9em;
-  line-height: 1.8;
-}
-
-.process-step {
-  margin: 4px 0;
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   color: var(--text-color-light);
 }
 
-.process-step strong {
+.welcome-motto {
+  margin: 26px 0 18px;
+  font-size: 1.75rem;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
   color: var(--text-color);
+}
+
+/* The three steps */
+.welcome-steps {
+  list-style: none;
+  margin: 0 0 26px;
+  padding: 0;
+  border-top: 1px solid var(--border-color);
+}
+
+.welcome-steps li {
+  display: grid;
+  grid-template-columns: 28px 104px 1fr;
+  align-items: baseline;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.welcome-step-number {
+  color: var(--accent-color);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.welcome-steps strong {
   font-weight: 600;
 }
 
-.step-number {
-  display: inline-block;
-  width: 20px;
-  color: var(--accent-color);
+.welcome-step-text {
+  color: var(--text-color-light);
 }
 
 /* Actions & Links */
-.welcome-actions,
-.welcome-links {
-  margin: 24px 0;
+.welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
 }
 
-.welcome-actions h4,
-.welcome-links h4 {
-  font-size: 0.8em;
-  color: var(--text-color-light);
-  margin-bottom: 12px;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  opacity: 0.7;
-}
-
-.welcome-link {
+.welcome-button {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  padding: 9px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
   background: transparent;
-  border: none;
-  color: var(--accent-color);
-  font-size: 0.95em;
+  color: var(--text-color);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
   cursor: pointer;
-  padding: 6px 16px;
-  margin: 2px;
-  text-decoration: none;
-  transition: all 0.2s;
-  border-radius: 4px;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
-.welcome-link:hover {
-  background: var(--bg-component);
-  transform: translateX(2px);
+.welcome-button:hover {
+  border-color: var(--text-color);
+}
+
+.welcome-button.primary {
+  border-color: var(--text-color);
+  background: var(--text-color);
+  color: var(--bg-canvas);
+}
+
+.welcome-button.primary::after {
+  content: '\2192';
+  font-weight: 400;
+}
+
+.welcome-button.primary:hover {
+  border-color: var(--accent-color);
+  background: var(--accent-color);
+  color: var(--on-accent);
+}
+
+.welcome-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin-bottom: 18px;
+  font-size: 0.85rem;
+}
+
+.welcome-links a {
+  color: var(--text-color);
+  text-decoration: underline;
+  text-decoration-color: var(--line-color);
+  text-underline-offset: 3px;
+}
+
+.welcome-links a:hover {
+  text-decoration-color: var(--accent-color);
 }
 
 /* Checkbox */
 .welcome-checkbox-container {
-  margin-top: 32px;
-  padding-top: 24px;
+  padding-top: 14px;
   border-top: 1px solid var(--border-color);
 }
 
@@ -2272,7 +2124,7 @@ legend {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.85em;
+  font-size: 0.8rem;
   color: var(--text-color-light);
   cursor: pointer;
 }
@@ -2282,8 +2134,8 @@ legend {
 }
 
 .welcome-checkbox input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   cursor: pointer;
   accent-color: var(--accent-color);
 }
@@ -2291,20 +2143,19 @@ legend {
 /* Responsive */
 @media (max-width: 640px) {
   .welcome-screen-container {
-    max-width: 90%;
-    padding: 0 20px;
+    padding: 20px 18px 16px;
   }
 
-  .welcome-header h1 {
-    font-size: 1.5em;
+  .welcome-motto {
+    font-size: 1.4rem;
   }
 
-  .welcome-logo {
-    width: 50px;
+  .welcome-steps li {
+    grid-template-columns: 24px 1fr;
   }
 
-  .process-steps {
-    font-size: 0.85em;
+  .welcome-step-text {
+    grid-column: 2;
   }
 }
 
@@ -2332,9 +2183,9 @@ legend {
   align-items: center;
   gap: 6px;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   background-color: var(--accent-color);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 0.8em;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -2359,7 +2210,7 @@ legend {
 .presentation-canvases button {
   padding: 4px 10px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: transparent;
   color: var(--text-color-light);
   font-size: 0.85em;
@@ -2368,7 +2219,7 @@ legend {
 }
 
 .presentation-canvases button:hover {
-  color: var(--accent-color);
+  color: var(--text-color);
 }
 
 .presentation-canvases button.active {
@@ -2391,7 +2242,7 @@ legend {
   gap: 6px;
   padding: 5px 12px;
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: transparent;
   color: var(--text-color);
   font-size: 0.9em;
@@ -2413,7 +2264,7 @@ legend {
   height: 32px;
   flex-shrink: 0;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: transparent;
   color: var(--text-color);
   cursor: pointer;
@@ -2421,8 +2272,8 @@ legend {
 }
 
 .presentation-icon-button:hover:not(:disabled) {
-  background-color: rgba(var(--accent-color-rgb), 0.12);
-  color: var(--accent-color);
+  background-color: var(--bg-hover);
+  color: var(--text-color);
 }
 
 .presentation-icon-button:disabled {
@@ -2435,7 +2286,7 @@ legend {
 .segmented {
   display: flex;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius);
   overflow: hidden;
 }
 
@@ -2458,13 +2309,13 @@ legend {
 
 .presentation-segmented button:hover:not(.active),
 .segmented button:hover:not(.active) {
-  background-color: rgba(var(--accent-color-rgb), 0.1);
+  background-color: var(--bg-hover);
 }
 
 .presentation-segmented button.active,
 .segmented button.active {
-  background-color: var(--accent-color);
-  color: #fff;
+  background-color: var(--text-color);
+  color: var(--bg-canvas);
   font-weight: 600;
 }
 
@@ -2577,18 +2428,20 @@ legend {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 9px 12px;
-  border: none;
-  border-radius: 8px;
-  background-color: var(--accent-color);
-  color: #fff;
+  padding: 8px 12px;
+  border: 1px solid var(--text-color);
+  border-radius: var(--radius);
+  background-color: var(--text-color);
+  color: var(--bg-canvas);
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
 .presentation-primary:hover:not(:disabled) {
-  opacity: 0.88;
+  border-color: var(--accent-color);
+  background-color: var(--accent-color);
+  color: var(--on-accent);
 }
 
 .presentation-primary:disabled {
@@ -2602,7 +2455,7 @@ legend {
   gap: 6px;
   padding: 6px 10px;
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: transparent;
   color: var(--text-color);
   font-size: 0.85em;
@@ -2610,8 +2463,7 @@ legend {
 }
 
 .presentation-secondary:hover {
-  border-color: var(--accent-color);
-  color: var(--accent-color);
+  border-color: var(--text-color);
 }
 
 .presentation-hint {
@@ -2635,7 +2487,7 @@ legend {
   gap: 10px;
   padding: 10px 12px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--radius);
 }
 
 .presentation-verdict svg {
@@ -2688,9 +2540,9 @@ legend {
   margin: 8px 0 0;
   padding: 8px 10px;
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background-color: var(--bg-canvas);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.8em;
   line-height: 1.45;
   overflow-wrap: anywhere;
@@ -2783,7 +2635,7 @@ legend {
 }
 
 .presentation-leg li.current .presentation-step-label {
-  color: var(--accent-color);
+  color: var(--text-color);
 }
 
 .presentation-step-label {
@@ -2827,7 +2679,7 @@ legend {
 
 .presentation-failures .presentation-secondary {
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   font-size: 0.8em;
 }
 
@@ -2838,7 +2690,7 @@ legend {
   margin: 2px 2px 2px 0;
   padding: 2px 8px;
   border: 1px solid var(--border-color);
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   background-color: var(--bg-canvas);
   color: var(--text-color);
   font-size: 0.95em;
@@ -2848,8 +2700,7 @@ legend {
 }
 
 .presentation-chip:hover {
-  border-color: var(--accent-color);
-  color: var(--accent-color);
+  border-color: var(--text-color);
 }
 
 .presentation-chip.failure {
@@ -2927,7 +2778,7 @@ legend {
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--accent-color);
+  color: var(--accent-text);
   font-size: 0.85em;
   cursor: pointer;
 }
@@ -2944,7 +2795,7 @@ legend {
   max-width: 320px;
   padding: 6px;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: var(--radius);
   background-color: var(--bg-menu);
   box-shadow: 0 8px 24px var(--shadow-color);
 }
@@ -2971,7 +2822,7 @@ legend {
   gap: 10px;
   padding: 8px 10px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: transparent;
   color: var(--text-color);
   font-size: 0.9em;
@@ -2980,8 +2831,7 @@ legend {
 }
 
 .presentation-menu button:hover:not(:disabled) {
-  background-color: rgba(var(--accent-color-rgb), 0.12);
-  color: var(--accent-color);
+  background-color: var(--bg-hover);
 }
 
 .presentation-menu button:disabled {
@@ -3050,13 +2900,13 @@ legend {
   left: -8px;
   z-index: 11;
   padding: 1px 8px;
-  border-radius: 999px;
-  color: #fff;
+  border-radius: var(--radius-small);
+  color: var(--on-accent);
   font-size: 0.7em;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  box-shadow: 0 1px 3px var(--shadow-color);
+  box-shadow: none;
   pointer-events: none;
 }
 
@@ -3066,12 +2916,13 @@ legend {
 
 .device-role-target {
   background-color: var(--secondary-color);
+  color: var(--on-secondary);
 }
 
 /* The packet of a simulation is stopping on this device */
 .network-device.device-has-packet {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.35), 0 3px 6px var(--shadow-color);
+  box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.35);
 }
 
 /* A device taken as broken */
@@ -3103,14 +2954,14 @@ legend {
   border-radius: 50%;
   background-color: #ef4444;
   color: #fff;
-  box-shadow: 0 1px 4px var(--shadow-color);
+  box-shadow: none;
   pointer-events: none;
 }
 
 /* The device the packet of the answer stops on */
 .network-device.device-drop {
   border-color: #f59e0b;
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4), 0 3px 6px var(--shadow-color);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4);
 }
 
 /* The mark on a cable that is cut */
@@ -3124,7 +2975,7 @@ legend {
   font-weight: 700;
   line-height: 22px;
   text-align: center;
-  box-shadow: 0 1px 4px var(--shadow-color);
+  box-shadow: none;
   cursor: pointer;
 }
 
@@ -3135,19 +2986,20 @@ legend {
   gap: 6px;
   margin-left: auto;
   padding: 5px 12px;
-  border: 1px solid var(--accent-color);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--accent-color);
-  font-size: 0.9em;
+  border: 1px solid var(--text-color);
+  border-radius: var(--radius);
+  background: var(--text-color);
+  color: var(--bg-canvas);
+  font-size: 1em;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
 .present-button:hover {
+  border-color: var(--accent-color);
   background-color: var(--accent-color);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* ============================================================
@@ -3168,7 +3020,7 @@ legend {
   justify-content: center;
   padding: 12px;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background-color: var(--bg-page);
 }
 

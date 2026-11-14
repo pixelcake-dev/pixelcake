@@ -258,7 +258,7 @@ const ConnectionTemplateEditModal = ({
 
         {/* Error Message */}
         {error && (
-          <div className="p-3 mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md text-red-600 dark:text-red-400">
+          <div className="modal-error-box mb-4">
             {error}
           </div>
         )}

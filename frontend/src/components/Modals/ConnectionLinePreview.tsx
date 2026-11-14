@@ -42,7 +42,7 @@ const ConnectionLinePreview = ({
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      className="border border-gray-300 dark:border-gray-600 rounded"
+      className="border border-[var(--border-color)] rounded"
     >
       {/* Background */}
       <rect width={width} height={height} fill="var(--bg-canvas)" />

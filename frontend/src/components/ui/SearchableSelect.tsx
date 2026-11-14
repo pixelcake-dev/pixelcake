@@ -101,7 +101,7 @@ const SearchableSelect = ({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-labelledby={labelId ? `${labelId} ${valueId}` : undefined}
-        className="w-full px-3 py-2 rounded-md border border-[var(--border-color)] bg-[var(--bg-canvas)] text-[var(--text-color)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] flex items-center justify-between gap-2"
+        className="w-full px-3 py-1.5 text-sm rounded-md border border-[var(--border-color)] bg-[var(--bg-canvas)] text-[var(--text-color)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] flex items-center justify-between gap-2"
       >
         <span
           id={valueId}
@@ -138,8 +138,8 @@ const SearchableSelect = ({
                 {...props}
                 style={{
                   ...style,
-                  backgroundColor: 'var(--accent-color)',
-                  borderRadius: '6px',
+                  backgroundColor: 'var(--scroll-thumb)',
+                  borderRadius: 'var(--radius)',
                   cursor: 'pointer',
                   border: '2px solid transparent',
                   backgroundClip: 'padding-box',
@@ -165,9 +165,9 @@ const SearchableSelect = ({
                 <button
                   key={option.value}
                   type="button"
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-[var(--bg-color-hover)] ${
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-[var(--bg-hover)] ${
                     option.value === value
-                      ? 'bg-[var(--accent-color)] text-white'
+                      ? 'bg-[var(--text-color)] text-[var(--bg-canvas)] hover:bg-[var(--text-color)]'
                       : 'text-[var(--text-color)]'
                   }`}
                   onClick={() => handleSelect(option.value)}

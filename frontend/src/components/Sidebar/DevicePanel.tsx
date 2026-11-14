@@ -96,23 +96,15 @@ const DevicePanel = () => {
   return (
     <div className="sidebar-panel-section">
       {/* Tab Header */}
-      <div className="flex gap-2 mb-3">
+      <div className="segmented mb-3">
         <button
-          className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'devices'
-              ? 'bg-[var(--accent-color)] text-white'
-              : 'bg-[var(--bg-color-secondary)] text-[var(--text-color-light)] hover:bg-[var(--bg-color-hover)]'
-          }`}
+          className={activeTab === 'devices' ? 'active' : ''}
           onClick={() => setActiveTab('devices')}
         >
           Dispositivi
         </button>
         <button
-          className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'templates'
-              ? 'bg-[var(--accent-color)] text-white'
-              : 'bg-[var(--bg-color-secondary)] text-[var(--text-color-light)] hover:bg-[var(--bg-color-hover)]'
-          }`}
+          className={activeTab === 'templates' ? 'active' : ''}
           onClick={() => setActiveTab('templates')}
         >
           Topologie
@@ -140,7 +132,7 @@ const DevicePanel = () => {
               className="sidebar-panel-item w-full"
               onClick={() => openModal('bulkAddDevice')}
             >
-              <Package size={20} style={{ color: '#8b5cf6', flexShrink: 0 }} />
+              <Package size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
               <span>Aggiungi in Blocco</span>
             </button>
           </div>
@@ -186,7 +178,7 @@ const DevicePanel = () => {
               className="sidebar-panel-item"
               onClick={() => handleLoadSample(createCompanySample)}
             >
-              <Plug size={20} style={{ color: '#f59e0b', flexShrink: 0 }} />
+              <Plug size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
               <span>
                 Azienda: uffici, Wi-Fi, server e DMZ
                 <span className="block text-xs text-[var(--text-color-light)]">
@@ -198,7 +190,7 @@ const DevicePanel = () => {
               className="sidebar-panel-item"
               onClick={() => handleLoadSample(createSampleTopology)}
             >
-              <Plug size={20} style={{ color: '#f59e0b', flexShrink: 0 }} />
+              <Plug size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
               <span>
                 Ufficio: due reti e un router
                 <span className="block text-xs text-[var(--text-color-light)]">
@@ -210,7 +202,7 @@ const DevicePanel = () => {
               className="sidebar-panel-item"
               onClick={() => handleLoadSample(createPerimeterSample)}
             >
-              <Plug size={20} style={{ color: '#f59e0b', flexShrink: 0 }} />
+              <Plug size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
               <span>
                 Sede: VLAN, DMZ e firewall
                 <span className="block text-xs text-[var(--text-color-light)]">
@@ -222,7 +214,7 @@ const DevicePanel = () => {
               className="sidebar-panel-item"
               onClick={() => handleLoadSample(createRedundancySample)}
             >
-              <Plug size={20} style={{ color: '#f59e0b', flexShrink: 0 }} />
+              <Plug size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
               <span>
                 Due sedi: linea principale e di riserva
                 <span className="block text-xs text-[var(--text-color-light)]">
