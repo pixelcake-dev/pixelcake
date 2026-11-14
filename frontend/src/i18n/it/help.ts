@@ -31,8 +31,8 @@ export const help = {
         'pannello ci sono quattro reti di esempio già pronte: quella di una piccola azienda (la ' +
         'stessa della schermata di benvenuto), una semplice, una con VLAN, DMZ e firewall, e una ' +
         'con due sedi e una linea di riserva. Caricarne una prende il posto di quanto è sul ' +
-        'canvas e porta con sé le sue impostazioni di rete (Impostazioni → Rete): la rete da cui ' +
-        'partono i nuovi dispositivi, il server DNS, i nomi delle VLAN.',
+        'canvas. Ogni rete di esempio arriva con le sue impostazioni di rete (Impostazioni → ' +
+        'Rete): la rete da cui partono i nuovi dispositivi, il server DNS, i nomi delle VLAN.',
     },
     moveAndSelect: {
       title: 'Spostali e selezionali',
@@ -56,17 +56,18 @@ export const help = {
       title: 'Raggruppa con i riquadri',
       text:
         'Un riquadro è un rettangolo colorato con un nome, disegnato dietro a un gruppo di ' +
-        'dispositivi per dire cosa sono: Core, Edge, Uffici, Internet. Nel pannello «Aggiungi ' +
-        "dispositivo» c'è «Riquadro», che ne aggiunge uno al centro della vista; oppure " +
-        "seleziona i dispositivi e scegli Modifica → «Racchiudi in un riquadro» (c'è anche nel " +
-        'clic destro su un dispositivo): il riquadro nasce intorno a loro. Scrivi il nome e ' +
-        'premi Invio. Un riquadro si prende dal nome o dal bordo: trascinandolo si sposta, e i ' +
-        'dispositivi restano dove sono; quando è selezionato mostra otto maniglie per ' +
-        'ridimensionarlo. Un doppio clic sul nome lo rinomina, il clic destro apre un menu con ' +
-        '«Rinomina», i colori ed «Elimina», e il tasto Canc elimina il riquadro selezionato. ' +
-        "L'interno di un riquadro non intralcia: lì dentro i dispositivi si selezionano, si " +
-        'collegano e si spostano come sempre. I riquadri si vedono anche in presentazione e ' +
-        "nell'immagine esportata, e vengono salvati con il progetto.",
+        'dispositivi per dire cosa sono: Core, Edge, Uffici, Internet. Le reti di esempio, ' +
+        "tranne la più semplice, ne hanno già. Nel pannello «Aggiungi dispositivo» c'è " +
+        '«Riquadro», che ne aggiunge uno al centro della vista; oppure seleziona i dispositivi e ' +
+        "scegli Modifica → «Racchiudi in un riquadro» (c'è anche nel clic destro su un " +
+        'dispositivo): il riquadro nasce intorno a loro. Scrivi il nome e premi Invio. Un ' +
+        'riquadro si prende dal nome o dal bordo: trascinandolo si sposta, e i dispositivi ' +
+        'restano dove sono; quando è selezionato mostra otto maniglie per ridimensionarlo. Un ' +
+        'doppio clic sul nome lo rinomina, il clic destro apre un menu con «Rinomina», i colori ' +
+        "ed «Elimina», e il tasto Canc elimina il riquadro selezionato. L'interno di un riquadro " +
+        'non intralcia: lì dentro i dispositivi si selezionano, si collegano e si spostano come ' +
+        "sempre. I riquadri si vedono anche in presentazione e nell'immagine esportata, e " +
+        'vengono salvati con il progetto.',
     },
     configure: {
       title: 'Configurali',

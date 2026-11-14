@@ -261,5 +261,8 @@ export function createSampleTopology(): SampleNetwork {
   // network of the offices. The sample has no DNS server and no VLAN
   const settings = sampleSettings({ network: '192.168.10.0', gateway: OFFICE_GATEWAY });
 
-  return { devices, connections, settings };
+  // No area: the two networks are plain to see, a switch under the router
+  // with its devices under it, and the label of each cable from the router
+  // would sit on the top of an area
+  return { devices, connections, settings, areas: [] };
 }

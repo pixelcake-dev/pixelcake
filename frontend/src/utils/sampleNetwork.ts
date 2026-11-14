@@ -2,12 +2,22 @@
  * A sample network: a drawing, and what goes with it. A sample is made for
  * a network of its own, so it brings the network settings of the project it
  * is loaded into: without them a new device would be offered an address of
- * no network of the drawing.
+ * no network of the drawing. And it comes with its areas, the rectangles
+ * that say at a glance what its groups of devices are.
  *
  * Pure: no React, no DOM, no store.
  */
 
-import type { GlobalNetworkSettings, NetworkConnection, NetworkDevice, ProjectVlan } from '@/types';
+import type {
+  AreaColour,
+  CanvasArea,
+  GlobalNetworkSettings,
+  NetworkConnection,
+  NetworkDevice,
+  ProjectVlan,
+} from '@/types';
+import { areaAround } from '@/utils/canvasAreas';
+import { approximateTextWidth, estimateDeviceSize } from '@/utils/drawingImage';
 import { tidyVlans } from '@/utils/vlanNames';
 
 export interface SampleNetwork {
@@ -15,6 +25,60 @@ export interface SampleNetwork {
   connections: NetworkConnection[];
   /** The network settings of the project the sample is made for: loading it sets them */
   settings: GlobalNetworkSettings;
+  /** The areas behind its groups of devices (the canvas gives each its id when the sample is loaded) */
+  areas: SampleArea[];
+}
+
+/** An area of a sample, before the canvas has given it an id */
+export type SampleArea = Omit<CanvasArea, 'id'>;
+
+/** A group of devices of a sample that an area is drawn around: its devices are named by their ids */
+export interface SampleGroup {
+  label: string;
+  color: AreaColour;
+  devices: readonly string[];
+}
+
+/** The size the canvas gives a device */
+export type DeviceSize = (device: NetworkDevice) => { width: number; height: number };
+
+/** What a device on DHCP has under its name: the address it is leased, and that it is leased */
+const LEASED_ADDRESS = '192.168.100.100 - DHCP';
+
+/**
+ * The size a device is drawn with, worked out from what is written under its
+ * icon (the numbers of the style sheet, as the exported image has them):
+ * when the look of a device changes, this follows, and the areas with it.
+ */
+export const drawnSize: DeviceSize = (device) =>
+  estimateDeviceSize(
+    device.label,
+    device.ip || ((device.nics ?? []).some((nic) => nic.dhcp === true) ? LEASED_ADDRESS : ''),
+    approximateTextWidth
+  );
+
+/**
+ * The areas of a sample: one around each group of its devices. No rectangle
+ * is typed in a sample: each is where its devices are, with the room around
+ * them, and above for its label, that «Racchiudi in un riquadro» leaves
+ * (`areaAround`, utils/canvasAreas.ts). Move a device, or draw devices
+ * larger, and the area follows.
+ */
+export function areasAround(
+  groups: readonly SampleGroup[],
+  devices: readonly NetworkDevice[],
+  sizeOf: DeviceSize = drawnSize
+): SampleArea[] {
+  return groups.map((group) => {
+    const members = group.devices.map((id) => {
+      const device = devices.find((candidate) => candidate.id === id);
+      if (!device) throw new Error(`the area "${group.label}" names a device the sample does not have: ${id}`);
+      return device;
+    });
+    const place = areaAround(members.map((device) => ({ ...device.position, ...sizeOf(device) })));
+    if (!place) throw new Error(`the area "${group.label}" holds no device`);
+    return { label: group.label, color: group.color, ...place };
+  });
 }
 
 /** A network of 254 addresses: every network of the samples is one */

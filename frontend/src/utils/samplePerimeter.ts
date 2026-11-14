@@ -41,7 +41,7 @@
 
 import type { NetworkDevice, NetworkConnection, NetworkInterfaceCard, Port } from '@/types';
 import { getT } from '@/i18n';
-import { sampleSettings, type SampleNetwork } from '@/utils/sampleNetwork';
+import { areasAround, sampleSettings, type SampleNetwork } from '@/utils/sampleNetwork';
 
 const MASK = '255.255.255.0';
 const P2P_MASK = '255.255.255.252';
@@ -368,5 +368,20 @@ export function createPerimeterSample(): SampleNetwork {
     ],
   });
 
-  return { devices, connections, settings };
+  // The three sides of the firewall, at a glance: what is outside, the DMZ,
+  // the inside. The firewall itself stands between them, in none
+  const areas = areasAround(
+    [
+      { label: 'Internet', color: 'slate', devices: ['internet', 'remote-pc'] },
+      { label: 'DMZ', color: 'green', devices: ['sw-dmz', 'web-public'] },
+      {
+        label: names.areas.inside,
+        color: 'amber',
+        devices: ['router-core', 'sw-core', 'pc-uffici-1', 'pc-uffici-2', 'srv-interno'],
+      },
+    ],
+    devices
+  );
+
+  return { devices, connections, settings, areas };
 }

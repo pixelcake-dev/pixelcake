@@ -14,6 +14,8 @@ const officesVlan = (vlan: number) => `Uffici (VLAN ${vlan})`;
 const serversVlan = (vlan: number) => `Server (VLAN ${vlan})`;
 /** The names a sample gives its VLANs in the settings of the project; 1 is where the ports nobody set are */
 const vlans = { default: 'Predefinita', offices, servers: 'Server' };
+/** The names of the areas of a sample that are not the same in every language */
+const areas = { offices, servers: 'Server' };
 const inside = 'Interno';
 const insideNetworks = 'reti interne';
 
@@ -53,6 +55,7 @@ export const samples = {
       portalReadsDatabase: 'il portale legge il database',
     },
     vlans,
+    areas,
     /** The names the DNS server of the company answers for */
     hostNames: {
       erp: 'gestionale.azienda.example',
@@ -89,6 +92,8 @@ export const samples = {
       inside,
     },
     vlans,
+    /** The side of the firewall that is trusted: the area around its devices */
+    areas: { inside: 'Rete interna' },
     /** What the route, the port forward and the rule of the firewall are there for */
     notes: {
       insideNetworks,

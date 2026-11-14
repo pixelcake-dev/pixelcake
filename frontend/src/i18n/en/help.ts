@@ -32,9 +32,9 @@ export const help: Dictionary['help'] = {
         'add” creates many at once. In the “Samples” tab of the same panel there are four sample ' +
         'networks ready to use: that of a small company (the same as on the welcome screen), a ' +
         'simple one, one with VLANs, a DMZ and a firewall, and one with two sites and a backup ' +
-        'line. Loading one replaces what is on the board and brings its own network settings ' +
-        '(Settings → Network): the network new devices start from, the DNS server, the names of ' +
-        'the VLANs.',
+        'line. Loading one replaces what is on the board. Each sample comes with its own network ' +
+        'settings (Settings → Network): the network new devices start from, the DNS server, the ' +
+        'names of the VLANs.',
     },
     moveAndSelect: {
       title: 'Move and select them',
@@ -55,17 +55,18 @@ export const help: Dictionary['help'] = {
     areas: {
       title: 'Group them with areas',
       text:
-        'An area is a coloured rectangle with a name, drawn behind a group of devices to say what ' +
-        'they are: Core, Edge, Offices, Internet. In the “Add device” panel there is “Area”, which ' +
-        'adds one at the centre of the view; or select the devices and choose Edit → “Enclose in ' +
-        'an area” (it is also in the right-click menu of a device): the area is drawn around them. ' +
-        'Type the name and press Enter. Grab an area by its name or its border: dragging it moves ' +
-        'it, and the devices stay where they are; when it is selected it shows eight handles to ' +
-        'resize it. A double click on the name renames it, a right click opens a menu with ' +
-        '“Rename”, the colours and “Delete”, and the Delete key deletes the selected area. The ' +
-        'inside of an area does not get in the way: devices inside it are selected, connected and ' +
-        'moved as usual. Areas also show in a presentation and in the exported image, and are ' +
-        'saved with the project.',
+        'An area is a coloured rectangle with a name, drawn behind a group of devices to say ' +
+        'what they are: Core, Edge, Offices, Internet. The sample networks, all but the ' +
+        'simplest, already have theirs. In the “Add device” panel there is “Area”, which adds ' +
+        'one at the centre of the view; or select the devices and choose Edit → “Enclose in an ' +
+        'area” (it is also in the right-click menu of a device): the area is drawn around them. ' +
+        'Type the name and press Enter. Grab an area by its name or its border: dragging it ' +
+        'moves it, and the devices stay where they are; when it is selected it shows eight ' +
+        'handles to resize it. A double click on the name renames it, a right click opens a menu ' +
+        'with “Rename”, the colours and “Delete”, and the Delete key deletes the selected area. ' +
+        'The inside of an area does not get in the way: devices inside it are selected, ' +
+        'connected and moved as usual. Areas also show in a presentation and in the exported ' +
+        'image, and are saved with the project.',
     },
     configure: {
       title: 'Configure them',

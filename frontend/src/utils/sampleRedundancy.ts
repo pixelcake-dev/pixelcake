@@ -39,7 +39,7 @@
 
 import type { NetworkDevice, NetworkConnection, NetworkInterfaceCard, Port } from '@/types';
 import { getT } from '@/i18n';
-import { sampleSettings, type SampleNetwork } from '@/utils/sampleNetwork';
+import { areasAround, sampleSettings, type SampleNetwork } from '@/utils/sampleNetwork';
 
 const MASK = '255.255.255.0';
 const P2P_MASK = '255.255.255.252';
@@ -404,5 +404,18 @@ export function createRedundancySample(): SampleNetwork {
   // network of the head office. The sample has no DNS server and no VLAN
   const settings = sampleSettings({ network: '192.168.1.0', gateway: '192.168.1.1' });
 
-  return { devices, connections, settings };
+  // The two sites, at a glance; the router of the backup carrier is in neither
+  const areas = areasAround(
+    [
+      {
+        label: headOffice,
+        color: 'slate',
+        devices: ['r-sede', 'sw-core', 'srv-file', 'sw-piano-1', 'sw-piano-2', 'pc-sede-1', 'pc-sede-2'],
+      },
+      { label: branch, color: 'teal', devices: ['r-filiale', 'sw-filiale', 'pc-filiale-1', 'pc-filiale-2'] },
+    ],
+    devices
+  );
+
+  return { devices, connections, settings, areas };
 }
