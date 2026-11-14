@@ -285,9 +285,10 @@ input[type='radio'] {
   background-color: var(--bg-toolbar);
   border: 1px solid var(--border-color);
 }
-/* The devices on the small map: one grey, the map is for finding one's place */
+/* The devices on the small map take the colour of their type from the
+   canvas (utils/miniMapColour.ts): a glance tells where to go. No colour
+   is set here, or it would cover theirs */
 .react-flow .react-flow__minimap-node {
-  fill: var(--line-color);
   stroke: none;
 }
 

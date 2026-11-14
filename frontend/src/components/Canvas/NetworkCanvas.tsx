@@ -28,6 +28,7 @@ import 'reactflow/dist/style.css';
 import NetworkDevice from './NetworkDevice';
 import { useDhcp } from '@/utils/useDhcp';
 import { shownAddress } from '@/utils/dhcpLabels';
+import { miniMapColour } from '@/utils/miniMapColour';
 import CustomEdge from './CustomEdge';
 import ParticleEdge from './ParticleEdge';
 import PacketAnimation from './PacketAnimation';
@@ -47,6 +48,10 @@ const edgeTypes = {
   custom: CustomEdge,
   particle: ParticleEdge, // Particle animations with CSS offset-path
 };
+
+/** A device on the small map is drawn in the colour of its type */
+const miniMapNodeColour = (node: Node): string =>
+  miniMapColour((node.data as NetworkDeviceType | undefined)?.type);
 
 /**
  * True once React Flow knows the size of every device on screen, which is
@@ -553,7 +558,7 @@ const NetworkCanvas = () => {
             background and the veil outside the view follow the theme: they
             are in index.css, like those of the zoom buttons and the credit */}
         {/* (the devices on the small map take their one colour from the style sheet) */}
-        {!presenting && <MiniMap />}
+        {!presenting && <MiniMap nodeColor={miniMapNodeColour} />}
         {/* Packet Animation Logic */}
         <PacketAnimation />
       </ReactFlow>
