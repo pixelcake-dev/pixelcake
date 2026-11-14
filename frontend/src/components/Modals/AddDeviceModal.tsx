@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Modal } from '@/components/ui/Modal';
 import DeviceDrawing from '@/components/ui/DeviceDrawing';
 import { drawingOf } from '@/utils/deviceDrawing';
+import { DEVICE_METRICS, deviceHeight } from '@/utils/deviceGeometry';
 import { Button } from '@/components/ui/Button';
 import { FormFieldset } from '@/components/ui/FormContainer';
 import { FieldRow, ReadOnlyField, SelectField, TextField } from '@/components/ui/compact';
@@ -119,11 +120,11 @@ const AddDeviceModal = () => {
     const canvas = document.querySelector('.react-flow')?.getBoundingClientRect();
     const viewWidth = canvas?.width || window.innerWidth;
     const viewHeight = canvas?.height || window.innerHeight;
-    // (a device is about 120 by 100: half of that puts its middle on the centre)
+    // (half of the frame of a device puts its middle on the centre)
     const place = firstFreePlace(
       {
-        x: Math.round((viewWidth / 2 - viewport.x) / zoom) - 60,
-        y: Math.round((viewHeight / 2 - viewport.y) / zoom) - 50,
+        x: Math.round((viewWidth / 2 - viewport.x) / zoom) - DEVICE_METRICS.width / 2,
+        y: Math.round((viewHeight / 2 - viewport.y) / zoom) - deviceHeight(true) / 2,
       },
       placed.map((device) => device.position)
     );

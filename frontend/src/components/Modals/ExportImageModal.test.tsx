@@ -17,7 +17,7 @@ import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
 import { createRedundancySample } from '@/utils/sampleRedundancy';
 import { createSampleTopology } from '@/utils/sampleTopology';
-import { MARK_COLORS, PALETTES } from '@/utils/drawingImage';
+import { DEVICE_STATE_COLORS, MARK_COLORS, PALETTES, deviceSize } from '@/utils/drawingImage';
 import * as images from '@/utils/imageExport';
 import { device } from '@/test/networkFixtures';
 import PresentationBar from '@/components/Presentation/PresentationBar';
@@ -307,8 +307,8 @@ describe('ExportImageModal — the choices', () => {
     expect(saveButton()).toHaveTextContent('Salva SVG…');
   });
 
-  it('uses the size each device has on screen', async () => {
-    // the canvas has drawn R-Sede 200 wide (a long name, say)
+  it('draws every device in its frame, the same whatever its name: nothing is read from the screen', async () => {
+    // (a device on the page that is not laid out as the picture expects changes nothing)
     const node = document.createElement('div');
     node.className = 'react-flow__node';
     node.dataset.id = id('R-Sede');
@@ -322,14 +322,16 @@ describe('ExportImageModal — the choices', () => {
     render(<ExportImageModal />);
     await openDialog();
 
-    const widths = [...picture().querySelectorAll('svg > g > g')]
-      .slice(2)
-      .map((group) => [
-        group.querySelector('text')?.textContent,
-        Number(group.querySelectorAll('rect')[0].getAttribute('width')) + 2,
-      ]);
-    expect(widths).toContainEqual(['R-Sede', 200]);
-    expect(widths).toContainEqual(['R-Filiale', 120]);
+    // each drawing is in the middle of a frame as wide as any other: 28 from its left side
+    const frame = deviceSize(true);
+    const lefts = [...picture().querySelectorAll('svg > g > g')].slice(2).map((group) => {
+      const at = /translate\(([\d.-]+) /.exec(group.children[0].getAttribute('transform') ?? '');
+      const name = group.querySelector('text');
+      return [name?.textContent, Number(name?.getAttribute('x')) - Number(at?.[1])];
+    });
+    expect(lefts).toHaveLength(network().devices.length);
+    expect(lefts).toContainEqual(['R-Sede', frame.width / 2 - 28]);
+    expect(new Set(lefts.map(([, left]) => left))).toEqual(new Set([frame.width / 2 - 28]));
   });
 });
 
@@ -677,8 +679,9 @@ describe('ExportImageModal — while presenting', () => {
     expect(caption).toContain(`Motivo: ${reason}`);
     expect(caption).toContain('Guasto simulato: SW-Core.');
     expect(picture().querySelector('svg > circle')?.getAttribute('fill')).toBe(PALETTES.light.toneKo);
-    // the broken device is struck out on the drawing
-    expect(picture().querySelector('pattern#pc-hatch')).not.toBeNull();
+    // on the drawing the lamp of the broken device is off, and the one of the device the answer stops on is red
+    expect(picture().querySelector(`[fill="${DEVICE_STATE_COLORS.off}"]`)).not.toBeNull();
+    expect(picture().querySelector(`[fill="${DEVICE_STATE_COLORS.error}"]`)).not.toBeNull();
   });
 
   it('leaves the caption out when asked, and keeps the marks on the drawing', async () => {

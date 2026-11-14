@@ -1,12 +1,11 @@
 /**
- * What the picture of a drawing asks the browser: how large each device is on
- * screen, what its icon looks like, how wide a text is.
+ * What is asked of the browser about the drawing on screen: how large each
+ * device is, how wide a text is.
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { addIcon } from '@iconify/react';
-import { FONT_FAMILY, approximateTextWidth } from './drawingImage';
-import { createTextMeasure, iconShapeOf, measureDeviceSizes } from './drawingMeasure';
+import { FONT_FAMILY, MONO_FONT_FAMILY, approximateTextWidth } from './drawingImage';
+import { createTextMeasure, measureDeviceSizes } from './drawingMeasure';
 
 /** A device as React Flow puts it on the page; jsdom lays nothing out, so sizes are given */
 function addNode(
@@ -34,30 +33,30 @@ afterEach(() => {
 
 describe('measureDeviceSizes', () => {
   it('reads the size of every device on the canvas', () => {
-    addNode(document.body, 'dev-0', { width: 120, height: 117 });
-    addNode(document.body, 'dev-1', { width: 188, height: 101 });
+    addNode(document.body, 'dev-0', { width: 104, height: 94 });
+    addNode(document.body, 'dev-1', { width: 104, height: 80 });
 
     expect([...measureDeviceSizes()]).toEqual([
-      ['dev-0', { width: 120, height: 117 }],
-      ['dev-1', { width: 188, height: 101 }],
+      ['dev-0', { width: 104, height: 94 }],
+      ['dev-1', { width: 104, height: 80 }],
     ]);
   });
 
-  it('gives a device its everyday size when the screen shows it with a thicker border', () => {
-    addNode(document.body, 'selected', { width: 122, height: 119 }, { node: 'selected' });
-    addNode(document.body, 'magnified', { width: 122, height: 119 }, { box: 'device-magnified' });
-    addNode(document.body, 'plain', { width: 120, height: 117 }, { box: 'device-dimmed' });
+  it('takes the frame as it is: a selected device, or one picked out, is as large as any other', () => {
+    addNode(document.body, 'selected', { width: 104, height: 94 }, { node: 'selected' });
+    addNode(document.body, 'magnified', { width: 104, height: 94 }, { box: 'device-magnified' });
+    addNode(document.body, 'plain', { width: 104, height: 94 }, { box: 'device-dimmed' });
 
     const sizes = measureDeviceSizes();
-    expect(sizes.get('selected')).toEqual({ width: 120, height: 117 });
-    expect(sizes.get('magnified')).toEqual({ width: 120, height: 117 });
-    expect(sizes.get('plain')).toEqual({ width: 120, height: 117 });
+    expect(sizes.get('selected')).toEqual({ width: 104, height: 94 });
+    expect(sizes.get('magnified')).toEqual({ width: 104, height: 94 });
+    expect(sizes.get('plain')).toEqual({ width: 104, height: 94 });
   });
 
   it('leaves out what is not laid out yet, and what is not a device', () => {
-    addNode(document.body, 'ready', { width: 120, height: 117 });
+    addNode(document.body, 'ready', { width: 104, height: 94 });
     addNode(document.body, 'not-yet', { width: 0, height: 0 });
-    addNode(document.body, null, { width: 120, height: 117 });
+    addNode(document.body, null, { width: 104, height: 94 });
 
     expect([...measureDeviceSizes().keys()]).toEqual(['ready']);
   });
@@ -66,40 +65,11 @@ describe('measureDeviceSizes', () => {
     const one = document.createElement('div');
     const other = document.createElement('div');
     document.body.append(one, other);
-    addNode(one, 'here', { width: 120, height: 117 });
-    addNode(other, 'elsewhere', { width: 120, height: 117 });
+    addNode(one, 'here', { width: 104, height: 94 });
+    addNode(other, 'elsewhere', { width: 104, height: 94 });
 
     expect([...measureDeviceSizes(one).keys()]).toEqual(['here']);
     expect(measureDeviceSizes(document.createElement('div')).size).toBe(0);
-  });
-});
-
-describe('iconShapeOf', () => {
-  it('gives the shape of an icon shipped with the app', () => {
-    const shape = iconShapeOf('mdi:router-network');
-    expect(shape).toMatchObject({ width: 24, height: 24, left: 0, top: 0 });
-    expect(shape?.body).toContain('<path');
-  });
-
-  it('has nothing for an icon the app does not have', () => {
-    expect(iconShapeOf('nope:nothing-like-this')).toBeNull();
-    expect(iconShapeOf('')).toBeNull();
-  });
-
-  it('refuses an icon that is more than a drawing', () => {
-    addIcon('pctest:plain', { body: '<path d="M0 0h8v8H0z"/>', width: 8, height: 8 });
-    addIcon('pctest:script', { body: '<script>alert(1)</script><path d="M0 0"/>', width: 8, height: 8 });
-    addIcon('pctest:remote', { body: '<image href="https://example.com/x.png"/>', width: 8, height: 8 });
-
-    expect(iconShapeOf('pctest:plain')).toEqual({
-      body: '<path d="M0 0h8v8H0z"/>',
-      width: 8,
-      height: 8,
-      left: 0,
-      top: 0,
-    });
-    expect(iconShapeOf('pctest:script')).toBeNull();
-    expect(iconShapeOf('pctest:remote')).toBeNull();
   });
 });
 
@@ -124,9 +94,15 @@ describe('createTextMeasure', () => {
     );
 
     const measure = createTextMeasure();
-    expect(measure('R-Sede', { size: 14, weight: 600 })).toBe(42);
-    expect(measure('10.0.0.1', { size: 12.24, weight: 400 })).toBe(56);
-    expect(fonts).toEqual([`600 14px ${FONT_FAMILY}`, `400 12.24px ${FONT_FAMILY}`]);
+    expect(measure('R-Sede', { size: 12.5, weight: 600 })).toBe(42);
+    // an address is written in the letters of equal width
+    expect(measure('10.0.0.1', { size: 10.5, weight: 400, mono: true })).toBe(56);
+    expect(measure('1 Gbps', { size: 12, weight: 400, mono: false })).toBe(42);
+    expect(fonts).toEqual([
+      `600 12.5px ${FONT_FAMILY}`,
+      `400 10.5px ${MONO_FONT_FAMILY}`,
+      `400 12px ${FONT_FAMILY}`,
+    ]);
   });
 
   it('estimates when the browser has a canvas but will not draw on it', () => {

@@ -247,7 +247,7 @@ describe('the guide — the areas of the canvas', () => {
 
     const { devices, connections, areas } = store();
     const picture = renderDrawingImage(
-      { devices, connections, areas, deviceTemplates: [], connectionTemplates: [], iconOf: () => null, measureText: (text) => text.length * 6 },
+      { devices, connections, areas, deviceTemplates: [], connectionTemplates: [], measureText: (text) => text.length * 6 },
       { theme: 'light' }
     );
     expect(picture.svg).toContain('>CORE</text>');

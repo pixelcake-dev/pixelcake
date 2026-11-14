@@ -660,27 +660,50 @@ button.area-label:focus-visible {
   outline-offset: 2px;
 }
 
-/* Network Device Styles */
+/* A device on the canvas: its drawing, its name under it, then its address.
+   No box. The frame around it is still there, the same for every device,
+   and shows under the pointer and on a selected device: it is what is
+   pressed, dragged and joined. The numbers are repeated for the exported
+   picture in utils/deviceGeometry.ts, and a test reads both */
 .network-device {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px;
-  background-color: var(--bg-component);
-  border: 2px solid var(--border-color);
+  /* one width for every device, whatever the length of its name (a long
+     name runs out on both sides): the cables between two devices one over
+     the other are then straight */
+  width: 104px;
+  /* how high the frame comes out, for what is placed along its sides: the
+     drawing and the name, and a line more with an address */
+  --frame-height: 80px;
+  padding: 6px 6px 3px;
+  background-color: transparent;
+  border: 2px solid transparent;
   border-radius: 3px;
   box-shadow: none;
-  font-size: 0.9em;
-  min-width: 120px;
   text-align: center;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
-  /* (what is behind the drawing of the device is its box) */
-  --device-ground: var(--bg-component);
+  transition: border-color 0.12s ease;
+}
+
+.network-device.device-with-address {
+  --frame-height: 94px;
+}
+
+.react-flow__node:hover .network-device {
+  border-color: var(--border-color);
+}
+
+/* The device that has the focus of the keyboard: its frame in the ink of the theme */
+.react-flow__node:focus-visible {
+  outline: none;
+}
+
+.react-flow__node:focus-visible .network-device {
+  border-color: var(--text-color);
 }
 
 .react-flow__node.dragging .network-device {
-  box-shadow: 0 6px 16px var(--shadow-color);
   border-color: var(--accent-color);
 }
 
@@ -691,124 +714,180 @@ button.area-label:focus-visible {
   pointer-events: none;
 }
 
-.device-icon {
-  margin-bottom: 5px;
-}
-
 .device-name {
+  margin-top: 3px;
+  font-size: 12.5px;
+  line-height: 16px;
   font-weight: 600;
+  color: var(--text-color);
 }
 
 .device-ip {
-  font-size: 0.85em;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10.5px;
+  line-height: 14px;
   color: var(--text-color-light);
-  margin-top: 4px;
 }
 
-/* Connection Points (Handles) */
-/* Large invisible hit area for easy connections */
-.connect-point {
-  width: 28px !important;
-  height: 28px !important;
-  background: transparent !important;
-  border: none !important;
-  border-radius: 50% !important;
-  opacity: 1 !important;
+/* The name and the address have the canvas behind them, so that a cable
+   passing there does not cut the letters; each is one line, however long */
+.device-name,
+.device-ip {
+  padding: 0 4px;
+  background-color: var(--bg-canvas);
+  white-space: nowrap;
+}
+
+/* Where a cable ends, and where one is started.
+
+   A cable ends on a connection point: a mark too small to see, placed by
+   the device itself next to what is drawn (above it, at its two sides) and
+   under its address. There are no marks on the sides of a device.
+
+   A cable is started from the frame: the band along each of its four sides
+   (the ::before of the point of that side) takes the press, and the side
+   under the pointer turns orange (the ::after). A press anywhere else on
+   the device selects it and drags it. `--at-x` and `--at-y` are where the
+   device put the point, from the inside of the frame: band and side are
+   placed back from there to the frame */
+.react-flow .connect-point {
+  min-width: 0;
+  min-height: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  opacity: 1;
   z-index: 10;
-  pointer-events: all !important;
-  transition: none !important;
+  pointer-events: none;
+  transform: none;
+  transition: none;
 }
 
-/* Small visible indicator using pseudo-element. Hidden at rest: four marks
-   on every device, all at once, covered the drawing. (The hit area above is
-   always there, and it is part of the device: the marks appear as the
-   pointer comes near.) */
+.react-flow .connect-point-top,
+.react-flow .connect-point-bottom {
+  width: 8px;
+  height: 2px;
+}
+
+.react-flow .connect-point-left,
+.react-flow .connect-point-right {
+  width: 2px;
+  height: 8px;
+}
+
+.connect-point::before,
 .connect-point::after {
   content: '';
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 14px;
-  height: 14px;
-  background-color: var(--bg-canvas);
-  border: 3px solid var(--connector-color);
-  border-radius: 50%;
+}
+
+/* The band: 12 deep along its side of the frame. The ones of the top and of
+   the bottom are as long as the frame, the ones at the two sides run between
+   them */
+.connect-point::before {
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+.connect-point-top::before {
+  left: calc(-2px - var(--at-x));
+  top: calc(-2px - var(--at-y));
+  width: 104px;
+  height: 12px;
+}
+
+.connect-point-bottom::before {
+  left: calc(-2px - var(--at-x));
+  bottom: 0;
+  width: 104px;
+  height: 12px;
+}
+
+.connect-point-left::before {
+  left: calc(-2px - var(--at-x));
+  top: calc(10px - var(--at-y));
+  width: 12px;
+  height: calc(var(--frame-height) - 24px);
+}
+
+.connect-point-right::before {
+  left: calc(90px - var(--at-x));
+  top: calc(10px - var(--at-y));
+  width: 12px;
+  height: calc(var(--frame-height) - 24px);
+}
+
+/* The side of the frame the band runs along: in orange while the pointer is
+   on the band */
+.connect-point::after {
+  background-color: var(--accent-color);
   opacity: 0;
-  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
   pointer-events: none;
 }
 
-/* They show on the device under the pointer and on a selected one (which is
-   also how they are reached where there is no pointer to hover with); on
-   every device while a cable is being dragged, see below */
-.react-flow__node:hover .connect-point::after,
-.react-flow__node.selected .connect-point::after {
-  opacity: 1 !important;
-}
-
-
-/* While a cable is being dragged every point it can land on is filled with
-   the accent (the class on the body is added by onConnectStart/onConnectEnd) */
-body.react-flow-connecting .connect-point::after {
-  opacity: 1 !important;
-  background-color: var(--accent-color) !important;
-  border-color: var(--bg-canvas) !important;
-  box-shadow: none !important;
-  transform: translate(-50%, -50%) scale(1.25) !important;
-  transition: none !important;
-}
-
-/* Also try React Flow native class as fallback */
-.react-flow.connecting .connect-point::after,
-.react-flow .react-flow__node.connecting .connect-point::after {
-  opacity: 1 !important;
-  background-color: var(--accent-color) !important;
-  border-color: var(--bg-canvas) !important;
-  box-shadow: none !important;
-  transform: translate(-50%, -50%) scale(1.25) !important;
-  transition: none !important;
-}
-
-/* Keep the source node handles normal during drag */
-body.react-flow-connecting .react-flow__node.selected .connect-point::after,
-.react-flow.connecting .react-flow__node.selected .connect-point::after {
-  background-color: var(--bg-canvas) !important;
-  border-color: var(--connector-color) !important;
-  transform: translate(-50%, -50%) scale(1) !important;
-  box-shadow: none !important;
-  transition: none !important;
-}
-
-/* Scale and highlight on direct hover */
 .connect-point:hover::after {
-  transform: translate(-50%, -50%) scale(1.2);
-  background-color: var(--connector-color);
+  opacity: 1;
 }
 
-/* Position adjustments for larger hit area */
-.connect-point-top {
-  top: -14px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
+.connect-point-top::after {
+  left: calc(-2px - var(--at-x));
+  top: calc(-2px - var(--at-y));
+  width: 104px;
+  height: 2px;
 }
 
-.connect-point-bottom {
-  bottom: -14px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
+.connect-point-bottom::after {
+  left: calc(-2px - var(--at-x));
+  bottom: 0;
+  width: 104px;
+  height: 2px;
 }
 
-.connect-point-left {
-  left: -14px !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
+.connect-point-left::after {
+  left: calc(-2px - var(--at-x));
+  top: calc(-2px - var(--at-y));
+  width: 2px;
+  height: var(--frame-height);
 }
 
-.connect-point-right {
-  right: -14px !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
+.connect-point-right::after {
+  left: calc(100px - var(--at-x));
+  top: calc(-2px - var(--at-y));
+  width: 2px;
+  height: var(--frame-height);
+}
+
+/* While a cable is being pulled every device shows its frame, and its bands
+   grow to meet in the middle: the cable can be let go anywhere on a device,
+   and it ends on the side it was let go on (the class on the body is added
+   by onConnectStart/onConnectEnd) */
+body.react-flow-connecting .network-device {
+  border-color: var(--border-color);
+}
+
+body.react-flow-connecting .connect-point-top::before {
+  height: 36px;
+}
+
+body.react-flow-connecting .connect-point-bottom::before {
+  height: calc(var(--frame-height) - 60px);
+}
+
+body.react-flow-connecting .connect-point-left::before {
+  top: calc(34px - var(--at-y));
+  width: 52px;
+  height: 24px;
+}
+
+body.react-flow-connecting .connect-point-right::before {
+  left: calc(50px - var(--at-x));
+  top: calc(34px - var(--at-y));
+  width: 52px;
+  height: 24px;
+}
+
+body.react-flow-connecting .connect-point:hover::before {
+  background-color: rgba(var(--accent-color-rgb), 0.12);
 }
 
 /* Packet Animation */
@@ -1711,11 +1790,11 @@ legend {
   --magnify-color-backbone: #f87171;
 }
 
-/* Device magnification states */
+/* Device magnification states: the frame of the devices picked out, in the
+   colour of their type */
 .network-device.device-magnified {
   z-index: 10 !important;
   border-color: currentColor !important;
-  border-width: 3px !important;
 }
 
 .network-device.device-dimmed {
@@ -1724,15 +1803,12 @@ legend {
   transition: opacity 0.3s ease, filter 0.3s ease;
 }
 
-/* Device selection state (React Flow native) */
+/* Device selection state (React Flow native): the frame in the accent. The
+   upper layer of the drawing is in the accent too: the device says so
+   itself, as a state */
 .react-flow__node.selected .network-device {
   border-color: var(--accent-color) !important;
-  border-width: 3px !important;
-  box-shadow: none;
-  background: var(--bg-canvas);
-  --device-ground: var(--bg-canvas);
   z-index: 5 !important;
-  transition: all 0.2s ease;
 }
 
 /* Edge/Connection magnification states */
@@ -3182,26 +3258,23 @@ legend {
   cursor: pointer;
 }
 
-.presenting .connect-point {
-  pointer-events: none !important;
-}
-
-/* (the handles stay in place, the cables hang on them: only their mark goes) */
-.presenting .react-flow__node .connect-point::after,
-.presenting .react-flow__node:hover .connect-point::after {
+/* (the connection points stay in place, the cables hang on them: only the
+   bands that start a cable go) */
+.presenting .connect-point::before {
   display: none;
 }
 
 /* The two ends of the question */
 .device-role {
   position: absolute;
-  top: -11px;
-  left: -8px;
+  top: -9px;
+  left: 2px;
   z-index: 11;
   padding: 1px 8px;
   border-radius: var(--radius-small);
   color: var(--on-accent);
-  font-size: 0.7em;
+  font-size: 10px;
+  line-height: 14px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -3218,32 +3291,22 @@ legend {
   color: var(--on-secondary);
 }
 
-/* The packet of a simulation is stopping on this device */
+/* The packet of a simulation is stopping on this device: its frame shows, in the accent */
 .network-device.device-has-packet {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.35);
 }
 
-/* A device taken as broken */
-.network-device.device-failed {
-  border-style: dashed;
-  border-color: #ef4444;
-  background-image: repeating-linear-gradient(
-    135deg,
-    rgba(239, 68, 68, 0.1) 0 8px,
-    transparent 8px 16px
-  );
-}
-
-.network-device.device-failed .device-content {
-  opacity: 0.45;
-  filter: grayscale(1);
+/* A device taken as broken: its lamp is off (the device says so itself, as a
+   state), its name and its address fade, and a mark says why */
+.network-device.device-failed .device-name,
+.network-device.device-failed .device-ip {
+  opacity: 0.55;
 }
 
 .device-failed-badge {
   position: absolute;
-  top: -10px;
-  right: -10px;
+  top: -8px;
+  right: 6px;
   z-index: 11;
   width: 24px;
   height: 24px;
@@ -3255,12 +3318,6 @@ legend {
   color: #fff;
   box-shadow: none;
   pointer-events: none;
-}
-
-/* The device the packet of the answer stops on */
-.network-device.device-drop {
-  border-color: #f59e0b;
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4);
 }
 
 /* The mark on a cable that is cut */

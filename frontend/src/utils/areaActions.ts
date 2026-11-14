@@ -8,9 +8,10 @@
 import { useNetworkStore } from '@/store/networkStore';
 import { DEFAULT_AREA_LABEL, areaAround, areaAt, nextAreaColour } from '@/utils/canvasAreas';
 import { measureDeviceSizes } from '@/utils/drawingMeasure';
+import { DEVICE_METRICS, deviceHeight } from '@/utils/deviceGeometry';
 
-/** The size a device is taken to have when the screen cannot say */
-const ASSUMED_DEVICE_SIZE = { width: 120, height: 100 };
+/** The size a device is taken to have when the screen cannot say: its frame, with an address */
+const ASSUMED_DEVICE_SIZE = { width: DEVICE_METRICS.width, height: deviceHeight(true) };
 
 /** The middle of the part of the canvas on screen, in the coordinates of the canvas */
 function viewCentre(): { x: number; y: number } {

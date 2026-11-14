@@ -342,23 +342,6 @@ export interface ConnectionTemplate {
 }
 
 /**
- * Device Icon Mapping (DEPRECATED)
- * Icons are now managed through templateStore
- * Kept for backward compatibility only
- */
-export const DEVICE_ICONS: Record<string, string> = {
-  PC: 'solar:monitor-bold-duotone',
-  Switch: 'carbon:network-4',
-  Router: 'mdi:router-network',
-  Server: 'mdi:server',
-  Firewall: 'mdi:shield-network',
-  AccessPoint: 'mdi:access-point',
-  LoadBalancer: 'mdi:scale-balance',
-  Database: 'mdi:database',
-  Cloud: 'mdi:cloud',
-};
-
-/**
  * Flow Model Colors for packet animation
  */
 export const FLOW_MODEL_COLORS: Record<FlowModelType, string> = {

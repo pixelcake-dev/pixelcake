@@ -15,6 +15,7 @@ import { useSimulationStore } from '@/store/simulationStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { END_PAUSE_MS, HOP_PAUSE_MS, edgeDuration, pickConnection } from '@/utils/packetTiming';
+import { DEVICE_METRICS, deviceHeight } from '@/utils/deviceGeometry';
 
 const PacketAnimation = () => {
   const reactFlowInstance = useReactFlow();
@@ -63,8 +64,8 @@ const PacketAnimation = () => {
         if (!fromNode || !toNode || !connection) continue;
 
         const centre = (node: typeof fromNode) => ({
-          x: node.position.x + (node.width ?? 120) / 2,
-          y: node.position.y + (node.height ?? 100) / 2,
+          x: node.position.x + (node.width ?? DEVICE_METRICS.width) / 2,
+          y: node.position.y + (node.height ?? deviceHeight(true)) / 2,
         });
         const from = centre(fromNode);
         const to = centre(toNode);

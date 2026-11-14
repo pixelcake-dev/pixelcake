@@ -15,20 +15,11 @@ import {
   layoutDrawing,
   renderDrawingImage,
   type DrawingInput,
-  type IconShape,
   type TextMeasure,
 } from './drawingImage';
 
 /** Half the font size for each letter: easy to do by hand */
 const measure: TextMeasure = (text, font) => text.length * font.size * 0.5;
-
-const SQUARE: IconShape = {
-  body: '<path fill="currentColor" d="M0 0h24v24H0z"/>',
-  width: 24,
-  height: 24,
-  left: 0,
-  top: 0,
-};
 
 const CORE: CanvasArea = {
   id: 'area-1',
@@ -54,7 +45,6 @@ const input = (overrides: Partial<DrawingInput> = {}): DrawingInput => ({
   connections: [link('a', 'b', { id: 'ab', sourceHandle: 'bottom', targetHandle: 'top' })],
   deviceTemplates: [],
   connectionTemplates: [],
-  iconOf: () => SQUARE,
   measureText: measure,
   ...overrides,
 });
@@ -186,7 +176,8 @@ describe('the areas in the picture', () => {
     expect(renderDrawingImage(input({ areas: [] }), options)).toEqual(plain);
     expect(plain.svg).not.toContain('fill-opacity="0.1"');
     // and one with areas is the same picture with them behind, when they do not stick out
-    const inside: CanvasArea = { ...CORE, position: { x: 10, y: 10 }, size: { width: 100, height: 300 } };
+    // (the two devices are 104 wide)
+    const inside: CanvasArea = { ...CORE, position: { x: 10, y: 10 }, size: { width: 90, height: 300 } };
     const withArea = renderDrawingImage(input({ areas: [inside] }), options);
     expect([withArea.width, withArea.height]).toEqual([plain.width, plain.height]);
     const areaGroup = /<g><g><rect [^>]*fill-opacity="0\.1"[^>]*\/><text [^>]*>CORE<\/text><\/g><\/g>/.exec(withArea.svg)?.[0];

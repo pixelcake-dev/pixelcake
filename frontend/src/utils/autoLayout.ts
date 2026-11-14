@@ -6,12 +6,14 @@
 import dagre from 'dagre';
 import type { NetworkDevice, NetworkConnection, ConnectionType } from '@/types';
 import { withLeases } from '@/engine';
+import { DEVICE_METRICS, deviceHeight } from '@/utils/deviceGeometry';
 
 /**
- * Node dimensions for layout calculation
+ * Node dimensions for layout calculation: the frame of a device on the
+ * canvas, with its address
  */
-const NODE_WIDTH = 120;
-const NODE_HEIGHT = 100;
+const NODE_WIDTH = DEVICE_METRICS.width;
+const NODE_HEIGHT = deviceHeight(true);
 
 /**
  * Device Tier Hierarchy

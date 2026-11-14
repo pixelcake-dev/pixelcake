@@ -118,20 +118,46 @@ export interface DrawingColours {
   ground: string;
 }
 
+/** The name of one of the two windows of a drawing, in a document that holds several drawings */
+function windowId(prefix: string, drawing: DeviceDrawingId, part: 'upper' | 'cut'): string {
+  return `${prefix}-${drawing}-${part}`;
+}
+
 /**
- * A drawing as markup for the inside of an `<svg>` 128 units wide and high,
- * with its colours written in: what the exported picture is made of. Built
- * as DeviceDrawing builds it on screen: the shapes whole, then in a window as
- * high as the upper layer, then in a window as high as the cut.
+ * The two windows of a drawing, for the `<defs>` of a document that shows
+ * it: one as high as its upper layer, one as high as the cut. They are named
+ * after the drawing (with `prefix` in front), once for a document: every
+ * copy of the drawing looks through the same two.
  */
-export function drawingMarkup(drawing: DeviceDrawingId, colours: DrawingColours): string {
-  const { layer, shapes } = DEVICE_DRAWINGS[drawing];
-  const paint = (device: string, onIt: string) =>
-    shapes.replaceAll('class="l"', `fill="${device}"`).replaceAll('class="g"', `fill="${onIt}"`);
+export function drawingWindows(drawing: DeviceDrawingId, prefix: string): string {
+  const { layer } = DEVICE_DRAWINGS[drawing];
   const cutTop = layer - DEVICE_DRAWING_CUT / 2;
   return (
+    `<clipPath id="${windowId(prefix, drawing, 'upper')}"><rect width="${DEVICE_DRAWING_SIZE}" height="${layer}"/></clipPath>` +
+    `<clipPath id="${windowId(prefix, drawing, 'cut')}"><rect y="${cutTop}" width="${DEVICE_DRAWING_SIZE}" height="${DEVICE_DRAWING_CUT}"/></clipPath>`
+  );
+}
+
+/**
+ * A drawing as markup, 128 units wide and high, with its colours written
+ * in: what the exported picture is made of. Built as DeviceDrawing builds it
+ * on screen: the shapes whole, then through a window as high as the upper
+ * layer, then through one as high as the cut. On screen the windows are
+ * nested `<svg>` elements, which need no name; a picture is opened by other
+ * programs too, and has the two windows in its `<defs>` (drawingWindows,
+ * with the same `prefix`).
+ */
+export function drawingMarkup(
+  drawing: DeviceDrawingId,
+  colours: DrawingColours,
+  prefix: string
+): string {
+  const { shapes } = DEVICE_DRAWINGS[drawing];
+  const paint = (device: string, onIt: string) =>
+    shapes.replaceAll('class="l"', `fill="${device}"`).replaceAll('class="g"', `fill="${onIt}"`);
+  return (
     `<g>${paint(colours.lower, colours.ground)}</g>` +
-    `<svg width="${DEVICE_DRAWING_SIZE}" height="${layer}" viewBox="0 0 ${DEVICE_DRAWING_SIZE} ${layer}">${paint(colours.state, colours.ground)}</svg>` +
-    `<svg y="${cutTop}" width="${DEVICE_DRAWING_SIZE}" height="${DEVICE_DRAWING_CUT}" viewBox="0 ${cutTop} ${DEVICE_DRAWING_SIZE} ${DEVICE_DRAWING_CUT}">${paint(colours.ground, colours.ground)}</svg>`
+    `<g clip-path="url(#${windowId(prefix, drawing, 'upper')})">${paint(colours.state, colours.ground)}</g>` +
+    `<g clip-path="url(#${windowId(prefix, drawing, 'cut')})">${paint(colours.ground, colours.ground)}</g>`
   );
 }

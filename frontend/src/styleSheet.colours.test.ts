@@ -54,8 +54,16 @@ describe('the colours of the interface', () => {
   });
 
   it('every variable a component or the style sheet uses has a value', () => {
-    // (set by the code on the element that uses it, not by the theme)
-    const setInPlace = new Set(['--animation-duration']);
+    // (set on the element that uses it, not by the theme: by the code, and for
+    // a device on the canvas by the device, which says where each of its
+    // connection points is, and by its own rule, which says how high its frame is)
+    const ofTheDevice = variablesOf('.network-device');
+    expect([...ofTheDevice]).toEqual(['--frame-height']);
+    expect([...variablesOf('.network-device.device-with-address')]).toEqual(['--frame-height']);
+    const device = sources['/src/components/Canvas/NetworkDevice.tsx'];
+    expect(device).toContain("'--at-x'");
+    expect(device).toContain("'--at-y'");
+    const setInPlace = new Set(['--animation-duration', '--at-x', '--at-y', ...ofTheDevice]);
     const used = new Map<string, string>();
     const written = Object.entries(sources).filter(([path]) => !/\.test\.tsx?$/.test(path));
     for (const [path, text] of [...written, ['index.css', sheet] as const]) {

@@ -48,10 +48,10 @@ const CORE: Omit<CanvasArea, 'id'> = {
   size: { width: 300, height: 260 },
 };
 
-/** What an area around these two is: jsdom measures nothing, a device is taken to be 120 by 100 */
+/** What an area around these two is: jsdom measures nothing, a device is taken to be its frame, 104 by 94 */
 const AROUND_TWO = {
   position: { x: 100 - AREA_MARGIN.side, y: 150 - AREA_MARGIN.top },
-  size: { width: 420 + 2 * AREA_MARGIN.side, height: 150 + AREA_MARGIN.top + AREA_MARGIN.bottom },
+  size: { width: 404 + 2 * AREA_MARGIN.side, height: 144 + AREA_MARGIN.top + AREA_MARGIN.bottom },
 };
 
 beforeEach(() => {
@@ -160,8 +160,8 @@ describe('«Racchiudi in un riquadro»', () => {
 
     expect(store().areas[0].position).toEqual({ x: 900 - AREA_MARGIN.side, y: 900 - AREA_MARGIN.top });
     expect(store().areas[0].size).toEqual({
-      width: 120 + 2 * AREA_MARGIN.side,
-      height: 100 + AREA_MARGIN.top + AREA_MARGIN.bottom,
+      width: 104 + 2 * AREA_MARGIN.side,
+      height: 94 + AREA_MARGIN.top + AREA_MARGIN.bottom,
     });
   });
 

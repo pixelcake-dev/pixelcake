@@ -30,7 +30,7 @@ import {
   type DrawingMarks,
   type ImageTheme,
 } from '@/utils/drawingImage';
-import { createTextMeasure, iconShapeOf, measureDeviceSizes } from '@/utils/drawingMeasure';
+import { createTextMeasure } from '@/utils/drawingMeasure';
 import {
   PNG_SCALES,
   canChooseWhereToSave,
@@ -115,9 +115,6 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
   );
 
   const measureText = useMemo(() => createTextMeasure(), []);
-  // The size of each device is read from the screen, again when the drawing changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const sizes = useMemo(() => measureDeviceSizes(), [devices]);
 
   // While presenting: what is marked on the drawing, and what is said under it.
   // The same questions to the engine as the panel of the presentation.
@@ -176,8 +173,6 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
           areas,
           deviceTemplates,
           connectionTemplates,
-          sizes,
-          iconOf: iconShapeOf,
           measureText,
           marks,
         },
@@ -194,7 +189,6 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
       areas,
       deviceTemplates,
       connectionTemplates,
-      sizes,
       measureText,
       marks,
       theme,

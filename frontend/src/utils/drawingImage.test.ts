@@ -3,21 +3,24 @@
  * what comes out is a document any program can open.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { Position, getSmoothStepPath } from 'reactflow';
 import type { ConnectionTemplate, DeviceTemplate } from '@/types/network';
 import { device, link } from '@/test/networkFixtures';
+import { drawingMarkup } from '@/utils/deviceDrawing';
 import styleSheet from '../index.css?raw';
 import {
   ACCENTS,
   DEVICE_METRICS,
+  DEVICE_STATE_COLORS,
+  FAILED_TEXT_OPACITY,
+  FAILURE_BADGE,
   MARK_COLORS,
   PALETTES,
+  ROLE_TAG,
   approximateTextWidth,
+  deviceSize,
   escapeXml,
-  estimateDeviceSize,
-  greyOf,
-  isPlainDrawing,
   layoutDrawing,
   pixelSize,
   renderDrawingImage,
@@ -25,7 +28,6 @@ import {
   wrapText,
   type DrawingInput,
   type DrawingMarks,
-  type IconShape,
   type ImageOptions,
   type TextMeasure,
 } from './drawingImage';
@@ -33,18 +35,10 @@ import {
 /** Half the font size for each letter: easy to do by hand */
 const measure: TextMeasure = (text, font) => text.length * font.size * 0.5;
 
-const SQUARE: IconShape = {
-  body: '<path fill="currentColor" d="M0 0h24v24H0z"/>',
-  width: 24,
-  height: 24,
-  left: 0,
-  top: 0,
-};
-
 const template = (overrides: Partial<DeviceTemplate> & { id: string }): DeviceTemplate => ({
   name: overrides.id,
   type: 'PC',
-  icon: 'mdi:monitor',
+  icon: 'pc',
   color: '#336699',
   isCustom: false,
   supportsVLAN: false,
@@ -71,7 +65,6 @@ const input = (overrides: Partial<DrawingInput> = {}): DrawingInput => ({
   connections: [],
   deviceTemplates: [],
   connectionTemplates: [],
-  iconOf: () => SQUARE,
   measureText: measure,
   ...overrides,
 });
@@ -87,7 +80,11 @@ const marks = (overrides: Partial<DrawingMarks> = {}): DrawingMarks => ({
 
 const LIGHT: ImageOptions = { theme: 'light' };
 
-/** Two devices one above the other, 120 × 117 each, joined bottom to top */
+/**
+ * Two computers one above the other, 104 × 94 each, joined bottom to top.
+ * What is drawn of a computer starts 12.5 under the top of its frame, and
+ * between 28.75 and 75.25 from its left side: a cable ends 3 off it.
+ */
 const pair = (overrides: Partial<DrawingInput> = {}) =>
   input({
     devices: [
@@ -110,91 +107,91 @@ const drawing = (doc: Document) => doc.querySelector('svg > g') as SVGGElement;
 const cablePaths = (doc: Document) => [...drawing(doc).children[0].querySelectorAll('path')];
 const deviceGroups = (doc: Document) => [...drawing(doc).children].slice(2);
 const texts = (scope: ParentNode) => [...scope.querySelectorAll('text')].map(t => t.textContent);
+/** What a device is drawn with: its three passes (whole, the upper layer, the cut) */
+const passes = (group: Element) => [...group.children[0].children];
+/** The colours something is filled with */
+const fills = (scope: Element) =>
+  [...new Set([...scope.querySelectorAll('[fill]')].map(shape => shape.getAttribute('fill')))].sort();
+/** What is painted behind the name and the address of a device */
+const behindTexts = (group: Element) => [...group.children].filter(child => child.tagName === 'rect');
 
 describe('layoutDrawing — devices', () => {
-  it('puts a device where the canvas has it, with the size measured on screen', () => {
+  it('puts a device where the canvas has it', () => {
     const scene = layoutDrawing(
-      input({
-        devices: [device({ id: 'a', position: { x: 100, y: 50 } })],
-        sizes: new Map([['a', { width: 143, height: 117 }]]),
-      })
+      input({ devices: [device({ id: 'a', ip: '10.0.0.1', position: { x: 100, y: 50 } })] })
     );
-    expect(scene.devices[0].box).toEqual({ x: 100, y: 50, width: 143, height: 117 });
+    expect(scene.devices[0].box).toEqual({ x: 100, y: 50, width: 104, height: 94 });
   });
 
-  it('works a missing size out from the texts, the way the style sheet lays a device out', () => {
-    const size = (label: string, ip: string) => estimateDeviceSize(label, ip, measure);
-    // short texts: the least width, and icon + name + address
-    expect(size('PC-1', '10.0.0.1')).toEqual({ width: 120, height: 117 });
-    // no address: one line less
-    expect(size('SW-1', '')).toEqual({ width: 120, height: 101 });
-    // a long name widens the box: 40 letters × 7 + border and padding on both sides
-    expect(size('x'.repeat(40), '').width).toBe(40 * 7 + 24);
+  it('gives each the frame of a device: one width, a line less without an address', () => {
+    // frame 2, room 6, drawing 48, 3 to the name, name 16, address 14, room 3, frame 2
+    expect(deviceSize(true)).toEqual({ width: 104, height: 94 });
+    expect(deviceSize(false)).toEqual({ width: 104, height: 80 });
 
-    const scene = layoutDrawing(input({ devices: [device({ id: 'a', label: 'PC-1', ip: '' })] }));
-    expect(scene.devices[0].box).toMatchObject({ width: 120, height: 101 });
-  });
-
-  it('does not take "not on screen yet" for a size', () => {
-    const scene = layoutDrawing(
+    const boxes = layoutDrawing(
       input({
-        devices: [device({ id: 'a', ip: '10.0.0.1' })],
-        sizes: new Map([['a', { width: 0, height: 0 }]]),
+        devices: [
+          device({ id: 'a', label: 'PC-1', ip: '10.0.0.1' }),
+          device({ id: 'b', label: 'SW-1', ip: '' }),
+          // a long name runs out of the frame: it does not widen it
+          device({ id: 'c', label: 'x'.repeat(40), ip: '' }),
+        ],
       })
-    );
-    expect(scene.devices[0].box).toMatchObject({ width: 120, height: 117 });
+    ).devices.map(({ box }) => [box.width, box.height]);
+    expect(boxes).toEqual([
+      [104, 94],
+      [104, 80],
+      [104, 80],
+    ]);
   });
 
-  it('takes icon and colour from the template: by id, else by type, else the fallbacks', () => {
-    const asked: string[] = [];
-    const iconOf = (name: string) => {
-      asked.push(name);
-      return name === 'x:gone' ? null : SQUARE;
-    };
+  it('shows a device with the drawing the canvas shows it with', () => {
     const scene = layoutDrawing(
       input({
-        iconOf,
         deviceTemplates: [
-          template({ id: 'tpl-pc', type: 'PC', icon: 'mdi:monitor', color: '#111111' }),
-          template({ id: 'tpl-nas', type: 'Server', icon: 'mdi:nas', color: '#222222' }),
-          template({ id: 'tpl-gone', type: 'Server', icon: 'x:gone', color: '#333333' }),
+          template({ id: 'tpl-nas', type: 'Database', icon: 'mdi:nas' }),
+          template({ id: 'custom-1', type: 'Server', icon: 'laptop', isCustom: true }),
+          template({ id: 'custom-2', type: 'Router', icon: 'mdi:router', isCustom: true }),
         ],
         devices: [
-          device({ id: 'a', type: 'Server', templateId: 'tpl-nas' }),
-          device({ id: 'b', type: 'PC' }),
-          device({ id: 'c', type: 'Router' }),
-          device({ id: 'd', type: 'Server', templateId: 'tpl-gone' }),
+          device({ id: 'a', type: 'Database', templateId: 'tpl-nas' }),
+          device({ id: 'b', type: 'Server', templateId: 'custom-1' }),
+          device({ id: 'c', type: 'Router', templateId: 'custom-2' }),
+          device({ id: 'd', type: 'PC' }),
+          device({ id: 'e', type: 'Switch', templateId: 'tpl-gone' }),
+          device({ id: 'f', type: 'Quantum' as never }),
         ],
       })
     );
-    expect(scene.devices.map(d => [d.iconName, d.color])).toEqual([
-      ['mdi:nas', '#222222'],
-      ['mdi:monitor', '#111111'],
-      // no template for a router here: the icon of its type, the neutral colour
-      ['mdi:router-network', '#5E8096'],
-      ['x:gone', '#333333'],
+    expect(scene.devices.map(d => d.drawing)).toEqual([
+      // a template the app comes with: its own drawing, whatever its icon says
+      'nas',
+      // a template that names a drawing
+      'laptop',
+      // one made before the drawings: the drawing of its type
+      'router',
+      // no template: the drawing of the type
+      'pc',
+      'switch',
+      // and a plain machine for a type the app does not know
+      'server',
     ]);
-    // an icon the app does not have gives way to the "unknown" one
-    expect(asked).toContain('mdi:help-circle-outline');
-    expect(scene.devices[3].icon).toBe(SQUARE);
   });
 });
 
 describe('layoutDrawing — cables', () => {
-  it('hangs a cable where the screen does, and carries it on to the two boxes', () => {
+  it('hangs a cable where the screen does: from under the address to just above what is drawn', () => {
     const scene = layoutDrawing(pair());
-    // on screen: from 12 below the first box to 12 above the second
     const [onScreen] = getSmoothStepPath({
-      sourceX: 60,
-      sourceY: 117 + 12,
+      sourceX: 52,
+      sourceY: 94,
       sourcePosition: Position.Bottom,
-      targetX: 60,
-      targetY: 300 - 12,
+      targetX: 52,
+      targetY: 300 + 12.5,
       targetPosition: Position.Top,
     });
-    expect(onScreen.startsWith('M60 129')).toBe(true);
-    // in the picture: the same line, from inside one border to inside the other
-    expect(scene.cables[0].path).toBe(`M60 116L${onScreen.slice(1)}L60 301`);
+    expect(onScreen.startsWith('M52 94')).toBe(true);
+    expect(scene.cables[0].path).toBe(onScreen);
   });
 
   it('uses the side each end names', () => {
@@ -207,9 +204,31 @@ describe('layoutDrawing — cables', () => {
         connections: [link('a', 'b', { sourceHandle: 'right', targetHandle: 'left' })],
       })
     );
-    // right side of the first box (x 120) to left side of the second (x 400), at mid height
-    expect(scene.cables[0].path.startsWith('M119 58.5L132 58.5')).toBe(true);
-    expect(scene.cables[0].path.endsWith('L388 58.5L401 58.5')).toBe(true);
+    // from the right of the first drawing to the left of the second, at mid height of the drawing
+    expect(scene.cables[0].path.startsWith('M75.25 32')).toBe(true);
+    expect(scene.cables[0].path.endsWith('L428.75 32')).toBe(true);
+  });
+
+  it('ends on what is drawn of each device: a narrow drawing is reached further in than a wide one', () => {
+    const scene = layoutDrawing(
+      input({
+        devices: [
+          // a server is drawn narrow and tall, a switch wide and low
+          device({ id: 'a', type: 'Server', position: { x: 0, y: 0 } }),
+          device({ id: 'b', type: 'Switch', position: { x: 400, y: 0 } }),
+        ],
+        connections: [
+          link('a', 'b', { id: 'side', sourceHandle: 'right', targetHandle: 'left' }),
+          link('a', 'b', { id: 'top', sourceHandle: 'top', targetHandle: 'top' }),
+        ],
+      })
+    );
+    const [side, top] = scene.cables.map(cable => cable.path);
+    // server: drawn from 34 to 94 of 128, from 10 down; switch: from 6 to 122, from 44 down
+    expect(side.startsWith(`M${28 + 94 * 0.375 + 3} 32`)).toBe(true);
+    expect(side.endsWith(`L${400 + 28 + 6 * 0.375 - 3} 32`)).toBe(true);
+    expect(top.startsWith(`M52 ${8 + 10 * 0.375 - 3}`)).toBe(true);
+    expect(top.endsWith(`L452 ${8 + 44 * 0.375 - 3}`)).toBe(true);
   });
 
   it('hangs an end that names no side, or a side that does not exist, on the top', () => {
@@ -222,9 +241,8 @@ describe('layoutDrawing — cables', () => {
       })
     );
     for (const cable of scene.cables) {
-      // from the top of the first box (y 0) to the top of the second (y 300)
-      expect(cable.path.startsWith('M60 1L60 -12')).toBe(true);
-      expect(cable.path.endsWith('L60 288L60 301')).toBe(true);
+      expect(cable.path.startsWith('M52 12.5')).toBe(true);
+      expect(cable.path.endsWith('L52 312.5')).toBe(true);
     }
   });
 
@@ -281,10 +299,11 @@ describe('layoutDrawing — cables', () => {
       { text: '1 Gbps', strong: true },
       { text: 'Linea principale', strong: false },
     ]);
+    // the middle of the cable: half way between y 94 and y 312.5
     // 16 letters × 6 = 96, + 8 of padding and 1 of border on each side
-    expect(both.label?.box).toEqual({ x: 60 - 57, y: 208.5 - 21, width: 114, height: 42 });
-    // 6 letters × 6 = 36 → 54 wide, one line → 26 high, on the middle of the cable
-    expect(speed.label?.box).toEqual({ x: 60 - 27, y: 208.5 - 13, width: 54, height: 26 });
+    expect(both.label?.box).toEqual({ x: 52 - 57, y: 203.25 - 21, width: 114, height: 42 });
+    // 6 letters × 6 = 36 → 54 wide, one line → 26 high
+    expect(speed.label?.box).toEqual({ x: 52 - 27, y: 203.25 - 13, width: 54, height: 26 });
     expect(bare.label).toBeNull();
   });
 });
@@ -311,9 +330,9 @@ describe('layoutDrawing — what presentation mode marks', () => {
   it('marks nothing outside a presentation', () => {
     const scene = layoutDrawing(pair());
     expect(scene.cables[0].look).toBe('plain');
-    expect(scene.devices.map(d => [d.role, d.failed, d.drop])).toEqual([
-      [null, false, false],
-      [null, false, false],
+    expect(scene.devices.map(d => [d.role, d.failed, d.drop, d.state])).toEqual([
+      [null, false, false, 'rest'],
+      [null, false, false, 'rest'],
     ]);
   });
 
@@ -368,13 +387,15 @@ describe('layoutDrawing — what presentation mode marks', () => {
       ['b', null, false, true],
       ['c', 'target', true, false],
     ]);
+    // and what the upper layer of each says: nothing, "it stops here", "off"
+    expect(scene.devices.map(d => d.state)).toEqual(['rest', 'error', 'off']);
   });
 
   it('a broken device is not "where the packet stops": the one before it is', () => {
     const scene = triangle(
       marks({ failedDevices: ['b'], route: { links: [], arrives: false, dropDeviceId: 'b' } })
     );
-    expect(scene.devices[1]).toMatchObject({ failed: true, drop: false });
+    expect(scene.devices[1]).toMatchObject({ failed: true, drop: false, state: 'off' });
   });
 });
 
@@ -392,11 +413,21 @@ describe('layoutDrawing — bounds', () => {
         ],
       })
     );
-    expect(scene.bounds).toEqual({ x: -50, y: 20, width: 470, height: 497 });
+    expect(scene.bounds).toEqual({ x: -50, y: 20, width: 454, height: 474 });
+  });
+
+  it('holds a name, or an address, that runs out of the frame of its device', () => {
+    const named = layoutDrawing(input({ devices: [device({ id: 'a', label: 'x'.repeat(30) })] }));
+    // 30 letters × 6.25, and 4 of canvas at each end, around the middle of the frame (x 52)
+    expect(named.bounds).toMatchObject({ x: 52 - 97.75, width: 195.5 });
+
+    const addressed = layoutDrawing(input({ devices: [device({ id: 'a', ip: '1'.repeat(30) })] }));
+    // 30 figures × 5.25, and the same 4
+    expect(addressed.bounds).toMatchObject({ x: 52 - 82.75, width: 165.5 });
   });
 
   it('holds a cable that goes round the outside of its devices', () => {
-    // top to top: the cable climbs above both boxes
+    // top to top: the cable climbs above both
     const scene = layoutDrawing(
       input({
         devices: [
@@ -406,8 +437,8 @@ describe('layoutDrawing — bounds', () => {
         connections: [link('a', 'b', { sourceHandle: 'top', targetHandle: 'top' })],
       })
     );
-    expect(scene.bounds.y).toBeLessThan(-12);
-    expect(scene.bounds.height).toBe(117 - scene.bounds.y);
+    expect(scene.bounds.y).toBeLessThan(0);
+    expect(scene.bounds.height).toBe(94 - scene.bounds.y);
   });
 
   it('holds a label wider than everything else, and the badges of a presentation', () => {
@@ -418,13 +449,13 @@ describe('layoutDrawing — bounds', () => {
         ],
       })
     );
-    // 60 letters × 6 + 18 = 378, centred on x 60
-    expect(wide.bounds.x).toBe(60 - 189);
+    // 60 letters × 6 + 18 = 378, centred on x 52
+    expect(wide.bounds.x).toBe(52 - 189);
     expect(wide.bounds.width).toBe(378);
 
     const marked = layoutDrawing(pair({ marks: marks({ sourceId: 'a', failedDevices: ['a'] }) }));
-    // "DA" sits up and to the left of its device, the sign of a failure up and to the right
-    expect(marked.bounds).toMatchObject({ x: -6, y: -9, width: 6 + 120 + 8 });
+    // "DA" and the sign of a failure sit on the top of the frame, inside its two sides
+    expect(marked.bounds).toMatchObject({ x: 0, y: -7, width: 104 });
   });
 });
 
@@ -433,14 +464,17 @@ describe('renderDrawingImage — the document', () => {
     const image = renderDrawingImage(pair(), LIGHT);
     const doc = parse(image.svg);
 
-    // two boxes 120 wide, 417 from top to bottom, 24 of margin all round
-    expect(image).toMatchObject({ width: 168, height: 465 });
-    expect(root(doc).getAttribute('width')).toBe('168');
-    expect(root(doc).getAttribute('height')).toBe('465');
-    expect(root(doc).getAttribute('viewBox')).toBe('0 0 168 465');
+    // two devices 104 wide, 394 from top to bottom, 24 of margin all round
+    expect(image).toMatchObject({ width: 152, height: 442 });
+    expect(root(doc).getAttribute('width')).toBe('152');
+    expect(root(doc).getAttribute('height')).toBe('442');
+    expect(root(doc).getAttribute('viewBox')).toBe('0 0 152 442');
     expect(root(doc).namespaceURI).toBe('http://www.w3.org/2000/svg');
     expect(image.svg).not.toMatch(/https?:\/\/(?!www\.w3\.org\/2000\/svg)/);
+    // every colour is written in: nothing is left to a style sheet the picture does not have
     expect(image.svg).not.toContain('currentColor');
+    expect(image.svg).not.toContain('class=');
+    expect(image.svg).not.toContain('var(');
     expect(image.svg).not.toContain('NaN');
     expect(image.svg).not.toContain('undefined');
   });
@@ -449,44 +483,54 @@ describe('renderDrawingImage — the document', () => {
     expect(renderDrawingImage(pair(), LIGHT).svg).toBe(renderDrawingImage(pair(), LIGHT).svg);
   });
 
-  it('draws each device: box, icon in the colour of its template, name, address', () => {
-    const doc = parse(
-      renderDrawingImage(
-        pair({ deviceTemplates: [template({ id: 'pc', type: 'PC', color: '#336699' })] }),
-        LIGHT
-      ).svg
-    );
+  it('draws each device as the canvas does: its drawing, its name, its address, and no box', () => {
+    const doc = parse(renderDrawingImage(pair(), LIGHT).svg);
     const [first, second] = deviceGroups(doc);
     expect(texts(first)).toEqual(['A', '10.0.0.1']);
     expect(texts(second)).toEqual(['B', '10.0.0.2']);
 
-    // the drawing is moved by the margin: the box of the first device starts there
+    // the drawing is moved by the margin: the frame of the first device starts there
     expect(drawing(doc).getAttribute('transform')).toBe('translate(24 24)');
-    const box = first.querySelectorAll('rect')[0];
-    expect(['x', 'y', 'width', 'height', 'rx'].map(name => box.getAttribute(name))).toEqual([
-      '1',
-      '1',
-      '118',
-      '115',
-      '2',
-    ]);
-    expect(box.getAttribute('fill')).toBe(PALETTES.light.component);
-    expect(box.getAttribute('stroke')).toBe(PALETTES.light.border);
+    // nothing is drawn around a device
+    expect(first.querySelector('[stroke]')).toBeNull();
 
-    // the icon: 24 units drawn 48 wide, in the middle of the box, 12 from its top
-    const icon = first.querySelector('g > g');
-    expect(icon?.getAttribute('transform')).toBe('translate(36 12) scale(2)');
-    expect(icon?.querySelector('path')?.getAttribute('fill')).toBe('#336699');
+    // the drawing: 128 units drawn 48 wide, in the middle of the frame, 8 from its top
+    expect(first.children[0].getAttribute('transform')).toBe('translate(28 8) scale(0.375)');
+    const P = PALETTES.light;
+    const [whole, upper, cut] = passes(first);
+    // whole in the colour of the lower layer, then the upper layer over it,
+    // then the cut; what is drawn on the device is the canvas
+    expect(fills(whole)).toEqual([P.deviceLower, P.canvas].sort());
+    expect(fills(upper)).toEqual([P.deviceUpper, P.canvas].sort());
+    expect(fills(cut)).toEqual([P.canvas]);
+    expect(whole.hasAttribute('clip-path')).toBe(false);
+    expect(upper.getAttribute('clip-path')).toBe('url(#pc-pc-upper)');
+    expect(cut.getAttribute('clip-path')).toBe('url(#pc-pc-cut)');
 
-    // name and address centred under it
+    // name and address in the middle under it, each with the canvas behind
     const [name, address] = [...first.querySelectorAll('text')];
-    expect(name.getAttribute('x')).toBe('60');
+    expect(name.getAttribute('x')).toBe('52');
     expect(name.getAttribute('text-anchor')).toBe('middle');
+    expect(name.getAttribute('font-size')).toBe('12.5');
     expect(name.getAttribute('font-weight')).toBe('600');
-    expect(name.getAttribute('fill')).toBe(PALETTES.light.text);
-    expect(address.getAttribute('fill')).toBe(PALETTES.light.address);
-    expect(Number(address.getAttribute('y'))).toBeGreaterThan(Number(name.getAttribute('y')));
-    expect(Number(address.getAttribute('y'))).toBeLessThan(117 - 12);
+    expect(name.getAttribute('fill')).toBe(P.text);
+    expect(address.getAttribute('fill')).toBe(P.address);
+    expect(address.getAttribute('font-size')).toBe('10.5');
+    // (an address is in letters of equal width)
+    expect(address.getAttribute('font-family')).toContain('monospace');
+    expect(name.hasAttribute('font-family')).toBe(false);
+    const attrs = (el: Element) => ['x', 'y', 'width', 'height', 'fill'].map(n => el.getAttribute(n));
+    const [behindName, behindAddress] = behindTexts(first);
+    // "A" is 6.25 wide, the address 42: 4 more at each end; the name 3 under the drawing
+    expect(attrs(behindName)).toEqual(['44.88', '59', '14.25', '16', P.canvas]);
+    expect(attrs(behindAddress)).toEqual(['27', '75', '50', '14', P.canvas]);
+    expect(name.previousElementSibling).toBe(behindName);
+    expect(address.previousElementSibling).toBe(behindAddress);
+    // each text sits on its line
+    expect(Number(name.getAttribute('y'))).toBeGreaterThan(59);
+    expect(Number(name.getAttribute('y'))).toBeLessThan(59 + 16);
+    expect(Number(address.getAttribute('y'))).toBeGreaterThan(75);
+    expect(Number(address.getAttribute('y'))).toBeLessThan(94 - 3);
   });
 
   it('writes no address line for a device without one', () => {
@@ -494,33 +538,30 @@ describe('renderDrawingImage — the document', () => {
       renderDrawingImage(input({ devices: [device({ id: 'sw', label: 'SW-1', ip: '' })] }), LIGHT).svg
     );
     expect(texts(deviceGroups(doc)[0])).toEqual(['SW-1']);
+    expect(behindTexts(deviceGroups(doc)[0])).toHaveLength(1);
   });
 
-  it('keeps an icon that is not square in proportion, in the middle of its place', () => {
-    const wide: IconShape = { body: '<path d="M0 0h32v16H0z"/>', width: 32, height: 16, left: 0, top: 0 };
-    const doc = parse(
-      renderDrawingImage(input({ devices: [device({ id: 'a' })], iconOf: () => wide }), LIGHT).svg
+  it('gives each device its own drawing, as the app draws it', () => {
+    const P = PALETTES.light;
+    const colours = { lower: P.deviceLower, state: P.deviceUpper, ground: P.canvas };
+    const image = renderDrawingImage(
+      input({
+        devices: [
+          device({ id: '1', type: 'Router' }),
+          device({ id: '2', type: 'Firewall' }),
+          device({ id: '3', type: 'Server', templateId: 'tpl-mailserver' }),
+        ],
+        deviceTemplates: [template({ id: 'tpl-mailserver', type: 'Server', icon: 'mdi:email' })],
+      }),
+      LIGHT
     );
-    // 32 × 16 at scale 1.5 is 48 × 24: 12 down from the top of the square
-    expect(deviceGroups(doc)[0].querySelector('g > g')?.getAttribute('transform')).toBe(
-      'translate(36 24) scale(1.5)'
-    );
+    for (const id of ['router', 'firewall', 'server-mail'] as const) {
+      expect(image.svg).toContain(drawingMarkup(id, colours, 'pc'));
+    }
+    expect(image.svg).not.toContain(drawingMarkup('pc', colours, 'pc'));
   });
 
-  it('draws the device even when no icon can be had', () => {
-    const doc = parse(
-      renderDrawingImage(input({ devices: [device({ id: 'a', label: 'PC' })], iconOf: () => null }), LIGHT)
-        .svg
-    );
-    expect(texts(deviceGroups(doc)[0])).toEqual(['PC']);
-    expect(deviceGroups(doc)[0].querySelector('g > g')).toBeNull();
-  });
-
-  it('keeps the ids inside one icon apart from those inside another', () => {
-    const shaded = (name: string): IconShape => ({
-      ...SQUARE,
-      body: `<defs><linearGradient id="a"><stop offset="0"/></linearGradient></defs><path fill="url(#a)" d="${name}"/><use href="#a"/>`,
-    });
+  it('has the two windows of a drawing once, whatever the number of its copies', () => {
     const doc = parse(
       renderDrawingImage(
         input({
@@ -529,24 +570,39 @@ describe('renderDrawingImage — the document', () => {
             device({ id: '2', type: 'Router' }),
             device({ id: '3', type: 'PC' }),
           ],
-          deviceTemplates: [
-            template({ id: 'pc', type: 'PC', icon: 'set:one' }),
-            template({ id: 'router', type: 'Router', icon: 'set:two' }),
-          ],
-          iconOf: name => shaded(name === 'set:one' ? 'M1 1' : 'M2 2'),
         }),
         LIGHT
       ).svg
     );
-    const gradients = [...doc.querySelectorAll('linearGradient')].map(g => g.getAttribute('id'));
-    const fills = [...doc.querySelectorAll('path[d^="M1"], path[d^="M2"]')].map(p => p.getAttribute('fill'));
-    expect(gradients).toEqual(['pc-i0-a', 'pc-i1-a', 'pc-i0-a']);
-    expect(fills).toEqual(['url(#pc-i0-a)', 'url(#pc-i1-a)', 'url(#pc-i0-a)']);
-    expect([...doc.querySelectorAll('use')].map(u => u.getAttribute('href'))).toEqual([
-      '#pc-i0-a',
-      '#pc-i1-a',
-      '#pc-i0-a',
+    const windows = [...doc.querySelectorAll('svg > defs > clipPath')];
+    expect(windows.map(w => w.getAttribute('id'))).toEqual([
+      'pc-pc-upper',
+      'pc-pc-cut',
+      'pc-router-upper',
+      'pc-router-cut',
     ]);
+    // the upper layer of a computer ends 40 from the top, the one of a router 46;
+    // the cut is 5 high, half above and half below that line
+    const rect = (w: Element) => ['y', 'width', 'height'].map(n => w.querySelector('rect')?.getAttribute(n));
+    expect(windows.map(rect)).toEqual([
+      [null, '128', '40'],
+      ['37.5', '128', '5'],
+      [null, '128', '46'],
+      ['43.5', '128', '5'],
+    ]);
+    // nothing else has a name, and everything that looks through a window finds it
+    expect([...doc.querySelectorAll('[id]')]).toHaveLength(4);
+    const used = [...doc.querySelectorAll('[clip-path]')].map(el => el.getAttribute('clip-path'));
+    expect(used).toEqual([
+      'url(#pc-pc-upper)',
+      'url(#pc-pc-cut)',
+      'url(#pc-router-upper)',
+      'url(#pc-router-cut)',
+      'url(#pc-pc-upper)',
+      'url(#pc-pc-cut)',
+    ]);
+    // and a picture of no device has no windows at all
+    expect(parse(renderDrawingImage(input(), LIGHT).svg).querySelector('defs')).toBeNull();
   });
 
   it('draws each cable under the devices, as the screen shows it at rest', () => {
@@ -624,7 +680,7 @@ describe('renderDrawingImage — what the user typed', () => {
   });
 
   it('loses the characters XML cannot hold, and nothing else', () => {
-    expect(escapeXml('a\u0000b\u0008c\u000Bd\u001Fe\uFFFEf')).toBe('abcdef');
+    expect(escapeXml('a\u0000b\u0008c\u000Bd\u001Fe￾f')).toBe('abcdef');
     expect(escapeXml('tab\there\nnew — è 日本 🙂')).toBe('tab\there\nnew — è 日本 🙂');
     const doc = parse(
       renderDrawingImage(input({ devices: [device({ id: 'a', label: 'PC\u0001-\u00011' })] }), LIGHT).svg
@@ -632,39 +688,29 @@ describe('renderDrawingImage — what the user typed', () => {
     expect(texts(deviceGroups(doc)[0])).toEqual(['PC-1']);
   });
 
-  it('a template colour that is not a colour cannot write attributes', () => {
-    const doc = parse(
-      renderDrawingImage(
-        input({
-          devices: [device({ id: 'a' })],
-          deviceTemplates: [template({ id: 'pc', type: 'PC', color: '#fff" onload="alert(1)' })],
-        }),
-        LIGHT
-      ).svg
-    );
-    const path = deviceGroups(doc)[0].querySelector('g > g path');
-    expect(path?.getAttribute('fill')).toBe('#5E8096');
-    expect(doc.querySelector('[onload]')).toBeNull();
-  });
-
-  it('accepts the colours a template can really have', () => {
-    const fillOf = (color: string) =>
-      parse(
-        renderDrawingImage(
-          input({
-            devices: [device({ id: 'a' })],
-            deviceTemplates: [template({ id: 'pc', type: 'PC', color })],
+  it('nothing a template says is copied into the picture: not its icon, not its colour', () => {
+    const image = renderDrawingImage(
+      input({
+        devices: [device({ id: 'a', templateId: 'mine' })],
+        deviceTemplates: [
+          template({
+            id: 'mine',
+            type: 'PC',
+            icon: '"/><script>alert(1)</script>',
+            color: '#fff" onload="alert(1)',
+            isCustom: true,
           }),
-          LIGHT
-        ).svg
-      )
-        .querySelector('svg > g > g g > path')
-        ?.getAttribute('fill');
-    expect(fillOf('#abc')).toBe('#abc');
-    expect(fillOf('#A1B2C3')).toBe('#A1B2C3');
-    expect(fillOf('rgb(10, 20, 30)')).toBe('rgb(10, 20, 30)');
-    expect(fillOf('tomato')).toBe('tomato');
-    expect(fillOf('url(#x)')).toBe('#5E8096');
+        ],
+      }),
+      LIGHT
+    );
+    const doc = parse(image.svg);
+    expect(doc.querySelector('script')).toBeNull();
+    expect(doc.querySelector('[onload]')).toBeNull();
+    expect(image.svg).not.toContain('alert');
+    // the device is shown with the drawing of its type, in the colours of the theme
+    const [whole] = passes(deviceGroups(doc)[0]);
+    expect(fills(whole)).toEqual([PALETTES.light.deviceLower, PALETTES.light.canvas].sort());
   });
 });
 
@@ -677,20 +723,38 @@ describe('renderDrawingImage — theme and background', () => {
 
     expect(background(light)?.getAttribute('fill')).toBe('#ffffff');
     expect(background(dark)?.getAttribute('fill')).toBe('#111315');
-    expect(['width', 'height'].map(n => background(dark)?.getAttribute(n))).toEqual(['168', '465']);
+    expect(['width', 'height'].map(n => background(dark)?.getAttribute(n))).toEqual(['152', '442']);
 
     const name = (doc: Document) => deviceGroups(doc)[0].querySelector('text')?.getAttribute('fill');
     expect(name(light)).toBe('#22313b');
     expect(name(dark)).toBe('#f4f6f8');
     expect(cablePaths(dark)[0].getAttribute('stroke')).toBe('#6f7c86');
+
+    // the two layers of a drawing in the colours of the theme, and on them the canvas of the theme
+    const layers = (doc: Document) => passes(deviceGroups(doc)[0]).map(fills);
+    expect(layers(light)).toEqual([['#22313b', '#ffffff'], ['#5e8096', '#ffffff'], ['#ffffff']]);
+    expect(layers(dark)).toEqual([['#111315', '#8fb0c6'], ['#111315', '#c9d8e2'], ['#111315']]);
+    // and the canvas behind the name of a device
+    expect(behindTexts(deviceGroups(dark)[0])[0].getAttribute('fill')).toBe('#111315');
   });
 
-  it('has no background when asked for none, and is otherwise the same picture', () => {
+  it('has no background when asked for none: not behind the page, not behind the texts of a device', () => {
     const solid = renderDrawingImage(pair(), { theme: 'light' });
     const clear = renderDrawingImage(pair(), { theme: 'light', transparent: true });
+    const behind = (image: { svg: string }) => deviceGroups(parse(image.svg)).flatMap(behindTexts);
+
+    expect(background(parse(solid.svg))).not.toBeNull();
     expect(background(parse(clear.svg))).toBeNull();
-    expect(clear.svg).toBe(solid.svg.replace('<rect width="168" height="465" fill="#ffffff"/>', ''));
+    // a name and an address for each of the two devices
+    expect(behind(solid)).toHaveLength(4);
+    expect(behind(clear)).toHaveLength(0);
+
+    // it is otherwise the same picture
     expect(clear).toMatchObject({ width: solid.width, height: solid.height });
+    const stripped = solid.svg
+      .replace('<rect width="152" height="442" fill="#ffffff"/>', '')
+      .replace(/<rect x="[\d.]+" y="[\d.]+" width="[\d.]+" height="1[46]" fill="#ffffff"\/>/g, '');
+    expect(clear.svg).toBe(stripped);
   });
 });
 
@@ -718,14 +782,14 @@ describe('renderDrawingImage — title and caption', () => {
     // the drawing moves down by the lines of the title and the space under them
     expect(named.height - bare.height).toBe(24 + 16);
     expect(both.height - bare.height).toBe(24 + 18 + 16);
-    expect(drawing(parse(both.svg)).getAttribute('transform')).toBe(`translate(144 ${24 + 58})`);
+    expect(drawing(parse(both.svg)).getAttribute('transform')).toBe(`translate(152 ${24 + 58})`);
   });
 
   it('gives texts room to be read: a narrow drawing sits in the middle of a wider page', () => {
     const image = renderDrawingImage(pair(), { theme: 'light', title: { name: 'Sede' } });
-    // 360 for the text + the margins; the 120 of the drawing in the middle of it
+    // 360 for the text + the margins; the 104 of the drawing in the middle of it
     expect(image.width).toBe(360 + 48);
-    expect(drawing(parse(image.svg)).getAttribute('transform')).toBe('translate(144 64)');
+    expect(drawing(parse(image.svg)).getAttribute('transform')).toBe('translate(152 64)');
   });
 
   it('writes question and answer under the drawing, with a mark in the colour of the answer', () => {
@@ -744,9 +808,9 @@ describe('renderDrawingImage — title and caption', () => {
       'B risponde ad A.',
       'Seconda riga.',
     ]);
-    // below the drawing (24 of margin + 417 of drawing), one under the other
+    // below the drawing (24 of margin + 394 of drawing), one under the other
     const ys = lines.map(line => Number(line.getAttribute('y')));
-    expect(ys[0]).toBeGreaterThan(24 + 417);
+    expect(ys[0]).toBeGreaterThan(24 + 394);
     expect(ys[1] - ys[0]).toBeGreaterThan(0);
     expect(ys[2] - ys[1]).toBe(18);
     expect(lines[0].getAttribute('font-weight')).toBe('600');
@@ -777,7 +841,7 @@ describe('renderDrawingImage — title and caption', () => {
     // nothing lost, nothing added
     expect(lines.map(line => line.textContent).join(' ')).toBe(long);
     // and the page grows downwards to hold them
-    expect(image.height).toBeGreaterThan(465 + lines.length * 18);
+    expect(image.height).toBeGreaterThan(442 + lines.length * 18);
   });
 });
 
@@ -791,7 +855,6 @@ describe('renderDrawingImage — a presentation', () => {
             device({ id: 'b', label: 'B', ip: '10.0.0.2', position: { x: 300, y: 0 } }),
             device({ id: 'c', label: 'C', ip: '10.0.0.3', position: { x: 150, y: 300 } }),
           ],
-          deviceTemplates: [template({ id: 'pc', type: 'PC', color: '#336699' })],
           connectionTemplates: [cableTemplate({ type: 'uplink', strokeWidth: 4, strokeDasharray: '8 4' })],
           connections: [
             link('a', 'b', { id: 'ab', sourceHandle: 'right', targetHandle: 'left', type: 'uplink', bandwidth: '1 Gbps' }),
@@ -805,6 +868,9 @@ describe('renderDrawingImage — a presentation', () => {
     );
   const attrs = (el: Element, names: string[]) => names.map(name => el.getAttribute(name));
   const LINE = ['stroke', 'stroke-width', 'stroke-dasharray', 'opacity'];
+  /** The colour of the upper layer of a device: its own, without the canvas drawn on it */
+  const lamp = (group: Element, theme: 'light' | 'dark' = 'light') =>
+    fills(passes(group)[1]).filter(colour => colour !== PALETTES[theme].canvas);
 
   it('marks the way of an answer that arrives, keeping the dashes of each cable', () => {
     const doc = presented(marks({ route: { links: ['ab', 'bc'], arrives: true, dropDeviceId: null } }));
@@ -814,21 +880,17 @@ describe('renderDrawingImage — a presentation', () => {
     expect(attrs(ac, LINE)).toEqual([PALETTES.light.line, '2.5', null, '0.6']);
   });
 
-  it('marks in another colour the way of an answer that stops, and the device it stops on', () => {
+  it('marks in another colour the way of an answer that stops, and lights in red the device it stops on', () => {
     const doc = presented(marks({ route: { links: ['ab'], arrives: false, dropDeviceId: 'b' } }));
     expect(attrs(cablePaths(doc)[0], LINE)).toEqual([MARK_COLORS.stops, '5.5', '8 4', null]);
 
-    const [a, b] = deviceGroups(doc);
-    expect(b.querySelectorAll('rect')[0].getAttribute('stroke')).toBe(MARK_COLORS.stops);
-    // the ring around it
-    const ring = b.querySelectorAll('rect')[1];
-    expect(attrs(ring, ['fill', 'stroke', 'stroke-width', 'stroke-opacity'])).toEqual([
-      'none',
-      MARK_COLORS.stops,
-      '3',
-      '0.4',
-    ]);
-    expect(a.querySelectorAll('rect')).toHaveLength(1);
+    const [a, b, c] = deviceGroups(doc);
+    expect(lamp(b)).toEqual([DEVICE_STATE_COLORS.error]);
+    // the others are at rest; and only the upper layer says it
+    expect(lamp(a)).toEqual([PALETTES.light.deviceUpper]);
+    expect(lamp(c)).toEqual([PALETTES.light.deviceUpper]);
+    expect(fills(passes(b)[0])).toEqual(fills(passes(a)[0]));
+    expect(fills(passes(b)[2])).toEqual(fills(passes(a)[2]));
   });
 
   it('shows a cut cable broken up and red, with its mark instead of its label', () => {
@@ -839,10 +901,9 @@ describe('renderDrawingImage — a presentation', () => {
     expect(labels.querySelector('circle')?.getAttribute('fill')).toBe(MARK_COLORS.failure);
     // the cross is drawn, not written: no font has to have the sign
     expect(labels.querySelector('path')?.getAttribute('stroke')).toBe('#ffffff');
-    expect(doc.querySelector('#pc-hatch')).toBeNull();
   });
 
-  it('shows a broken device struck out, with its sign, and its cables faded', () => {
+  it('shows a broken device with its lamp off, its texts faded and its sign, and its cables faded', () => {
     const doc = presented(marks({ failedDevices: ['b'] }));
     const [ab, bc, ac] = cablePaths(doc);
     expect(attrs(ab, LINE)).toEqual([PALETTES.light.line, '4', '3 7', '0.3']);
@@ -852,21 +913,30 @@ describe('renderDrawingImage — a presentation', () => {
     expect(texts(drawing(doc).children[1])).toEqual(['1 Gbps']);
 
     const [a, b] = deviceGroups(doc);
-    const box = b.querySelectorAll('rect')[0];
-    expect(attrs(box, ['stroke', 'stroke-dasharray'])).toEqual([MARK_COLORS.failure, '6 4']);
-    expect(b.querySelectorAll('rect')[1].getAttribute('fill')).toBe('url(#pc-hatch)');
-    expect(doc.querySelector('pattern#pc-hatch')).not.toBeNull();
-    // what is inside is greyed out
-    const content = b.querySelector('g > g[opacity="0.45"]');
-    expect(texts(content as Element)).toEqual(['B', '10.0.0.2']);
-    expect(content?.querySelector('path')?.getAttribute('fill')).toBe(greyOf('#336699'));
-    // the sign, on the top right corner
+    expect(lamp(b)).toEqual([DEVICE_STATE_COLORS.off]);
+    // its name and its address fade; its drawing does not
+    const faded = b.querySelector(`g[opacity="${FAILED_TEXT_OPACITY}"]`);
+    expect(texts(faded as Element)).toEqual(['B', '10.0.0.2']);
+    expect(b.children[0].hasAttribute('opacity')).toBe(false);
+    // the sign, on the top of the frame at its right: 8 in from the side, 6 above the top
     const sign = b.querySelector('circle');
-    expect(attrs(sign as Element, ['cx', 'cy', 'r', 'fill'])).toEqual(['416', '4', '12', MARK_COLORS.failure]);
+    expect(attrs(sign as Element, ['cx', 'cy', 'r', 'fill'])).toEqual(['384', '6', '12', MARK_COLORS.failure]);
+    expect(sign?.nextElementSibling?.getAttribute('stroke')).toBe('#ffffff');
     // a working device has none of this
     expect(a.querySelector('circle')).toBeNull();
-    expect(a.querySelector('[opacity="0.45"]')).toBeNull();
-    expect(a.querySelector('path')?.getAttribute('fill')).toBe('#336699');
+    expect(a.querySelector('[opacity]')).toBeNull();
+    expect(lamp(a)).toEqual([PALETTES.light.deviceUpper]);
+  });
+
+  it('a state has the same colour in light and in dark', () => {
+    const doc = presented(
+      marks({ failedDevices: ['c'], route: { links: ['ab'], arrives: false, dropDeviceId: 'b' } }),
+      { theme: 'dark' }
+    );
+    const [a, b, c] = deviceGroups(doc);
+    expect(lamp(a, 'dark')).toEqual([PALETTES.dark.deviceUpper]);
+    expect(lamp(b, 'dark')).toEqual([DEVICE_STATE_COLORS.error]);
+    expect(lamp(c, 'dark')).toEqual([DEVICE_STATE_COLORS.off]);
   });
 
   it('labels the two ends of the question, in the colours of the theme', () => {
@@ -892,6 +962,12 @@ describe('renderDrawingImage — a presentation', () => {
       ['A', ACCENTS.dark.secondary, ACCENTS.dark.onSecondary],
     ]);
     expect(badges(presented(marks()))).toEqual([null, null, null]);
+
+    // on the top of the frame at its left: 4 in from the side, 7 above the top, 16 high
+    const tag = [...deviceGroups(presented(asked))[2].querySelectorAll('text')].find(t =>
+      t.hasAttribute('letter-spacing')
+    )?.previousElementSibling as Element;
+    expect(attrs(tag, ['x', 'y', 'height'])).toEqual(['154', '293', '16']);
   });
 });
 
@@ -900,11 +976,11 @@ describe('scaledSvg and pixelSize', () => {
     const image = renderDrawingImage(pair(), LIGHT);
     const doubled = scaledSvg(image, 2);
     const doc = parse(doubled);
-    expect(root(doc).getAttribute('width')).toBe('336');
-    expect(root(doc).getAttribute('height')).toBe('930');
-    expect(root(doc).getAttribute('viewBox')).toBe('0 0 168 465');
+    expect(root(doc).getAttribute('width')).toBe('304');
+    expect(root(doc).getAttribute('height')).toBe('884');
+    expect(root(doc).getAttribute('viewBox')).toBe('0 0 152 442');
     // nothing else changes
-    expect(doubled.replace('width="336" height="930"', 'width="168" height="465"')).toBe(image.svg);
+    expect(doubled.replace('width="304" height="884"', 'width="152" height="442"')).toBe(image.svg);
     expect(scaledSvg(image, 1)).toBe(image.svg);
   });
 
@@ -913,7 +989,7 @@ describe('scaledSvg and pixelSize', () => {
     expect(pixelSize({ width: 101, height: 33 }, 0.5)).toEqual({ width: 51, height: 17 });
     expect(pixelSize({ width: 10, height: 10 }, 0.01)).toEqual({ width: 1, height: 1 });
     const image = renderDrawingImage(pair(), LIGHT);
-    expect(root(parse(scaledSvg(image, 0.5))).getAttribute('width')).toBe('84');
+    expect(root(parse(scaledSvg(image, 0.5))).getAttribute('width')).toBe('76');
   });
 
   it('leaves alone a document it did not write', () => {
@@ -946,49 +1022,6 @@ describe('wrapText', () => {
   });
 });
 
-describe('greyOf', () => {
-  it('gives the grey of the same brightness', () => {
-    expect(greyOf('#ffffff')).toBe('#ffffff');
-    expect(greyOf('#000')).toBe('#000000');
-    expect(greyOf('#ff0000')).toBe('#363636');
-    expect(greyOf('#00ff00')).toBe('#b6b6b6');
-    expect(greyOf('#5B7C8D')).toBe('#767676');
-  });
-
-  it('gives a middle grey for what is not a plain colour code', () => {
-    expect(greyOf('tomato')).toBe('#888888');
-    expect(greyOf('')).toBe('#888888');
-  });
-});
-
-describe('isPlainDrawing', () => {
-  it('lets through the shapes icons are made of', () => {
-    expect(isPlainDrawing('<path fill="currentColor" d="M0 0h24v24H0z"/>')).toBe(true);
-    expect(isPlainDrawing('<g fill="none" stroke="currentColor"><circle cx="1" cy="1" r="1"/></g>')).toBe(true);
-    expect(
-      isPlainDrawing('<defs><linearGradient id="a"/></defs><path fill="url(#a)"/><use href="#a"/>')
-    ).toBe(true);
-    expect(isPlainDrawing("<use xlink:href='#a'/>")).toBe(true);
-    expect(isPlainDrawing('<path d="M0 0"><animate attributeName="d" dur="1s"/></path>')).toBe(true);
-    expect(isPlainDrawing('<path d="M0 0"><animateTransform type="rotate"/></path>')).toBe(true);
-  });
-
-  it('stops whatever could run, restyle the document or reach outside it', () => {
-    expect(isPlainDrawing('<script>alert(1)</script>')).toBe(false);
-    expect(isPlainDrawing('< SCRIPT >x</script>')).toBe(false);
-    expect(isPlainDrawing('<path onload="alert(1)"/>')).toBe(false);
-    expect(isPlainDrawing('<path d="M0 0" onClick = "x()"/>')).toBe(false);
-    expect(isPlainDrawing('<a href="#a"><path/></a>')).toBe(false);
-    expect(isPlainDrawing('<style>*{fill:red}</style>')).toBe(false);
-    expect(isPlainDrawing('<foreignObject><div/></foreignObject>')).toBe(false);
-    expect(isPlainDrawing('<iframe/>')).toBe(false);
-    expect(isPlainDrawing('<use href="https://example.com/x.svg#a"/>')).toBe(false);
-    expect(isPlainDrawing("<image xlink:href='data:image/png;base64,AAAA'/>")).toBe(false);
-    expect(isPlainDrawing('<image href=x.png />')).toBe(false);
-    expect(isPlainDrawing('<set attributeName="href" to="javascript:alert(1)"/>')).toBe(false);
-  });
-});
-
 describe('approximateTextWidth', () => {
   it('grows with the text, the size and the weight', () => {
     const regular = { size: 12, weight: 400 } as const;
@@ -1000,6 +1033,12 @@ describe('approximateTextWidth', () => {
     );
     // one sign, not two halves
     expect(approximateTextWidth('🙂', regular)).toBe(approximateTextWidth('a', regular));
+  });
+
+  it('gives every letter of an address the same width, six tenths of its size', () => {
+    const address = { size: 10, weight: 400, mono: true } as const;
+    expect(approximateTextWidth('10.0.0.1', address)).toBe(48);
+    expect(approximateTextWidth('iiii', address)).toBe(approximateTextWidth('MMMM', address));
   });
 });
 
@@ -1016,48 +1055,27 @@ describe('the numbers repeated from the style sheet', () => {
     if (!found) throw new Error(`no "${property}" in "${selector}"`);
     return found[1].trim();
   };
+  const px = (selector: string, property: string) => {
+    const text = value(selector, property);
+    expect(text).toMatch(/^-?[\d.]+px$/);
+    return parseFloat(text);
+  };
   /** #ddd and #DDDDDD are the same colour */
   const hex = (color: string) => {
     const code = color.replace('#', '').toLowerCase();
     return `#${code.length === 3 ? [...code].map(c => c + c).join('') : code}`;
   };
 
-  it('a device is laid out as the picture draws it', () => {
-    const m = DEVICE_METRICS;
-    expect(value('.network-device', 'padding')).toBe(`${m.padding}px`);
-    expect(value('.network-device', 'border')).toBe(`${m.border}px solid var(--border-color)`);
-    expect(value('.network-device', 'border-radius')).toBe(`${m.radius}px`);
-    expect(value('.network-device', 'min-width')).toBe(`${m.minWidth}px`);
-    expect(value('.network-device', 'background-color')).toBe('var(--bg-component)');
-    // flat on the page: a border, no shadow, and the picture draws none
-    expect(value('.network-device', 'box-shadow')).toBe('none');
-    expect(value('.device-icon', 'margin-bottom')).toBe(`${m.iconGap}px`);
-    expect(value('.device-ip', 'margin-top')).toBe(`${m.ipGap}px`);
-    // the address: 0.85 of the 0.9 em of the device, on the 16 px of the page
-    expect(value('.network-device', 'font-size')).toBe('0.9em');
-    expect(value('.device-ip', 'font-size')).toBe('0.85em');
-    expect(Number((16 * 0.9 * 0.85).toFixed(2))).toBe(m.ipSize);
-  });
-
-  it('a cable hangs as far from its device as the picture takes it', () => {
-    // a connection point is 28 wide and starts 14 outside the padding box of
-    // the device, which is one border inside the device itself
-    expect(value('.connect-point', 'width')).toBe('28px !important');
-    expect(value('.connect-point-top', 'top')).toBe('-14px !important');
-    expect(value('.connect-point-bottom', 'bottom')).toBe('-14px !important');
-    expect(value('.connect-point-left', 'left')).toBe('-14px !important');
-    expect(value('.connect-point-right', 'right')).toBe('-14px !important');
-    expect(14 - DEVICE_METRICS.border).toBe(DEVICE_METRICS.handleReach);
-  });
-
   it('the two themes have the colours of the picture', () => {
     const check = (selector: string, palette: (typeof PALETTES)['light']) => {
       expect(hex(value(selector, '--bg-canvas'))).toBe(palette.canvas);
-      expect(hex(value(selector, '--bg-component'))).toBe(palette.component);
       expect(hex(value(selector, '--border-color'))).toBe(palette.border);
       expect(hex(value(selector, '--text-color'))).toBe(palette.text);
       expect(hex(value(selector, '--text-color-light'))).toBe(palette.textLight);
       expect(hex(value(selector, '--line-color'))).toBe(palette.line);
+      // the two layers of the drawing of a device
+      expect(hex(value(selector, '--device-lower'))).toBe(palette.deviceLower);
+      expect(hex(value(selector, '--device-upper'))).toBe(palette.deviceUpper);
       // the label of a cable: on screen it takes these four from the theme by name
       // (see the test of the colours of the interface), the picture repeats them
       expect(palette.pillFill).toBe(palette.canvas);
@@ -1069,12 +1087,25 @@ describe('the numbers repeated from the style sheet', () => {
     };
     check(':root', PALETTES.light);
     check('.dark', PALETTES.dark);
+    // on screen what is drawn on a device is the canvas, and so are the grounds of its texts
+    expect(value(':root', '--device-ground')).toBe('var(--bg-canvas)');
+    expect(value('.dark', '--device-ground')).toBe('var(--bg-canvas)');
+    expect(value('.device-ip', 'color')).toBe('var(--text-color-light)');
+    expect(value('.device-name', 'color')).toBe('var(--text-color)');
     expect(value('.presentation-verdict.tone-ok', 'color')).toBe(PALETTES.light.toneOk);
     expect(value('.presentation-verdict.tone-ko', 'color')).toBe(PALETTES.light.toneKo);
     expect(value('.presentation-verdict.tone-unknown', 'color')).toBe(PALETTES.light.toneUnknown);
     expect(value('.dark .presentation-verdict.tone-ok', 'color')).toBe(PALETTES.dark.toneOk);
     expect(value('.dark .presentation-verdict.tone-ko', 'color')).toBe(PALETTES.dark.toneKo);
     expect(value('.dark .presentation-verdict.tone-unknown', 'color')).toBe(PALETTES.dark.toneUnknown);
+  });
+
+  it('a state has on screen the colour it has in the picture, in light and in dark', () => {
+    for (const theme of [':root', '.dark']) {
+      for (const [state, colour] of Object.entries(DEVICE_STATE_COLORS)) {
+        expect(hex(value(theme, `--state-${state}`))).toBe(colour);
+      }
+    }
   });
 
   it('the app, in light and in dark, has the accents of the picture', () => {
@@ -1095,12 +1126,31 @@ describe('the numbers repeated from the style sheet', () => {
     expect(value('.device-role-target', 'color')).toBe('var(--on-secondary)');
   });
 
-  it('a failure and a stop have the colours of the picture', () => {
-    expect(value('.network-device.device-failed', 'border-color')).toBe(MARK_COLORS.failure);
+  it('what a presentation hangs on a device is where the picture draws it', () => {
+    // (the style sheet places them from the inside of the frame, the picture from its outside)
+    const border = DEVICE_METRICS.border;
+    expect(px('.device-role', 'left') + border).toBe(ROLE_TAG.left);
+    expect(px('.device-role', 'top') + border).toBe(ROLE_TAG.top);
+    // a line of 14 with 1 above and 1 below
+    expect(value('.device-role', 'padding')).toBe('1px 8px');
+    expect(px('.device-role', 'line-height') + 2).toBe(ROLE_TAG.height);
+    expect(value('.device-role', 'font-size')).toBe('10px');
+    expect(value('.device-role', 'letter-spacing')).toBe('0.04em');
+
+    expect(px('.device-failed-badge', 'right') + border).toBe(FAILURE_BADGE.right);
+    expect(px('.device-failed-badge', 'top') + border).toBe(FAILURE_BADGE.top);
+    expect(px('.device-failed-badge', 'width')).toBe(2 * FAILURE_BADGE.radius);
+    expect(px('.device-failed-badge', 'height')).toBe(2 * FAILURE_BADGE.radius);
+  });
+
+  it('a failure has the colours of the picture, and fades the texts of its device as much', () => {
     expect(value('.device-failed-badge', 'background-color')).toBe(MARK_COLORS.failure);
     expect(value('.edge-cut-mark', 'background-color')).toBe(MARK_COLORS.failure);
-    expect(value('.network-device.device-drop', 'border-color')).toBe(MARK_COLORS.stops);
-    expect(value('.network-device.device-failed .device-content', 'opacity')).toBe('0.45');
+    // (one rule for the name and the address)
+    expect(css).toContain(
+      '\n.network-device.device-failed .device-name,\n.network-device.device-failed .device-ip {\n'
+    );
+    expect(value('.network-device.device-failed .device-ip', 'opacity')).toBe(String(FAILED_TEXT_OPACITY));
   });
 });
 
@@ -1115,15 +1165,16 @@ describe('a drawing of some size', () => {
       })
     );
     const connections = devices.slice(1).map((d, i) => link(devices[i].id, d.id, { bandwidth: '1 Gbps' }));
-    const iconOf = vi.fn(() => SQUARE);
 
     const started = performance.now();
-    const image = renderDrawingImage(input({ devices, connections, iconOf }), LIGHT);
+    const image = renderDrawingImage(input({ devices, connections }), LIGHT);
     const took = performance.now() - started;
 
     const doc = parse(image.svg);
     expect(deviceGroups(doc)).toHaveLength(400);
     expect(cablePaths(doc)).toHaveLength(399);
+    // one pair of windows for the four hundred computers
+    expect(doc.querySelectorAll('clipPath')).toHaveLength(2);
     expect(took).toBeLessThan(3000);
   });
 });

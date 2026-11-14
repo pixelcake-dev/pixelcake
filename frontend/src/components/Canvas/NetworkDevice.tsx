@@ -1,10 +1,13 @@
-import { memo } from 'react';
-import { Handle, Position } from 'reactflow';
+import { memo, useEffect, useRef } from 'react';
+import type { CSSProperties } from 'react';
+import { Handle, Position, useUpdateNodeInternals } from 'reactflow';
 import type { NodeProps } from 'reactflow';
 import { ZapOff } from 'lucide-react';
 import type { NetworkDevice as NetworkDeviceType } from '@/types/network';
 import DeviceDrawing from '@/components/ui/DeviceDrawing';
-import { drawingOf } from '@/utils/deviceDrawing';
+import { drawingOf, type DeviceState } from '@/utils/deviceDrawing';
+import { DEVICE_METRICS, cableEnd, type Side } from '@/utils/deviceGeometry';
+import type { DeviceDrawingId } from '@/data/deviceDrawings';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { useUIStore } from '@/store/uiStore';
@@ -21,6 +24,53 @@ interface NetworkDeviceData extends NetworkDeviceType {
   isSelected?: boolean;
   onContextMenu?: (e: React.MouseEvent, device: NetworkDeviceType) => void;
   onDoubleClick?: (device: NetworkDeviceType) => void;
+}
+
+/** The four sides of a device: a cable can end on each */
+const SIDES: ReadonlyArray<{ side: Side; position: Position }> = [
+  { side: 'top', position: Position.Top },
+  { side: 'bottom', position: Position.Bottom },
+  { side: 'left', position: Position.Left },
+  { side: 'right', position: Position.Right },
+];
+
+/** The mark a cable ends on is 8 long and 2 thick (index.css): half of its length */
+const HALF_MARK = 4;
+
+/**
+ * Where the connection point of a side is placed, for a drawing: next to
+ * what is drawn, where the cable has to end (utils/deviceGeometry.ts), from
+ * the inside of the frame. The band that starts a cable is placed back from
+ * there by the style sheet, which is told where the point is.
+ */
+function pointStyle(drawing: DeviceDrawingId, side: Side): CSSProperties {
+  const { border } = DEVICE_METRICS;
+  // (the end at the bottom is placed from the bottom of the frame: no height is needed)
+  const end = cableEnd(drawing, side, 0);
+  const place = (style: CSSProperties, x: number, y?: number) =>
+    ({ ...style, '--at-x': `${x}px`, ...(y === undefined ? {} : { '--at-y': `${y}px` }) }) as CSSProperties;
+  switch (side) {
+    case 'top': {
+      const x = end.x - border - HALF_MARK;
+      const y = end.y - border;
+      return place({ left: x, top: y }, x, y);
+    }
+    case 'bottom': {
+      const x = end.x - border - HALF_MARK;
+      return place({ left: x, top: 'auto', bottom: -border }, x);
+    }
+    case 'left': {
+      const x = end.x - border;
+      const y = end.y - border - HALF_MARK;
+      return place({ left: x, top: y }, x, y);
+    }
+    case 'right': {
+      // (the mark is 2 thick: its outer edge is where the cable ends)
+      const x = end.x - border - 2;
+      const y = end.y - border - HALF_MARK;
+      return place({ left: x, top: y, right: 'auto' }, x, y);
+    }
+  }
 }
 
 // Custom comparator for memo to prevent unnecessary re-renders
@@ -43,7 +93,7 @@ function arePropsEqual(
   );
 }
 
-const NetworkDevice = memo(({ data, id }: NodeProps<NetworkDeviceData>) => {
+const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>) => {
   const setHoveredDevice = useNetworkStore((state) => state.setHoveredDevice);
   const templates = useTemplateStore((state) => state.templates);
   const magnifiedDeviceTypes = useUIStore((state) => state.magnifiedDeviceTypes);
@@ -70,6 +120,22 @@ const NetworkDevice = memo(({ data, id }: NodeProps<NetworkDeviceData>) => {
   // The drawing of the device: the one of its template, else the one of its type
   const drawing = drawingOf(template, data.type);
 
+  // The cables end next to what is drawn, and every drawing has its own
+  // shape: when the drawing of a device changes, React Flow is told to look
+  // again at where its connection points are
+  const updateNodeInternals = useUpdateNodeInternals();
+  const drawn = useRef(drawing);
+  useEffect(() => {
+    if (drawn.current === drawing) return;
+    drawn.current = drawing;
+    updateNodeInternals(id);
+  }, [drawing, id, updateNodeInternals]);
+
+  // What the upper layer of the drawing says. A device taken as broken is
+  // off, whatever else is true of it; the one an answer stops on is in
+  // error; then a selected one
+  const state: DeviceState = isFailed ? 'off' : isDropPoint ? 'error' : selected ? 'selected' : 'rest';
+
   // Magnification logic
   const isMagnified = magnifiedDeviceTypes.includes(data.type);
   const isDimmed = magnifiedDeviceTypes.length > 0 && !isMagnified;
@@ -82,7 +148,12 @@ const NetworkDevice = memo(({ data, id }: NodeProps<NetworkDeviceData>) => {
     ? 'device-dimmed'
     : '';
 
+  // What is written under the name: nothing, for a device with no address to show
+  const address = data.address ?? data.ip;
+
   const stateClasses = [
+    // (the frame is a line higher: the style sheet places the sides by it)
+    address ? 'device-with-address' : '',
     // While presenting a device is not dragged, so a press on it would start
     // moving the view, and a hand that is not perfectly still would turn a
     // click into a drag: `nopan` leaves the press to the click
@@ -131,37 +202,22 @@ const NetworkDevice = memo(({ data, id }: NodeProps<NetworkDeviceData>) => {
       {/* Connection Handles - 4 directions (source only with connectionMode="loose")
           Using only source handles with loose mode is the official React Flow pattern
           for bidirectional connections. This avoids handle overlap/z-index conflicts.
+          Each is where a cable ends on that side, next to what is drawn; what
+          starts a cable is the band of the frame along the side (index.css).
           While presenting nothing can be joined: the handles stay where they are
-          (the cables hang on them) and are hidden by the style sheet. */}
+          (the cables hang on them) and their bands are taken away by the style sheet. */}
 
-      <Handle
-        type="source"
-        position={Position.Top}
-        id="top"
-        className="connect-point connect-point-top"
-        isConnectable={!presenting}
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="bottom"
-        className="connect-point connect-point-bottom"
-        isConnectable={!presenting}
-      />
-      <Handle
-        type="source"
-        position={Position.Left}
-        id="left"
-        className="connect-point connect-point-left"
-        isConnectable={!presenting}
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="right"
-        className="connect-point connect-point-right"
-        isConnectable={!presenting}
-      />
+      {SIDES.map(({ side, position }) => (
+        <Handle
+          key={side}
+          type="source"
+          position={position}
+          id={side}
+          className={`connect-point connect-point-${side}`}
+          style={pointStyle(drawing, side)}
+          isConnectable={!presenting}
+        />
+      ))}
 
       {/* Presentation mode: the ends of the question, and a broken device */}
       {(isSource || isTarget) && (
@@ -178,13 +234,10 @@ const NetworkDevice = memo(({ data, id }: NodeProps<NetworkDeviceData>) => {
 
       {/* Device Content */}
       <div className="device-content pointer-events-none">
-        <DeviceDrawing drawing={drawing} className="device-icon" />
-        <span className="device-name font-semibold text-sm">
-          {data.label}
-        </span>
-        <span className="device-ip text-xs mt-1">
-          {data.address ?? data.ip}
-        </span>
+        <DeviceDrawing drawing={drawing} state={state} className="device-icon" />
+        <span className="device-name">{data.label}</span>
+        {/* (a device with no address to show is its drawing and its name: no empty line) */}
+        {address && <span className="device-ip">{address}</span>}
       </div>
     </div>
   );

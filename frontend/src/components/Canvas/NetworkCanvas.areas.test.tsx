@@ -379,11 +379,11 @@ describe('adding an area', () => {
       id = encloseDevices([first, second]);
     });
 
-    // (jsdom measures nothing: a device is taken to be 120 by 100)
+    // (jsdom measures nothing: a device is taken to be its frame, 104 by 94)
     expect(area(id!)).toMatchObject({
       label: 'Riquadro',
       position: { x: 100 - AREA_MARGIN.side, y: 150 - AREA_MARGIN.top },
-      size: { width: 520 - 100 + 2 * AREA_MARGIN.side, height: 300 - 150 + AREA_MARGIN.top + AREA_MARGIN.bottom },
+      size: { width: 504 - 100 + 2 * AREA_MARGIN.side, height: 294 - 150 + AREA_MARGIN.top + AREA_MARGIN.bottom },
     });
     expect(store().devices.map((d) => d.position)).toEqual([
       { x: 100, y: 200 },
