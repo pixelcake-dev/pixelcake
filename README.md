@@ -9,7 +9,7 @@
 
 PixelCake is a browser-based designer for small networks. You draw the network, configure it, then ask it a question: does this PC reach that server? If it does not, you see where the traffic stops and why.
 
-![The sample network of a small company with the terminal: a ping from PC-Sales to Web-ERP that works; the gateway of PC-Sales set to a wrong address; the same ping stopped at PC-Sales, with the reason; then the addresses of PC-Sales](docs/screenshot.png)
+![The sample network of a small company, its groups of devices in areas (Internet, Edge, Core, Offices, Servers), with the terminal: a ping from PC-Sales to Web-ERP that works; the gateway of PC-Sales set to a wrong address; the same ping stopped at PC-Sales, with the reason; then the addresses of PC-Sales](docs/screenshot.png)
 
 **Status:** early prototype. It is good for exploring and explaining a small network. Do not use its answers to validate a real one: the [limits](#what-it-does-not-do) are listed below.
 
@@ -27,6 +27,8 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 The interface is in Italian and in English. It starts in Italian in a browser set to Italian and in English in any other, and `IT` / `EN` on the menu bar (and on the welcome screen, and in Settings → Appearance) change it at once; the choice is kept in the browser. `?lang=it` or `?lang=en` in the address chooses it too. The terminal language is English in both. This page names menus and buttons as the English interface does.
 
 Four sample networks are bundled. The welcome screen loads the first: a small company, with offices and Wi-Fi in two VLANs on one trunk, an access point, a switch of servers, a public portal in a DMZ and a firewall with three rules that does NAT towards the Internet. The router hands out the addresses of the offices and of the Wi-Fi, and the two laptops take theirs from it. One of the servers is the DNS server of the inside: it knows the management software, the mail server and the portal by name. It is also under Add → Samples, with the other three: a small office with two subnets and a router; a site with VLANs, a DMZ and a firewall; and two sites joined by a main line and a backup line, made for trying failures.
+
+A sample sets the network settings of the project to its own (Settings → Network): the network new devices start from and its gateway, the DNS server when it has one, a name for each of its VLANs. A device added afterwards is offered an address of the sample's network. All but the small office come with their areas, the rectangles that say what a group of devices is: Internet, Edge, Core, Offices and Servers for the company; Internet, the DMZ and the internal network for the site; the head office and the branch for the two sites.
 
 ### The terminal
 
@@ -116,7 +118,7 @@ Lookup failed: Remote-Customer has no DNS server: it cannot look up portal.compa
 
 ### What happens if this breaks
 
-![Presentation mode on the sample with two sites: the main line between R-HQ and R-Branch is cut, the ping from PC-Branch-1 still reaches Srv-File through R-Backup, and the panel counts twelve exchanges that take another path and none that stop](docs/presentation.png)
+![Presentation mode on the sample with two sites, the head office and the branch each in its area: the main line between R-HQ and R-Branch is cut, the ping from PC-Branch-1 still reaches Srv-File through R-Backup, and the panel counts twelve exchanges that take another path and none that stop](docs/presentation.png)
 
 In presentation mode a click on a device or on a cable, then “Simulate a failure”, treats it as broken. The drawing is not edited: the failure is a list handed to the engine next to the network, and it is gone when the presentation ends. The question on screen is asked again at once.
 
@@ -133,7 +135,7 @@ When the engine cannot verify something, it says so in a note instead of answeri
 
 ### The drawing as an image
 
-![The screen above as an exported image: the whole board under the name of the project, the path of the answer in green through R-Backup, the cut line in red, and under the drawing the question, its answer, the simulated failure and the effect on the other exchanges](docs/export.png)
+![The screen above as an exported image: the whole board under the name of the project, with its two areas, the path of the answer in green through R-Backup, the cut line in red, and under the drawing the question, its answer, the simulated failure and the effect on the other exchanges](docs/export.png)
 
 **File → Export image…** draws the whole board again as an image. It is not a screenshot: it is made from the same data as the canvas, so it shows every device whatever the zoom, and never a selection or a connection point.
 
