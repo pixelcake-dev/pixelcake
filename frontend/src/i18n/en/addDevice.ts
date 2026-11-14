@@ -61,8 +61,5 @@ export const addDevice: Dictionary['addDevice'] = {
 
     selectAtLeastOne: 'Select at least one device to add.',
     added: (count: number) => (count === 1 ? '1 device added' : `${count} devices added`),
-
-    /** Written as the description of the network card of each end device added here */
-    cardDescription: 'Primary network interface',
   },
 };

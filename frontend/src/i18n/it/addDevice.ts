@@ -61,8 +61,5 @@ export const addDevice = {
     selectAtLeastOne: 'Seleziona almeno un dispositivo da aggiungere.',
     added: (count: number) =>
       count === 1 ? '1 dispositivo aggiunto' : `${count} dispositivi aggiunti`,
-
-    /** Written as the description of the network card of each end device added here */
-    cardDescription: 'Primary Network Interface',
   },
 };

@@ -108,6 +108,7 @@ An area is a rectangle with a label, drawn behind a group of devices to say what
 - **SettingsModal** - App settings with tabbed interface. Its first tab, Rete (`NetworkSettingsTab`), holds the settings of the project: what a new device starts from (network, mask, gateway and, optional, the DNS server its card asks), saved together by the one button of the tab. Once a DNS server is saved, the tab counts the end devices of the canvas that ask nobody (`utils/defaultDns.ts`) and offers to write it on their first card addressed by hand, after a question. The group «VLAN del progetto» is the table of the names of the VLANs (`ui/VlanNamesTable`): the VLANs that have one and those the canvas uses without one (`vlansInUse`), a row added by hand for any other; what is wrong with a row (`vlanRowProblem`) is said under it and stops the save
 - **BulkAddDeviceModal** - Bulk device creation with table-based interface
   - Two sections: Configurable Devices (Switch/Router/Firewall with portCount dropdown) + Standard Devices (PC/Server/Database with fixed 1 NIC)
+  - A row is a template, told by its id. Several templates are of one type (seven are servers): the quantity of a row, its key and the devices it adds are of its template alone. Only the templates the app comes with are listed, not the user's own
   - ConfigurableDeviceRow: Dynamic rows with id, templateType, portCount, quantity
   - Auto-generation: Ports and NICs with realistic defaults (VLAN, PoE, NAT, MAC)
   - Search filtering + custom scrollbar (react-custom-scrollbars-2, autoHeightMax: 500px)
@@ -365,12 +366,14 @@ light or dark whatever the theme, a vector file, and a sharp PNG of any size.
 - Edge type switching via `particleAnimationEnabled`
 
 ### Bulk Device Helpers (`frontend/src/utils/bulkDeviceHelpers.ts`)
+- `bulkAddDevices(rows, quantities, …)` - every device is made from the template of its row, found by its id, and says so (`templateId`: the canvas takes its icon, and the windows its capabilities, from there)
 - `generateDefaultPorts(portCount, deviceType)` - Switch: trunk+access+PoE, Router: WAN+LAN+NAT, Firewall: security zones
 - A new router or firewall gets no gateway (on a router the gateway is its default route); switches and end devices get the one of the project
-- `generateDefaultNIC(ip, subnet, gateway, dns?)` - Auto MAC, eth0, auto speed; the DNS server of the project when it has one
-- Sequential naming: `${type}-${existingCount}`
+- `generateDefaultNIC(ip, subnet, gateway, dns?)` - Auto MAC, eth0, auto speed; the DNS server of the project when it has one. It is the card AddDeviceModal starts from
+- Naming: `generateDeviceName(template, devices)`, the name of the template and how many devices of its type there are, those just made included: the name AddDeviceModal proposes
 - Grid positioning: `generateGridPositions()` with random offsets (-25/+25px)
-- IP assignment: `findNextAvailableIP()` skips .1 gateway
+- IP assignment: `findNextAvailableIP()` of `ipHelpers`, the one AddDeviceModal uses: the first free address of the network of the project, from .2
+- A device made here is the one AddDeviceModal makes from the same template (`BulkAddDeviceModal.same.test.tsx` compares the two, template by template), but for three things: the port defaults above (a device made alone starts with plain ports), its place on the grid, and that it is not selected
 
 ## Data Types
 

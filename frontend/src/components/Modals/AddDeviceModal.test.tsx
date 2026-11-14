@@ -121,15 +121,15 @@ describe('AddDeviceModal — where a new device appears', () => {
 describe('bulk add — the gateway of new routers and firewalls', () => {
   it('is left empty too, while switches and end devices keep it', () => {
     const { globalNetworkSettings, addDevice } = useNetworkStore.getState();
-    const rows = (['Router', 'Firewall', 'Switch'] as const).map((templateType, index) => ({
+    const rows = (['tpl-router', 'tpl-firewall', 'tpl-switch'] as const).map((templateId, index) => ({
       id: `row-${index}`,
-      templateType,
+      templateId,
       quantity: 1,
       portCount: 8,
     }));
     bulkAddDevices(
       rows,
-      { PC: 1 },
+      { 'tpl-pc': 1 },
       [],
       globalNetworkSettings,
       useTemplateStore.getState().templates,
@@ -233,15 +233,15 @@ describe('the DNS server of the project on a new device', () => {
   it('bulk add: the cards of the end devices start with it, switches and routers have none', () => {
     useServer();
     const { globalNetworkSettings, addDevice } = useNetworkStore.getState();
-    const rows = (['Router', 'Switch'] as const).map((templateType, index) => ({
+    const rows = (['tpl-router', 'tpl-switch'] as const).map((templateId, index) => ({
       id: `row-${index}`,
-      templateType,
+      templateId,
       quantity: 1,
       portCount: 8,
     }));
     bulkAddDevices(
       rows,
-      { PC: 2, Server: 1, Cloud: 1, AccessPoint: 1 },
+      { 'tpl-pc': 2, 'tpl-server': 1, 'tpl-cloud': 1, 'tpl-accesspoint': 1 },
       [],
       globalNetworkSettings,
       useTemplateStore.getState().templates,
@@ -263,7 +263,7 @@ describe('the DNS server of the project on a new device', () => {
 
   it('bulk add without one in the project: no card names a server', () => {
     const { globalNetworkSettings, addDevice } = useNetworkStore.getState();
-    bulkAddDevices([], { PC: 1 }, [], globalNetworkSettings, useTemplateStore.getState().templates, addDevice);
+    bulkAddDevices([], { 'tpl-pc': 1 }, [], globalNetworkSettings, useTemplateStore.getState().templates, addDevice);
     expect('dns' in (useNetworkStore.getState().devices[0].nics?.[0] ?? {})).toBe(false);
   });
 });
