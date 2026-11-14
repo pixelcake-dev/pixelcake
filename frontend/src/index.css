@@ -59,6 +59,23 @@
   --area-violet: #6a58a6;
   --area-teal: #1c6f7c;
 
+  /* The drawing of a device: a silhouette in two layers. The lower one is
+     the ink of the theme; the upper one is the lamp of the device, and its
+     colour is the state (at rest, the slate of the logo). What is drawn on
+     the layers, and the cut between them, take the colour of what is behind
+     the drawing: the canvas, unless whoever shows the drawing says another
+     (a list, a window). The exported picture repeats these colours
+     (utils/drawingImage.ts) */
+  --device-lower: #22313b;
+  --device-upper: #5e8096;
+  --device-ground: var(--bg-canvas);
+  --device-state: var(--device-upper);
+  --state-selected: #f07d2a;
+  --state-ok: #2fa866;
+  --state-warning: #f2c230;
+  --state-error: #e0483e;
+  --state-off: #9aa7b0;
+
   /* Terminal Colors (Light Mode) */
   --terminal-bg: #ffffff;
   --terminal-text: #22313b;
@@ -107,6 +124,16 @@
   --area-red: #e08f88;
   --area-violet: #a99bd6;
   --area-teal: #62bccb;
+
+  --device-lower: #8fb0c6;
+  --device-upper: #c9d8e2;
+  --device-ground: var(--bg-canvas);
+  --device-state: var(--device-upper);
+  --state-selected: #f07d2a;
+  --state-ok: #2fa866;
+  --state-warning: #f2c230;
+  --state-error: #e0483e;
+  --state-off: #9aa7b0;
 
   /* Terminal Colors (Dark Mode) */
   --terminal-bg: #111315;
@@ -524,6 +551,53 @@ button.area-label:focus-visible {
 .area-colour-swatch[aria-pressed='true'] {
   outline: 1.5px solid var(--text-color);
   outline-offset: 2px;
+}
+
+/* The drawing of a device (components/ui/DeviceDrawing.tsx). Its shapes
+   carry no colour: "l" is of the device itself, "g" is drawn on it. They
+   are there three times: whole, in the colour of the lower layer; in the
+   window of the upper layer, in the colour of the state; in the window of
+   the cut, in the colour of the ground */
+.device-drawing {
+  display: block;
+  flex-shrink: 0;
+}
+
+.device-drawing .l {
+  fill: var(--device-lower);
+}
+
+.device-drawing .g {
+  fill: var(--device-ground);
+}
+
+.device-drawing .device-drawing-upper .l {
+  fill: var(--device-state);
+}
+
+.device-drawing .device-drawing-cut .l {
+  fill: var(--device-ground);
+}
+
+/* The state: the colour of the upper layer */
+.device-drawing.is-selected {
+  --device-state: var(--state-selected);
+}
+
+.device-drawing.is-ok {
+  --device-state: var(--state-ok);
+}
+
+.device-drawing.is-warning {
+  --device-state: var(--state-warning);
+}
+
+.device-drawing.is-error {
+  --device-state: var(--state-error);
+}
+
+.device-drawing.is-off {
+  --device-state: var(--state-off);
 }
 
 /* Network Device Styles */
