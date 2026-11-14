@@ -31,7 +31,7 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 - `speed` (0.5, 1, 2): set from the presentation bar
 
 ### presentationStore (`frontend/src/store/presentationStore.ts`)
-- Presentation mode: `active`, the question (`sourceId`, `targetId`, `flow`), the simulated failures (`failedDevices`, `failedConnections`), the small menu open on the canvas, the way of the answer for the canvas to mark (`route`), whether the panel is open
+- Presentation mode: `active`, the question (`sourceId`, `targetId`, `flow`), the simulated failures (`failedDevices`, `failedConnections`), the small menu open on the canvas, the way of the answer (`route`: the device the packet stops on, for the canvas; the cables, for the exported picture), whether the panel is open
 - **It never changes the drawing.** A failure is an id in this store, handed to the engine next to the topology. Nothing here is persisted; `exit()` forgets question and failures
 - `enter()` refuses an empty canvas and puts the building tools away (selection, context menu, running packet)
 - `utils/liveTopology.ts` builds the topology every question is asked of (canvas + failures while presenting): the simulation panel, the terminal and the presentation all read it there
@@ -63,7 +63,7 @@ The connection points of a device (`.connect-point`) are hidden at rest: they sh
 
 Bringing the whole drawing into view is a request (`fitViewRequest` in networkStore, raised by `triggerFitView`). The canvas answers each request once, after React Flow has measured the devices, so a drawing that has just been loaded (a sample network) is fitted too.
 
-While presenting, NetworkCanvas makes the drawing read-only (nothing is selected, moved, joined, deleted or pasted; dragging pans), a click on a device or a cable opens the presentation menu, the drawing is fitted to the window, and the view saved with the drawing is not touched. NetworkDevice and CustomEdge mark the ends of the question, a broken device, a cut cable and the way of the answer.
+While presenting, NetworkCanvas makes the drawing read-only (nothing is selected, moved, joined, deleted or pasted; dragging pans), a click on a device or a cable opens the presentation menu, the drawing is fitted to the window, and the view saved with the drawing is not touched. NetworkDevice and CustomEdge mark the ends of the question, a broken device and a cut cable. The way of the answer is not painted: the packet shows it, and a cable lights up in the colour of its kind while the packet is on it, as while building.
 
 ### Presentation (`frontend/src/components/Presentation/`)
 - **PresentationBar** - Takes the place of the menu bar: project and canvases, pace of the packet, terminal, the picture of what is on screen, full screen, exit (also Esc)
@@ -98,6 +98,7 @@ While presenting, NetworkCanvas makes the drawing read-only (nothing is selected
 
 ### UI Components
 - **Modal / BaseModal** - The window every dialog is built on. Esc closes it as its X does (`ui/useEscapeToClose.ts`): whatever Esc can close is on one list while it is open, a single listener closes the last entry, so each press closes one thing, the one on top (a list of the icon picker before its window, a window before the one under it). Whoever uses Esc for itself (an edit in place) marks the event with `preventDefault()`; a press that is marked is left alone, also by the presentation bar
+- **ConfirmDialog** (`store/confirmStore.ts`) - A question with a yes and a no, asked in a window of the app: `askConfirm({ title, detail, confirmLabel, danger })` gives a promise of the answer. It lies over any other window; Esc and a click outside are a no. No source file calls the browser's `alert()`, `confirm()` or `prompt()` (a test scans for them). In tests, `test/confirm.ts` answers the questions and `await settled()` lets whoever asked go on
 - **Button** - Lays what is inside it out in a row: an icon and its label stay on one line, with no styling of the icon by the caller
 - **TabContainer** - Reusable tab system for modals
 - **VLANInput** - Multi-value input with tag chips (range 1-4094)
