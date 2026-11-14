@@ -93,15 +93,15 @@ network       ::= ipv4 "/" prefix | "default"
 next-hop      ::= ipv4 | device
 
 rule-cmd      ::= "add" "rule" [position] ("allow" | "deny") [service | "any"]
-                        "from" endpoint "to" endpoint [["on"] device]
+                        "from" endpoint "to" endpoint ["on" device]
                 | "remove" "rule" position [("from" | "on") device]
 endpoint      ::= "any" | "trust" | "untrust" | "dmz" | ipv4 | network | device
 
 forward-cmd   ::= "add" "forward" [service | "any"] "from" ["interface"] number
-                        "to" (ipv4 | device) [["on"] device]
+                        "to" (ipv4 | device) ["on" device]
                 | "remove" "forward" position [("from" | "on") device]
 
-record-cmd    ::= "add" "record" name ["to"] (ipv4 | device) [["on"] device]
+record-cmd    ::= "add" "record" name ["to"] (ipv4 | device) ["on" device]
                 | "remove" "record" (position | name) [("from" | "on") device]
 
 session       ::= "use" device | "exit" | "clear" | "help" [topic]
@@ -112,8 +112,12 @@ name          ::= label "." label { "." label }     (* www.azienda.example *)
 ```
 
 In a device context (`use …`) the `["from" device]`, `[["of"] device]` and
-`[["on"] device]` parts default to the context device. `show dhcp` with no
-device, outside a context, is about the whole drawing.
+`[["on"] device]` parts default to the context device. `show dhcp` and
+`show dns` with no device, outside a context, are about the whole drawing.
+Where a command ends with something that may be a device of several words
+(the destination of a rule, the address of a forward or of a record), `on`
+is what parts it from the device the command is for, and cannot be left
+out: `["on" device]`.
 
 ## Commands
 
@@ -396,11 +400,11 @@ Aliases: `sh` → `show` · `ls`, `list` → `show devices` ·
 | `add route <network>\|default via <next hop> [on] <device>` | Static route on a router or firewall. The network is written `192.168.30.0/24`; the next hop is an address, or a device with an address on a network the two share. Adding a route to a network that has one replaces its next hop |
 | `add backup route <network>\|default via <next hop> [on] <device>` | A second route to a network that has one. It is used when the interface of the first has no working link (a port switched off, or a failure simulated in presentation mode). `show routes` marks it `backup` |
 | `remove route <network>\|default [via <next hop>] [from] <device>` | Without `via`, every route to that network; with it, the one through that next hop |
-| `add rule [<position>] allow\|deny [<service>\|any] from <source> to <destination> [on] <firewall>` | Firewall rule, added last or at the given position. Source and destination are `any`, a zone, an address, a network, or a device (stored as its address). No service means any |
+| `add rule [<position>] allow\|deny [<service>\|any] from <source> to <destination> on <firewall>` | Firewall rule, added last or at the given position. Source and destination are `any`, a zone, an address, a network, or a device (stored as its address). No service means any |
 | `remove rule <n> [from] <firewall>` | |
-| `add forward [<service>\|any] from interface <n> to <address> [on] <device>` | Port forward on a router or firewall: what arrives for the address of interface `<n>`, for the service, is sent on to the address, which may be given as a device. No service means any. `interface` may be left out |
+| `add forward [<service>\|any] from interface <n> to <address> on <device>` | Port forward on a router or firewall: what arrives for the address of interface `<n>`, for the service, is sent on to the address, which may be given as a device. No service means any. `interface` may be left out |
 | `remove forward <n> [from] <device>` | |
-| `add record <name> [to] <address> [on] <server>` | A name a server answers for as a DNS server. The address may be given as a device, and is stored as the address it has. A name that is already there takes the new address: one name, one address |
+| `add record <name> [to] <address> on <server>` | A name a server answers for as a DNS server. The address may be given as a device, and is stored as the address it has. A name that is already there takes the new address: one name, one address |
 | `remove record <n>\|<name> [from] <server>` | By its place in the list, or by its name |
 | `add vlan <id> [to] <device>` / `remove vlan <id> from <device>` | The VLAN list of a device (see *VLANs*) |
 | `connect <A> [to] <B>` / `disconnect <A> [from] <B>` | Create/remove a link. `connect` attaches each end to the first free interface and says which: `connected A (port 3) ↔ B (eth0)`. On a firewall with security zones the end stays unattached: choose the port, and with it the zone, in the connection editor |

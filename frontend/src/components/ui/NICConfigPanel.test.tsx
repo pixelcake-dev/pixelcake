@@ -52,6 +52,28 @@ describe('NICConfigPanel — where the address comes from', () => {
     expect(saved(onSave)).toMatchObject({ dhcp: true, ip: '', subnet: '', gateway: '', name: 'eth0' });
   });
 
+  it('from DHCP: the card is handed back with no DNS server of its own either', () => {
+    const { onSave } = renderPanel({ ...CARD, dns: '192.168.1.53' });
+    expect(screen.getByLabelText('Server DNS')).toHaveValue('192.168.1.53');
+    fireEvent.change(mode(), { target: { value: 'dhcp' } });
+    expect(screen.queryByLabelText('Server DNS')).not.toBeInTheDocument();
+    save();
+    expect(saved(onSave)).toMatchObject({ dhcp: true, ip: '' });
+    expect(saved(onSave).dns).toBeUndefined();
+  });
+
+  it('what was wrong with the DNS server of one card is not said of the next one opened', () => {
+    const onSave = vi.fn();
+    const { rerender } = render(<NICConfigPanel nic={CARD} onSave={onSave} onCancel={() => {}} />);
+    fireEvent.change(screen.getByLabelText('Server DNS'), { target: { value: 'srv-auth' } });
+    save();
+    expect(screen.getByRole('alert')).toHaveTextContent('"srv-auth" non è un indirizzo IPv4 valido');
+    expect(onSave).not.toHaveBeenCalled();
+    rerender(<NICConfigPanel nic={{ ...CARD, id: 'nic-2', name: 'eth1' }} onSave={onSave} onCancel={() => {}} />);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Server DNS')).toHaveValue('');
+  });
+
   it('a card kept on DHCP opens on DHCP', () => {
     renderPanel({ ...CARD, dhcp: true, ip: '', subnet: '', gateway: '' });
     expect(mode().value).toBe('dhcp');

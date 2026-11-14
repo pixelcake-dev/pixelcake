@@ -1001,7 +1001,7 @@ function cardDnsLine(
   nic: NetworkInterfaceCard,
   used: NetworkInterfaceCard | undefined
 ): TerminalLine {
-  const lease = nic.dhcp ? leaseOf(dhcp, d.id, nic.id) : undefined;
+  const lease = leaseOf(dhcp, d.id, nic.id);
   const pool = lease ? poolAt(dhcp, lease.server) : undefined;
   if (!nic.dns) {
     const why = !nic.dhcp
@@ -1832,8 +1832,6 @@ function runRuleRemove(position: number, deviceQuery: string | undefined, contex
   return [ok(`${device.label}: rule ${position} removed — ${describeRule(rule)}`)];
 }
 
-/* ── help ─────────────────────────────────────────────────────────────── */
-
 /* ── port forwards ────────────────────────────────────────────────────── */
 
 function runForwardAdd(
@@ -2035,6 +2033,8 @@ function runRecordRemove(
   });
   return [ok(`${device.label}: record ${at + 1} removed — ${record.name} is ${record.address}`)];
 }
+
+/* ── help ─────────────────────────────────────────────────────────────── */
 
 /**
  * The command reference: what `help` prints, and the list the in-app guide

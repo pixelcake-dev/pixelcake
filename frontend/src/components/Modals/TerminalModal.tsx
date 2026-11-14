@@ -41,6 +41,13 @@ interface LiveSession {
   lookupLines: TerminalLine[];
 }
 
+/** Everything a live session still has to print, in the order it is printed */
+const pendingLines = (live: LiveSession): TerminalLine[] => [
+  ...live.lookupLines,
+  ...live.hopLines.slice(live.printed),
+  ...live.finalLines,
+];
+
 /** Fixed console palette — the pane stays dark regardless of app theme */
 const CONSOLE_BG = '#16181d';
 const CONSOLE_INPUT_COLOR = '#e6edf3';
@@ -223,12 +230,7 @@ const TerminalModal = () => {
         // Animation finished (or was stopped): flush the rest + verdict,
         // then hand the prompt back
         liveRef.current = null;
-        setLines((prev) => [
-          ...prev,
-          ...live.lookupLines,
-          ...live.hopLines.slice(live.printed),
-          ...live.finalLines,
-        ]);
+        setLines((prev) => [...prev, ...pendingLines(live)]);
         setIsBusy(false);
       }
     });
@@ -240,12 +242,7 @@ const TerminalModal = () => {
     const live = liveRef.current;
     if (!live) return;
     liveRef.current = null;
-    setLines((prev) => [
-      ...prev,
-      ...live.lookupLines,
-      ...live.hopLines.slice(live.printed),
-      ...live.finalLines,
-    ]);
+    setLines((prev) => [...prev, ...pendingLines(live)]);
     setIsBusy(false);
   };
 

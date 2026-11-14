@@ -34,7 +34,7 @@ interface NICConfigPanelProps {
 }
 
 /** The pool fields before anything is typed */
-const EMPTY_POOL: DhcpPool = { start: '', end: '', gateway: '', dns: '' };
+const EMPTY_POOL: DhcpPool = { start: '', end: '', gateway: '' };
 
 /**
  * NICConfigPanel Component
@@ -97,7 +97,7 @@ const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel, 
       setFormData({ ...formData, dhcp });
       return;
     }
-    setFormData({ ...formData, dhcp, ...lease.given, dns: lease.given.dns ?? '' });
+    setFormData({ ...formData, dhcp, ...lease.given });
   };
 
   const handleSave = () => {
@@ -109,7 +109,6 @@ const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel, 
       setDnsError(dnsProblem);
       return;
     }
-    setDnsError(null);
 
     // Prepare updates. A card on DHCP keeps no address of its own, and no
     // DNS server of its own: both come with the lease
@@ -294,7 +293,7 @@ const NICConfigPanel: React.FC<NICConfigPanelProps> = ({ nic, onSave, onCancel, 
                 label="Server DNS"
                 type="text"
                 placeholder="es. 192.168.1.53"
-                value={formData.dns}
+                value={formData.dns ?? ''}
                 onChange={(e) => {
                   setFormData({ ...formData, dns: e.target.value });
                   setDnsError(null);

@@ -137,6 +137,16 @@ describe('add record', () => {
     expect(device('Web-01').dnsRecords).toHaveLength(2);
   });
 
+  it('finds a name that is there however it was written, and keeps it the way names are compared', () => {
+    useNetworkStore.getState().updateDevice(device('Web-01').id, {
+      dnsRecords: [{ id: 'record-1', name: 'WWW.Azienda.Example', address: WEB }],
+    });
+    expect(output(`add record www.azienda.example ${MAIL} on Web-01`)).toEqual([
+      'Web-01: record 1 — www.azienda.example is now 192.168.20.20 (was 192.168.20.10)',
+    ]);
+    expect(device('Web-01').dnsRecords).toEqual([{ id: 'record-1', name: 'www.azienda.example', address: MAIL }]);
+  });
+
   it('a new record takes the lowest id not in use', () => {
     smallWithDns();
     run('remove record 1 from Web-01');
@@ -397,6 +407,31 @@ describe('resolve', () => {
     // the question is seen to travel as far as it got
     expect(way(result)).toBe('PC-1 > SW-Office > Router-1');
     expect(result.liveTrace?.finalLines.map(l => l.tone)).toEqual(['error', 'error', 'muted']);
+  });
+
+  it('a question that never leaves the device is not animated', () => {
+    run('interface eth0 gateway none on PC-1');
+    const result = run('resolve www.azienda.example from PC-1');
+    expect(result.lines.map(l => l.text)).toEqual([
+      'Looking up www.azienda.example from PC-1 (DNS server 192.168.20.10)...',
+      '  ✗ DNS request: PC-1 → Web-01',
+      'Lookup failed (blocked): DNS request: no default gateway configured on PC-1',
+      '  dropped at: PC-1',
+    ]);
+    expect(result.liveTrace).toBeUndefined();
+  });
+
+  it('a server that asks itself and then pings waits for nothing before the ping', () => {
+    run(`interface eth0 dns ${WEB} on Web-01`);
+    const result = run('ping posta.azienda.example from Web-01');
+    expect(result.lines.map(l => l.text)).toEqual([
+      'Looking up posta.azienda.example from Web-01 (DNS server 192.168.20.10)...',
+      'posta.azienda.example is 192.168.20.20 (answered by Web-01 itself)',
+      'Pinging Mail-01 (192.168.20.20) from Web-01...',
+    ]);
+    expect(way(result)).toBe('Web-01 > SW-Servers > Mail-01 > SW-Servers > Web-01');
+    expect(result.liveTrace?.lookup).toBeUndefined();
+    expect(result.liveTrace?.finalLines.map(l => l.text)).toEqual(['Reply from 192.168.20.20: hops=3 time=3ms']);
   });
 
   it('a server that is its own DNS server answers without sending anything', () => {
@@ -733,6 +768,18 @@ describe('show dns', () => {
     ]);
   });
 
+  it('does not list records left on a device that is no server, and says when a server has no address', () => {
+    useNetworkStore.getState().updateDevice(device('PC-2').id, {
+      dnsRecords: [{ id: 'record-1', name: 'www.azienda.example', address: WEB }],
+    });
+    expect(output('show dns')[0]).toBe('no DNS in the drawing: no server keeps records, no card names a DNS server');
+    expect(output('show dns PC-2').join('\n')).not.toContain('RECORDS');
+
+    run(`add record www.azienda.example ${WEB} on Mail-01`);
+    run('interface eth0 dhcp on Mail-01');
+    expect(output('show dns').slice(0, 2)).toEqual(['DNS — 1 server, 1 record', 'RECORDS of Mail-01 (no address)']);
+  });
+
   it('of a device that asks: the server of each card, who that is, and where it came from', () => {
     smallWithDns();
     expect(output('show dns PC-1')).toEqual(['DNS of PC-1', '  eth0: asks 192.168.20.10 (Web-01)', LIMITS]);
@@ -815,6 +862,8 @@ describe('show dns', () => {
       '  eth2: asks 8.8.8.8 (no device has it)  (not asked: eth1 comes first)',
       LIMITS,
     ]);
+    // only the card that is asked through stands out
+    expect(run('show dns PC-2').lines.map(l => l.tone)).toEqual(['heading', 'muted', 'normal', 'muted', 'muted']);
     expect(output('show dns')).toContain(`  ${'PC-2 eth1'.padEnd(24)} 192.168.20.20`);
     expect(output('resolve www.azienda.example from PC-2')[0]).toBe(
       'Looking up www.azienda.example from PC-2 (DNS server 192.168.20.20)...'

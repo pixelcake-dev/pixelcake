@@ -43,6 +43,7 @@ describe('parse — resolve', () => {
   it('is suggested for a verb typed nearly right', () => {
     expect(suggestion('resolv www.azienda.example')).toBe('resolve');
     expect(suggestion('nslokup www.azienda.example')).toBe('nslookup');
+    expect(suggestion('lokup www.azienda.example')).toBe('lookup');
   });
 });
 
@@ -211,6 +212,20 @@ describe('parse — add record', () => {
       device: 'DNS Server',
     });
     expect(parse('add record www.azienda.example Web-01')).toMatchObject({ address: 'Web-01' });
+    // of several, the last one
+    expect(parse('add record www.azienda.example Server on the roof on DNS Server')).toEqual({
+      kind: 'record-add',
+      name: 'www.azienda.example',
+      address: 'Server on the roof',
+      device: 'DNS Server',
+    });
+    // a server called "on" is quoted, and is not taken for the word
+    expect(parse('add record www.azienda.example Web-01 on "on"')).toEqual({
+      kind: 'record-add',
+      name: 'www.azienda.example',
+      address: 'Web-01',
+      device: 'on',
+    });
   });
 
   it('says what it should have been when a part is missing', () => {

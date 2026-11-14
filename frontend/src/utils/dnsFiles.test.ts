@@ -158,19 +158,30 @@ describe('DNS in a project file', () => {
           ? { ...d, nics: d.nics?.map(({ dns, ...rest }) => ({ dns, ...rest })) }
           : d
     );
+    expect(serializeProject(projectOf(shuffled))).toBe(serializeProject(projectOf(lab())));
+
+    // fields the format does not know come after those it does, wherever they were
+    shuffled.devices = shuffled.devices.map(d => {
+      if (d.id === 'ns') return { annotation: 'kept', ...d };
+      if (d.id === 'a') return { ...d, nics: d.nics?.map(card => ({ ...card, mac: '02:00:00:00:00:0A' })) };
+      if (d.id !== 'fw') return d;
+      const [lan, ...others] = d.ports ?? [];
+      const pool = { comment: 'kept', ...lan.dhcpServer } as unknown as typeof lan.dhcpServer;
+      return { ...d, ports: [{ ...lan, dhcpServer: pool }, ...others] };
+    });
     const devices = JSON.parse(serializeProject(projectOf(shuffled))).canvases[0].devices as NetworkDevice[];
     const server = named(devices, 'NS');
-    expect(Object.keys(server ?? {}).slice(-2)).toEqual(['nics', 'dnsRecords']);
+    expect(Object.keys(server ?? {}).slice(-3)).toEqual(['nics', 'dnsRecords', 'annotation']);
     expect(server?.dnsRecords?.map(record => Object.keys(record))).toEqual([
       ['id', 'name', 'address'],
       ['id', 'name', 'address'],
     ]);
     expect(Object.keys(named(devices, 'A')?.nics?.[0] ?? {})).toEqual([
-      'id', 'name', 'enabled', 'speed', 'ip', 'subnet', 'gateway', 'dns',
+      'id', 'name', 'enabled', 'speed', 'ip', 'subnet', 'gateway', 'dns', 'mac',
     ]);
-    expect(Object.keys(named(devices, 'FW')?.ports?.[0].dhcpServer ?? {})).toEqual(['start', 'end', 'dns']);
-    // the same text as the drawing put together the usual way
-    expect(serializeProject(projectOf(shuffled))).toBe(serializeProject(projectOf(lab())));
+    expect(Object.keys(named(devices, 'FW')?.ports?.[0].dhcpServer ?? {})).toEqual([
+      'start', 'end', 'dns', 'comment',
+    ]);
   });
 
   it('a device without DNS is written without a word about it', () => {
@@ -371,6 +382,10 @@ describe('DNS through YAML', () => {
       '    - name: Altro',
       '      type: Server',
       '      dns_records: nessuno',
+      '    - name: Vuoto',
+      '      type: Server',
+      '      dns_records:',
+      '        - name: senza.indirizzo.example',
       '  connections: []',
     ].join('\n');
     const result = parseYamlTopology(yaml);
@@ -380,12 +395,15 @@ describe('DNS through YAML', () => {
       { id: 'record-2', name: 'nas.azienda.example', address: '167772242' },
     ]);
     expect(result.devices[1]).not.toHaveProperty('dnsRecords');
+    // a list with nothing in it that can be kept is no list
+    expect(result.devices[2]).not.toHaveProperty('dnsRecords');
     expect(result.warnings).toEqual([
       'NS: record DNS 2 senza nome o indirizzo, ignorato',
       'NS: record DNS 3 senza nome o indirizzo, ignorato',
       'NS: record DNS 4 senza nome o indirizzo, ignorato',
       'NS: record DNS 6 senza nome o indirizzo, ignorato',
       'NS: record DNS 7 senza nome o indirizzo, ignorato',
+      'Vuoto: record DNS 1 senza nome o indirizzo, ignorato',
     ]);
   });
 

@@ -673,6 +673,9 @@ describe('createCompanySample — DNS', () => {
 
   it('the offices name it on their cards, the laptops are handed it with their lease, nobody else asks', () => {
     for (const label of OFFICES) expect(device(label).nics?.[0].dns, label).toBe('192.168.30.10');
+    // no other card carries the field, not even empty
+    const named = sample.devices.filter(d => (d.nics ?? []).some(card => 'dns' in card)).map(d => d.label);
+    expect(named).toEqual(OFFICES);
     // a laptop keeps none of its own
     for (const label of WIFI) expect(device(label).nics?.[0], label).not.toHaveProperty('dns');
     expect(resolveDhcp(sample).pools.map(pool => pool.pool.dns)).toEqual(['192.168.30.10', '192.168.30.10']);

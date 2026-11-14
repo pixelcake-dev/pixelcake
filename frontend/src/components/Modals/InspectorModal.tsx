@@ -890,7 +890,7 @@ const InspectorModal = () => {
           <DnsPanel
             records={dnsRecords}
             onChange={setDnsRecords}
-            addresses={nics.filter((nic) => !nic.dhcp && nic.ip).map((nic) => nic.ip)}
+            addresses={nics.filter((nic) => nic.ip).map((nic) => nic.ip)}
           />
         </div>
       ),

@@ -133,8 +133,9 @@ function parseRecords(list: unknown[], deviceName: string, warnings: string[]): 
   list.forEach((raw, index) => {
     const data = raw !== null && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
     // String(): YAML reads a bare number where an address was mistyped
-    const name = data.name === undefined || data.name === null ? '' : String(data.name);
-    const address = data.address === undefined || data.address === null ? '' : String(data.address);
+    const text = (value: unknown) => (value === undefined || value === null ? '' : String(value));
+    const name = text(data.name);
+    const address = text(data.address);
     if (!name || !address) {
       warnings.push(`${deviceName}: record DNS ${index + 1} senza nome o indirizzo, ignorato`);
       return;

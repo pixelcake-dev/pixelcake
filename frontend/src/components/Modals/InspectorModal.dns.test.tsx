@@ -235,6 +235,11 @@ describe('InspectorModal — the «DNS» tab of a server', () => {
     );
     expect(device('Web-01').dnsRecords).toEqual(RECORDS);
 
+    // however the first of the two is written
+    type('Nome del record 1', 'Www.Azienda.EXAMPLE.');
+    expect(alerts()).toEqual(['il nome www.azienda.example è già nel record 1: un nome ha un solo indirizzo']);
+    type('Nome del record 1', 'www.azienda.example');
+
     // with another name it is fine
     type('Nome del record 3', 'intranet.azienda.example');
     expect(alerts()).toEqual([]);
