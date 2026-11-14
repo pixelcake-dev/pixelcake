@@ -110,7 +110,7 @@ The reference implementation is `frontend/src/utils/projectFile.ts`
 | `gateway` | string | Default gateway. |
 | `dns` | string | Optional. Address of the DNS server written on the card of a new end device. Without it a new card names no DNS server. |
 | `emailMode` | `"auto"` \| `"internal"` \| `"cloud"` | Optional. How the email flow of the simulation is routed; a missing value means `"auto"`. |
-| `vlans` | array | Optional. The names of the VLANs of the project: one `{ "id": 10, "name": "Uffici" }` for each VLAN that has a name, lowest `id` first. `id` is a VLAN number (an integer from 1 to 4094), `name` a text of 32 characters at most. A VLAN stays a number on devices, ports and connections: the name is only shown next to it. |
+| `vlans` | array | Optional. The names of the VLANs of the project: one `{ "id": 10, "name": "Offices" }` for each VLAN that has a name, lowest `id` first. `id` is a VLAN number (an integer from 1 to 4094), `name` a text of 32 characters at most. A VLAN stays a number on devices, ports and connections: the name is only shown next to it. |
 
 ## Canvas
 
