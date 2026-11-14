@@ -7,14 +7,16 @@ import { useState } from 'react';
 import { useTemplateStore } from '@/store/templateStore';
 import GenericTemplatesTab from './GenericTemplatesTab';
 import CustomTemplatesTab from './CustomTemplatesTab';
+import { useT } from '@/i18n';
 
 const DeviceTemplatesTab = () => {
+  const t = useT();
   const templates = useTemplateStore((state) => state.templates);
   const [templateTab, setTemplateTab] = useState<'generic' | 'custom'>('generic');
 
   // Filter templates by type
-  const genericTemplates = templates.filter((t) => !t.isCustom);
-  const customTemplates = templates.filter((t) => t.isCustom);
+  const genericTemplates = templates.filter((template) => !template.isCustom);
+  const customTemplates = templates.filter((template) => template.isCustom);
 
   return (
     <div>
@@ -24,13 +26,13 @@ const DeviceTemplatesTab = () => {
           className={`settings-tab ${templateTab === 'generic' ? 'active' : ''}`}
           onClick={() => setTemplateTab('generic')}
         >
-          Dispositivi Generici
+          {t.templates.devices.tabs.generic}
         </button>
         <button
           className={`settings-tab ${templateTab === 'custom' ? 'active' : ''}`}
           onClick={() => setTemplateTab('custom')}
         >
-          Dispositivi Custom
+          {t.templates.devices.tabs.custom}
         </button>
       </div>
 

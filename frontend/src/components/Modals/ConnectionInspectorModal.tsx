@@ -10,7 +10,9 @@ import { useTemplateStore } from '@/store/templateStore';
 import { bindingFor, boundInterface, listInterfaces, usedInterfaceKeys, withLeases } from '@/engine';
 import type { DeviceInterface } from '@/engine';
 import { interfaceOptionLabel } from '@/utils/interfaceLabels';
+import { linkTypeDescription } from '@/utils/templateText';
 import type { ConnectionType, NetworkDevice } from '@/types/network';
+import { useT } from '@/i18n';
 
 /** Value shown for an end that has no interface */
 const UNASSIGNED = '';
@@ -30,28 +32,27 @@ interface InterfaceSelectProps {
  * Interfaces used by another link are listed but cannot be chosen.
  */
 const InterfaceSelect = ({ id, device, value, onChange, takenKeys }: InterfaceSelectProps) => {
+  const t = useT();
   const interfaces: DeviceInterface[] = device ? listInterfaces(device) : [];
 
   return (
     <Select
       id={id}
-      label={`Interfaccia su ${device?.label ?? 'dispositivo sconosciuto'}`}
+      label={t.connection.interfaces.on(device?.label)}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       disabled={interfaces.length === 0}
     >
       {/* A cable is always plugged into something, and an unbound end is
-          bound again at the next load: "Non assegnata" is only shown while
+          bound again at the next load: "not assigned" is only shown while
           the end really has no interface (none free, or a device without
           any), never offered as a choice for a bound end. */}
-      {value === UNASSIGNED && <option value={UNASSIGNED}>Non assegnata</option>}
+      {value === UNASSIGNED && <option value={UNASSIGNED}>{t.connection.interfaces.notAssigned}</option>}
       {interfaces.map((iface) => {
         const inUse = takenKeys.has(iface.key);
         return (
           <option key={iface.key} value={iface.key} disabled={inUse}>
-            {interfaceOptionLabel(iface)}
-            {!iface.enabled && ' — disabilitata'}
-            {inUse && ' (in uso)'}
+            {t.connection.interfaces.option(interfaceOptionLabel(iface), { enabled: iface.enabled, inUse })}
           </option>
         );
       })}
@@ -60,6 +61,7 @@ const InterfaceSelect = ({ id, device, value, onChange, takenKeys }: InterfaceSe
 };
 
 const ConnectionInspectorModal = () => {
+  const t = useT();
   const isOpen = useUIStore((state) => state.modals.connectionInspector);
   const inspectorConnection = useUIStore((state) => state.inspectorConnection);
   const closeModal = useUIStore((state) => state.closeModal);
@@ -110,7 +112,6 @@ const ConnectionInspectorModal = () => {
   const shown = withLeases({ devices, connections }).devices;
   const sourceDevice = shown.find((d) => d.id === inspectorConnection.source);
   const targetDevice = shown.find((d) => d.id === inspectorConnection.target);
-  const connectionLabel = `${sourceDevice?.label || 'Unknown'} → ${targetDevice?.label || 'Unknown'}`;
 
   // Interfaces that cannot be chosen for an end: used by another link, or
   // (when both ends sit on the same device) chosen for the other end
@@ -153,23 +154,23 @@ const ConnectionInspectorModal = () => {
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={`Modifica Connessione: ${connectionLabel}`}
+      title={t.connection.title(sourceDevice?.label, targetDevice?.label)}
       size="sm"
       autoHeight={true}
       footer={
         <div className="modal-actions px-6 pb-6 pt-4">
           <Button variant="secondary" onClick={handleClose}>
-            Annulla
+            {t.common.actions.cancel}
           </Button>
           <Button variant="primary" onClick={handleSave}>
-            Salva
+            {t.common.actions.save}
           </Button>
         </div>
       }
     >
       <div>
         {/* Interfaces: which port/NIC each end of the link is attached to */}
-        <FormFieldset legend="Interfacce" className="mb-4">
+        <FormFieldset legend={t.connection.interfaces.legend} className="mb-4">
           <FormContainer gap="0">
             <InterfaceSelect
               id="connection-source-interface"
@@ -185,33 +186,34 @@ const ConnectionInspectorModal = () => {
               onChange={setTargetInterface}
               takenKeys={takenOn(targetDevice, sourceInterface)}
             />
-            <p className="text-xs text-[var(--text-color-light)]">
-              Stato della porta, zona di sicurezza e gateway vengono verificati solo sulle
-              estremità assegnate a un&apos;interfaccia.
-            </p>
+            <p className="text-xs text-[var(--text-color-light)]">{t.connection.interfaces.note}</p>
           </FormContainer>
         </FormFieldset>
 
         {/* Connection Type */}
         <Select
-        label="Tipo Connessione"
+        label={t.connection.type}
         value={connectionType}
         onChange={(e) => setConnectionType(e.target.value)}
       >
-        <option value="">Nessuno (Default)</option>
-        {connectionTemplates.map((template) => (
-          <option key={template.id} value={template.type}>
-            {template.name}
-            {template.description && ` - ${template.description}`}
-          </option>
-        ))}
+        <option value="">{t.connection.noType}</option>
+        {connectionTemplates.map((template) => {
+          // In the language of the interface while it is the app's own; as typed once rewritten
+          const description = linkTypeDescription(template, t);
+          return (
+            <option key={template.id} value={template.type}>
+              {template.name}
+              {description && ` - ${description}`}
+            </option>
+          );
+        })}
       </Select>
 
-      {/* Preview della connessione con colore */}
+      {/* The colour the link will be drawn in */}
       {connectionType && (
         <div className="form-group">
           <label className="block text-sm font-medium mb-1 text-[var(--text-color-light)]">
-            Anteprima Colore
+            {t.connection.colourPreview}
           </label>
           <div
             className="w-full h-4 rounded-md border border-[var(--border-color)]"
@@ -225,7 +227,7 @@ const ConnectionInspectorModal = () => {
           them and under them comes from this container */}
       <FormContainer gap="4" className="mb-4">
         <Input
-          label="Bandwidth (es: 1Gbps, 100Mbps)"
+          label={t.connection.bandwidth}
           value={bandwidth}
           onChange={(e) => setBandwidth(e.target.value)}
           placeholder="1Gbps"
@@ -233,10 +235,10 @@ const ConnectionInspectorModal = () => {
         />
 
         <Input
-          label="Etichetta Custom"
+          label={t.connection.label}
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="Etichetta opzionale"
+          placeholder={t.connection.labelPlaceholder}
           size="md"
         />
       </FormContainer>
@@ -244,7 +246,7 @@ const ConnectionInspectorModal = () => {
       {/* Custom Color */}
       <div className="form-group">
         <label className="block text-sm font-medium mb-1 text-[var(--text-color-light)]">
-          Colore Personalizzato (opzionale)
+          {t.connection.customColour}
         </label>
         <div className="flex gap-2">
           <Input
@@ -263,9 +265,7 @@ const ConnectionInspectorModal = () => {
             className="flex-1"
           />
         </div>
-        <p className="text-xs text-[var(--text-color-light)] mt-1">
-          Il colore personalizzato sovrascrive il colore del tipo
-        </p>
+        <p className="text-xs text-[var(--text-color-light)] mt-1">{t.connection.customColourNote}</p>
       </div>
       </div>
     </Modal>

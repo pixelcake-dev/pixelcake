@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 import { ChevronDown } from 'lucide-react';
 import { COMMON_NETWORK_ICONS } from '@/data/commonIcons';
 import { useEscapeToClose } from './useEscapeToClose';
+import { useT } from '@/i18n';
 
 interface IconPickerProps {
   value: string;
@@ -19,6 +20,7 @@ const IconPicker = ({
   label,
   error,
 }: IconPickerProps) => {
+  const t = useT();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
@@ -75,7 +77,7 @@ const IconPicker = ({
 
   // Get current icon label
   const currentIcon = COMMON_NETWORK_ICONS.find((icon) => icon.name === value);
-  const currentLabel = currentIcon?.label || value || 'Select icon';
+  const currentLabel = currentIcon?.label || value || t.ui.iconPicker.placeholder;
 
   const handleSelect = (iconName: string) => {
     onChange(iconName);
@@ -130,7 +132,7 @@ const IconPicker = ({
           <div className="p-3 border-b border-[var(--border-color)]">
             <input
               type="text"
-              placeholder="Cerca icone..."
+              placeholder={t.ui.iconPicker.search}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-3 py-1.5 bg-[var(--bg-canvas)] border border-[var(--border-color)] rounded text-sm text-[var(--text-color)] placeholder:text-[var(--text-color-light)] focus:outline-none focus:border-[var(--accent-color)]"
@@ -142,7 +144,7 @@ const IconPicker = ({
           <div className="overflow-y-auto p-3" style={{ maxHeight: '400px' }}>
             {filteredIcons.length === 0 ? (
               <div className="text-center py-8 text-sm text-[var(--text-color-light)]">
-                Nessuna icona trovata
+                {t.ui.iconPicker.noResults}
               </div>
             ) : (
               <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">

@@ -6,12 +6,15 @@ import { useTemplateStore } from '@/store/templateStore';
 import TemplateEditModal from './TemplateEditModal';
 import type { DeviceTemplate } from '@/types/network';
 import { askConfirm } from '@/store/confirmStore';
+import { useT } from '@/i18n';
 
 interface GenericTemplatesTabProps {
   templates: DeviceTemplate[];
 }
 
 const GenericTemplatesTab = ({ templates }: GenericTemplatesTabProps) => {
+  const t = useT();
+  const words = t.templates.devices.generic;
   const deleteTemplate = useTemplateStore((state) => state.deleteTemplate);
 
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -29,9 +32,9 @@ const GenericTemplatesTab = ({ templates }: GenericTemplatesTabProps) => {
 
   const handleDelete = async (template: DeviceTemplate) => {
     const confirmed = await askConfirm({
-      title: `Eliminare il template «${template.name}»?`,
-      detail: 'I dispositivi esistenti di questo tipo potrebbero non essere più disegnati come prima.',
-      confirmLabel: 'Elimina',
+      title: words.deleteQuestion.title(template.name),
+      detail: words.deleteQuestion.detail,
+      confirmLabel: t.common.actions.delete,
       danger: true,
     });
     if (confirmed) {
@@ -48,12 +51,10 @@ const GenericTemplatesTab = ({ templates }: GenericTemplatesTabProps) => {
     <div className="generic-templates-tab">
       {/* Header with Add Button */}
       <div className="tab-header">
-        <p className="text-sm text-[var(--text-color-light)]">
-          Dispositivi predefiniti disponibili per uso rapido
-        </p>
+        <p className="text-sm text-[var(--text-color-light)]">{words.intro}</p>
         <Button variant="primary" onClick={handleAddNew} className="add-template-btn">
           <Plus size={18} />
-          Aggiungi Nuovo Template
+          {words.add}
         </Button>
       </div>
 
@@ -80,14 +81,14 @@ const GenericTemplatesTab = ({ templates }: GenericTemplatesTabProps) => {
               <button
                 className="action-btn edit-btn"
                 onClick={() => handleEdit(template)}
-                title="Modifica template"
+                title={words.edit}
               >
                 <Pencil size={16} />
               </button>
               <button
                 className="action-btn delete-btn"
                 onClick={() => handleDelete(template)}
-                title="Elimina template"
+                title={words.delete}
               >
                 <Trash2 size={16} />
               </button>

@@ -8,6 +8,11 @@ import { FormContainer } from '@/components/ui/FormContainer';
 import IconPicker from '@/components/ui/IconPicker';
 import { useTemplateStore } from '@/store/templateStore';
 import type { DeviceTemplate } from '@/types/network';
+import { useT, type Dictionary } from '@/i18n';
+
+/** What is wrong with a field: named here, said in the language of the interface when drawn */
+type FieldError = keyof Dictionary['templates']['devices']['editor']['errors'];
+type FormErrors = Partial<Record<'name' | 'type' | 'icon', FieldError>>;
 
 interface TemplateEditModalProps {
   isOpen: boolean;
@@ -16,6 +21,8 @@ interface TemplateEditModalProps {
 }
 
 const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps) => {
+  const t = useT();
+  const words = t.templates.devices.editor;
   const addTemplate = useTemplateStore((state) => state.addTemplate);
   const updateTemplate = useTemplateStore((state) => state.updateTemplate);
   const templates = useTemplateStore((state) => state.templates);
@@ -30,7 +37,7 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
     color: '#5E8096',
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<FormErrors>({});
 
   // Initialize form data when template changes
   useEffect(() => {
@@ -53,26 +60,26 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
   }, [template, isOpen]);
 
   const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: FormErrors = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Nome obbligatorio';
+      newErrors.name = 'nameRequired';
     }
 
     if (!formData.type || !formData.type.trim()) {
-      newErrors.type = 'Tipo base obbligatorio';
+      newErrors.type = 'typeRequired';
     } else if (!isEditMode) {
       // Check for duplicate type only in create mode
       const existingTemplate = templates.find(
-        (t) => t.type === formData.type && !t.isCustom
+        (existing) => existing.type === formData.type && !existing.isCustom
       );
       if (existingTemplate) {
-        newErrors.type = 'Tipo già esistente tra i template generici';
+        newErrors.type = 'typeExists';
       }
     }
 
     if (!formData.icon.trim()) {
-      newErrors.icon = 'Icona obbligatoria';
+      newErrors.icon = 'iconRequired';
     }
 
     setErrors(newErrors);
@@ -146,47 +153,49 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
     <Modal
       isOpen={isOpen}
       onClose={handleCancel}
-      title={isEditMode ? 'Modifica Template Generico' : 'Nuovo Template Generico'}
+      title={isEditMode ? words.titleEdit : words.titleNew}
       size="sm"
       variant="scrollable"
       autoHeight={true}
       footer={
         <div className="modal-actions px-6 pb-6 pt-4">
           <Button variant="secondary" onClick={handleCancel}>
-            Annulla
+            {t.common.actions.cancel}
           </Button>
           <Button variant="primary" onClick={handleSave}>
-            {isEditMode ? 'Salva Modifiche' : 'Crea Template'}
+            {isEditMode ? words.saveChanges : words.create}
           </Button>
         </div>
       }
     >
       <FormContainer gap="4">
-        {/* Nome */}
+        {/* Name */}
         <div>
           <Input
-            label="Nome"
+            label={words.name}
             type="text"
-            placeholder="es: PC, Printer, IoT Device"
+            placeholder={words.namePlaceholder}
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             size="md"
             autoFocus
           />
-          {errors.name && <span className="text-sm text-[var(--danger-color)]">{errors.name}</span>}
+          {errors.name && (
+            <span className="text-sm text-[var(--danger-color)]">{words.errors[errors.name]}</span>
+          )}
         </div>
 
-        {/* Tipo Base */}
+        {/* Base type */}
         <div>
           <Select
-            label="Tipo Base"
+            label={t.templates.devices.baseType}
             value={formData.type}
             onChange={(e) => setFormData({ ...formData, type: e.target.value })}
             size="md"
             disabled={isEditMode}
             required
           >
-            <option value="">-- Seleziona tipo --</option>
+            <option value="">{words.chooseType}</option>
             <option value="PC">PC</option>
             <option value="Switch">Switch</option>
             <option value="Router">Router</option>
@@ -197,29 +206,29 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
             <option value="Database">Database</option>
             <option value="Cloud">Cloud</option>
           </Select>
-          {errors.type && <span className="text-sm text-[var(--danger-color)]">{errors.type}</span>}
+          {errors.type && (
+            <span className="text-sm text-[var(--danger-color)]">{words.errors[errors.type]}</span>
+          )}
           {isEditMode && (
-            <span className="text-xs text-[var(--text-color-light)] mt-1">
-              Il tipo non può essere modificato per evitare problemi con i dispositivi esistenti
-            </span>
+            <span className="text-xs text-[var(--text-color-light)] mt-1">{words.typeLocked}</span>
           )}
         </div>
 
-        {/* Icona */}
+        {/* Icon */}
         <div className="flex gap-3 items-start">
           <div className="flex-1">
             <IconPicker
-              label="Icona (Iconify)"
+              label={words.icon}
               value={formData.icon}
               onChange={(icon) => setFormData({ ...formData, icon })}
               color={formData.color}
-              error={errors.icon}
+              error={errors.icon && words.errors[errors.icon]}
             />
           </div>
           {/* Live Preview */}
           <div>
             <label className="block text-sm font-medium text-[var(--text-color-light)] mb-1.5">
-              Preview
+              {words.preview}
             </label>
             <div className="w-12 h-12 flex items-center justify-center bg-[var(--bg-component)] rounded-lg border border-[var(--border-color)]">
               {formData.icon && (
@@ -234,10 +243,10 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
           </div>
         </div>
 
-        {/* Colore */}
+        {/* Colour */}
         <div>
           <label className="block text-sm font-medium text-[var(--text-color-light)] mb-1.5">
-            Colore
+            {t.templates.devices.colour}
           </label>
           <div className="flex gap-3">
             <input

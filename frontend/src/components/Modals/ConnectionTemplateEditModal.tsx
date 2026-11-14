@@ -12,6 +12,11 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { FormContainer } from '@/components/ui/FormContainer';
+import { getT, useT, type Dictionary } from '@/i18n';
+import { linkTypeDescription } from '@/utils/templateText';
+
+/** What stops the save: named here, said in the language of the interface when drawn */
+type FormError = keyof Dictionary['templates']['links']['editor']['errors'];
 
 interface ConnectionTemplateEditModalProps {
   isOpen: boolean;
@@ -24,6 +29,8 @@ const ConnectionTemplateEditModal = ({
   onClose,
   template,
 }: ConnectionTemplateEditModalProps) => {
+  const t = useT();
+  const words = t.templates.links.editor;
   const addConnectionTemplate = useTemplateStore((state) => state.addConnectionTemplate);
   const updateConnectionTemplate = useTemplateStore((state) => state.updateConnectionTemplate);
   const connectionTemplates = useTemplateStore((state) => state.connectionTemplates);
@@ -37,14 +44,19 @@ const ConnectionTemplateEditModal = ({
   const [color, setColor] = useState('#3b82f6');
   const [lineStyle, setLineStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
   const [strokeWidth, setStrokeWidth] = useState(2.5);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<FormError | null>(null);
 
   // Initialize form with template data in edit mode
   useEffect(() => {
     if (template) {
       setName(template.name);
       setType(template.type);
-      setDescription(template.description || '');
+      // The description starts as the list shows it: in the language of the
+      // interface while it is the app's own. It is read when the editor
+      // opens (hence `getT()`, not a dependency of this effect): from then
+      // on the field holds what the user is typing, which a change of
+      // language must not write over
+      setDescription(linkTypeDescription(template, getT()) || '');
       setColor(template.color);
       setLineStyle(template.lineStyle);
       setStrokeWidth(template.strokeWidth);
@@ -57,7 +69,7 @@ const ConnectionTemplateEditModal = ({
       setLineStyle('solid');
       setStrokeWidth(2.5);
     }
-    setError('');
+    setError(null);
   }, [template, isOpen]);
 
   // Calculate stroke dash array based on line style
@@ -75,24 +87,24 @@ const ConnectionTemplateEditModal = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError(null);
 
     // Validation
     if (!name.trim()) {
-      setError('Il nome è obbligatorio');
+      setError('nameRequired');
       return;
     }
 
     if (!type.trim()) {
-      setError('Il tipo è obbligatorio');
+      setError('typeRequired');
       return;
     }
 
     // Validate unique type (only in create mode or if type changed)
     if (!isEditMode || type !== template?.type) {
-      const typeExists = connectionTemplates.some((t) => t.type === type.toLowerCase());
+      const typeExists = connectionTemplates.some((existing) => existing.type === type.toLowerCase());
       if (typeExists) {
-        setError('Questo tipo esiste già');
+        setError('typeExists');
         return;
       }
     }
@@ -100,13 +112,13 @@ const ConnectionTemplateEditModal = ({
     // Validate color hex
     const hexRegex = /^#[0-9A-F]{6}$/i;
     if (!hexRegex.test(color)) {
-      setError('Colore non valido (formato: #RRGGBB)');
+      setError('invalidColour');
       return;
     }
 
     // Validate stroke width
     if (strokeWidth < 1 || strokeWidth > 10) {
-      setError('Lo spessore deve essere tra 1 e 10');
+      setError('thicknessOutOfRange');
       return;
     }
 
@@ -135,17 +147,17 @@ const ConnectionTemplateEditModal = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditMode ? 'Modifica Tipo Connessione' : 'Nuovo Tipo Connessione'}
+      title={isEditMode ? words.titleEdit : words.titleNew}
       size="sm"
       variant="scrollable"
       autoHeight={true}
       footer={
         <div className="modal-actions px-6 pb-6 pt-4">
           <Button variant="secondary" onClick={onClose}>
-            Annulla
+            {t.common.actions.cancel}
           </Button>
           <Button variant="primary" onClick={handleSubmit}>
-            {isEditMode ? 'Salva Modifiche' : 'Crea Tipo'}
+            {isEditMode ? words.saveChanges : words.create}
           </Button>
         </div>
       }
@@ -153,11 +165,11 @@ const ConnectionTemplateEditModal = ({
       <FormContainer gap="4">
           {/* Name */}
           <Input
-            label="Nome *"
+            label={words.name}
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="es: Trunk, Access, WAN"
+            placeholder={words.namePlaceholder}
             size="md"
             required
           />
@@ -165,27 +177,25 @@ const ConnectionTemplateEditModal = ({
           {/* Type ID */}
           <div>
             <Input
-              label="Tipo ID *"
+              label={words.typeId}
               type="text"
               value={type}
               onChange={(e) => setType(e.target.value)}
-              placeholder="es: trunk, access, wan"
+              placeholder={words.typeIdPlaceholder}
               size="md"
               disabled={isEditMode} // Cannot change type in edit mode
               required
             />
-            <span className="form-hint">
-              Identificatore univoco (minuscolo, no spazi). Non modificabile dopo la creazione.
-            </span>
+            <span className="form-hint">{words.typeIdHint}</span>
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium mb-1 text-[var(--text-color)]">Descrizione</label>
+            <label className="block text-sm font-medium mb-1 text-[var(--text-color)]">{words.description}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="es: Link trunk tra switch"
+              placeholder={words.descriptionPlaceholder}
               className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-canvas)] text-[var(--text-color)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-transparent max-w-[400px]"
               rows={2}
             />
@@ -193,7 +203,7 @@ const ConnectionTemplateEditModal = ({
 
           {/* Color */}
           <div>
-            <label className="block text-sm font-medium mb-1 text-[var(--text-color)]">Colore *</label>
+            <label className="block text-sm font-medium mb-1 text-[var(--text-color)]">{words.colour}</label>
             <div className="flex gap-2">
               <Input
                 type="color"
@@ -217,20 +227,20 @@ const ConnectionTemplateEditModal = ({
 
           {/* Line Style */}
           <Select
-            label="Stile Linea *"
+            label={words.lineStyle}
             value={lineStyle}
             onChange={(e) => setLineStyle(e.target.value as 'solid' | 'dashed' | 'dotted')}
             required
           >
-            <option value="solid">Solida</option>
-            <option value="dashed">Tratteggiata</option>
-            <option value="dotted">Puntinata</option>
+            <option value="solid">{words.lineStyles.solid}</option>
+            <option value="dashed">{words.lineStyles.dashed}</option>
+            <option value="dotted">{words.lineStyles.dotted}</option>
           </Select>
 
           {/* Stroke Width */}
           <div>
             <Input
-              label="Spessore *"
+              label={words.thickness}
               type="number"
               value={strokeWidth}
               onChange={(e) => setStrokeWidth(Number(e.target.value))}
@@ -240,12 +250,12 @@ const ConnectionTemplateEditModal = ({
               size="xs"
               required
             />
-            <span className="form-hint">Da 1 a 10 pixel</span>
+            <span className="form-hint">{words.thicknessHint}</span>
           </div>
 
           {/* Live Preview */}
           <div className="form-field">
-            <label>Anteprima</label>
+            <label>{words.preview}</label>
             <ConnectionLinePreview
               color={color}
               lineStyle={lineStyle}
@@ -257,11 +267,7 @@ const ConnectionTemplateEditModal = ({
           </div>
 
         {/* Error Message */}
-        {error && (
-          <div className="modal-error-box mb-4">
-            {error}
-          </div>
-        )}
+        {error && <div className="modal-error-box mb-4">{words.errors[error]}</div>}
       </FormContainer>
     </Modal>
   );

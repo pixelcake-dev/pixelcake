@@ -3,12 +3,14 @@ import { ChevronDown } from 'lucide-react';
 import { Scrollbars } from 'react-custom-scrollbars-2';
 import { SearchInput } from './SearchInput';
 import { useEscapeToClose } from './useEscapeToClose';
+import { useT } from '@/i18n';
 
 interface SearchableSelectProps {
   label?: string;
   value: string;
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
+  /** What the button shows while nothing is chosen (left out: the usual words, in the language of the interface) */
   placeholder?: string;
   /**
    * Id of an element elsewhere on the page that names this field, when the
@@ -22,9 +24,10 @@ const SearchableSelect = ({
   value,
   onChange,
   options,
-  placeholder = 'Seleziona...',
+  placeholder,
   labelledBy,
 }: SearchableSelectProps) => {
+  const t = useT();
   // The button is named by its label and by the value it shows
   const ownLabelId = useId();
   const valueId = useId();
@@ -36,7 +39,9 @@ const SearchableSelect = ({
 
   // Update display label when value changes
   const selectedOption = options.find((opt) => opt.value === value);
-  const displayValue = selectedOption ? selectedOption.label : placeholder;
+  const displayValue = selectedOption
+    ? selectedOption.label
+    : (placeholder ?? t.ui.searchableSelect.placeholder);
 
   // Filter options based on search term
   useEffect(() => {
@@ -177,7 +182,7 @@ const SearchableSelect = ({
               ))
             ) : (
               <div className="px-3 py-2 text-sm text-[var(--text-color-light)] text-center">
-                Nessun risultato trovato
+                {t.ui.searchableSelect.noResults}
               </div>
             )}
           </Scrollbars>
