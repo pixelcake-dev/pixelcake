@@ -65,10 +65,13 @@ const miniMapNodeColour = (node: Node): string =>
     ? miniMapAreaColour((node.data as CanvasArea | undefined)?.color)
     : miniMapColour((node.data as NetworkDeviceType | undefined)?.type);
 
+/** How long the view has to stand still to be taken as come to rest (ms) */
+const VIEW_AT_REST_AFTER = 150;
+
 /**
  * True once React Flow knows the size of every device on screen, which is
- * what fitting the view needs. The sizes are lost, and measured again a
- * moment later, each time the list of devices is handed to React Flow.
+ * what fitting the view needs. A device that has just come on the canvas
+ * has none until React Flow has measured it, a moment later.
  */
 const allNodesMeasured = (state: ReactFlowState): boolean => {
   if (state.nodeInternals.size === 0) return false;
@@ -124,10 +127,6 @@ const NetworkCanvas = () => {
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const isUpdatingSelection = useRef(false);
-  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
-  const dragEndPos = useRef<{ x: number; y: number } | null>(null);
-  const dragGestureId = useRef<number>(0);
-  const currentDragId = useRef<number | null>(null);
 
   // Handle context menu on device. While presenting, the right button opens
   // the same small menu as a click: nothing there edits the drawing
@@ -182,23 +181,11 @@ const NetworkCanvas = () => {
         return;
       }
 
+      // Every change is passed on, whatever was done on the canvas before
+      // it: React Flow has changed its selection already, and a change kept
+      // from the store leaves the app with another selection than the one on
+      // screen
       const selectedIds = nodes.filter((n) => n.selected).map((n) => n.id);
-
-      // Check if this was a micro-drag (< 5px) and cancel selection if so
-      // Validate that coordinates are from the same drag gesture
-      if (dragStartPos.current && dragEndPos.current && currentDragId.current !== null) {
-        const dx = dragEndPos.current.x - dragStartPos.current.x;
-        const dy = dragEndPos.current.y - dragStartPos.current.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        // If drag distance < 5px, it's accidental - cancel selection
-        if (distance < 5) {
-          dragStartPos.current = null;
-          dragEndPos.current = null;
-          currentDragId.current = null;
-          return; // Don't update selection
-        }
-      }
 
       // Only update if selection changed (avoid infinite loops)
       // Use Set for efficient comparison instead of sort().join().
@@ -221,11 +208,6 @@ const NetworkCanvas = () => {
           isUpdatingSelection.current = false;
         });
       }
-
-      // Reset drag tracking
-      dragStartPos.current = null;
-      dragEndPos.current = null;
-      currentDragId.current = null;
     },
     [selectMultipleDevices]
   );
@@ -325,8 +307,25 @@ const NetworkCanvas = () => {
     [areaNodes, deviceNodes]
   );
 
+  // The list is made anew from the store at every change, and React Flow
+  // takes a node as it is handed over: without the size it had measured,
+  // which it then has to measure again. Until it has, the device counts as
+  // inside any selection box, and the rectangle around a group taken with a
+  // box is as large as the places of its devices alone: of no height for
+  // two in a row. React Flow then takes the rectangle away, and the one it
+  // draws next cannot be dragged. So a device that stays on the canvas is
+  // handed over with the size it had (a size that changes is still told by
+  // React Flow, which goes on watching the device)
   useEffect(() => {
-    setNodes(reactFlowNodes);
+    setNodes((shown) => {
+      const before = new Map(shown.map((node) => [node.id, node]));
+      return reactFlowNodes.map((node) => {
+        const had = before.get(node.id);
+        return node.width === undefined && had?.width && had.height
+          ? { ...node, width: had.width, height: had.height }
+          : node;
+      });
+    });
   }, [reactFlowNodes, setNodes]);
 
   // Sync Zustand connections to React Flow edges
@@ -503,6 +502,23 @@ const NetworkCanvas = () => {
     setViewport(currentViewport);
   }, [reactFlowInstance, setViewport]);
 
+  // A move the app makes (the drawing fitted to the window, the zoom buttons
+  // of the canvas, the view that follows a device dragged to the border) has
+  // no end React Flow tells of, as one made with the pointer or the wheel
+  // has. It is over when the view has stood still for a moment, and the view
+  // is stored then: it is the one a reload of the page comes back to
+  const viewAtRest = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const handleMove = useCallback(
+    (event: MouseEvent | TouchEvent | null) => {
+      // (made with the pointer or the wheel: stored at its end, above)
+      if (event) return;
+      clearTimeout(viewAtRest.current);
+      viewAtRest.current = setTimeout(handleMoveEnd, VIEW_AT_REST_AFTER);
+    },
+    [handleMoveEnd]
+  );
+  useEffect(() => () => clearTimeout(viewAtRest.current), []);
+
   // Keyboard shortcuts: Ctrl+C (copy), Ctrl+V (paste)
   useEffect(() => {
     const handleKeyboardShortcuts = (e: KeyboardEvent) => {
@@ -546,20 +562,6 @@ const NetworkCanvas = () => {
     return;
   }, []);
 
-  // Track mouse drag for threshold-based selection
-  // Use onPaneMouseDown/Up to ensure events only fire from canvas pane (not Controls/MiniMap)
-  const handlePaneMouseDown = useCallback((e: React.MouseEvent) => {
-    dragGestureId.current++;
-    currentDragId.current = dragGestureId.current;
-    dragStartPos.current = { x: e.clientX, y: e.clientY };
-    dragEndPos.current = null;
-  }, []);
-
-  const handlePaneMouseUp = useCallback((e: React.MouseEvent) => {
-    dragEndPos.current = { x: e.clientX, y: e.clientY };
-    // Keep currentDragId for validation in handleSelectionChange
-  }, []);
-
   // The welcome screen shows by itself only on an empty project: one canvas
   // with nothing on it (an empty canvas added to a project is just an empty
   // canvas). Asked for from the Aiuto menu, it shows on any empty canvas
@@ -600,9 +602,8 @@ const NetworkCanvas = () => {
         onSelectionStart={presenting ? undefined : deselectArea}
         onMoveStart={presenting ? closePresentationMenu : undefined}
         onError={handleError}
+        onMove={handleMove}
         onMoveEnd={handleMoveEnd}
-        onMouseDown={handlePaneMouseDown}
-        onMouseUp={handlePaneMouseUp}
         nodeTypes={memoizedNodeTypes}
         edgeTypes={memoizedEdgeTypes}
         // Restore saved viewport on mount

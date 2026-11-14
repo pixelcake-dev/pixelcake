@@ -63,7 +63,13 @@ The panels React Flow draws by itself (zoom buttons, small map, credit) take the
 
 The connection points of a device (`.connect-point`) are hidden at rest: they show on the device under the pointer, on a selected one, and on every device while a cable is being dragged. Their hit area is always there.
 
+The selection of the devices is React Flow's: every change it tells of (`onSelectionChange`) is written to networkStore, whatever was done on the canvas before it. The handler keeps its identity and reads the store when it is called, because React Flow calls a new handler at once with the selection it has at that moment. It keeps nothing back: React Flow has changed its selection already, and a change that does not reach the store leaves the app with another selection than the one on screen.
+
+The list of React Flow nodes is made anew from the store at every change. A device that stays on the canvas is handed over with the size React Flow measured for it (`width`, `height`), which React Flow needs for more than drawing: a node without a size counts as inside any selection box, and the rectangle around a group taken with a box is made from the sizes (without them two devices in a row give it no height; React Flow takes it away, and the one it draws next cannot be dragged). A size that changes is still told by React Flow, which goes on watching the node. An area has the size the drawing gives it.
+
 Bringing the whole drawing into view is a request (`fitViewRequest` in networkStore, raised by `triggerFitView`). The canvas answers each request once, after React Flow has measured the devices, so a drawing that has just been loaded (a sample network) is fitted too.
+
+The view on screen is kept with the canvas (`viewport` in networkStore, which is not an edit): it is what a reload of the page and the way out of a presentation come back to. A move made with the pointer or the wheel is stored at its end (`onMoveEnd`). A move the app makes (the drawing fitted, the zoom and fit buttons of the canvas, the view that follows a device dragged to the border) has no end React Flow tells of: it reaches the canvas as `onMove` with no event, and the view is stored once it has stood still for 150 ms. Nothing is stored while presenting.
 
 While presenting, NetworkCanvas makes the drawing read-only (nothing is selected, moved, joined, deleted or pasted; dragging pans), a click on a device or a cable opens the presentation menu, the drawing is fitted to the window, and the view saved with the drawing is not touched. NetworkDevice and CustomEdge mark the ends of the question, a broken device and a cut cable. The way of the answer is not painted: the packet shows it, and a cable lights up in the colour of its kind while the packet is on it, as while building.
 
@@ -516,7 +522,7 @@ Open           -> file -> parseProjectFile() -> projectStore.loadProject() -> ne
 | Modal jumps on tab change | `verticalAlign="start"` keeps modal anchored |
 | VLAN/STP fields not visible | templateStore v4 with supportsVLAN/supportsSTP |
 | Loop infinito onSelectionChange | `isUpdatingSelection` ref + `queueMicrotask` |
-| Selezione globale spontanea | 5px movement threshold + `selectionMode="full"` |
+| Selezione globale spontanea | `selectionMode="full"`, and a device keeps its measured size (one without a size is inside any selection box). The 5px threshold that came with it is gone: it never saw a selection box, and kept other changes of selection from the store |
 | Lag durante drag/selection | Set comparison + NetworkDevice memo comparator |
 | Dropdown select accent color | CSS focus state: `border-color: var(--accent-color)` + box-shadow rgba |
 | NICs/Ports wrapping on resize | `minWidth: '400px'` on left panel |
