@@ -12,6 +12,10 @@ interface NatPanelProps {
   /** A firewall also needs a rule for what a forward lets in */
   isFirewall: boolean;
   onChange: (forwards: PortForward[]) => void;
+  /** NAT is switched on and off here, port by port: the ports as they become */
+  onPortsChange: (ports: Port[]) => void;
+  /** Go to the «Porte» tab, on a port when one is given: an address is typed there */
+  onOpenPort: (portId?: number) => void;
 }
 
 /** Lowest `forward-N` id not in use */
@@ -34,15 +38,24 @@ const cell =
 const iconButton =
   'p-1 rounded hover:bg-[var(--bg-canvas)] text-[var(--text-color-light)] ' +
   'disabled:opacity-30 disabled:cursor-not-allowed';
+const link = 'text-[var(--accent-text)] underline cursor-pointer';
 
 /**
  * NatPanel
  * Address translation of a router or a firewall: which ports give their
- * address to what leaves by them (set port by port, shown here), and what is
- * published from a port to an address inside. The forwards are ordered: the
- * first that matches is taken, so each row can be moved up and down.
+ * address to what leaves by them (a tick for each port that has an address:
+ * the same setting as «NAT Abilitato» on the port), and what is published
+ * from a port to an address inside. The forwards are ordered: the first that
+ * matches is taken, so each row can be moved up and down.
  */
-const NatPanel: React.FC<NatPanelProps> = ({ ports, forwards, isFirewall, onChange }) => {
+const NatPanel: React.FC<NatPanelProps> = ({
+  ports,
+  forwards,
+  isFirewall,
+  onChange,
+  onPortsChange,
+  onOpenPort,
+}) => {
   const update = (id: string, patch: Partial<PortForward>) => {
     onChange(forwards.map((forward) => (forward.id === id ? { ...forward, ...patch } : forward)));
   };
@@ -53,11 +66,17 @@ const NatPanel: React.FC<NatPanelProps> = ({ ports, forwards, isFirewall, onChan
     [next[index], next[target]] = [next[target], next[index]];
     onChange(next);
   };
+  const setNat = (id: number, nat: boolean) => {
+    onPortsChange(ports.map((port) => (port.id === id ? { ...port, nat } : port)));
+  };
 
   const natPorts = ports.filter((port) => port.nat);
   // A forward publishes the address of a port: only a port that has one can
   const publishing = ports.filter(hasAddress);
   const firstPort = (natPorts.find(hasAddress) ?? publishing[0])?.id;
+  // NAT gives the address of the port: the ports that have one are listed,
+  // and one that has NAT on without an address, so that it can be put right
+  const listed = ports.filter((port) => hasAddress(port) || port.nat);
 
   return (
     <div className="flex flex-col gap-4 text-sm">
@@ -70,28 +89,73 @@ const NatPanel: React.FC<NatPanelProps> = ({ ports, forwards, isFirewall, onChan
 
       <section aria-label="Porte con NAT">
         <h4 className="text-sm font-semibold text-[var(--text-color)] mb-1">Porte con NAT</h4>
-        {natPorts.length === 0 ? (
+        {listed.length === 0 ? (
           <p className="text-[var(--text-color-light)]">
-            Nessuna porta fa NAT. Si attiva porta per porta, nella scheda «Porte».
+            Nessuna porta ha un indirizzo: il NAT dà a ciò che esce l&apos;indirizzo della porta,
+            quindi si attiva su una porta che ne ha uno.{' '}
+            <button type="button" className={link} onClick={() => onOpenPort()}>
+              Vai alla scheda «Porte»
+            </button>
           </p>
         ) : (
-          <ul className="flex flex-col gap-1">
-            {natPorts.map((port) => (
-              <li key={port.id}>
-                {portName(port)}:{' '}
-                {hasAddress(port) ? (
-                  <>
-                    ciò che esce prende l&apos;indirizzo <code className="font-mono">{port.ip}</code>
-                  </>
-                ) : (
-                  <span className="text-[var(--danger-color)]" role="alert">
-                    non ha un indirizzo, quindi non traduce nulla. Dagliene uno nella scheda
-                    «Porte».
+          <>
+            {natPorts.length === 0 && (
+              <p className="text-[var(--text-color-light)] mb-1">
+                Nessuna porta fa NAT. Spunta la porta da cui si esce verso Internet.
+              </p>
+            )}
+            <ul className="flex flex-col gap-1">
+              {listed.map((port) => (
+                <li key={port.id} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id={`nat-port-${port.id}`}
+                    aria-label={`NAT sulla porta ${port.id}`}
+                    className="w-4 h-4 shrink-0 cursor-pointer"
+                    checked={Boolean(port.nat)}
+                    onChange={(e) => setNat(port.id, e.target.checked)}
+                  />
+                  <span className={port.nat ? '' : 'text-[var(--text-color-light)]'}>
+                    <label htmlFor={`nat-port-${port.id}`} className="cursor-pointer">
+                      {portName(port)}
+                    </label>
+                    {!port.nat && (
+                      <>
+                        {' '}
+                        (<code className="font-mono">{port.ip}</code>)
+                      </>
+                    )}
+                    {port.nat && hasAddress(port) && (
+                      <>
+                        : ciò che esce prende l&apos;indirizzo{' '}
+                        <code className="font-mono">{port.ip}</code>
+                      </>
+                    )}
+                    {port.nat && !hasAddress(port) && (
+                      <>
+                        :{' '}
+                        <span className="text-[var(--danger-color)]" role="alert">
+                          non ha un indirizzo, quindi non traduce nulla.
+                        </span>{' '}
+                        <button type="button" className={link} onClick={() => onOpenPort(port.id)}>
+                          Dagliene uno
+                        </button>
+                      </>
+                    )}
                   </span>
-                )}
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+            {listed.length < ports.length && (
+              <p className="text-xs text-[var(--text-color-light)] mt-2">
+                Sono elencate le porte che hanno un indirizzo. Per darne uno a un&apos;altra:{' '}
+                <button type="button" className={link} onClick={() => onOpenPort()}>
+                  scheda «Porte»
+                </button>
+                .
+              </p>
+            )}
+          </>
         )}
       </section>
 

@@ -381,7 +381,10 @@ describe('InspectorModal — NAT', () => {
   const add = () => fireEvent.click(screen.getByRole('button', { name: 'Aggiungi inoltro' }));
   const forwards = () => device('Router-1').portForwards;
 
-  /** Switch NAT on on a port of Router-1, as the "Porte" tab does */
+  const natOf = (portId: number) => device('Router-1').ports?.find(p => p.id === portId)?.nat;
+  const openedTab = () => document.querySelector('.tab-header.active');
+
+  /** Switch NAT on on a port of Router-1, as the store keeps it */
   function natOn(portId: number, patch: Partial<NonNullable<NetworkDevice['ports']>[number]> = {}) {
     const router = device('Router-1');
     useNetworkStore.getState().updateDevice(router.id, {
@@ -394,7 +397,13 @@ describe('InspectorModal — NAT', () => {
     openTab('NAT');
 
     const natPorts = screen.getByRole('region', { name: 'Porte con NAT' });
-    expect(natPorts).toHaveTextContent('Nessuna porta fa NAT. Si attiva porta per porta, nella scheda «Porte».');
+    expect(natPorts).toHaveTextContent('Nessuna porta fa NAT. Spunta la porta da cui si esce verso Internet.');
+    // the ports that have an address, each with its tick
+    expect(within(natPorts).getAllByRole('listitem').map(item => item.textContent)).toEqual([
+      'Porta 1 «LAN Uffici» (192.168.10.1)',
+      'Porta 2 «LAN Server» (192.168.20.1)',
+    ]);
+    for (const tick of within(natPorts).getAllByRole('checkbox')) expect(tick).not.toBeChecked();
     const published = screen.getByRole('region', { name: 'Servizi pubblicati' });
     expect(published).toHaveTextContent('Nessun inoltro: da fuori si raggiunge soltanto il dispositivo stesso.');
     expect(within(published).queryByRole('table')).toBeNull();
@@ -406,8 +415,12 @@ describe('InspectorModal — NAT', () => {
     openTab('NAT');
 
     const natPorts = screen.getByRole('region', { name: 'Porte con NAT' });
-    expect(within(natPorts).getAllByRole('listitem')).toHaveLength(1);
-    expect(natPorts).toHaveTextContent(/Porta 2.*ciò che esce prende l'indirizzo 192\.168\.20\.1/);
+    expect(within(natPorts).getAllByRole('listitem').map(item => item.textContent)).toEqual([
+      'Porta 1 «LAN Uffici» (192.168.10.1)',
+      "Porta 2 «LAN Server»: ciò che esce prende l'indirizzo 192.168.20.1",
+    ]);
+    expect(screen.getByLabelText('NAT sulla porta 1')).not.toBeChecked();
+    expect(screen.getByLabelText('NAT sulla porta 2')).toBeChecked();
   });
 
   it('warns about a port with NAT and no address: it translates nothing', () => {
@@ -417,6 +430,93 @@ describe('InspectorModal — NAT', () => {
 
     const warning = within(screen.getByRole('region', { name: 'Porte con NAT' })).getByRole('alert');
     expect(warning).toHaveTextContent('non ha un indirizzo, quindi non traduce nulla');
+  });
+
+  it('is switched on from the tab, on a port that has an address, and saved with the device', () => {
+    openInspector('Router-1');
+    openTab('NAT');
+    fireEvent.click(screen.getByLabelText('NAT sulla porta 2'));
+
+    const natPorts = screen.getByRole('region', { name: 'Porte con NAT' });
+    expect(natPorts).not.toHaveTextContent('Nessuna porta fa NAT');
+    expect(natPorts).toHaveTextContent("Porta 2 «LAN Server»: ciò che esce prende l'indirizzo 192.168.20.1");
+    // nothing reaches the drawing before the device is saved
+    expect(natOf(2)).toBeFalsy();
+    save();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(natOf(2)).toBe(true);
+    expect(natOf(1)).toBeFalsy();
+  });
+
+  it('is switched off from the tab', () => {
+    natOn(2);
+    openInspector('Router-1');
+    openTab('NAT');
+    expect(screen.getByLabelText('NAT sulla porta 2')).toBeChecked();
+    fireEvent.click(screen.getByLabelText('NAT sulla porta 2'));
+    save();
+    expect(natOf(2)).toBe(false);
+  });
+
+  it('the tick of the tab and «NAT Abilitato» of the port are one setting', () => {
+    openInspector('Router-1');
+    openTab('NAT');
+    fireEvent.click(screen.getByLabelText('NAT sulla porta 2'));
+    openTab(/^Porte/);
+    fireEvent.click(screen.getByText('2', { selector: '.port-number' }));
+    expect(screen.getByLabelText(/^NAT Abilitato/)).toBeChecked();
+    // and back: off on the port, off in the tab
+    fireEvent.click(screen.getByLabelText(/^NAT Abilitato/));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Salva' })[0]);
+    openTab('NAT');
+    expect(screen.getByLabelText('NAT sulla porta 2')).not.toBeChecked();
+  });
+
+  it('a port with NAT and no address: «Dagliene uno» opens that port in «Porte»', () => {
+    natOn(3);
+    openInspector('Router-1');
+    openTab('NAT');
+    fireEvent.click(screen.getByRole('button', { name: 'Dagliene uno' }));
+
+    expect(openedTab()).toHaveTextContent(/^Porte/);
+    expect(screen.getByRole('heading', { name: 'Configurazione Porta 3' })).toBeInTheDocument();
+    type('Indirizzo IP', '203.0.113.2');
+    fireEvent.click(screen.getAllByRole('button', { name: 'Salva' })[0]);
+    openTab('NAT');
+    const natPorts = screen.getByRole('region', { name: 'Porte con NAT' });
+    expect(within(natPorts).queryByRole('alert')).toBeNull();
+    expect(natPorts).toHaveTextContent(/Porta 3.*: ciò che esce prende l'indirizzo 203\.0\.113\.2/);
+  });
+
+  it('lists the ports that have an address, and sends to «Porte» for the others', () => {
+    openInspector('Router-1');
+    openTab('NAT');
+    const natPorts = screen.getByRole('region', { name: 'Porte con NAT' });
+    expect(natPorts).toHaveTextContent('Sono elencate le porte che hanno un indirizzo.');
+    fireEvent.click(within(natPorts).getByRole('button', { name: 'scheda «Porte»' }));
+
+    expect(openedTab()).toHaveTextContent(/^Porte/);
+    // no port is picked: which one gets an address is not the tab's to say
+    expect(
+      screen.getByText('Seleziona una porta per visualizzare e modificare le sue impostazioni.')
+    ).toBeInTheDocument();
+  });
+
+  it('with no addressed port there is no tick to put: it says why and sends to «Porte»', () => {
+    const router = device('Router-1');
+    useNetworkStore.getState().updateDevice(router.id, {
+      ports: router.ports?.map(p => ({ ...p, ip: undefined, subnet: undefined })),
+    });
+    openInspector('Router-1');
+    openTab('NAT');
+
+    const natPorts = screen.getByRole('region', { name: 'Porte con NAT' });
+    expect(natPorts).toHaveTextContent(
+      "Nessuna porta ha un indirizzo: il NAT dà a ciò che esce l'indirizzo della porta, quindi si attiva su una porta che ne ha uno."
+    );
+    expect(within(natPorts).queryByRole('checkbox')).toBeNull();
+    fireEvent.click(within(natPorts).getByRole('button', { name: 'Vai alla scheda «Porte»' }));
+    expect(openedTab()).toHaveTextContent(/^Porte/);
   });
 
   it('adds a forward, on the port that does NAT, and saves it', () => {

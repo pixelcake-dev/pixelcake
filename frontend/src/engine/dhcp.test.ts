@@ -28,6 +28,7 @@ import {
   poolProblem,
   resolveDhcp,
   servesDhcp,
+  suggestedPool,
   unservedOf,
   withLeases,
 } from './dhcp';
@@ -796,5 +797,88 @@ describe('simulated failures', () => {
     const cut = withFailures(t, { devices: [], connections: ['a--sw'] });
     expect(byId(withLeases(cut), 'a').ip).toBe('192.168.1.100');
     expect(traceRoute('a', 'c', cut)).toMatchObject({ verdict: 'blocked', failureReason: 'link A–SW is down' });
+  });
+});
+
+describe('a range to start from', () => {
+  const on = (lan: Partial<Port>) => {
+    const r = device({ id: 'r', label: 'R', type: 'Router', ports: [port(1, lan)] });
+    return { r, iface: listInterfaces(r)[0] };
+  };
+  const suggestion = (lan: Partial<Port>) => suggestedPool(on(lan).iface);
+
+  it('is .100 to .199 on a /24', () => {
+    expect(suggestion({ ip: '192.168.1.1', subnet: MASK })).toEqual({ start: '192.168.1.100', end: '192.168.1.199' });
+    // no mask written: the default one, as everywhere
+    expect(suggestion({ ip: '192.168.1.1' })).toEqual({ start: '192.168.1.100', end: '192.168.1.199' });
+  });
+
+  it('stays next to the address of the interface in a larger network', () => {
+    expect(suggestion({ ip: '10.0.5.1', subnet: '255.0.0.0' })).toEqual({ start: '10.0.5.100', end: '10.0.5.199' });
+    expect(suggestion({ ip: '172.16.3.254', subnet: '255.255.0.0' })).toEqual({
+      start: '172.16.3.100',
+      end: '172.16.3.199',
+    });
+  });
+
+  it('is the upper half of a smaller network', () => {
+    // /26: hosts .1 to .62
+    expect(suggestion({ ip: '192.168.1.1', subnet: '255.255.255.192' })).toEqual({
+      start: '192.168.1.32',
+      end: '192.168.1.62',
+    });
+    // /28 in the middle of a network: hosts .17 to .30
+    expect(suggestion({ ip: '192.168.1.17', subnet: '255.255.255.240' })).toEqual({
+      start: '192.168.1.24',
+      end: '192.168.1.30',
+    });
+  });
+
+  it('leaves the address of the interface out when it is at an end of the range', () => {
+    expect(suggestion({ ip: '192.168.1.62', subnet: '255.255.255.192' })).toEqual({
+      start: '192.168.1.32',
+      end: '192.168.1.61',
+    });
+    expect(suggestion({ ip: '192.168.1.32', subnet: '255.255.255.192' })).toEqual({
+      start: '192.168.1.33',
+      end: '192.168.1.62',
+    });
+    expect(suggestion({ ip: '192.168.1.100', subnet: MASK })).toEqual({ start: '192.168.1.101', end: '192.168.1.199' });
+    expect(suggestion({ ip: '192.168.1.199', subnet: MASK })).toEqual({ start: '192.168.1.100', end: '192.168.1.198' });
+  });
+
+  it('on a network of two addresses is the one that is not the interface', () => {
+    expect(suggestion({ ip: '10.0.0.1', subnet: '255.255.255.252' })).toEqual({ start: '10.0.0.2', end: '10.0.0.2' });
+    expect(suggestion({ ip: '10.0.0.2', subnet: '255.255.255.252' })).toEqual({ start: '10.0.0.1', end: '10.0.0.1' });
+  });
+
+  it('is nothing where no address can be handed out', () => {
+    expect(suggestion({})).toBeUndefined();
+    expect(suggestion({ ip: 'x.y', subnet: MASK })).toBeUndefined();
+    expect(suggestion({ ip: '10.0.0.1', subnet: '255.255.255.254' })).toBeUndefined();
+    expect(suggestion({ ip: '10.0.0.1', subnet: '255.255.255.255' })).toBeUndefined();
+    // a card that takes its own address from DHCP
+    const server = device({ id: 's', type: 'Server', nics: [nic({ ip: '10.0.0.10', dhcp: true })] });
+    expect(suggestedPool(listInterfaces(server)[0])).toBeUndefined();
+  });
+
+  it('always gives a range that can work', () => {
+    const masks = ['255.0.0.0', '255.255.0.0', MASK, '255.255.255.128', '255.255.255.192', '255.255.255.240', '255.255.255.252'];
+    const addresses = ['10.0.0.1', '10.0.0.2', '10.0.0.100', '10.0.0.126', '10.0.0.199', '10.0.0.254', '10.9.8.7'];
+    for (const subnet of masks) {
+      for (const ip of addresses) {
+        const { r, iface } = on({ ip, subnet });
+        const pool = suggestedPool(iface);
+        // (an address that is the network's own or its broadcast address is not one of an interface)
+        if (!pool) continue;
+        expect(poolProblem(r, iface, pool), `${ip} ${subnet}`).toBeUndefined();
+        expect(pool.start === ip && pool.end === ip, `${ip} ${subnet}`).toBe(false);
+      }
+    }
+  });
+
+  it('hands out its addresses when it is put on the port', () => {
+    const { leases } = resolveDhcp(lab({ pool: suggestedPool(on({ ip: '192.168.1.1', subnet: MASK }).iface) }));
+    expect(leases.map(lease => lease.ip)).toEqual(['192.168.1.100', '192.168.1.102']);
   });
 });

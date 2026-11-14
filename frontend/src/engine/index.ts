@@ -95,6 +95,7 @@ export {
   poolProblem,
   resolveDhcp,
   servesDhcp,
+  suggestedPool,
   unservedOf,
   withLeases,
 } from './dhcp';

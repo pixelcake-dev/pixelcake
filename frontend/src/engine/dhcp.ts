@@ -236,6 +236,46 @@ export function poolProblem(
   return undefined;
 }
 
+/**
+ * A range to start from on an interface that has no pool yet: the addresses
+ * from .100 to .199 next to the interface's own, when its network has them
+ * (a /24 or a larger one); the upper half of a smaller network. The
+ * interface's own address is left out when it falls at an end of the range.
+ * Undefined when the interface cannot hand out addresses (it has none, or it
+ * is a card that takes its own from DHCP) or its network has none to spare.
+ * What it gives always passes `poolProblem`.
+ */
+export function suggestedPool(iface: DeviceInterface): DhcpPool | undefined {
+  if (isDhcpClient(iface)) return undefined;
+  const own = poolNetwork(iface);
+  if (!own) return undefined;
+  const { first, last } = networkEnds(own.network);
+  // the network's own address and its broadcast address are never handed out
+  const lowest = first + 1;
+  const highest = last - 1;
+  const count = highest - lowest + 1;
+  if (count < 1) return undefined;
+  const self = ipToNumber(iface.ip);
+  let start: number;
+  let end: number;
+  if (count >= 254) {
+    // the block of 256 addresses the interface is in
+    const block = self - (self % 256);
+    start = block + 100;
+    end = block + 199;
+  } else {
+    start = lowest + Math.floor(count / 2);
+    end = highest;
+  }
+  if (self === start && start < end) start++;
+  if (self === end && start < end) end--;
+  if (start === end && start === self) {
+    // the one address left is the interface's own: another one of its network
+    start = end = self === lowest ? highest : lowest;
+  }
+  return { start: numberToIp(start), end: numberToIp(end) };
+}
+
 /** A pool while leases are being given */
 interface WorkingPool {
   state: DhcpPoolState;

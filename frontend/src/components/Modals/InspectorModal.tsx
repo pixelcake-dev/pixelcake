@@ -33,9 +33,15 @@ import {
   servesDhcp,
   servesDns,
 } from '@/engine';
-import type { DhcpResolution } from '@/engine';
+import type { DeviceInterface, DhcpResolution } from '@/engine';
 import { linkPeerLabel } from '@/utils/interfaceLabels';
-import { NO_LEASE_LABEL, cardLeaseText, firstPoolProblem } from '@/utils/dhcpLabels';
+import {
+  NO_LEASE_LABEL,
+  cardLeaseText,
+  firstPoolProblem,
+  isBlankPool,
+  tidyPool,
+} from '@/utils/dhcpLabels';
 import {
   forwardProblemText,
   isBlankForward,
@@ -48,6 +54,7 @@ import {
 } from '@/utils/networkConfigValidation';
 import type {
   DeviceTemplate,
+  DhcpPool,
   DnsRecord,
   FirewallRule,
   NetworkDevice,
@@ -65,6 +72,17 @@ function templateOf(
   return device.templateId
     ? templates.find((t) => t.id === device.templateId)
     : templates.find((t) => t.type === device.type);
+}
+
+/**
+ * An interface with its DHCP pool as the device keeps it: trimmed, and not
+ * there at all when its range was never typed (as a route or a forward left
+ * empty is not kept)
+ */
+function withKeptPool<T extends { dhcpServer?: DhcpPool }>(iface: T): T {
+  const pool = iface.dhcpServer;
+  if (!pool) return iface;
+  return { ...iface, dhcpServer: isBlankPool(pool) ? undefined : tidyPool(pool) };
 }
 
 const InspectorModal = () => {
@@ -108,6 +126,10 @@ const InspectorModal = () => {
   // Name resolution (server): the names it answers for
   const [dnsRecords, setDnsRecords] = useState<DnsRecord[]>([]);
 
+  // The open tab is kept here, so that a tab can send to another one: from
+  // «NAT» and «DHCP» to the port that needs an address, in «Porte»
+  const [activeTab, setActiveTab] = useState('general');
+
   useEffect(() => {
     if (isOpen && inspectorDevice) {
       setName(inspectorDevice.label);
@@ -128,6 +150,7 @@ const InspectorModal = () => {
       setFirewallRules(inspectorDevice.firewallRules || []);
       setPortForwards(inspectorDevice.portForwards || []);
       setDnsRecords(inspectorDevice.dnsRecords || []);
+      setActiveTab('general');
     }
   }, [isOpen, inspectorDevice]);
 
@@ -142,6 +165,29 @@ const InspectorModal = () => {
 
   const handlePortCancel = () => {
     setSelectedPortId(null);
+  };
+
+  /** From another tab: the «Porte» tab, on a port when one is given */
+  const openPort = (portId?: number) => {
+    if (portId !== undefined) setSelectedPortId(portId);
+    setActiveTab('ports');
+  };
+
+  /** From another tab: the «Schede di rete» tab, on a card when one is given */
+  const openNic = (nicId?: string) => {
+    if (nicId !== undefined) setSelectedNicId(nicId);
+    setActiveTab('nics');
+  };
+
+  /** The DHCP pool of an interface, set from the «DHCP» tab (undefined: none) */
+  const handlePoolChange = (iface: DeviceInterface, pool: DhcpPool | undefined) => {
+    if (iface.kind === 'port') {
+      const { id } = iface.port;
+      setPorts((prev) => prev.map((port) => (port.id === id ? { ...port, dhcpServer: pool } : port)));
+    } else {
+      const { id } = iface.nic;
+      setNics((prev) => prev.map((nic) => (nic.id === id ? { ...nic, dhcpServer: pool } : nic)));
+    }
   };
 
   const handleNicSave = (nicId: string, updates: Partial<NetworkInterfaceCard>) => {
@@ -252,8 +298,11 @@ const InspectorModal = () => {
     }
 
     // A DHCP server is saved only if it can work with the addresses as they
-    // are now (the address of its port may have changed after it was typed)
-    const poolIssue = firstPoolProblem({ ...inspectorDevice, ports, nics });
+    // are now (the address of its port may have changed after it was typed).
+    // A range typed in the «DHCP» tab is kept trimmed; one left empty is not kept
+    const keptPorts = ports.map(withKeptPool);
+    const keptNics = nics.map(withKeptPool);
+    const poolIssue = firstPoolProblem({ ...inspectorDevice, ports: keptPorts, nics: keptNics });
     if (poolIssue) {
       toast.error(poolIssue);
       return;
@@ -274,8 +323,8 @@ const InspectorModal = () => {
             priority: stpPriority,
           }
         : undefined,
-      ports: ports.length > 0 ? ports : undefined,
-      nics: nics.length > 0 ? nics : undefined,
+      ports: keptPorts.length > 0 ? keptPorts : undefined,
+      nics: keptNics.length > 0 ? keptNics : undefined,
       routes: keptRoutes.length > 0 ? keptRoutes : undefined,
       firewallRules: keptRules.length > 0 ? keptRules : undefined,
       portForwards: keptForwards.length > 0 ? keptForwards : undefined,
@@ -317,14 +366,15 @@ const InspectorModal = () => {
   const isSwitch = inspectorDevice.type.toLowerCase().includes('switch');
 
   // DHCP in the drawing with this device as it is in the form, unsaved edits
-  // included: what its cards are leased, what its pools give out
+  // included: what its cards are leased, what its pools give out. A range is
+  // read as it would be kept (one being typed in the «DHCP» tab is not tidy yet)
   const withForm = (formNics: NetworkInterfaceCard[]) =>
     devices.map((d) =>
       d.id === liveDevice.id
         ? normalizeAddressing({
             ...liveDevice,
-            ports: ports.length > 0 ? ports : undefined,
-            nics: formNics.length > 0 ? formNics : undefined,
+            ports: ports.length > 0 ? ports.map(withKeptPool) : undefined,
+            nics: formNics.length > 0 ? formNics.map(withKeptPool) : undefined,
           })
         : d
     );
@@ -840,7 +890,8 @@ const InspectorModal = () => {
   }
 
   // Address translation: routers and firewalls that have ports. The panel
-  // reads the ports of the form as they are now, unsaved edits included
+  // reads the ports of the form as they are now, unsaved edits included, and
+  // switches NAT on and off on them
   if (routesTraffic && supportsPorts) {
     const keptForwards = portForwards.filter((forward) => !isBlankForward(forward));
     tabs.push({
@@ -853,6 +904,8 @@ const InspectorModal = () => {
             forwards={portForwards}
             isFirewall={isFirewall}
             onChange={setPortForwards}
+            onPortsChange={setPorts}
+            onOpenPort={openPort}
           />
         </div>
       ),
@@ -860,7 +913,8 @@ const InspectorModal = () => {
   }
 
   // DHCP server: routers and firewalls on their ports, servers on their
-  // cards. The panel shows what the engine makes of the form as it is now
+  // cards. The panel sets the pools and shows what the engine makes of the
+  // form as it is now
   if (servesDhcp(inspectorDevice) && (supportsPorts || supportsNICs)) {
     const poolCount = dhcp.pools.filter((pool) => pool.deviceId === liveDevice.id).length;
     tabs.push({
@@ -872,6 +926,15 @@ const InspectorModal = () => {
             deviceId={liveDevice.id}
             dhcp={dhcp}
             setIn={supportsPorts ? 'Porte' : 'Schede di rete'}
+            interfaces={listInterfaces({ ...liveDevice, ports, nics }).filter(
+              (iface) => iface.kind === (supportsPorts ? 'port' : 'nic')
+            )}
+            onPoolChange={handlePoolChange}
+            onOpenInterface={(iface) =>
+              supportsPorts
+                ? openPort(iface?.kind === 'port' ? iface.port.id : undefined)
+                : openNic(iface?.kind === 'nic' ? iface.nic.id : undefined)
+            }
           />
         </div>
       ),
@@ -917,7 +980,7 @@ const InspectorModal = () => {
       }
     >
       <div style={{ minHeight: '500px' }}>
-        <TabContainer tabs={tabs} defaultTab="general" />
+        <TabContainer tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
     </Modal>
   );

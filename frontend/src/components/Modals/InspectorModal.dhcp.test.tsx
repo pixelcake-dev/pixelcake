@@ -57,6 +57,24 @@ const saveDevice = () => {
 const selectPort = (id: number) => fireEvent.click(screen.getByText(String(id), { selector: '.port-number' }));
 const selectCard = (name: string) => fireEvent.click(screen.getByText(name, { selector: '.nic-name' }));
 const section = (name: string) => screen.getByRole('region', { name });
+const openedTab = () => document.querySelector('.tab-header.active');
+
+/** The rows of «Intervalli di indirizzi» as read: the interface, its tick, its fields, what is said below them */
+function poolRows() {
+  return within(section('Intervalli di indirizzi'))
+    .getAllByRole('listitem')
+    .map(item => {
+      const last = item.lastElementChild;
+      return {
+        name: item.querySelector('label')?.textContent,
+        on: within(item).getByRole<HTMLInputElement>('checkbox').checked,
+        range: within(item)
+          .queryAllByRole<HTMLInputElement>('textbox')
+          .map(field => field.value),
+        says: last?.tagName === 'SPAN' ? last.textContent : '',
+      };
+    });
+}
 
 /** Put a pool on a port of Router-1, as the store keeps it */
 function setPool(portId: number, pool: DhcpPool | undefined) {
@@ -404,12 +422,14 @@ describe('InspectorModal — the DHCP server of a server', () => {
     savePanel();
 
     openTab('DHCP (1)');
-    expect(section('Intervalli di indirizzi')).toHaveTextContent(
-      'eth0 (192.168.20.10): da 192.168.20.50 a 192.168.20.59'
-    );
-    expect(section('Intervalli di indirizzi')).toHaveTextContent(
-      'Gateway consegnato 192.168.20.1 · 1 assegnato, 9 liberi su 10'
-    );
+    expect(poolRows()).toEqual([
+      {
+        name: 'eth0 (192.168.20.10)',
+        on: true,
+        range: ['192.168.20.50', '192.168.20.59', '192.168.20.1', ''],
+        says: 'Gateway consegnato 192.168.20.1 · 1 assegnato, 9 liberi su 10',
+      },
+    ]);
     const rows = within(section('Indirizzi assegnati')).getAllByRole('row').slice(1);
     expect(rows.map(row => within(row).getAllByRole('cell').map(cell => cell.textContent))).toEqual([
       ['192.168.20.50', 'Mail-01', 'eth0', 'eth0'],
@@ -488,18 +508,18 @@ describe('InspectorModal — the DHCP server of a server', () => {
 });
 
 describe('InspectorModal — the «DHCP» tab', () => {
-  it('with no pool says where one is switched on', () => {
+  it('with no pool says how one is switched on', () => {
     openInspector('Router-1');
     openTab('DHCP');
     expect(section('Intervalli di indirizzi')).toHaveTextContent(
-      'Nessuna porta assegna indirizzi. Si attiva porta per porta, nella scheda «Porte», con «Server DHCP Abilitato».'
+      "Nessuna porta assegna indirizzi. Spunta la porta della rete a cui darli: l'intervallo viene proposto, e si può cambiare."
     );
     expect(screen.queryByRole('region', { name: 'Avvisi' })).not.toBeInTheDocument();
 
     openInspector('Web-01');
     openTab('DHCP');
     expect(section('Intervalli di indirizzi')).toHaveTextContent(
-      'Nessuna scheda assegna indirizzi. Si attiva scheda per scheda, nella scheda «Schede di rete»'
+      'Nessuna scheda assegna indirizzi. Spunta la scheda della rete a cui darli'
     );
   });
 
@@ -513,12 +533,19 @@ describe('InspectorModal — the «DHCP» tab', () => {
     expect(screen.getByRole('button', { name: 'DHCP (2)' })).toBeInTheDocument();
     openTab('DHCP (2)');
 
-    const pools = within(section('Intervalli di indirizzi')).getAllByRole('listitem').map(item => item.textContent);
-    expect(pools).toEqual([
-      'Porta 1 «LAN Uffici» (192.168.10.1): da 192.168.10.100 a 192.168.10.199' +
-        'Gateway consegnato 192.168.10.1 · 2 assegnati, 98 liberi su 100',
-      'Porta 2 «LAN Server» (192.168.20.1): da 192.168.20.100 a 192.168.20.101' +
-        'Gateway consegnato 192.168.20.1 · 1 assegnato, 1 libero su 2',
+    expect(poolRows()).toEqual([
+      {
+        name: 'Porta 1 «LAN Uffici» (192.168.10.1)',
+        on: true,
+        range: ['192.168.10.100', '192.168.10.199', '', ''],
+        says: 'Gateway consegnato 192.168.10.1 · 2 assegnati, 98 liberi su 100',
+      },
+      {
+        name: 'Porta 2 «LAN Server» (192.168.20.1)',
+        on: true,
+        range: ['192.168.20.100', '192.168.20.101', '', ''],
+        says: 'Gateway consegnato 192.168.20.1 · 1 assegnato, 1 libero su 2',
+      },
     ]);
     const rows = within(section('Indirizzi assegnati')).getAllByRole('row').slice(1);
     expect(rows.map(row => within(row).getAllByRole('cell').map(cell => cell.textContent))).toEqual([
@@ -603,5 +630,201 @@ describe('InspectorModal — the «DHCP» tab', () => {
     expect(
       screen.getByText(/Un guasto simulato in presentazione non toglie l'indirizzo a chi lo aveva\. Non sono simulati il relay/)
     ).toBeInTheDocument();
+  });
+});
+
+describe('InspectorModal — pools set from the «DHCP» tab', () => {
+  const tick = (of: string) => screen.getByLabelText(`Server DHCP sulla ${of}`);
+
+  it('lists the ports that have an address, each with its tick', () => {
+    openInspector('Router-1');
+    openTab('DHCP');
+    expect(poolRows()).toEqual([
+      { name: 'Porta 1 «LAN Uffici» (192.168.10.1)', on: false, range: [], says: '' },
+      { name: 'Porta 2 «LAN Server» (192.168.20.1)', on: false, range: [], says: '' },
+    ]);
+    expect(section('Intervalli di indirizzi')).toHaveTextContent('Sono elencate le porte che hanno un indirizzo.');
+  });
+
+  it('a tick switches the server of the port on with a range to start from, which hands out at once', () => {
+    setAutomatic('PC-1');
+    openInspector('Router-1');
+    openTab('DHCP');
+    fireEvent.click(tick('porta 1'));
+
+    expect(screen.getByRole('button', { name: 'DHCP (1)' })).toBeInTheDocument();
+    expect(poolRows()[0]).toEqual({
+      name: 'Porta 1 «LAN Uffici» (192.168.10.1)',
+      on: true,
+      range: ['192.168.10.100', '192.168.10.199', '', ''],
+      says: 'Gateway consegnato 192.168.10.1 · 1 assegnato, 99 liberi su 100',
+    });
+    // left empty, the gateway handed out is the port: the field shows it
+    expect(screen.getByLabelText('Gateway consegnato, porta 1')).toHaveAttribute('placeholder', '192.168.10.1');
+    expect(section('Intervalli di indirizzi')).not.toHaveTextContent('Nessuna porta assegna indirizzi');
+    const rows = within(section('Indirizzi assegnati')).getAllByRole('row').slice(1);
+    expect(rows.map(row => within(row).getAllByRole('cell').map(cell => cell.textContent))).toEqual([
+      ['192.168.10.100', 'PC-1', 'eth0', 'porta 1'],
+    ]);
+    // nothing reaches the drawing before the device is saved
+    expect(device('Router-1').ports?.[0].dhcpServer).toBeUndefined();
+
+    saveDevice();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(device('Router-1').ports?.[0].dhcpServer).toEqual(OFFICE);
+    expect(device('Router-1').ports?.[1].dhcpServer).toBeUndefined();
+  });
+
+  it('the range is changed in its fields, and what is typed is kept trimmed', () => {
+    openInspector('Router-1');
+    openTab('DHCP');
+    fireEvent.click(tick('porta 1'));
+    type('Primo indirizzo, porta 1', ' 192.168.10.50 ');
+    type('Ultimo indirizzo, porta 1', '192.168.10.59');
+    type('Gateway consegnato, porta 1', '192.168.10.254');
+    type('Server DNS consegnato, porta 1', ' 192.168.20.10 ');
+    // read as it will be kept, while it is still being typed
+    expect(poolRows()[0].says).toBe(
+      'Gateway consegnato 192.168.10.254 · server DNS consegnato 192.168.20.10 · 0 assegnati, 10 liberi su 10'
+    );
+
+    saveDevice();
+    expect(device('Router-1').ports?.[0].dhcpServer).toEqual({
+      start: '192.168.10.50',
+      end: '192.168.10.59',
+      gateway: '192.168.10.254',
+      dns: '192.168.20.10',
+    });
+  });
+
+  it('the tick of the tab and «Server DHCP Abilitato» of the port are one setting', () => {
+    openInspector('Router-1');
+    openTab('DHCP');
+    fireEvent.click(tick('porta 1'));
+    openTab(/^Porte/);
+    selectPort(1);
+    expect(screen.getByLabelText(/^Server DHCP Abilitato/)).toBeChecked();
+    expect(screen.getByLabelText('Primo indirizzo')).toHaveValue('192.168.10.100');
+    expect(screen.getByLabelText('Ultimo indirizzo')).toHaveValue('192.168.10.199');
+
+    // and back: off on the port, off in the tab
+    fireEvent.click(screen.getByLabelText(/^Server DHCP Abilitato/));
+    savePanel();
+    openTab('DHCP');
+    expect(tick('porta 1')).not.toBeChecked();
+    saveDevice();
+    expect(device('Router-1').ports?.[0].dhcpServer).toBeUndefined();
+  });
+
+  it('a range switched off comes back with the tick, for as long as the tab is open', () => {
+    setPool(1, { start: '192.168.10.50', end: '192.168.10.59' });
+    openInspector('Router-1');
+    openTab('DHCP (1)');
+    fireEvent.click(tick('porta 1'));
+    expect(poolRows()[0]).toMatchObject({ on: false, range: [] });
+    fireEvent.click(tick('porta 1'));
+    expect(poolRows()[0]).toMatchObject({ on: true, range: ['192.168.10.50', '192.168.10.59', '', ''] });
+  });
+
+  it('a range that cannot work says so under its fields, and the device is not saved', () => {
+    openInspector('Router-1');
+    openTab('DHCP');
+    fireEvent.click(tick('porta 1'));
+    type('Primo indirizzo, porta 1', '10.0.0.5');
+    expect(within(section('Intervalli di indirizzi')).getByRole('alert')).toHaveTextContent(
+      'Non utilizzabile: 10.0.0.5 è fuori dalla rete della porta (192.168.10.0/24).'
+    );
+
+    saveDevice();
+    expect(toast.error).toHaveBeenCalledWith(
+      'Porta 1, server DHCP: 10.0.0.5 è fuori dalla rete della porta (192.168.10.0/24)'
+    );
+    expect(device('Router-1').ports?.[0].dhcpServer).toBeUndefined();
+    expect(useUIStore.getState().modals.inspector).toBe(true);
+  });
+
+  it('a range left empty is not kept, and is not an error', () => {
+    openInspector('Router-1');
+    openTab('DHCP');
+    fireEvent.click(tick('porta 1'));
+    type('Primo indirizzo, porta 1', '');
+    type('Ultimo indirizzo, porta 1', ' ');
+    expect(poolRows()[0].says).toBe(
+      "Scrivi il primo e l'ultimo indirizzo da assegnare: un intervallo lasciato vuoto non viene salvato."
+    );
+    // it does not count as a pool
+    expect(screen.getByRole('button', { name: 'DHCP' })).toBeInTheDocument();
+
+    saveDevice();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(device('Router-1').ports?.[0].dhcpServer).toBeUndefined();
+    expect(useUIStore.getState().modals.inspector).toBe(false);
+  });
+
+  it('sends to «Porte» for a port that has no address yet', () => {
+    openInspector('Router-1');
+    openTab('DHCP');
+    fireEvent.click(within(section('Intervalli di indirizzi')).getByRole('button', { name: 'scheda «Porte»' }));
+    expect(openedTab()).toHaveTextContent(/^Porte/);
+  });
+
+  it('a pool on a port without an address: «Dagliene uno» opens that port in «Porte»', () => {
+    setPool(3, OFFICE);
+    openInspector('Router-1');
+    openTab('DHCP (1)');
+    const row = poolRows()[2];
+    expect(row.name).toMatch(/^Porta 3/);
+    expect(row.on).toBe(true);
+    expect(row.says).toContain('Non utilizzabile: la porta non ha un indirizzo');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dagliene uno' }));
+    expect(openedTab()).toHaveTextContent(/^Porte/);
+    expect(screen.getByRole('heading', { name: 'Configurazione Porta 3' })).toBeInTheDocument();
+  });
+
+  it('with no addressed port there is no tick to put: it says why and sends to «Porte»', () => {
+    const router = device('Router-1');
+    store().updateDevice(router.id, {
+      ports: router.ports?.map(p => ({ ...p, ip: undefined, subnet: undefined })),
+    });
+    openInspector('Router-1');
+    openTab('DHCP');
+    const pools = section('Intervalli di indirizzi');
+    expect(pools).toHaveTextContent(
+      'Nessuna porta ha un indirizzo: un intervallo distribuisce gli indirizzi della rete della sua porta, quindi si attiva su una porta che ne ha uno.'
+    );
+    expect(within(pools).queryByRole('checkbox')).toBeNull();
+    fireEvent.click(within(pools).getByRole('button', { name: 'Vai alla scheda «Porte»' }));
+    expect(openedTab()).toHaveTextContent(/^Porte/);
+  });
+
+  it('on a server the cards are listed: a tick proposes the range of the network of the card', () => {
+    openInspector('Web-01');
+    openTab('DHCP');
+    expect(poolRows()).toEqual([{ name: 'eth0 (192.168.20.10)', on: false, range: [], says: '' }]);
+
+    fireEvent.click(tick('scheda eth0'));
+    expect(poolRows()[0]).toMatchObject({ on: true, range: ['192.168.20.100', '192.168.20.199', '', ''] });
+    expect(poolRows()[0].says).toBe('Nessun gateway consegnato · 0 assegnati, 100 liberi su 100');
+    // a server is not the gateway of its network: none is handed out unless one is typed
+    expect(screen.getByLabelText('Gateway consegnato, scheda eth0')).toHaveAttribute('placeholder', 'nessuno');
+
+    saveDevice();
+    expect(device('Web-01').nics?.[0].dhcpServer).toEqual({ start: '192.168.20.100', end: '192.168.20.199' });
+  });
+
+  it('a card that takes its own address from DHCP cannot be ticked, and says why', () => {
+    setAutomatic('Web-01');
+    openInspector('Web-01');
+    openTab('DHCP');
+    expect(tick('scheda eth0')).toBeDisabled();
+    expect(poolRows()).toEqual([
+      {
+        name: 'eth0',
+        on: false,
+        range: [],
+        says: 'Prende il proprio indirizzo dal DHCP: non può anche assegnarne.',
+      },
+    ]);
   });
 });

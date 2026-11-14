@@ -113,24 +113,27 @@ const GuideTab = () => (
       <Step title="Esci su Internet con il NAT">
         Un simbolo Cloud chiamato «Internet» non trasporta gli indirizzi privati (10.x, 172.16-31.x,
         192.168.x): chi sta dentro non esce e chi sta fuori non entra, finché un router o un
-        firewall non traduce gli indirizzi. Nella scheda «Porte» attiva «NAT Abilitato» sulla porta
-        rivolta a Internet: ciò che esce prende l&apos;indirizzo di quella porta, e la risposta
-        torna a chi aveva chiesto. Per raggiungere da fuori un server che sta dentro, nella scheda
-        «NAT» premi «Aggiungi inoltro»: servizio, porta su cui arriva, indirizzo interno. Chi è
-        fuori chiede all&apos;indirizzo della porta e la risposta gli torna da lì. Su un firewall
-        serve anche la regola che lo permette, nella scheda «Regole». La rete di esempio della
+        firewall non traduce gli indirizzi. Nella scheda «NAT» del router o del firewall spunta
+        la porta rivolta a Internet (è la stessa scelta di «NAT Abilitato» sulla porta, nella
+        scheda «Porte»): ciò che esce prende l&apos;indirizzo di quella porta, e la risposta
+        torna a chi aveva chiesto. Per raggiungere da fuori un server che sta dentro, lì sotto
+        premi «Aggiungi inoltro»: servizio, porta su cui arriva, indirizzo interno. Chi è fuori
+        chiede all&apos;indirizzo della porta e la risposta gli torna da lì. Su un firewall serve
+        anche la regola che lo permette, nella scheda «Regole». La rete di esempio della
         schermata iniziale è fatta così.
       </Step>
 
       <Step title="Dai gli indirizzi con il DHCP">
         Un dispositivo può prendere l&apos;indirizzo da solo: nella scheda «Schede di rete», alla
         voce «Indirizzo», scegli «Automatico (DHCP)» al posto di «Manuale». Glielo dà un server
-        DHCP della stessa rete: una porta di router o di firewall, oppure la scheda di un server,
-        con «Server DHCP Abilitato» e l&apos;intervallo da «Primo indirizzo» a «Ultimo indirizzo».
-        Con l&apos;indirizzo arrivano la subnet mask e il gateway. Gli indirizzi si calcolano dal
+        DHCP della stessa rete: una porta di router o di firewall, oppure la scheda di un server.
+        Si accende nella scheda «DHCP» di quel dispositivo, con la spunta accanto alla porta o
+        alla scheda: l&apos;intervallo da «Primo indirizzo» a «Ultimo indirizzo» viene proposto,
+        e si può cambiare (è la stessa scelta di «Server DHCP Abilitato» sulla porta o sulla
+        scheda). Con l&apos;indirizzo arrivano la subnet mask e il gateway. Gli indirizzi si calcolano dal
         disegno, sempre allo stesso modo: i dispositivi vengono serviti nell&apos;ordine in cui
         compaiono e ciascuno prende il primo indirizzo libero, saltando quelli scritti a mano. La
-        scheda «DHCP» del server elenca chi ha preso quale indirizzo, e sul disegno un indirizzo
+        scheda «DHCP» elenca anche chi ha preso quale indirizzo, e sul disegno un indirizzo
         assegnato è seguito da «DHCP». Una scheda che non trova un server resta senza indirizzo,
         e la sua finestra dice perché. Un router non passa la richiesta a un&apos;altra rete: il
         relay non è simulato, e nemmeno le prenotazioni e le scadenze. Nella rete di esempio della

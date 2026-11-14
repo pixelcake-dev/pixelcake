@@ -471,7 +471,8 @@ describe('InspectorModal — the DNS server a pool hands out', () => {
     expect(section('Intervalli di indirizzi')).toHaveTextContent(
       'Gateway consegnato 192.168.10.1 · 0 assegnati, 100 liberi su 100'
     );
-    expect(section('Intervalli di indirizzi')).not.toHaveTextContent('server DNS');
+    expect(section('Intervalli di indirizzi')).not.toHaveTextContent('server DNS consegnato');
+    expect(screen.getByLabelText('Server DNS consegnato, porta 1')).toHaveValue('');
   });
 });
 

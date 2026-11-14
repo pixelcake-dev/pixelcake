@@ -69,7 +69,7 @@ describe('the guide — NAT', () => {
   });
 
   it('names what is on the screen', () => {
-    expect(quoted(step(TITLE))).toEqual(['Internet', 'Porte', 'NAT Abilitato', 'NAT', 'Aggiungi inoltro', 'Regole']);
+    expect(quoted(step(TITLE))).toEqual(['Internet', 'NAT', 'NAT Abilitato', 'Porte', 'Aggiungi inoltro', 'Regole']);
   });
 
   it('the tabs it names are those of a firewall', () => {
@@ -77,14 +77,20 @@ describe('the guide — NAT', () => {
     for (const tab of ['Porte', 'NAT', 'Regole']) expect(tabNames(), tab).toContain(tab);
   });
 
-  it('the option it names is on a port, the button it names is in the NAT tab', () => {
+  it('the tick it names is in the NAT tab, with the button below it; the option it names is on the port', () => {
     openInspector('FW-Edge');
+    fireEvent.click(screen.getByRole('button', { name: /^NAT/ }));
+    // the port that faces the Internet is ticked, and it is the only one
+    const ticks = screen.getAllByRole<HTMLInputElement>('checkbox', { name: /^NAT sulla porta/ });
+    expect(ticks.filter(tick => tick.checked).map(tick => tick.getAttribute('aria-label'))).toEqual([
+      'NAT sulla porta 3',
+    ]);
+    expect(screen.getByRole('region', { name: 'Porte con NAT' })).toHaveTextContent(/Porta 3 «Internet»: ciò che esce/);
+    expect(screen.getByRole('button', { name: 'Aggiungi inoltro' })).toBeEnabled();
+
     fireEvent.click(screen.getByRole('button', { name: /^Porte/ }));
     fireEvent.click(screen.getByText('3'));
     expect(screen.getByLabelText(/^NAT Abilitato/)).toBeChecked();
-
-    fireEvent.click(screen.getByRole('button', { name: /^NAT/ }));
-    expect(screen.getByRole('button', { name: 'Aggiungi inoltro' })).toBeEnabled();
   });
 
   it('the symbol it names is the one that refuses private addresses, and the ranges are the ones it lists', () => {

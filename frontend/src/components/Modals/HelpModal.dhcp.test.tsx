@@ -75,9 +75,10 @@ describe('the guide — DHCP', () => {
       'Indirizzo',
       'Automatico (DHCP)',
       'Manuale',
-      'Server DHCP Abilitato',
+      'DHCP',
       'Primo indirizzo',
       'Ultimo indirizzo',
+      'Server DHCP Abilitato',
       'DHCP',
       'DHCP',
     ]);
@@ -104,7 +105,14 @@ describe('the guide — DHCP', () => {
     expect(screen.getByLabelText('Primo indirizzo')).toHaveValue('192.168.20.100');
     expect(screen.getByLabelText('Ultimo indirizzo')).toHaveValue('192.168.20.199');
 
+    // the tab has the tick next to the port, and the two fields under the names the step gives them
     fireEvent.click(screen.getByRole('button', { name: /^DHCP/ }));
+    expect(screen.getByLabelText('Server DHCP sulla porta 2')).toBeChecked();
+    const pools = screen.getByRole('region', { name: 'Intervalli di indirizzi' });
+    expect(pools).toHaveTextContent('Primo indirizzo');
+    expect(pools).toHaveTextContent('Ultimo indirizzo');
+    expect(screen.getByLabelText('Primo indirizzo, porta 2')).toHaveValue('192.168.20.100');
+    expect(screen.getByLabelText('Ultimo indirizzo, porta 2')).toHaveValue('192.168.20.199');
     const leases = screen.getByRole('region', { name: 'Indirizzi assegnati' });
     expect(leases).toHaveTextContent('192.168.20.100');
     expect(leases).toHaveTextContent('Portatile-1');
