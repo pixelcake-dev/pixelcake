@@ -13,14 +13,8 @@ import { useNetworkStore } from '@/store/networkStore';
 import { useSimulationStore } from '@/store/simulationStore';
 import { planAndEvaluateFlow } from '@/engine';
 import { liveTopology } from '@/utils/liveTopology';
+import { getT } from '@/i18n';
 import type { FlowModelType } from '@/types';
-
-const FLOW_LABELS: Record<FlowModelType, string> = {
-  ping: 'Ping',
-  email: 'Email',
-  web: 'Web',
-  download: 'Download',
-};
 
 /** Returns true when an animation was started */
 export function runFlowSimulation(
@@ -30,17 +24,19 @@ export function runFlowSimulation(
 ): boolean {
   const topology = liveTopology();
   const { globalNetworkSettings } = useNetworkStore.getState();
+  // (the words of the notices, in the language of the moment the simulation is asked for)
+  const { notices } = getT().simulation;
 
   if (topology.devices.length < 2) {
-    toast.warning('Aggiungi almeno due dispositivi per avviare una simulazione.');
+    toast.warning(notices.addTwoDevices);
     return false;
   }
   if (!sourceId || !targetId) {
-    toast.warning('Seleziona dispositivo di partenza e destinazione.');
+    toast.warning(notices.chooseBothEnds);
     return false;
   }
   if (sourceId === targetId) {
-    toast.warning('Il dispositivo di partenza e destinazione non possono coincidere.');
+    toast.warning(notices.sameDevice);
     return false;
   }
 
@@ -60,8 +56,9 @@ export function runFlowSimulation(
   // Failure: animate up to the drop point when there is a prefix to show
   const started = result.animationPath.length >= 2;
   if (started) start();
-  toast.error(`Simulazione ${FLOW_LABELS[flowModel]} fallita`, {
-    description: result.failureReason ?? 'motivo sconosciuto',
+  // (the reason is the engine's own, as it wrote it: in English in every language)
+  toast.error(notices.failed(flowModel), {
+    description: result.failureReason ?? notices.unknownReason,
   });
   return started;
 }

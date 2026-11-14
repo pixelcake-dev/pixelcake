@@ -12,24 +12,29 @@ import { Plug, Package, SquareDashed } from 'lucide-react';
 import { addAreaInView } from '@/utils/areaActions';
 import type { DeviceType } from '@/types/network';
 import { askConfirm } from '@/store/confirmStore';
+import { useT, type Dictionary } from '@/i18n';
 
-// Helper function for device descriptions
-const getDeviceDescription = (type: DeviceType): string => {
-  const descriptions: Record<DeviceType, string> = {
-    PC: 'Dispositivo endpoint per utenti',
-    Switch: 'Aggregatore di rete locale',
-    Router: 'Gateway e routing tra reti',
-    Server: 'Server applicativo o dati',
-    Firewall: 'Protezione e sicurezza di rete',
-    AccessPoint: 'Punto di accesso WiFi',
-    LoadBalancer: 'Bilanciatore di carico',
-    Database: 'Database server',
-    Cloud: 'Servizio cloud o virtuale',
-  };
-  return descriptions[type] || 'Dispositivo di rete';
-};
+type Descriptions = Dictionary['devicePanel']['descriptions'];
+
+/** Where the dictionary keeps what a device of each built-in type is */
+const DESCRIPTION_OF_TYPE = new Map<DeviceType, keyof Descriptions>([
+  ['PC', 'pc'],
+  ['Switch', 'switch'],
+  ['Router', 'router'],
+  ['Server', 'server'],
+  ['Firewall', 'firewall'],
+  ['AccessPoint', 'accessPoint'],
+  ['LoadBalancer', 'loadBalancer'],
+  ['Database', 'database'],
+  ['Cloud', 'cloud'],
+]);
+
+/** What a device of this type is, in the words of the dictionary it is handed */
+const describeType = (type: DeviceType, descriptions: Descriptions): string =>
+  descriptions[DESCRIPTION_OF_TYPE.get(type) ?? 'other'];
 
 const DevicePanel = () => {
+  const t = useT();
   const openModal = useUIStore((state) => state.openModal);
   const setAddDeviceType = useUIStore((state) => state.setAddDeviceType);
 
@@ -54,12 +59,12 @@ const DevicePanel = () => {
         type: template.type,
         name: template.name,
         description: template.isCustom
-          ? `Template personalizzato (${template.type})`
-          : getDeviceDescription(template.type),
+          ? t.devicePanel.customTemplate(template.type)
+          : describeType(template.type, t.devicePanel.descriptions),
         icon: template.icon,
         color: template.color,
       })),
-    [templates]
+    [templates, t]
   );
 
   // Filter devices based on search query
@@ -87,9 +92,9 @@ const DevicePanel = () => {
     const shouldLoad =
       (devices.length === 0 && areaCount === 0) ||
       (await askConfirm({
-        title: 'Caricare la rete di esempio?',
-        detail: 'Prende il posto di quello che c\'è sul canvas.',
-        confirmLabel: 'Carica',
+        title: t.devicePanel.samples.replaceQuestion.title,
+        detail: t.devicePanel.samples.replaceQuestion.detail,
+        confirmLabel: t.devicePanel.samples.replaceQuestion.confirm,
       }));
 
     if (shouldLoad) {
@@ -109,13 +114,13 @@ const DevicePanel = () => {
           className={activeTab === 'devices' ? 'active' : ''}
           onClick={() => setActiveTab('devices')}
         >
-          Dispositivi
+          {t.devicePanel.tabs.devices}
         </button>
         <button
           className={activeTab === 'templates' ? 'active' : ''}
           onClick={() => setActiveTab('templates')}
         >
-          Topologie
+          {t.devicePanel.tabs.samples}
         </button>
       </div>
 
@@ -127,7 +132,7 @@ const DevicePanel = () => {
             <SearchInput
               value={searchQuery}
               onChange={setSearchQuery}
-              placeholder="Cerca dispositivo..."
+              placeholder={t.devicePanel.searchPlaceholder}
               autoFocus={true}
               inputWidth="100%"
               size="md"
@@ -141,7 +146,7 @@ const DevicePanel = () => {
               onClick={() => openModal('bulkAddDevice')}
             >
               <Package size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
-              <span>Aggiungi in Blocco</span>
+              <span>{t.devicePanel.bulkAdd}</span>
             </button>
           </div>
 
@@ -151,9 +156,9 @@ const DevicePanel = () => {
             <button className="sidebar-panel-item w-full" onClick={() => addAreaInView()}>
               <SquareDashed size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
               <span>
-                Riquadro
+                {t.devicePanel.area.name}
                 <span className="block text-xs text-[var(--text-color-light)]">
-                  Un&apos;area con un nome, dietro a un gruppo di dispositivi
+                  {t.devicePanel.area.description}
                 </span>
               </span>
             </button>
@@ -184,7 +189,7 @@ const DevicePanel = () => {
               ))
             ) : (
               <div className="text-center text-[var(--text-color-light)] py-4">
-                Nessun dispositivo trovato per "{searchQuery}"
+                {t.devicePanel.noDevicesFor(searchQuery)}
               </div>
             )}
           </div>
@@ -194,7 +199,7 @@ const DevicePanel = () => {
           {/* Templates Tab */}
           <div className="space-y-2">
             <p className="text-xs text-[var(--text-color-light)] mb-1">
-              Reti di esempio già configurate. Caricarne una sostituisce il canvas aperto.
+              {t.devicePanel.samples.intro}
             </p>
             <button
               className="sidebar-panel-item"
@@ -202,9 +207,9 @@ const DevicePanel = () => {
             >
               <Plug size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
               <span>
-                Azienda: uffici, Wi-Fi, server e DMZ
+                {t.devicePanel.samples.company.title}
                 <span className="block text-xs text-[var(--text-color-light)]">
-                  La rete di esempio: VLAN su un trunk, access point, firewall con tre regole
+                  {t.devicePanel.samples.company.description}
                 </span>
               </span>
             </button>
@@ -214,9 +219,9 @@ const DevicePanel = () => {
             >
               <Plug size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
               <span>
-                Ufficio: due reti e un router
+                {t.devicePanel.samples.office.title}
                 <span className="block text-xs text-[var(--text-color-light)]">
-                  Per cominciare: ping, web, email
+                  {t.devicePanel.samples.office.description}
                 </span>
               </span>
             </button>
@@ -226,9 +231,9 @@ const DevicePanel = () => {
             >
               <Plug size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
               <span>
-                Sede: VLAN, DMZ e firewall
+                {t.devicePanel.samples.site.title}
                 <span className="block text-xs text-[var(--text-color-light)]">
-                  Due VLAN, rotte, zone e una regola che pubblica un sito
+                  {t.devicePanel.samples.site.description}
                 </span>
               </span>
             </button>
@@ -238,9 +243,9 @@ const DevicePanel = () => {
             >
               <Plug size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
               <span>
-                Due sedi: linea principale e di riserva
+                {t.devicePanel.samples.twoSites.title}
                 <span className="block text-xs text-[var(--text-color-light)]">
-                  Per provare i guasti: quasi ogni cavo ha un&apos;altra strada
+                  {t.devicePanel.samples.twoSites.description}
                 </span>
               </span>
             </button>

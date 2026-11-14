@@ -9,6 +9,7 @@ import type {
 import { generateMacAddress } from './ipHelpers';
 import { isEndDeviceKind } from './defaultDns';
 import { isL3Type } from '@/engine';
+import { getT } from '@/i18n';
 
 /**
  * Configurable Device Row (from BulkAddDeviceModal)
@@ -147,7 +148,8 @@ const generateDefaultNIC = (
     gateway,
     ...(dns ? { dns } : {}),
     mac: generateMacAddress(),
-    description: 'Primary Network Interface',
+    // Written on the card once, in the language of the moment: from then on it is the user's text
+    description: getT().addDevice.bulk.cardDescription,
   };
 };
 

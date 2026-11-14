@@ -8,6 +8,7 @@ import Select from '@/components/ui/Select';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import { Button } from '@/components/ui/Button';
 import { Play, Square } from 'lucide-react';
+import { useLanguage, useT } from '@/i18n';
 import type { FlowModelType, NetworkDevice } from '@/types/network';
 
 /** A PC is where a question starts; a server is what it is asked of */
@@ -16,6 +17,8 @@ const answersQuestions = (device: NetworkDevice) =>
   device.type === 'Server' || device.type === 'Database';
 
 const SimulationPanel = () => {
+  const t = useT();
+  const language = useLanguage();
   const devices = useNetworkStore((state) => state.devices);
   const stopSimulation = useSimulationStore((state) => state.stopSimulation);
   const isRunning = useSimulationStore((state) => state.isRunning);
@@ -28,13 +31,16 @@ const SimulationPanel = () => {
   // Convert devices to options format for SearchableSelect
   const dhcp = useDhcp();
   const deviceOptions = useMemo(() => {
+    // A device on DHCP that was given no address says so in words: the list
+    // is made again when the language changes
+    void language;
     return sortedDevices.map((device) => {
       // (the Internet symbol, for one, has no address to show; a device on
       // DHCP shows the one it is leased)
       const address = shownAddress(device, dhcp);
       return { value: device.id, label: address ? `${device.label} (${address})` : device.label };
     });
-  }, [sortedDevices, dhcp]);
+  }, [sortedDevices, dhcp, language]);
 
   // Simulation settings state
   const [sourceId, setSourceId] = useState('');
@@ -80,32 +86,32 @@ const SimulationPanel = () => {
       {/* What to send, from where to where: then the button that sends it */}
       <div className="px-2 pb-3 space-y-3">
         <SearchableSelect
-          label="Partenza"
+          label={t.simulation.source}
           value={sourceId}
           onChange={(value) => setSourceId(value)}
           options={deviceOptions}
-          placeholder="Cerca dispositivo di partenza..."
+          placeholder={t.simulation.sourcePlaceholder}
         />
 
         <SearchableSelect
-          label="Destinazione"
+          label={t.simulation.destination}
           value={targetId}
           onChange={(value) => setTargetId(value)}
           options={deviceOptions}
-          placeholder="Cerca dispositivo di destinazione..."
+          placeholder={t.simulation.destinationPlaceholder}
         />
 
         <Select
-          label="Modello di Flusso"
+          label={t.simulation.flowModel}
           value={flowModel}
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             setFlowModel(e.target.value as FlowModelType)
           }
         >
-          <option value="ping">Ping (ICMP)</option>
-          <option value="email">Messaggio Email (SMTP)</option>
-          <option value="web">Pagina Web (HTTP)</option>
-          <option value="download">Download File (FTP)</option>
+          <option value="ping">{t.simulation.flowModels.ping}</option>
+          <option value="email">{t.simulation.flowModels.email}</option>
+          <option value="web">{t.simulation.flowModels.web}</option>
+          <option value="download">{t.simulation.flowModels.download}</option>
         </Select>
 
         {/* What the panel is for: one button, and it looks like one */}
@@ -116,11 +122,11 @@ const SimulationPanel = () => {
           disabled={!isRunning && !ready}
         >
           {isRunning ? <Square size={16} /> : <Play size={16} />}
-          {isRunning ? 'Ferma Simulazione' : 'Avvia Simulazione'}
+          {isRunning ? t.simulation.stop : t.simulation.start}
         </Button>
         {!ready && !isRunning && (
           <p className="text-xs text-[var(--text-color-light)]">
-            Servono almeno due dispositivi sul canvas.
+            {t.simulation.needsTwoDevices}
           </p>
         )}
       </div>
