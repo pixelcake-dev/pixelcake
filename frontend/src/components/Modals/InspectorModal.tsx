@@ -43,7 +43,7 @@ import type { DeviceInterface, DhcpResolution } from '@/engine';
 import { linkPeerLabel } from '@/utils/interfaceLabels';
 import { NO_LEASE_LABEL, cardLeaseText, firstPoolProblem, poolStatusText } from '@/utils/dhcpLabels';
 import { firstInterfaceProblem, tidyNic, tidyPort } from '@/utils/interfaceProblems';
-import { NOTES_MAX_LENGTH, tidyNotes } from '@/utils/deviceNotes';
+import { NOTES_MAX_LENGTH, noteRows, tidyNotes } from '@/utils/deviceNotes';
 import {
   forwardProblemText,
   isBlankForward,
@@ -494,14 +494,16 @@ const InspectorModal = () => {
                   onChange={(e) => setLocation(e.target.value)}
                 />
               )}
-              {/* What does not fit a field: every kind of device has it */}
+              {/* What does not fit a field: every kind of device has it. One
+                  row until it is written, then as many as its lines (the
+                  first screen of a device is for what the device is) */}
               <TextAreaField
                 label="Note"
-                placeholder="es. a chi è assegnato, cosa c'è da sistemare, a chi chiedere..."
+                placeholder="Testo libero. Si legge anche sul disegno, fermando il puntatore sul dispositivo."
+                rows={noteRows(notes)}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 maxLength={NOTES_MAX_LENGTH}
-                hint="Si leggono anche sul disegno, fermando il puntatore sul dispositivo."
               />
             </FieldRow>
           </FormFieldset>

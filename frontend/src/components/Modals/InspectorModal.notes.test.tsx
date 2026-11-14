@@ -65,7 +65,12 @@ describe('the note of a device — in its window', () => {
       expect(fields[fields.length - 1]).toBe(field);
       expect(field.parentElement?.className).toContain('col-span-4');
       expect(field.parentElement?.parentElement?.className).toContain('grid-cols-4');
-      expect(identity).toHaveTextContent('Si leggono anche sul disegno, fermando il puntatore sul dispositivo.');
+      // an empty note takes one row of the window, and says where it will be read
+      expect((field as HTMLTextAreaElement).rows).toBe(1);
+      expect(field).toHaveAttribute(
+        'placeholder',
+        'Testo libero. Si legge anche sul disegno, fermando il puntatore sul dispositivo.'
+      );
     }
   );
 
@@ -110,6 +115,22 @@ describe('the note of a device — in its window', () => {
     fireEvent.change(screen.getByLabelText('Nome Dispositivo'), { target: { value: 'Web-02' } });
     save();
     expect(device('Web-02').notes).toBe('backup ogni notte');
+  });
+
+  it('the field is as tall as the note, from one row to six', () => {
+    openInspector('PC-1');
+    expect(note().rows).toBe(1);
+    fireEvent.change(note(), { target: { value: 'una riga' } });
+    expect(note().rows).toBe(1);
+    fireEvent.change(note(), { target: { value: 'uno\ndue\ntre' } });
+    expect(note().rows).toBe(3);
+    fireEvent.change(note(), { target: { value: Array(10).fill('riga').join('\n') } });
+    expect(note().rows).toBe(6);
+
+    // a device opened with a note shows it whole
+    store().updateDevice(device('Web-01').id, { notes: 'uno\ndue' });
+    openInspector('Web-01');
+    expect(note().rows).toBe(2);
   });
 
   it('cannot be typed without end', () => {
