@@ -24,7 +24,7 @@ export const explorer = {
     detail: (count: number) => `Contiene ${devices(count)}: il suo contenuto andrà perso.`,
   },
 
-  newCanvas: 'Nuovo Canvas',
+  newCanvas: 'Nuovo canvas',
   newCanvasPlaceholder: 'Nome del canvas…',
   newCanvasName: 'Nome del nuovo canvas',
   createCanvas: 'Crea canvas',

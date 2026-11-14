@@ -4,7 +4,7 @@ export const sidebar = {
   buttons: {
     explorer: 'Explorer',
     simulation: 'Simulazione',
-    addDevice: 'Aggiungi Dispositivo',
+    addDevice: 'Aggiungi dispositivo',
     console: 'Console',
     importExport: 'Import/Export',
     settings: 'Impostazioni',

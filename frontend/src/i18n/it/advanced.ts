@@ -1,28 +1,28 @@
 /** Settings, advanced tab: figures and shortcuts */
 export const advanced = {
   usage: {
-    title: 'Statistiche di Utilizzo',
+    title: 'Statistiche di utilizzo',
     intro: "Statistiche sull'utilizzo corrente dell'applicazione.",
     devices: {
-      title: 'Dispositivi sul Canvas',
+      title: 'Dispositivi sul canvas',
       caption: 'Dispositivi sul canvas aperto',
     },
     links: {
-      title: 'Connessioni sul Canvas',
+      title: 'Connessioni sul canvas',
       caption: 'Connessioni tra dispositivi',
     },
     deviceTemplates: {
-      title: 'Template di Dispositivi Personalizzati',
+      title: 'Template di dispositivi personalizzati',
       caption: 'Template personalizzati creati',
     },
     linkTemplates: {
-      title: 'Template di Connessioni Personalizzati',
+      title: 'Template di connessioni personalizzati',
       caption: 'Template di connessioni creati',
     },
   },
 
   shortcuts: {
-    title: 'Scorciatoie da Tastiera e Mouse',
+    title: 'Scorciatoie da tastiera e mouse',
     intro: 'Comandi da tastiera e da mouse per lavorare sul canvas.',
     /** What each shortcut does, and the keys (or the gesture) that do it */
     rows: {

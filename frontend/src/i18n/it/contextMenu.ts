@@ -1,7 +1,7 @@
 /** The menus a right click opens on the board */
 export const contextMenu = {
   device: {
-    details: 'Dettagli (Modifica)',
+    details: 'Dettagli (modifica)',
     console: 'Console',
     enclose: 'Racchiudi in un riquadro',
     deleteQuestion: {
@@ -11,8 +11,8 @@ export const contextMenu = {
   },
 
   connection: {
-    edit: 'Modifica Connessione',
-    delete: 'Elimina Connessione',
+    edit: 'Modifica connessione',
+    delete: 'Elimina connessione',
     deleteQuestion: {
       title: 'Eliminare questa connessione?',
     },

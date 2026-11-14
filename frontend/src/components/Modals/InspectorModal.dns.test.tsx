@@ -381,7 +381,7 @@ describe('InspectorModal — the DNS server a pool hands out', () => {
     openInspector('Router-1');
     openTab(/^Porte/);
     selectPort(1);
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Attivo/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     type('Primo indirizzo', OFFICE.start);
     type('Ultimo indirizzo', OFFICE.end);
   };
@@ -432,7 +432,7 @@ describe('InspectorModal — the DNS server a pool hands out', () => {
     openInspector('Router-1');
     openTab(/^Porte/);
     selectPort(1);
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Attivo/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     type('Primo indirizzo', '');
     type('Ultimo indirizzo', '');
     type('Server DNS consegnato (facoltativo)', WEB);
@@ -443,7 +443,7 @@ describe('InspectorModal — the DNS server a pool hands out', () => {
     openInspector('Web-01');
     openTab(/^Schede di rete/);
     selectCard('eth0');
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Attivo/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     type('Primo indirizzo', '192.168.20.100');
     type('Ultimo indirizzo', '192.168.20.110');
     type('Server DNS consegnato (facoltativo)', WEB);

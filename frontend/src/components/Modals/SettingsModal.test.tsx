@@ -57,7 +57,7 @@ describe('SettingsModal', () => {
 
     expect(tabs().map(tab => tab.textContent)).toEqual(['Rete', 'Aspetto', 'Template', 'Avanzate']);
     expect(activeTab()).toBe('Rete');
-    expect(screen.getByText('Impostazioni di Rete Globali')).toBeInTheDocument();
+    expect(screen.getByText('Impostazioni di rete globali')).toBeInTheDocument();
   });
 
   it('has no user profile', () => {
@@ -89,7 +89,7 @@ describe('SettingsModal', () => {
       render(<SettingsModal />);
       openTab('Avanzate');
 
-      expect(screen.getByText('Statistiche di Utilizzo')).toBeInTheDocument();
+      expect(screen.getByText('Statistiche di utilizzo')).toBeInTheDocument();
       expect(screen.queryByText('Preferenze Generali')).toBeNull();
       expect(screen.queryByText('Lingua Interfaccia')).toBeNull();
       expect(screen.queryByText('Formato Data')).toBeNull();
@@ -123,9 +123,9 @@ describe('SettingsModal', () => {
 
       const [network, mask, gateway, dns] = [
         'Rete',
-        'Subnet Mask Predefinita',
-        'Gateway Predefinito',
-        'Server DNS Predefinito',
+        'Subnet mask predefinita',
+        'Gateway predefinito',
+        'Server DNS predefinito',
       ].map(label => screen.getByLabelText(label));
       const row = network.closest('.grid');
       expect(row).not.toBeNull();
@@ -143,7 +143,7 @@ describe('SettingsModal', () => {
       expect(screen.getByRole('group', { name: 'Nuovi dispositivi' })).toContainElement(network);
 
       // the line that explains the last field stays with it
-      const select = screen.getByLabelText('Modalità Email (SMTP)');
+      const select = screen.getByLabelText('Modalità email (SMTP)');
       const hint = screen.getByText(/Determina come viaggiano le email/);
       expect(select.closest('.grid')).toBe(hint.parentElement);
       expect(screen.getByRole('group', { name: 'Simulazione' })).toContainElement(select);
@@ -153,19 +153,19 @@ describe('SettingsModal', () => {
       render(<SettingsModal />);
       const before = useNetworkStore.getState().globalNetworkSettings;
 
-      fireEvent.change(screen.getByLabelText('Gateway Predefinito'), { target: { value: '192.168.1' } });
+      fireEvent.change(screen.getByLabelText('Gateway predefinito'), { target: { value: '192.168.1' } });
       // nothing is said before the user asks to save
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: 'Salva le Impostazioni di Rete' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Salva le impostazioni di rete' }));
 
       expect(screen.getByRole('alert')).toHaveTextContent('"192.168.1" non è un indirizzo IPv4 valido');
       expect(toast.error as Mock).toHaveBeenCalledWith('"192.168.1" non è un indirizzo IPv4 valido');
       expect(useNetworkStore.getState().globalNetworkSettings).toEqual(before);
 
       // put right, it goes away as it is typed, and the save goes through, trimmed
-      fireEvent.change(screen.getByLabelText('Gateway Predefinito'), { target: { value: ' 192.168.1.254 ' } });
+      fireEvent.change(screen.getByLabelText('Gateway predefinito'), { target: { value: ' 192.168.1.254 ' } });
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: 'Salva le Impostazioni di Rete' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Salva le impostazioni di rete' }));
       expect(useNetworkStore.getState().globalNetworkSettings.gateway).toBe('192.168.1.254');
     });
 
@@ -173,10 +173,10 @@ describe('SettingsModal', () => {
       const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
       render(<SettingsModal />);
 
-      fireEvent.change(screen.getByLabelText('Gateway Predefinito'), {
+      fireEvent.change(screen.getByLabelText('Gateway predefinito'), {
         target: { value: '192.168.1.254' },
       });
-      fireEvent.click(screen.getByRole('button', { name: 'Salva le Impostazioni di Rete' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Salva le impostazioni di rete' }));
 
       expect(useNetworkStore.getState().globalNetworkSettings.gateway).toBe('192.168.1.254');
       expect(toast.success as Mock).toHaveBeenCalledWith('Impostazioni di rete salvate');
@@ -188,8 +188,8 @@ describe('SettingsModal', () => {
       const before = useNetworkStore.getState().globalNetworkSettings;
       render(<SettingsModal />);
 
-      fireEvent.change(screen.getByLabelText('Gateway Predefinito'), { target: { value: ' ' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Salva le Impostazioni di Rete' }));
+      fireEvent.change(screen.getByLabelText('Gateway predefinito'), { target: { value: ' ' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Salva le impostazioni di rete' }));
 
       expect(toast.error as Mock).toHaveBeenCalledWith('Tutti i campi sono obbligatori');
       expect(toast.success as Mock).not.toHaveBeenCalled();
@@ -199,8 +199,8 @@ describe('SettingsModal', () => {
   });
 
   describe('Rete — the DNS server of new devices', () => {
-    const save = () => fireEvent.click(screen.getByRole('button', { name: 'Salva le Impostazioni di Rete' }));
-    const field = () => screen.getByLabelText<HTMLInputElement>('Server DNS Predefinito');
+    const save = () => fireEvent.click(screen.getByRole('button', { name: 'Salva le impostazioni di rete' }));
+    const field = () => screen.getByLabelText<HTMLInputElement>('Server DNS predefinito');
     const settings = () => useNetworkStore.getState().globalNetworkSettings;
 
     it('is optional: left empty, the settings are saved without one', () => {
@@ -257,7 +257,7 @@ describe('SettingsModal', () => {
   });
 
   describe('Rete — the names of the VLANs of the project', () => {
-    const save = () => fireEvent.click(screen.getByRole('button', { name: 'Salva le Impostazioni di Rete' }));
+    const save = () => fireEvent.click(screen.getByRole('button', { name: 'Salva le impostazioni di rete' }));
     const store = () => useNetworkStore.getState();
     const named = () => store().globalNetworkSettings.vlans;
     const group = () => screen.getByRole('group', { name: 'VLAN del progetto' });
@@ -327,7 +327,7 @@ describe('SettingsModal', () => {
       type(nameOf(10), 'Uffici');
       // nothing reaches the project before it is saved
       expect(named()).toBeUndefined();
-      type(screen.getByLabelText('Gateway Predefinito'), '192.168.1.254');
+      type(screen.getByLabelText('Gateway predefinito'), '192.168.1.254');
       save();
 
       expect(toast.error as Mock).not.toHaveBeenCalled();
@@ -483,7 +483,7 @@ describe('SettingsModal', () => {
       const view = render(<SettingsModal />);
       expect(screen.queryByTestId('assign-dns')).not.toBeInTheDocument();
       // typed and not saved: still nothing to give
-      fireEvent.change(screen.getByLabelText('Server DNS Predefinito'), { target: { value: DNS } });
+      fireEvent.change(screen.getByLabelText('Server DNS predefinito'), { target: { value: DNS } });
       expect(screen.queryByTestId('assign-dns')).not.toBeInTheDocument();
       view.unmount();
 
@@ -564,13 +564,13 @@ describe('SettingsModal', () => {
       answerConfirms(true);
       render(<SettingsModal />);
 
-      fireEvent.change(screen.getByLabelText('Server DNS Predefinito'), { target: { value: '10.9.9.9' } });
+      fireEvent.change(screen.getByLabelText('Server DNS predefinito'), { target: { value: '10.9.9.9' } });
       fireEvent.click(button()!);
       await settled();
 
       expect(cardDns('PC-1')).toEqual([DNS]);
       // what was being typed is still there, not yet saved
-      expect(screen.getByLabelText<HTMLInputElement>('Server DNS Predefinito').value).toBe('10.9.9.9');
+      expect(screen.getByLabelText<HTMLInputElement>('Server DNS predefinito').value).toBe('10.9.9.9');
       expect(store().globalNetworkSettings.dns).toBe(DNS);
     });
   });

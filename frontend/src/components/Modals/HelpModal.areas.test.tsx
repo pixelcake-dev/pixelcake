@@ -99,7 +99,7 @@ describe('the guide — the areas of the canvas', () => {
 
   it('names what is on the screen', () => {
     expect(quoted(step(TITLE))).toEqual([
-      'Aggiungi Dispositivo',
+      'Aggiungi dispositivo',
       'Riquadro',
       'Racchiudi in un riquadro',
       'Rinomina',
@@ -109,10 +109,10 @@ describe('the guide — the areas of the canvas', () => {
 
   it('the panel it names has the entry it names, which adds an area in the middle of the view', () => {
     expect(step(TITLE)).toContain(
-      "Nel pannello «Aggiungi Dispositivo» c'è «Riquadro», che ne aggiunge uno al centro della vista"
+      "Nel pannello «Aggiungi dispositivo» c'è «Riquadro», che ne aggiunge uno al centro della vista"
     );
     const sidebar = render(<Sidebar />);
-    expect(screen.getByRole('button', { name: 'Aggiungi Dispositivo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Aggiungi dispositivo' })).toBeInTheDocument();
     sidebar.unmount();
 
     render(<DevicePanel />);

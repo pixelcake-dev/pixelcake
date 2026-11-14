@@ -2,7 +2,7 @@
 export const connection = {
   /** The two devices of the link, by name; one that is no longer there has none */
   title: (source: string | undefined, target: string | undefined) =>
-    `Modifica Connessione: ${source || 'sconosciuto'} → ${target || 'sconosciuto'}`,
+    `Modifica connessione: ${source || 'sconosciuto'} → ${target || 'sconosciuto'}`,
 
   interfaces: {
     legend: 'Interfacce',
@@ -16,12 +16,12 @@ export const connection = {
       "estremità assegnate a un'interfaccia.",
   },
 
-  type: 'Tipo di Connessione',
-  noType: 'Nessuno (Predefinito)',
-  colourPreview: 'Anteprima del Colore',
+  type: 'Tipo di connessione',
+  noType: 'Nessuno (predefinito)',
+  colourPreview: 'Anteprima del colore',
   bandwidth: 'Banda (es. 1 Gbps, 100 Mbps)',
-  label: 'Etichetta Personalizzata',
+  label: 'Etichetta personalizzata',
   labelPlaceholder: 'Etichetta facoltativa',
-  customColour: 'Colore Personalizzato (facoltativo)',
+  customColour: 'Colore personalizzato (facoltativo)',
   customColourNote: 'Il colore personalizzato sovrascrive il colore del tipo.',
 };

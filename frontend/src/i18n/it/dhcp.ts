@@ -148,7 +148,7 @@ export const dhcp = {
 
   /** The DHCP server in the panel of one port or of one card */
   server: {
-    enabled: 'Server DHCP Attivo',
+    enabled: 'Server DHCP attivo',
     enabledHint:
       'I dispositivi di questa rete con la scheda su «Automatico (DHCP)» prendono da qui ' +
       'indirizzo, subnet mask e gateway; gli indirizzi scritti a mano nel disegno vengono ' +

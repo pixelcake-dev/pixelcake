@@ -12,18 +12,18 @@ const listOf = (names: string[]) => {
 };
 
 export const networkSettings = {
-  title: 'Impostazioni di Rete Globali',
+  title: 'Impostazioni di rete globali',
   intro: 'Valgono per tutto il progetto. Cambiarle non tocca i dispositivi che ci sono già.',
 
   newDevices: {
     legend: 'Nuovi dispositivi',
     network: 'Rete',
     networkPlaceholder: example('192.168.1.0'),
-    mask: 'Subnet Mask Predefinita',
+    mask: 'Subnet mask predefinita',
     maskPlaceholder: example('255.255.255.0'),
-    gateway: 'Gateway Predefinito',
+    gateway: 'Gateway predefinito',
     gatewayPlaceholder: example('192.168.1.1'),
-    dns: 'Server DNS Predefinito',
+    dns: 'Server DNS predefinito',
     dnsPlaceholder: 'facoltativo',
     hint:
       'A un dispositivo nuovo viene proposto il primo indirizzo libero di questa rete, con ' +
@@ -71,7 +71,7 @@ export const networkSettings = {
 
   simulation: {
     legend: 'Simulazione',
-    emailMode: 'Modalità Email (SMTP)',
+    emailMode: 'Modalità email (SMTP)',
     auto: 'Auto (rileva automaticamente)',
     internal: 'Server di posta interno',
     cloud: 'Cloud (M365, Gmail…)',
@@ -80,7 +80,7 @@ export const networkSettings = {
       "oppure un servizio esterno (Cloud), attraverso l'uscita verso Internet.",
   },
 
-  save: 'Salva le Impostazioni di Rete',
+  save: 'Salva le impostazioni di rete',
   allRequired: 'Tutti i campi sono obbligatori',
   saved: 'Impostazioni di rete salvate',
 };

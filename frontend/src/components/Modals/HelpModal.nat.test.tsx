@@ -69,7 +69,7 @@ describe('the guide — NAT', () => {
   });
 
   it('names what is on the screen', () => {
-    expect(quoted(step(TITLE))).toEqual(['Internet', 'NAT', 'NAT Attivo', 'Porte', 'Aggiungi inoltro', 'Regole']);
+    expect(quoted(step(TITLE))).toEqual(['Internet', 'NAT', 'NAT attivo', 'Porte', 'Aggiungi inoltro', 'Regole']);
   });
 
   it('the tabs it names are those of a firewall', () => {
@@ -90,7 +90,7 @@ describe('the guide — NAT', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^Porte/ }));
     fireEvent.click(screen.getByText('3'));
-    expect(screen.getByLabelText(/^NAT Attivo/)).toBeChecked();
+    expect(screen.getByLabelText(/^NAT attivo/)).toBeChecked();
   });
 
   it('the symbol it names is the one that refuses private addresses, and the ranges are the ones it lists', () => {

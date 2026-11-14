@@ -5,12 +5,12 @@ import { common } from './common';
 const example = (value: string) => `es. ${value}`;
 
 export const newProject = {
-  title: 'Nuovo Progetto',
-  create: 'Crea Progetto',
+  title: 'Nuovo progetto',
+  create: 'Crea progetto',
 
   info: {
-    legend: 'Informazioni sul Progetto',
-    name: 'Nome del Progetto',
+    legend: 'Informazioni sul progetto',
+    name: 'Nome del progetto',
     namePlaceholder: example('Rete della sede'),
     description: 'Descrizione',
     descriptionPlaceholder: 'Breve descrizione del progetto…',
@@ -18,9 +18,9 @@ export const newProject = {
 
   /** What the new devices of the project start from */
   network: {
-    legend: 'Impostazioni di Rete Globali',
+    legend: 'Impostazioni di rete globali',
     network: 'Rete',
-    mask: 'Subnet Mask',
+    mask: 'Subnet mask',
     dns: 'Server DNS (facoltativo)',
     dnsPlaceholder: example('192.168.1.53'),
   },

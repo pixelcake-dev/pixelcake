@@ -14,7 +14,7 @@ export const inspector = {
     identity: {
       legend: 'Identità',
       type: 'Tipo',
-      name: 'Nome del Dispositivo',
+      name: 'Nome del dispositivo',
       vendor: 'Vendor',
       vendorPlaceholder: 'es. Cisco, HP, Dell…',
       location: 'Posizione',

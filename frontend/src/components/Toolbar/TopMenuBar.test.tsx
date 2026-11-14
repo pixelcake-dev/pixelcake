@@ -126,7 +126,7 @@ describe('TopMenuBar', () => {
       ]) {
         expect(screen.getByText(entry)).not.toHaveClass('disabled');
       }
-      for (const removed of ['Nuovo', 'Nuovo Progetto', 'Apri...', 'Apri Progetto...']) {
+      for (const removed of ['Nuovo', 'Nuovo progetto', 'Apri...', 'Apri Progetto...']) {
         expect(screen.queryByText(removed)).toBeNull();
       }
       expect(screen.queryByText('Documentazione API')).toBeNull();
@@ -218,7 +218,7 @@ describe('TopMenuBar', () => {
       // an empty canvas: nothing to fit, to lay out or to connect
       click('Adatta alla finestra');
       click('Gerarchica, verticale');
-      click('Connessione Automatica');
+      click('Connessione automatica');
 
       expect(toastInfoMock).toHaveBeenCalledTimes(3);
       for (const [message] of toastInfoMock.mock.calls) {

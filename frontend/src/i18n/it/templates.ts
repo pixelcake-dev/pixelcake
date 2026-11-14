@@ -1,7 +1,7 @@
 /** Device and link templates: lists and editors */
 
 /** The button that adds a link type: the empty list names it */
-const newLinkType = 'Nuovo Tipo di Connessione';
+const newLinkType = 'Nuovo tipo di connessione';
 
 export const templates = {
   title: 'Template',
@@ -14,17 +14,17 @@ export const templates = {
 
   devices: {
     tabs: {
-      generic: 'Dispositivi Generici',
-      custom: 'Dispositivi Personalizzati',
+      generic: 'Dispositivi generici',
+      custom: 'Dispositivi personalizzati',
     },
 
     /** Fields the editor of a generic template and the form of a custom one share */
-    baseType: 'Tipo di Base',
+    baseType: 'Tipo di base',
     colour: 'Colore',
 
     generic: {
       intro: 'Dispositivi predefiniti disponibili per uso rapido',
-      add: 'Nuovo Template',
+      add: 'Nuovo template',
       edit: 'Modifica template',
       delete: 'Elimina template',
       deleteQuestion: {
@@ -34,10 +34,10 @@ export const templates = {
     },
 
     editor: {
-      titleEdit: 'Modifica Template Generico',
-      titleNew: 'Nuovo Template Generico',
-      saveChanges: 'Salva Modifiche',
-      create: 'Crea Template',
+      titleEdit: 'Modifica template generico',
+      titleNew: 'Nuovo template generico',
+      saveChanges: 'Salva modifiche',
+      create: 'Crea template',
       name: 'Nome',
       namePlaceholder: 'es. PC, Stampante, Dispositivo IoT',
       chooseType: '-- Seleziona tipo --',
@@ -55,13 +55,13 @@ export const templates = {
 
     custom: {
       intro: 'Template personalizzati con campi Terraform',
-      add: 'Nuovo Template',
-      formTitle: 'Crea Nuovo Template',
-      name: 'Nome del Template',
+      add: 'Nuovo template',
+      formTitle: 'Crea nuovo template',
+      name: 'Nome del template',
       namePlaceholder: 'es. AWS EC2 Instance',
       icon: 'Icona Iconify',
       iconPlaceholder: 'es. mdi:server',
-      save: 'Salva Template',
+      save: 'Salva template',
       empty: 'Nessun template personalizzato. Creane uno.',
       deleteQuestion: 'Eliminare questo template?',
     },
@@ -80,20 +80,20 @@ export const templates = {
     },
 
     editor: {
-      titleEdit: 'Modifica Tipo di Connessione',
+      titleEdit: 'Modifica tipo di connessione',
       titleNew: newLinkType,
-      saveChanges: 'Salva Modifiche',
-      create: 'Crea Tipo',
+      saveChanges: 'Salva modifiche',
+      create: 'Crea tipo',
       name: 'Nome',
       namePlaceholder: 'es. Trunk, Access, WAN',
-      typeId: 'ID del Tipo',
+      typeId: 'ID del tipo',
       typeIdPlaceholder: 'es. trunk, access, wan',
       typeIdHint:
         'Identificatore univoco (minuscolo, senza spazi). Non modificabile dopo la creazione.',
       description: 'Descrizione',
       descriptionPlaceholder: 'es. Connessione trunk tra switch',
       colour: 'Colore',
-      lineStyle: 'Stile della Linea',
+      lineStyle: 'Stile della linea',
       lineStyles: {
         solid: 'Continua',
         dashed: 'Tratteggiata',

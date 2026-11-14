@@ -270,12 +270,12 @@ describe('App', () => {
       expect(screen.queryByText('Visual Network Designer')).toBeNull();
     });
 
-    it('"Apri Progetto" opens the file picker: cancelling it leaves the welcome screen', async () => {
+    it('"Apri progetto" opens the file picker: cancelling it leaves the welcome screen', async () => {
       const picker = vi.fn().mockRejectedValue(new DOMException('aborted', 'AbortError'));
       vi.stubGlobal('showOpenFilePicker', picker);
       render(<App />);
 
-      fireEvent.click(screen.getByText('Apri Progetto'));
+      fireEvent.click(screen.getByText('Apri progetto'));
 
       await waitFor(() => expect(picker).toHaveBeenCalledTimes(1));
       await act(async () => {});
@@ -283,7 +283,7 @@ describe('App', () => {
       expect(useProjectStore.getState().name).toBe('Sede Milano');
     });
 
-    it('"Apri Progetto" with a file: the project is on screen and the welcome screen is gone', async () => {
+    it('"Apri progetto" with a file: the project is on screen and the welcome screen is gone', async () => {
       const text = serializeProject({
         format: 'pixelcake-project',
         version: 1,
@@ -333,7 +333,7 @@ describe('App', () => {
       useUIStore.setState({ activeSidebarPanel: 'explorer' });
       render(<App />);
 
-      fireEvent.click(screen.getByText('Apri Progetto'));
+      fireEvent.click(screen.getByText('Apri progetto'));
 
       await waitFor(() => expect(screen.getByText('Reception')).toBeInTheDocument());
       expect(screen.queryByText('Visual Network Designer')).toBeNull();
@@ -353,22 +353,22 @@ describe('App', () => {
       expect(screen.getByText('Reception')).toBeInTheDocument();
     });
 
-    it('"Nuovo Progetto" opens the form; the new project starts on its empty canvas', async () => {
+    it('"Nuovo progetto" opens the form; the new project starts on its empty canvas', async () => {
       useUIStore.setState({ activeSidebarPanel: 'explorer' });
       render(<App />);
 
-      fireEvent.click(screen.getByText('Nuovo Progetto'));
+      fireEvent.click(screen.getByText('Nuovo progetto'));
       // (nothing to lose, so nothing is asked: the form opens a moment later)
       await settled();
-      fireEvent.change(screen.getByLabelText('Nome del Progetto'), {
+      fireEvent.change(screen.getByLabelText('Nome del progetto'), {
         target: { value: 'Sede Torino' },
       });
-      fireEvent.click(screen.getByRole('button', { name: 'Crea Progetto' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Crea progetto' }));
 
       // the name of the project, in the bar at the top (and in the Explorer when it is open)
       expect(document.querySelector('.topbar-project-name')).toHaveTextContent('Sede Torino');
       expect(screen.queryByText('Visual Network Designer')).toBeNull();
-      expect(screen.queryByLabelText('Nome del Progetto')).toBeNull();
+      expect(screen.queryByLabelText('Nome del progetto')).toBeNull();
       expect(useProjectStore.getState().canvases).toHaveLength(1);
     });
   });
@@ -394,7 +394,7 @@ describe('App', () => {
       await settled();
 
       expect(confirms.asked).toHaveLength(1);
-      expect(screen.queryByLabelText('Nome del Progetto')).toBeNull();
+      expect(screen.queryByLabelText('Nome del progetto')).toBeNull();
       expect(screen.getByText('PC-1')).toBeInTheDocument();
     });
 

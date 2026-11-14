@@ -7,7 +7,7 @@ export const devicePanel = {
 
   searchPlaceholder: 'Cerca dispositivo…',
   noDevicesFor: (query: string) => `Nessun dispositivo trovato per "${query}"`,
-  bulkAdd: 'Aggiungi in Blocco',
+  bulkAdd: 'Aggiungi in blocco',
   area: {
     name: 'Riquadro',
     description: "Un'area con un nome, dietro a un gruppo di dispositivi",

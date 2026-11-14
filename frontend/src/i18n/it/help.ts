@@ -23,11 +23,11 @@ export const help = {
     addDevices: {
       title: 'Aggiungi i dispositivi',
       text:
-        'Nella barra a sinistra apri «Aggiungi Dispositivo» (il pulsante +) e scegli un tipo ' +
+        'Nella barra a sinistra apri «Aggiungi dispositivo» (il pulsante +) e scegli un tipo ' +
         "dall'elenco: controlla il nome e conferma, l'indirizzo IP viene proposto in automatico " +
         'e si può cambiare, o lasciare al DHCP. Il dispositivo compare al centro della parte di ' +
         'canvas che stai guardando (o nel primo posto libero lì accanto) ed è già selezionato. ' +
-        '«Aggiungi in Blocco» ne crea molti in una volta. Nella scheda «Esempi» dello stesso ' +
+        '«Aggiungi in blocco» ne crea molti in una volta. Nella scheda «Esempi» dello stesso ' +
         'pannello ci sono quattro reti di esempio già pronte: quella di una piccola azienda (la ' +
         'stessa della schermata di benvenuto), una semplice, una con VLAN, DMZ e firewall, e una ' +
         'con due sedi e una linea di riserva. Caricarne una prende il posto di quanto è sul ' +
@@ -48,7 +48,7 @@ export const help = {
         'passi sopra con il mouse o lo selezioni. Trascina da un punto fino a un punto di un ' +
         'altro dispositivo: a ciascun capo la connessione viene assegnata a una porta o a una ' +
         'scheda di rete libera. Su un firewall con zone di sicurezza la porta va scelta a mano. ' +
-        'Con un clic destro sulla connessione, «Modifica Connessione» permette di cambiare le ' +
+        'Con un clic destro sulla connessione, «Modifica connessione» permette di cambiare le ' +
         "interfacce, il tipo, la banda, l'etichetta e il colore.",
     },
     areas: {
@@ -56,21 +56,22 @@ export const help = {
       text:
         'Un riquadro è un rettangolo colorato con un nome, disegnato dietro a un gruppo di ' +
         'dispositivi per dire cosa sono: Core, Edge, Uffici, Internet. Nel pannello «Aggiungi ' +
-        "Dispositivo» c'è «Riquadro», che ne aggiunge uno al centro della vista; oppure seleziona i " +
-        "dispositivi e scegli Modifica → «Racchiudi in un riquadro» (c'è anche nel clic destro su un " +
-        'dispositivo): il riquadro nasce intorno a loro. Scrivi il nome e premi Invio. Un riquadro si ' +
-        'prende dal nome o dal bordo: trascinandolo si sposta, e i dispositivi restano dove sono; ' +
-        'quando è selezionato mostra otto maniglie per ridimensionarlo. Un doppio clic sul nome lo ' +
-        'rinomina, il clic destro apre un menu con «Rinomina», i colori ed «Elimina», e il tasto Canc ' +
-        "elimina il riquadro selezionato. L'interno di un riquadro non intralcia: lì dentro i " +
-        'dispositivi si selezionano, si collegano e si spostano come sempre. I riquadri si vedono ' +
-        "anche in presentazione e nell'immagine esportata, e vengono salvati con il progetto.",
+        "dispositivo» c'è «Riquadro», che ne aggiunge uno al centro della vista; oppure " +
+        "seleziona i dispositivi e scegli Modifica → «Racchiudi in un riquadro» (c'è anche nel " +
+        'clic destro su un dispositivo): il riquadro nasce intorno a loro. Scrivi il nome e ' +
+        'premi Invio. Un riquadro si prende dal nome o dal bordo: trascinandolo si sposta, e i ' +
+        'dispositivi restano dove sono; quando è selezionato mostra otto maniglie per ' +
+        'ridimensionarlo. Un doppio clic sul nome lo rinomina, il clic destro apre un menu con ' +
+        '«Rinomina», i colori ed «Elimina», e il tasto Canc elimina il riquadro selezionato. ' +
+        "L'interno di un riquadro non intralcia: lì dentro i dispositivi si selezionano, si " +
+        'collegano e si spostano come sempre. I riquadri si vedono anche in presentazione e ' +
+        "nell'immagine esportata, e vengono salvati con il progetto.",
     },
     configure: {
       title: 'Configurali',
       text:
         'Un doppio clic su un dispositivo ne apre la scheda (la stessa di clic destro → ' +
-        '«Dettagli (Modifica)»). La prima schermata, «Generale», è fatta per il dispositivo: di ' +
+        '«Dettagli (modifica)»). La prima schermata, «Generale», è fatta per il dispositivo: di ' +
         'un PC o di un server mostra nome e indirizzo, che si scrive lì; di uno switch le VLAN e ' +
         'come sono divise le porte; di un router o di un firewall le porte in uso, ciascuna con ' +
         'indirizzo, a cosa è collegata e ruolo. Switch, router e firewall hanno anche la scheda ' +
@@ -118,7 +119,7 @@ export const help = {
         'Un simbolo Cloud chiamato «Internet» non trasporta gli indirizzi privati (10.x, ' +
         '172.16–31.x, 192.168.x): chi sta dentro non esce e chi sta fuori non entra, finché un ' +
         'router o un firewall non traduce gli indirizzi. Nella scheda «NAT» del router o del ' +
-        'firewall spunta la porta rivolta a Internet (è la stessa scelta di «NAT Attivo» sulla ' +
+        'firewall spunta la porta rivolta a Internet (è la stessa scelta di «NAT attivo» sulla ' +
         "porta, nella scheda «Porte»): ciò che esce prende l'indirizzo di quella porta, e la " +
         'risposta torna a chi aveva chiesto. Per raggiungere da fuori un server che sta dentro, ' +
         'lì sotto premi «Aggiungi inoltro»: servizio, porta su cui arriva, indirizzo interno. ' +
@@ -134,7 +135,7 @@ export const help = {
         'DHCP della stessa rete: una porta di router o di firewall, oppure la scheda di un ' +
         'server. Si attiva nella scheda «DHCP» di quel dispositivo, con la spunta accanto alla ' +
         "porta o alla scheda: l'intervallo da «Primo indirizzo» a «Ultimo indirizzo» viene " +
-        'proposto, e si può cambiare (è la stessa scelta di «Server DHCP Attivo» sulla porta o ' +
+        'proposto, e si può cambiare (è la stessa scelta di «Server DHCP attivo» sulla porta o ' +
         "sulla scheda). Con l'indirizzo arrivano la subnet mask e il gateway. Gli indirizzi si " +
         'calcolano dal disegno, sempre allo stesso modo: i dispositivi vengono serviti ' +
         "nell'ordine in cui compaiono e ciascuno prende il primo indirizzo libero, saltando " +
@@ -152,7 +153,7 @@ export const help = {
         "scrivi un nome, per esempio `gestionale.azienda.example`, e l'indirizzo a cui " +
         'corrisponde. A chi chiedere lo decide ogni dispositivo: nella scheda «Schede di rete» ' +
         "il campo «Server DNS» contiene l'indirizzo del server. Per non scriverlo ogni volta, in " +
-        "Impostazioni → Rete c'è «Server DNS Predefinito»: i nuovi dispositivi nascono con " +
+        "Impostazioni → Rete c'è «Server DNS predefinito»: i nuovi dispositivi nascono con " +
         'quello sulla scheda e, una volta salvato, lì sotto si può assegnarlo anche ai ' +
         "dispositivi del canvas che non ne hanno uno. Chi prende l'indirizzo dal DHCP riceve " +
         'anche quello, se nel server DHCP è compilato «Server DNS consegnato (facoltativo)». Un ' +
@@ -171,7 +172,7 @@ export const help = {
       title: 'Chiedi se un dispositivo ne raggiunge un altro',
       text:
         'Apri «Simulazione» (il pulsante con il fulmine), scegli «Partenza», «Destinazione» e il ' +
-        '«Tipo di Traffico» (ping, email, pagina web o download), poi premi «Avvia Simulazione». ' +
+        '«Tipo di traffico» (ping, email, pagina web o download), poi premi «Avvia simulazione». ' +
         "Il pacchetto percorre la rete sul disegno. Se non arriva, l'animazione si ferma dove il " +
         'traffico viene bloccato e un messaggio ne spiega il motivo: quale dispositivo, quale ' +
         'porta, quale rotta o quale regola.',
@@ -229,9 +230,10 @@ export const help = {
     canvases: {
       title: 'Dividi il progetto in canvas',
       text:
-        'Un progetto può avere più canvas. In «Explorer», il primo pulsante della barra a sinistra, ' +
-        'ne aggiungi con «Nuovo Canvas», li rinomini, li elimini (ne resta sempre almeno uno) e passi ' +
-        "dall'uno all'altro con un clic. Lì si cambiano anche il nome e la descrizione del progetto.",
+        'Un progetto può avere più canvas. In «Explorer», il primo pulsante della barra a ' +
+        'sinistra, ne aggiungi con «Nuovo canvas», li rinomini, li elimini (ne resta sempre ' +
+        "almeno uno) e passi dall'uno all'altro con un clic. Lì si cambiano anche il nome e la " +
+        'descrizione del progetto.',
     },
     save: {
       title: 'Salva su file',

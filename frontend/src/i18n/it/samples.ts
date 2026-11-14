@@ -9,7 +9,7 @@
 
 // What more than one sample has: the same thing goes by the same name in all
 const offices = 'Uffici';
-const serverRoom = 'Sala Server';
+const serverRoom = 'Sala server';
 const officesVlan = (vlan: number) => `Uffici (VLAN ${vlan})`;
 const serversVlan = (vlan: number) => `Server (VLAN ${vlan})`;
 const inside = 'Interno';

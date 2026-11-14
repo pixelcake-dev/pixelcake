@@ -15,15 +15,15 @@ export const simulation = {
   sourcePlaceholder: 'Cerca dispositivo di partenza…',
   destination: 'Destinazione',
   destinationPlaceholder: 'Cerca dispositivo di destinazione…',
-  flowModel: 'Tipo di Traffico',
+  flowModel: 'Tipo di traffico',
   flowModels: {
     ping: 'Ping (ICMP)',
-    email: 'Messaggio Email (SMTP)',
-    web: 'Pagina Web (HTTP)',
-    download: 'Download di un File (FTP)',
+    email: 'Messaggio email (SMTP)',
+    web: 'Pagina web (HTTP)',
+    download: 'Download di un file (FTP)',
   },
-  start: 'Avvia Simulazione',
-  stop: 'Ferma Simulazione',
+  start: 'Avvia simulazione',
+  stop: 'Ferma simulazione',
   needsTwoDevices: 'Servono almeno due dispositivi sul canvas.',
 
   /** What a simulation that is refused, or that fails, says in a notice */

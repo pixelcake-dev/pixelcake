@@ -30,7 +30,7 @@ describe('Sidebar', () => {
     expect(buttons.map(button => button.getAttribute('aria-label'))).toEqual([
       'Explorer',
       'Simulazione',
-      'Aggiungi Dispositivo',
+      'Aggiungi dispositivo',
       'Console',
       'Import/Export',
       'Impostazioni',
@@ -46,7 +46,7 @@ describe('Sidebar', () => {
   it.each([
     ['Explorer', 'explorer'],
     ['Simulazione', 'simulation'],
-    ['Aggiungi Dispositivo', 'devices'],
+    ['Aggiungi dispositivo', 'devices'],
   ])('"%s" opens its panel, and closes it when pressed again', (title, panel) => {
     render(<Sidebar />);
 
@@ -79,7 +79,7 @@ describe('Sidebar', () => {
     fireEvent.click(icon('Simulazione'));
     expect(panelTitles()).toEqual(['Simulazione']);
 
-    fireEvent.click(icon('Aggiungi Dispositivo'));
+    fireEvent.click(icon('Aggiungi dispositivo'));
     expect(panelTitles()).toEqual(['Aggiungi']);
 
     fireEvent.click(icon('Explorer'));
@@ -110,7 +110,7 @@ describe('Sidebar', () => {
       expect(name()).toBeNull();
     });
 
-    it.each(['Explorer', 'Simulazione', 'Aggiungi Dispositivo', 'Console', 'Import/Export', 'Impostazioni'])(
+    it.each(['Explorer', 'Simulazione', 'Aggiungi dispositivo', 'Console', 'Import/Export', 'Impostazioni'])(
       '"%s" shows its own name, one name at a time',
       label => {
         render(<Sidebar />);

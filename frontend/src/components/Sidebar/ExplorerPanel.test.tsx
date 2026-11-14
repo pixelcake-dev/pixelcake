@@ -167,7 +167,7 @@ describe('ExplorerPanel', () => {
       twoCanvases();
       render(<ExplorerPanel />);
 
-      fireEvent.click(screen.getByText('Nuovo Canvas'));
+      fireEvent.click(screen.getByText('Nuovo canvas'));
       const input = screen.getByLabelText('Nome del nuovo canvas');
       fireEvent.change(input, { target: { value: 'Sala server' } });
       fireEvent.keyDown(input, { key: 'Enter' });
@@ -182,7 +182,7 @@ describe('ExplorerPanel', () => {
     it('adding a canvas: Escape cancels, an empty name adds nothing', () => {
       render(<ExplorerPanel />);
 
-      fireEvent.click(screen.getByText('Nuovo Canvas'));
+      fireEvent.click(screen.getByText('Nuovo canvas'));
       fireEvent.keyDown(screen.getByLabelText('Nome del nuovo canvas'), { key: 'Enter' });
       expect(canvasNames()).toEqual(['Canvas 1']);
 
@@ -194,7 +194,7 @@ describe('ExplorerPanel', () => {
       ).toBe(false);
       expect(canvasNames()).toEqual(['Canvas 1']);
       expect(screen.queryByLabelText('Nome del nuovo canvas')).toBeNull();
-      expect(screen.getByText('Nuovo Canvas')).toBeInTheDocument();
+      expect(screen.getByText('Nuovo canvas')).toBeInTheDocument();
     });
 
     it('renames a canvas in place: Enter confirms, without switching to it', () => {

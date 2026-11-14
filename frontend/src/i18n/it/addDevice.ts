@@ -5,18 +5,18 @@ export const addDevice = {
   ports: (count: number) => (count === 1 ? '1 porta' : `${count} porte`),
 
   /** The window that adds one device, of the type picked in the panel */
-  title: (typeName: string) => `Aggiungi Nuovo ${typeName}`,
+  title: (typeName: string) => `Aggiungi nuovo ${typeName}`,
   nameAndAddressRequired: 'Nome e IP sono obbligatori',
 
   identity: {
     legend: 'Identità',
-    name: 'Nome del Dispositivo',
+    name: 'Nome del dispositivo',
     namePlaceholder: (type: string) => `es. ${type}-Ufficio-01`,
     vendor: 'Vendor',
     vendorPlaceholder: 'es. Cisco, HP…',
     location: 'Posizione',
     locationPlaceholder: 'es. Rack 01…',
-    portCount: 'Numero di Porte',
+    portCount: 'Numero di porte',
     portCountHint: 'Si può cambiare anche dopo.',
   },
 
@@ -31,7 +31,7 @@ export const addDevice = {
         : 'Subnet mask e gateway sono quelli delle Impostazioni → Rete.'),
     ipAddress: 'Indirizzo IP',
     ipAddressHint: 'Proposto: il primo libero.',
-    subnetMask: 'Subnet Mask',
+    subnetMask: 'Subnet mask',
     gateway: 'Gateway',
     /** On a router or a firewall, in place of the gateway */
     setLater:
@@ -40,7 +40,7 @@ export const addDevice = {
 
   /** The window that adds many devices at once */
   bulk: {
-    title: 'Aggiungi Dispositivi in Blocco',
+    title: 'Aggiungi dispositivi in blocco',
     searchPlaceholder: 'Cerca per tipo o porte…',
     noDevicesFor: (query: string) => `Nessun dispositivo trovato per "${query}"`,
 
@@ -56,7 +56,7 @@ export const addDevice = {
     removeRow: 'Elimina riga',
     decrease: 'Diminuisci',
     increase: 'Aumenta',
-    total: 'Totale Dispositivi:',
+    total: 'Totale dispositivi:',
 
     selectAtLeastOne: 'Seleziona almeno un dispositivo da aggiungere',
     added: (count: number) =>

@@ -92,7 +92,7 @@ describe('the guide — DNS', () => {
       'Aggiungi record',
       'Schede di rete',
       'Server DNS',
-      'Server DNS Predefinito',
+      'Server DNS predefinito',
       'Server DNS consegnato (facoltativo)',
       'DNS',
     ]);
@@ -132,18 +132,18 @@ describe('the guide — DNS', () => {
 
   it('the settings have the field it names: saved, new devices start with it and it is offered to those that have none', async () => {
     expect(step(TITLE).text).toContain(
-      'in Impostazioni → Rete c\'è «Server DNS Predefinito»: i nuovi dispositivi nascono con quello sulla scheda e, una volta salvato, lì sotto si può assegnarlo anche ai dispositivi del canvas che non ne hanno uno.'
+      'in Impostazioni → Rete c\'è «Server DNS predefinito»: i nuovi dispositivi nascono con quello sulla scheda e, una volta salvato, lì sotto si può assegnarlo anche ai dispositivi del canvas che non ne hanno uno.'
     );
     cleanup();
     ui().openModal('settings');
     const settings = render(<SettingsModal />);
     // Rete is the tab the settings open on
-    expect(screen.getByText('Impostazioni di Rete Globali')).toBeInTheDocument();
-    const field = screen.getByLabelText('Server DNS Predefinito');
+    expect(screen.getByText('Impostazioni di rete globali')).toBeInTheDocument();
+    const field = screen.getByLabelText('Server DNS predefinito');
     // not saved yet: nothing is offered
     expect(screen.queryByRole('button', { name: /^Assegna/ })).not.toBeInTheDocument();
     fireEvent.change(field, { target: { value: '192.168.30.10' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Salva le Impostazioni di Rete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Salva le impostazioni di rete' }));
 
     // under it, in the same group: the devices of the sample that ask nobody
     const offer = screen.getByRole('button', { name: 'Assegna 192.168.30.10' });

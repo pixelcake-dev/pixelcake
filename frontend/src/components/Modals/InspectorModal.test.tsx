@@ -458,15 +458,15 @@ describe('InspectorModal — NAT', () => {
     expect(natOf(2)).toBe(false);
   });
 
-  it('the tick of the tab and «NAT Attivo» of the port are one setting', () => {
+  it('the tick of the tab and «NAT attivo» of the port are one setting', () => {
     openInspector('Router-1');
     openTab('NAT');
     fireEvent.click(screen.getByLabelText('NAT sulla porta 2'));
     openTab(/^Porte/);
     fireEvent.click(screen.getByText('2', { selector: '.port-number' }));
-    expect(screen.getByLabelText(/^NAT Attivo/)).toBeChecked();
+    expect(screen.getByLabelText(/^NAT attivo/)).toBeChecked();
     // and back: off on the port, off in the tab
-    fireEvent.click(screen.getByLabelText(/^NAT Attivo/));
+    fireEvent.click(screen.getByLabelText(/^NAT attivo/));
     openTab('NAT');
     expect(screen.getByLabelText('NAT sulla porta 2')).not.toBeChecked();
   });

@@ -152,9 +152,9 @@ describe('App — Esc closes the window on top', () => {
     act(() => ui().openModal('settings'));
     fireEvent.click(tab('Template'));
     fireEvent.click(tab('Dispositivi'));
-    fireEvent.click(screen.getByRole('button', { name: /Nuovo Template/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Nuovo template/ }));
     expect(windows()).toBe(2);
-    expect(screen.getByRole('heading', { name: 'Nuovo Template Generico' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Nuovo template generico' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Seleziona un\'icona' }));
     expect(screen.getByPlaceholderText('Cerca icone…')).toBeInTheDocument();
@@ -165,7 +165,7 @@ describe('App — Esc closes the window on top', () => {
 
     esc();
     expect(windows()).toBe(1);
-    expect(screen.queryByRole('heading', { name: 'Nuovo Template Generico' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Nuovo template generico' })).toBeNull();
     expect(screen.getByRole('heading', { name: 'Impostazioni' })).toBeInTheDocument();
     expect(ui().modals.settings).toBe(true);
 

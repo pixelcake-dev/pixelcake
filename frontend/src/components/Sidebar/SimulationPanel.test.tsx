@@ -16,7 +16,7 @@ import SimulationPanel from './SimulationPanel';
 
 vi.mock('@/utils/runSimulation', () => ({ runFlowSimulation: vi.fn(() => true) }));
 
-const start = () => screen.getByRole('button', { name: 'Avvia Simulazione' });
+const start = () => screen.getByRole('button', { name: 'Avvia simulazione' });
 
 /** The id the store gave to the device with this name */
 const idOf = (label: string) => {
@@ -55,7 +55,7 @@ describe('SimulationPanel', () => {
     const inOrder = [
       screen.getByRole('button', { name: /Partenza/ }),
       screen.getByRole('button', { name: /Destinazione/ }),
-      screen.getByLabelText('Tipo di Traffico'),
+      screen.getByLabelText('Tipo di traffico'),
       start(),
     ];
     for (let i = 1; i < inOrder.length; i++) {
@@ -80,7 +80,7 @@ describe('SimulationPanel', () => {
     const { devices } = loadSample();
     render(<SimulationPanel />);
 
-    fireEvent.change(screen.getByLabelText('Tipo di Traffico'), { target: { value: 'web' } });
+    fireEvent.change(screen.getByLabelText('Tipo di traffico'), { target: { value: 'web' } });
     fireEvent.click(start());
 
     // The panel proposes the first PC and the first server of the drawing,
@@ -188,8 +188,8 @@ describe('SimulationPanel', () => {
       useSimulationStore.getState().startSimulation([devices[0].id, devices[1].id], 'ping');
     });
 
-    const stop = screen.getByRole('button', { name: 'Ferma Simulazione' });
-    expect(screen.queryByRole('button', { name: 'Avvia Simulazione' })).toBeNull();
+    const stop = screen.getByRole('button', { name: 'Ferma simulazione' });
+    expect(screen.queryByRole('button', { name: 'Avvia simulazione' })).toBeNull();
     expect(stop).toBeEnabled();
     expect(stop.className).toContain('bg-[var(--danger-color)]');
 

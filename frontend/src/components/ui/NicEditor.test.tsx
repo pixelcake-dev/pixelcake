@@ -52,7 +52,7 @@ function renderEditor(start: NetworkInterfaceCard, props: { lease?: CardLease; c
 const mode = () => screen.getByLabelText<HTMLSelectElement>('Indirizzo');
 const type = (label: string, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
-const SERVER = 'Server DHCP Attivo';
+const SERVER = 'Server DHCP attivo';
 
 describe('NicEditor — where the address comes from', () => {
   it('by hand: the fields, kept as typed and with no word about DHCP', () => {
@@ -101,7 +101,7 @@ describe('NicEditor — where the address comes from', () => {
   it('a card kept on DHCP opens on DHCP', () => {
     renderEditor({ ...CARD, dhcp: true, ip: '', subnet: '', gateway: '' });
     expect(mode().value).toBe('dhcp');
-    expect(screen.queryByLabelText('Subnet Mask')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Subnet mask')).not.toBeInTheDocument();
   });
 
   it('with nothing known of the drawing says where the address will come from', () => {
@@ -147,16 +147,16 @@ describe('NicEditor — where the address comes from', () => {
 describe('NicEditor — the card itself', () => {
   it('is switched off, renamed, given a speed and a note', () => {
     const { kept } = renderEditor(CARD);
-    fireEvent.click(screen.getByLabelText('Scheda Attiva'));
-    type('Nome dell\'Interfaccia', ' ens192 ');
+    fireEvent.click(screen.getByLabelText('Scheda attiva'));
+    type('Nome dell\'interfaccia', ' ens192 ');
     type('Velocità', '10G');
-    type('Note / Descrizione', 'uplink');
+    type('Note / descrizione', 'uplink');
     expect(kept()).toMatchObject({ enabled: false, name: 'ens192', speed: '10G', description: 'uplink' });
   });
 
   it('must have a name: an empty one is said so', () => {
     renderEditor(CARD);
-    type('Nome dell\'Interfaccia', ' ');
+    type('Nome dell\'interfaccia', ' ');
     expect(screen.getByRole('alert')).toHaveTextContent('La scheda deve avere un nome');
   });
 

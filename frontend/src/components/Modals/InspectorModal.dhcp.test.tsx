@@ -103,10 +103,10 @@ describe('InspectorModal — the DHCP server of a port', () => {
     openTab(/^Porte/);
     selectPort(1);
     // off: no range to type
-    expect(screen.getByLabelText(/^Server DHCP Attivo/)).not.toBeChecked();
+    expect(screen.getByLabelText(/^Server DHCP attivo/)).not.toBeChecked();
     expect(screen.queryByLabelText('Primo indirizzo')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Attivo/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     type('Primo indirizzo', ' 192.168.10.100 ');
     type('Ultimo indirizzo', '192.168.10.199');
     expect(screen.getByRole('button', { name: 'DHCP (1)' })).toBeInTheDocument();
@@ -122,7 +122,7 @@ describe('InspectorModal — the DHCP server of a port', () => {
     openInspector('Router-1');
     openTab(/^Porte/);
     selectPort(1);
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Attivo/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     type('Primo indirizzo', '192.168.10.100');
     type('Ultimo indirizzo', '192.168.10.199');
     type('Gateway consegnato (facoltativo)', '192.168.10.254');
@@ -135,12 +135,12 @@ describe('InspectorModal — the DHCP server of a port', () => {
     openInspector('Router-1');
     openTab(/^Porte/);
     selectPort(1);
-    expect(screen.getByLabelText(/^Server DHCP Attivo/)).toBeChecked();
+    expect(screen.getByLabelText(/^Server DHCP attivo/)).toBeChecked();
     expect(screen.getByLabelText('Primo indirizzo')).toHaveValue('192.168.10.100');
     expect(screen.getByLabelText('Ultimo indirizzo')).toHaveValue('192.168.10.199');
     expect(screen.getByLabelText('Gateway consegnato (facoltativo)')).toHaveValue('192.168.10.254');
 
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Attivo/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     saveDevice();
     expect(device('Router-1').ports?.[0].dhcpServer).toBeUndefined();
     expect(device('Router-1').ports?.[0]).toMatchObject({ ip: '192.168.10.1', subnet: '255.255.255.0' });
@@ -155,7 +155,7 @@ describe('InspectorModal — the DHCP server of a port', () => {
     openInspector('Router-1');
     openTab(/^Porte/);
     selectPort(1);
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Attivo/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     type('Primo indirizzo', first);
     type('Ultimo indirizzo', last);
     expect(screen.getByRole('alert')).toHaveTextContent(message);
@@ -171,7 +171,7 @@ describe('InspectorModal — the DHCP server of a port', () => {
     openInspector('Router-1');
     openTab(/^Porte/);
     selectPort(1);
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Attivo/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     expect(screen.getByLabelText('Primo indirizzo')).toHaveValue('192.168.10.100');
     expect(screen.getByLabelText('Ultimo indirizzo')).toHaveValue('192.168.10.199');
     // what it gives out is said under the fields, as in the «DHCP» tab
@@ -191,7 +191,7 @@ describe('InspectorModal — the DHCP server of a port', () => {
     openInspector('Router-1');
     openTab(/^Porte/);
     selectPort(1);
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Attivo/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     type('Primo indirizzo', '192.168.10.100');
     type('Ultimo indirizzo', '192.168.10.199');
     type('Gateway consegnato (facoltativo)', '10.0.0.1');
@@ -201,7 +201,7 @@ describe('InspectorModal — the DHCP server of a port', () => {
     type('Gateway consegnato (facoltativo)', '');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     type('Indirizzo IP', '');
-    type('Subnet Mask', '');
+    type('Subnet mask', '');
     expect(screen.getByRole('alert')).toHaveTextContent(
       'la porta non ha un indirizzo: gli indirizzi da assegnare sono quelli della sua rete'
     );
@@ -212,7 +212,7 @@ describe('InspectorModal — the DHCP server of a port', () => {
     openTab(/^Porte/);
     selectPort(1);
     type('Indirizzo IP', '172.16.5.1');
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Attivo/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     type('Primo indirizzo', '172.16.5.10');
     type('Ultimo indirizzo', '172.16.5.20');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -227,7 +227,7 @@ describe('InspectorModal — the DHCP server of a port', () => {
     openInspector('SW-Office');
     openTab(/^Porte/);
     selectPort(1);
-    expect(screen.queryByLabelText(/^Server DHCP Attivo/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Server DHCP attivo/)).not.toBeInTheDocument();
     expect(tabNames()).not.toContain('DHCP');
   });
 
@@ -262,7 +262,7 @@ describe('InspectorModal — a card on DHCP', () => {
     selectCard('eth0');
     fireEvent.change(screen.getByLabelText('Indirizzo'), { target: { value: 'dhcp' } });
 
-    for (const label of ['Indirizzo IP', 'Subnet Mask', 'Gateway']) {
+    for (const label of ['Indirizzo IP', 'Subnet mask', 'Gateway']) {
       expect(screen.queryByLabelText(label)).not.toBeInTheDocument();
     }
     const lease = screen.getByTestId('nic-lease');
@@ -331,7 +331,7 @@ describe('InspectorModal — a card on DHCP', () => {
     expect(screen.getByLabelText('Indirizzo')).toHaveValue('dhcp');
     fireEvent.change(screen.getByLabelText('Indirizzo'), { target: { value: 'manual' } });
     expect(screen.getByLabelText('Indirizzo IP')).toHaveValue('192.168.10.100');
-    expect(screen.getByLabelText('Subnet Mask')).toHaveValue('255.255.255.0');
+    expect(screen.getByLabelText('Subnet mask')).toHaveValue('255.255.255.0');
     expect(screen.getByLabelText('Gateway')).toHaveValue('192.168.10.1');
 
     saveDevice();
@@ -363,7 +363,7 @@ describe('InspectorModal — a card on DHCP', () => {
   it('is not asked for an address when the device is saved, and neither is a device with no address on its cards', () => {
     setAutomatic('PC-1');
     openInspector('PC-1');
-    type('Nome del Dispositivo', 'PC-Nuovo');
+    type('Nome del dispositivo', 'PC-Nuovo');
     saveDevice();
     expect(toast.error).not.toHaveBeenCalled();
     expect(device('PC-Nuovo').nics?.[0].dhcp).toBe(true);
@@ -380,7 +380,7 @@ describe('InspectorModal — a card on DHCP', () => {
       nics: [{ id: 'nic-1', name: 'eth0', enabled: true, speed: 'auto', ip: '', subnet: '255.255.255.0', gateway: '' }],
     });
     openInspector('Internet');
-    type('Nome del Dispositivo', 'Fuori');
+    type('Nome del dispositivo', 'Fuori');
     saveDevice();
     expect(toast.error).not.toHaveBeenCalled();
     expect(device('Fuori').type).toBe('Cloud');
@@ -388,7 +388,7 @@ describe('InspectorModal — a card on DHCP', () => {
 
   it('a name is still asked of everybody, and an address of a device that types it in the first tab', () => {
     openInspector('PC-1');
-    type('Nome del Dispositivo', ' ');
+    type('Nome del dispositivo', ' ');
     saveDevice();
     expect(toast.error).toHaveBeenCalledWith('Il nome è obbligatorio');
 
@@ -405,14 +405,14 @@ describe('InspectorModal — the DHCP server of a server', () => {
     openInspector('PC-1');
     openTab(/^Schede di rete/);
     selectCard('eth0');
-    expect(screen.queryByLabelText(/^Server DHCP Attivo/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Server DHCP attivo/)).not.toBeInTheDocument();
     expect(tabNames()).toEqual(['Generale', 'Schede di rete (1)']);
 
     openInspector('Web-01');
     expect(tabNames()).toEqual(['Generale', 'Schede di rete (1)', 'DHCP', 'DNS']);
     openTab(/^Schede di rete/);
     selectCard('eth0');
-    expect(screen.getByLabelText(/^Server DHCP Attivo/)).not.toBeChecked();
+    expect(screen.getByLabelText(/^Server DHCP attivo/)).not.toBeChecked();
   });
 
   it('serves the network of the card with the gateway typed, and says so in the «DHCP» tab', () => {
@@ -420,7 +420,7 @@ describe('InspectorModal — the DHCP server of a server', () => {
     openInspector('Web-01');
     openTab(/^Schede di rete/);
     selectCard('eth0');
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Attivo/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     type('Primo indirizzo', '192.168.20.50');
     type('Ultimo indirizzo', '192.168.20.59');
     type('Gateway consegnato (facoltativo)', '192.168.20.1');
@@ -477,9 +477,9 @@ describe('InspectorModal — the DHCP server of a server', () => {
     openInspector('Web-01');
     openTab(/^Schede di rete/);
     selectCard('eth0');
-    expect(screen.getByLabelText(/^Server DHCP Attivo/)).toBeChecked();
+    expect(screen.getByLabelText(/^Server DHCP attivo/)).toBeChecked();
     fireEvent.change(screen.getByLabelText('Indirizzo'), { target: { value: 'dhcp' } });
-    expect(screen.queryByLabelText(/^Server DHCP Attivo/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Server DHCP attivo/)).not.toBeInTheDocument();
     saveDevice();
     const card = device('Web-01').nics?.[0];
     expect(card?.dhcp).toBe(true);
@@ -490,7 +490,7 @@ describe('InspectorModal — the DHCP server of a server', () => {
     openInspector('Web-01');
     openTab(/^Schede di rete/);
     selectCard('eth0');
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Attivo/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     type('Primo indirizzo', '192.168.10.50');
     type('Ultimo indirizzo', '192.168.10.59');
     expect(screen.getByRole('alert')).toHaveTextContent(
@@ -562,7 +562,7 @@ describe('InspectorModal — the «DHCP» tab', () => {
     openInspector('Router-1');
     openTab(/^Porte/);
     selectPort(1);
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Attivo/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     type('Primo indirizzo', '192.168.10.100');
     type('Ultimo indirizzo', '192.168.10.199');
     openTab('DHCP (1)');
@@ -697,18 +697,18 @@ describe('InspectorModal — pools set from the «DHCP» tab', () => {
     });
   });
 
-  it('the tick of the tab and «Server DHCP Attivo» of the port are one setting', () => {
+  it('the tick of the tab and «Server DHCP attivo» of the port are one setting', () => {
     openInspector('Router-1');
     openTab('DHCP');
     fireEvent.click(tick('porta 1'));
     openTab(/^Porte/);
     selectPort(1);
-    expect(screen.getByLabelText(/^Server DHCP Attivo/)).toBeChecked();
+    expect(screen.getByLabelText(/^Server DHCP attivo/)).toBeChecked();
     expect(screen.getByLabelText('Primo indirizzo')).toHaveValue('192.168.10.100');
     expect(screen.getByLabelText('Ultimo indirizzo')).toHaveValue('192.168.10.199');
 
     // and back: off on the port, off in the tab
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Attivo/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     openTab('DHCP');
     expect(tick('porta 1')).not.toBeChecked();
     saveDevice();

@@ -20,19 +20,19 @@ export const menu = {
     title: 'Vista',
     fit: 'Adatta alla finestra',
     presentation: 'Modalità presentazione',
-    autoLayout: 'Disposizione Automatica',
+    autoLayout: 'Disposizione automatica',
     layouts: {
       hierarchicalVertical: 'Gerarchica, verticale',
       hierarchicalHorizontal: 'Gerarchica, orizzontale',
       subnetVertical: 'Per subnet, verticale',
       subnetHorizontal: 'Per subnet, orizzontale',
     },
-    autoConnect: 'Connessione Automatica',
+    autoConnect: 'Connessione automatica',
     magnify: 'Ingrandisci',
     magnifyDevices: 'Dispositivi',
     magnifyConnections: 'Connessioni',
-    resetMagnify: 'Ripristina Ingrandimento',
-    animation: 'Animazione Rete',
+    resetMagnify: 'Ripristina ingrandimento',
+    animation: 'Animazione rete',
   },
 
   help: {
