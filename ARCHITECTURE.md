@@ -81,7 +81,7 @@ While presenting, NetworkCanvas makes the drawing read-only (nothing is selected
 - State: `useUIStore.showWelcomeScreen`, the number of devices on screen and the number of canvases
 
 ### Modals (Enterprise Style)
-- **InspectorModal** - Device configuration in tabs: Generale, Porte (switch, router, firewall) or Schede di rete (end devices), Rotte (router, firewall: `ui/RoutesPanel`, with the routing table the engine would read from the form), Regole (firewall: `ui/FirewallRulesPanel`, ordered rules), NAT (router, firewall: `ui/NatPanel`, the ports that do NAT and the ordered port forwards), DHCP (router, firewall, server: `ui/DhcpPanel`, the pools of the device, who was given which address and who was left without). Routes, rules and forwards are validated on save (`utils/networkConfigValidation.ts`), pools in the panel of their port or card and again on save (`utils/dhcpLabels.ts`). The DHCP tab and the lease shown on a card are worked out from the form as it is, unsaved edits included
+- **InspectorModal** - Device configuration in tabs: Generale, Porte (switch, router, firewall) or Schede di rete (end devices), Rotte (router, firewall: `ui/RoutesPanel`, with the routing table the engine would read from the form), Regole (firewall: `ui/FirewallRulesPanel`, ordered rules), NAT (router, firewall: `ui/NatPanel`, the ports that do NAT and the ordered port forwards), DHCP (router, firewall, server: `ui/DhcpPanel`, the pools of the device, who was given which address and who was left without), DNS (server: `ui/DnsPanel`, the names it answers for). Routes, rules, forwards and DNS records are validated on save (`utils/networkConfigValidation.ts`; a record also as it is typed), pools in the panel of their port or card and again on save (`utils/dhcpLabels.ts`). The DNS server a card asks is a field of the card (`ui/NICConfigPanel`), the one a pool hands out a field of the pool (`ui/DhcpPoolFields`). The DHCP tab and the lease shown on a card are worked out from the form as it is, unsaved edits included
 - **HelpModal** - The guide, in three tabs: how to use the app, the terminal commands (rendered from `COMMAND_REFERENCE`, the table the terminal's `help` prints), information
 - **ExportImageModal** - The board as a picture: preview, format (PNG, SVG), size, theme, title, background; save to a file or copy to the clipboard. It exists only while it is open, so every time it starts from the drawing and the theme on screen. See "The drawing as a picture" below
 - **ConnectionInspectorModal** - Connection properties editor
@@ -195,6 +195,17 @@ Modules:
   of an allowed flow, sent back to the address the request came from. The
   result carries the devices to animate and the cable of each stretch
   (`animationPath`, `animationLinks`).
+- `dns.ts` — a name in place of an address (`lookup`). Nothing is
+  remembered: a name is looked up each time a question uses it. A server
+  answers for the records written on it (`dnsRecords`); a device asks the
+  DNS server of its first enabled card that names one (`dns` on the card,
+  written by hand or filled in with the lease by `dhcp.ts`). The lookup is a
+  round trip planned by `flows.ts` (`planRoundTrip`, the same plan as a
+  ping) for the service `dns`, so `trace.ts`, the firewall, NAT and
+  simulated failures all apply; only when both legs arrive is the record
+  read. The result carries the address or the reason, the device that
+  answered and the trip. Names are resolved by the terminal alone: the
+  simulation panel and the presentation choose devices from menus.
 - `failures.ts` — "what if this breaks": a topology can carry `failures`
   (devices that are down, cables that are cut). `l2.ts` finds nothing
   travelling through them and goes round when the drawing offers another way;
@@ -231,13 +242,18 @@ before routing existed gives the answers it gave.
   returns lines to print. `COMMAND_REFERENCE` is the table behind `help` and
   behind the guide.
 - The language is specified in `docs/terminal-commands.md`; a test parses every
-  example of that document, and another runs its DHCP session and compares
-  what the terminal prints with what the document shows. The version of the
+  example of that document, and two others run its DHCP and DNS sessions and
+  compare what the terminal prints with what the document shows. The version of the
   language is `NCL_VERSION` in `types.ts`: the banner of `help` reads it, and
   a test holds the title of the document to it.
 - Commands that only read (`show`, `ping`, `trace`…) look at the drawing with
   its leases filled in; commands that write work on the drawing as it is
   kept, so that a leased address is never written back.
+- A target that is neither a device nor an address, and reads as a host
+  name, is looked up from the source first (`resolveEnds`). The lookup and
+  the flow are one animation: `LiveTrace.lookup` says how many stretches of
+  the path belong to the lookup and what to print when the packet is back
+  from it, and `TerminalModal` prints the hops of the flow after that.
 
 ### The drawing as a picture (`frontend/src/utils/drawingImage.ts`)
 
@@ -333,9 +349,10 @@ interface FlowMap {
 - `portCount?, ports?: Port[]` - Network ports (Switch/Router/Firewall)
 - `nics?: NetworkInterfaceCard[]` - NICs for end devices
 - `routes?: StaticRoute[]` - Static routes (Router/Firewall): `{ id, destination, nextHop, description? }`, destination in CIDR form. `gateway` is the default route
-- `firewallRules?: FirewallRule[]` - Ordered rules (Firewall): `{ id, action: 'allow'|'deny', service: 'any'|'ping'|'web'|'email', source, destination, enabled?, description? }`; source and destination are `any`, a zone, an address or a network
-- `portForwards?: PortForward[]` - Ordered port forwards (Router/Firewall): `{ id, service: 'any'|'ping'|'web'|'email', port, to, enabled?, description? }`; what arrives for the address of `port`, for the service, is sent on to `to`. Source NAT is the `nat` flag of each port
-- DHCP is kept on the interfaces: `dhcp?: boolean` on a NIC (the card takes its address from a server, and keeps none of its own: `normalizeAddressing` empties it whenever a device enters the store), `dhcpServer?: { start, end, gateway? }` on a router or firewall port and on a NIC of a server (the pool it hands out to its network). A lease is never stored
+- `firewallRules?: FirewallRule[]` - Ordered rules (Firewall): `{ id, action: 'allow'|'deny', service: 'any'|'ping'|'web'|'email'|'dns', source, destination, enabled?, description? }`; source and destination are `any`, a zone, an address or a network
+- `portForwards?: PortForward[]` - Ordered port forwards (Router/Firewall): `{ id, service: 'any'|'ping'|'web'|'email'|'dns', port, to, enabled?, description? }`; what arrives for the address of `port`, for the service, is sent on to `to`. Source NAT is the `nat` flag of each port
+- DHCP is kept on the interfaces: `dhcp?: boolean` on a NIC (the card takes its address from a server, and keeps none of its own: `normalizeAddressing` empties it whenever a device enters the store), `dhcpServer?: { start, end, gateway?, dns? }` on a router or firewall port and on a NIC of a server (the pool it hands out to its network, with the DNS server it names). A lease is never stored
+- `dnsRecords?: DnsRecord[]` - The names a server answers for as a DNS server: `{ id, name, address }`, a name being a host name with at least one dot, kept in lower case. Which server a device asks is on its NICs (`dns`). What a name resolved to is never stored
 
 ### Port
 ```
@@ -344,15 +361,16 @@ portType?: 'access'|'trunk'|'hybrid'|'wan'|'lan'|'dmz',
 vlan?: number|number[], poe?: boolean, securityZone?: string, description?: string,
 ip?: string, subnet?: string,  // L3 address of a router/firewall port
 nat?: boolean,                 // source NAT (router, firewall)
-dhcpServer?: { start, end, gateway? }   // DHCP pool for the network of the port
+dhcpServer?: { start, end, gateway?, dns? }   // DHCP pool for the network of the port
 ```
 
 ### NetworkInterfaceCard
 ```
 id: string, name: string, enabled: boolean, speed: string,
 ip: string, subnet: string, gateway: string, mac?: string, description?: string,
+dns?: string,                           // the DNS server the card asks (not on a card on DHCP: it comes with the lease)
 dhcp?: boolean,                         // address from a DHCP server (ip/subnet/gateway then empty)
-dhcpServer?: { start, end, gateway? }   // DHCP pool, on a card of a server
+dhcpServer?: { start, end, gateway?, dns? }   // DHCP pool, on a card of a server
 ```
 
 ### NetworkConnection

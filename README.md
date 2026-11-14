@@ -16,9 +16,9 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 ## What it does
 
 - **Draw.** Devices, links, ports and network cards on an interactive canvas. 20 device types and 5 link types are built in and can be customised. Auto-layout, multi-selection, copy and paste, and several boards per project.
-- **Configure.** Addresses on every router port and network card, static routes, VLANs port by port (access and trunk), firewall zones and ordered rules, NAT towards the Internet and port forwards for what is reached from it, DHCP for the devices that take their address by themselves.
+- **Configure.** Addresses on every router port and network card, static routes, VLANs port by port (access and trunk), firewall zones and ordered rules, NAT towards the Internet and port forwards for what is reached from it, DHCP for the devices that take their address by themselves, DNS records on a server so that a device can be called by name.
 - **Test.** Ping, web, download and email flows are followed hop by hop and animated on the drawing. When a flow fails, the packet stops at the device that drops it and the reason names the port, the route or the rule.
-- **Type.** A built-in terminal with a small vendor-neutral command language: `ping`, `trace`, `browse`, `show routes`, `add route`, `add rule`, `interface 3 access 10` and more. Commands that change the network edit the same drawing you see.
+- **Type.** A built-in terminal with a small vendor-neutral command language: `ping`, `trace`, `browse`, `resolve`, `show routes`, `add route`, `add rule`, `interface 3 access 10` and more. Commands that change the network edit the same drawing you see.
 - **Present.** A presentation mode puts the editing tools away. Click two devices to ask a question, watch the packet go, read the answer hop by hop. Then break something, a device or a cable, and see at once whether the traffic finds another way and which exchanges between end devices stop working. Nothing in the drawing changes.
 - **Save.** A project, with all its boards, is kept in the browser while you work and saved as a single `.pixelcake.json` file that you can open again or pass on. There is no server and no account.
 - **Hand over.** The board as a picture, PNG or SVG, in the light or the dark theme, to a file or to the clipboard. Made from a presentation, it carries the question, the answer and what was broken.
@@ -26,7 +26,7 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 
 The interface is in Italian. The terminal language is English.
 
-Four sample networks are bundled. The welcome screen loads the first: a small company, with offices and Wi-Fi in two VLANs on one trunk, an access point, a switch of servers, a public portal in a DMZ and a firewall with three rules that does NAT towards the Internet. The router hands out the addresses of the offices and of the Wi-Fi, and the two laptops take theirs from it. It is also under Aggiungi → Topologie, with the other three: a small office with two subnets and a router; a site with VLANs, a DMZ and a firewall; and two sites joined by a main line and a backup line, made for trying failures.
+Four sample networks are bundled. The welcome screen loads the first: a small company, with offices and Wi-Fi in two VLANs on one trunk, an access point, a switch of servers, a public portal in a DMZ and a firewall with three rules that does NAT towards the Internet. The router hands out the addresses of the offices and of the Wi-Fi, and the two laptops take theirs from it. One of the servers is the DNS server of the inside: it knows the management software, the mail server and the portal by name. It is also under Aggiungi → Topologie, with the other three: a small office with two subnets and a router; a site with VLANs, a DMZ and a firewall; and two sites joined by a main line and a backup line, made for trying failures.
 
 ### The terminal
 
@@ -89,12 +89,27 @@ A routing loop, an address used twice, a next hop nobody has, a trunk towards a 
 pixelcake> show dhcp
 DHCP — 2 pools, 2 leases
 POOLS
-  Router-Core port 1     192.168.10.100 – 192.168.10.199  gateway 192.168.10.1  0 leased, 100 free of 100
-  Router-Core port 2     192.168.20.100 – 192.168.20.199  gateway 192.168.20.1  2 leased, 98 free of 100
+  Router-Core port 1     192.168.10.100 – 192.168.10.199  gateway 192.168.10.1  dns 192.168.30.10  0 leased, 100 free of 100
+  Router-Core port 2     192.168.20.100 – 192.168.20.199  gateway 192.168.20.1  dns 192.168.30.10  2 leased, 98 free of 100
 LEASES
   192.168.20.100   Portatile-1 eth0         from Router-Core port 2
   192.168.20.101   Portatile-2 eth0         from Router-Core port 2
   leases are worked out from the drawing: nothing is renewed, nothing is relayed to another network
+```
+
+**A device can be called by name.** A server keeps a list of names, each with its address. A network card says which DNS server it asks, or is handed one with its lease. In the terminal a name then works as the target of a question: `ping`, `trace`, `browse`, `mail`, `download`. Nothing is remembered: every time, the question goes to the DNS server and the answer comes back, through the same switches, routes and firewall rules as any other exchange, and it fails in the same ways, with the reason.
+
+```text
+pixelcake> ping gestionale.azienda.example from PC-Vendite
+Looking up gestionale.azienda.example from PC-Vendite (DNS server 192.168.30.10)...
+  ✓ DNS request: PC-Vendite → Srv-Auth
+  ✓ DNS reply: Srv-Auth → PC-Vendite
+gestionale.azienda.example is 192.168.30.30 (answered by Srv-Auth)
+Pinging Web-Gestionale (192.168.30.30) from PC-Vendite...
+Reply from 192.168.30.30: hops=6 time=9ms
+pixelcake> resolve portale.azienda.example from Cliente-Remoto
+Looking up portale.azienda.example from Cliente-Remoto...
+Lookup failed: Cliente-Remoto has no DNS server: it cannot look up portale.azienda.example
 ```
 
 ### What happens if this breaks
@@ -128,14 +143,15 @@ Opened from a presentation (the picture button on its bar), it shows what the pr
 
 ## What it does not do
 
-- **It is not a packet-level simulator.** There is no ARP, MAC learning, DNS or dynamic routing. Ping times are derived from the number of hops.
+- **It is not a packet-level simulator.** There is no ARP, MAC learning or dynamic routing. Ping times are derived from the number of hops.
 - **Routes are static.** A router knows the networks it is attached to and the routes you wrote. Router sub-interfaces are not modelled: routing between VLANs needs a router port in each.
 - **A backup route takes over only when the line is seen to be down.** That is, when the interface of the main route has no working cable left. A next hop that dies behind a switch is not noticed, as with a plain static route on real hardware, and the traffic is lost there. A host has one gateway per network card: there is no gateway redundancy protocol.
 - **Simulated failures are not saved.** They belong to the presentation and are gone when it ends.
-- **Firewall rules know three services**: ping, web and email. There are no port numbers, and traffic addressed to the firewall itself is not filtered.
+- **Firewall rules know four services**: ping, web, email and DNS. There are no port numbers, and traffic addressed to the firewall itself is not filtered.
 - **Spanning tree is not simulated.** A drawing with redundant links is walked without loops, but no port is blocked.
 - **NAT is by service, not by port number.** A port forward is "this service, arriving on this port": there are no TCP or UDP port numbers, and two flows never compete for a translation. A server reached from inside at its published address is not treated apart, and a device behind two layers of NAT is found by name only through the first.
 - **A DHCP lease is worked out, not negotiated.** It depends on the drawing alone: there are no lease times, no renewal and no reservations, so the addresses follow the drawing: putting on DHCP a device that was drawn before the others moves the addresses of those after it. A server gives addresses to its own network only (no relay through a router), and a router or firewall port cannot take its own address from DHCP. A simulated failure does not take an address away.
+- **DNS is one server, asked every time.** A network card names one DNS server: there is no second one to fall back on. A server answers only for the names written on it: it does not pass a question on to another server, and a public DNS server that is not in the drawing is nobody. Nothing is cached, so every question that uses a name looks it up again. There is no reverse lookup, and there are no aliases or wildcards. Names are for the terminal: the simulation panel and the presentation choose devices from menus.
 - **The Internet symbol is a stand-in.** It carries public addresses, with a note, and refuses private ones, as the Internet does. A Cloud symbol with any other name carries everything, with a note.
 - **No undo.** It does not exist yet.
 - **A picture is one board.** A project with several boards is exported one board at a time. The SVG names the fonts of the interface without embedding them: on a computer that has none of them the texts are set in another typeface. A PNG of a very large drawing is reduced to what the browser can paint, and the dialog says so.
@@ -163,7 +179,7 @@ The app's icons are bundled with it. Only an icon name typed by hand in a custom
 
 ```bash
 cd frontend
-pnpm test:run      # 1961 tests: engine, terminal, project files, import/export, pictures, screens
+pnpm test:run      # 2198 tests: engine, terminal, project files, import/export, pictures, screens
 pnpm type-check
 pnpm lint
 pnpm build
@@ -192,7 +208,7 @@ Today the first two exist in a basic form and the third is only a sketch. The st
 ## What is next
 
 1. Undo and redo.
-2. In the engine: DNS, then spanning tree.
+2. In the engine: spanning tree.
 
 ## License
 
