@@ -11,11 +11,13 @@ import { isEndDeviceKind } from './defaultDns';
 import { isL3Type } from '@/engine';
 
 /**
- * Configurable Device Row (from BulkAddDeviceModal)
+ * Configurable Device Row (from BulkAddDeviceModal): so many devices of one
+ * template, with so many ports each. The template is told by its id: two
+ * templates can be of one type
  */
 interface ConfigurableDeviceRow {
   id: string;
-  templateType: DeviceType;
+  templateId: string;
   portCount: number;
   quantity: number;
 }
@@ -152,10 +154,11 @@ const generateDefaultNIC = (
 };
 
 /**
- * Bulk adds multiple devices with configurable port counts and standard devices with NICs
+ * Bulk adds multiple devices with configurable port counts and standard devices with NICs.
+ * Each is made from the template of its row, which is found by its id
  *
  * @param configurableRows Array of configurable device rows (Switch/Router/Firewall with portCount)
- * @param standardQuantities Record of standard device quantities (PC/Server/Database/etc.)
+ * @param standardQuantities How many standard devices (PC/Server/Database/etc.) of each template, by template id
  * @param existingDevices Array of existing devices (for IP/name generation)
  * @param globalSettings Global network settings
  * @param templates All device templates
@@ -164,7 +167,7 @@ const generateDefaultNIC = (
  */
 export const bulkAddDevices = (
   configurableRows: ConfigurableDeviceRow[],
-  standardQuantities: Record<DeviceType, number>,
+  standardQuantities: Record<string, number>,
   existingDevices: NetworkDevice[],
   globalSettings: GlobalNetworkSettings,
   templates: DeviceTemplate[],
@@ -185,25 +188,27 @@ export const bulkAddDevices = (
   configurableRows.forEach(row => {
     if (row.quantity === 0) return;
 
-    const template = templates.find(t => t.type === row.templateType);
+    const template = templates.find(t => t.id === row.templateId);
     if (!template) return;
+    const type = template.type;
 
     for (let i = 0; i < row.quantity; i++) {
-      const deviceName = generateDeviceName(row.templateType, i, currentDevices);
+      const deviceName = generateDeviceName(type, i, currentDevices);
       const ip = findNextAvailableIP(currentDevices, globalSettings);
       const position = allPositions[positionIndex++];
 
       // Generate ports based on portCount
-      const ports = generateDefaultPorts(row.portCount, row.templateType);
+      const ports = generateDefaultPorts(row.portCount, type);
 
       const newDevice: Omit<NetworkDevice, 'id'> = {
-        type: row.templateType,
+        type,
+        templateId: template.id,
         label: deviceName,
         ip,
         subnet: globalSettings.subnet,
         // On a router or firewall the gateway is its default route: left
         // empty, it is for whoever configures the device to choose
-        gateway: isL3Type(row.templateType) ? '' : globalSettings.gateway,
+        gateway: isL3Type(type) ? '' : globalSettings.gateway,
         position,
         portCount: row.portCount,
         ports,
@@ -218,14 +223,15 @@ export const bulkAddDevices = (
   });
 
   // PART 2: Add standard devices (with NICs)
-  Object.entries(standardQuantities).forEach(([type, quantity]) => {
+  Object.entries(standardQuantities).forEach(([templateId, quantity]) => {
     if (quantity === 0) return;
 
-    const template = templates.find(t => t.type === type);
+    const template = templates.find(t => t.id === templateId);
     if (!template) return;
+    const type = template.type;
 
     for (let i = 0; i < quantity; i++) {
-      const deviceName = generateDeviceName(type as DeviceType, i, currentDevices);
+      const deviceName = generateDeviceName(type, i, currentDevices);
       const ip = findNextAvailableIP(currentDevices, globalSettings);
       const position = allPositions[positionIndex++];
 
@@ -239,7 +245,8 @@ export const bulkAddDevices = (
       );
 
       const newDevice: Omit<NetworkDevice, 'id'> = {
-        type: type as DeviceType,
+        type,
+        templateId: template.id,
         label: deviceName,
         ip, // Device-level IP mirrors NIC IP
         subnet: globalSettings.subnet,

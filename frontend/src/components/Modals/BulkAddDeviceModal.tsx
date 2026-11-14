@@ -10,7 +10,6 @@ import { useTemplateStore } from '@/store/templateStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { bulkAddDevices } from '@/utils/bulkDeviceHelpers';
 import { withLeases } from '@/engine';
-import type { DeviceType } from '@/types/network';
 
 /**
  * Configurable Device Row
@@ -18,7 +17,7 @@ import type { DeviceType } from '@/types/network';
  */
 interface ConfigurableDeviceRow {
   id: string;
-  templateType: DeviceType;
+  templateId: string;
   portCount: number;
   quantity: number;
 }
@@ -41,8 +40,10 @@ const BulkAddDeviceModal = () => {
   // State for configurable devices (Switch/Router/Firewall with dynamic port counts)
   const [configurableRows, setConfigurableRows] = useState<ConfigurableDeviceRow[]>([]);
 
-  // State for standard devices (PC/Server/Database with fixed 1 NIC)
-  const [standardQuantities, setStandardQuantities] = useState<Record<DeviceType, number>>({});
+  // State for standard devices (PC/Server/Database with fixed 1 NIC): how
+  // many of each row, by the id of its template. Several templates are of
+  // one type (the servers), and a quantity belongs to one row
+  const [standardQuantities, setStandardQuantities] = useState<Record<string, number>>({});
 
   // State for search query
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,9 +57,9 @@ const BulkAddDeviceModal = () => {
   // Initialize standard quantities only when modal opens
   useEffect(() => {
     if (isOpen && !prevIsOpenRef.current) {
-      const initialQuantities: Record<DeviceType, number> = {};
+      const initialQuantities: Record<string, number> = {};
       standardTemplates.forEach((template) => {
-        initialQuantities[template.type] = 0;
+        initialQuantities[template.id] = 0;
       });
       setStandardQuantities(initialQuantities);
       setConfigurableRows([]); // Reset configurable rows
@@ -79,7 +80,7 @@ const BulkAddDeviceModal = () => {
 
     const query = searchQuery.toLowerCase();
     return configurableRows.filter(row => {
-      const template = configurableTemplates.find(t => t.type === row.templateType);
+      const template = configurableTemplates.find(t => t.id === row.templateId);
       return (
         template?.name.toLowerCase().includes(query) ||
         `${row.portCount} porte`.includes(query) ||
@@ -100,13 +101,13 @@ const BulkAddDeviceModal = () => {
   }, [standardTemplates, searchQuery]);
 
   // Add configurable device row
-  const handleAddConfigurableRow = (templateType: DeviceType) => {
-    const template = configurableTemplates.find(t => t.type === templateType);
+  const handleAddConfigurableRow = (templateId: string) => {
+    const template = configurableTemplates.find(t => t.id === templateId);
     if (!template) return;
 
     const newRow: ConfigurableDeviceRow = {
       id: `row-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      templateType,
+      templateId,
       portCount: template.defaultPortCount || template.portOptions?.[0] || 8,
       quantity: 0,
     };
@@ -128,21 +129,21 @@ const BulkAddDeviceModal = () => {
   };
 
   // Update standard device quantity
-  const handleUpdateStandardQuantity = (type: DeviceType, delta: number) => {
+  const handleUpdateStandardQuantity = (templateId: string, delta: number) => {
     setStandardQuantities(prev => {
-      const current = prev[type] || 0;
+      const current = prev[templateId] || 0;
       const newValue = Math.max(0, current + delta);
-      return { ...prev, [type]: newValue };
+      return { ...prev, [templateId]: newValue };
     });
   };
 
   // Handle input change for standard devices
-  const handleStandardInputChange = (type: DeviceType, value: string) => {
+  const handleStandardInputChange = (templateId: string, value: string) => {
     const numValue = parseInt(value, 10);
     if (!isNaN(numValue) && numValue >= 0) {
-      setStandardQuantities(prev => ({ ...prev, [type]: numValue }));
+      setStandardQuantities(prev => ({ ...prev, [templateId]: numValue }));
     } else if (value === '') {
-      setStandardQuantities(prev => ({ ...prev, [type]: 0 }));
+      setStandardQuantities(prev => ({ ...prev, [templateId]: 0 }));
     }
   };
 
@@ -271,7 +272,7 @@ const BulkAddDeviceModal = () => {
                     </thead>
                     <tbody>
                       {filteredConfigurableRows.map(row => {
-                        const template = configurableTemplates.find(t => t.type === row.templateType);
+                        const template = configurableTemplates.find(t => t.id === row.templateId);
                         if (!template) return null;
 
                         return (
@@ -349,8 +350,8 @@ const BulkAddDeviceModal = () => {
                     <div className="add-menu">
                       {configurableTemplates.map(template => (
                         <button
-                          key={template.type}
-                          onClick={() => handleAddConfigurableRow(template.type)}
+                          key={template.id}
+                          onClick={() => handleAddConfigurableRow(template.id)}
                           className="add-menu-item"
                         >
                           <Icon
@@ -384,7 +385,7 @@ const BulkAddDeviceModal = () => {
                     </thead>
                     <tbody>
                       {filteredStandardTemplates.map(template => (
-                        <tr key={template.type}>
+                        <tr key={template.id}>
                           {/* Type Column */}
                           <td className="type-cell">
                             <Icon
@@ -400,8 +401,8 @@ const BulkAddDeviceModal = () => {
                           <td className="quantity-cell">
                             <input
                               type="text"
-                              value={standardQuantities[template.type] || 0}
-                              onChange={(e) => handleStandardInputChange(template.type, e.target.value)}
+                              value={standardQuantities[template.id] || 0}
+                              onChange={(e) => handleStandardInputChange(template.id, e.target.value)}
                               className="quantity-input"
                             />
                           </td>
@@ -410,15 +411,15 @@ const BulkAddDeviceModal = () => {
                           <td className="controls-cell">
                             <div className="controls-wrapper">
                               <button
-                                onClick={() => handleUpdateStandardQuantity(template.type, -1)}
-                                disabled={(standardQuantities[template.type] || 0) === 0}
+                                onClick={() => handleUpdateStandardQuantity(template.id, -1)}
+                                disabled={(standardQuantities[template.id] || 0) === 0}
                                 className="quantity-btn"
                                 title="Diminuisci"
                               >
                                 <Minus size={14} />
                               </button>
                               <button
-                                onClick={() => handleUpdateStandardQuantity(template.type, 1)}
+                                onClick={() => handleUpdateStandardQuantity(template.id, 1)}
                                 className="quantity-btn"
                                 title="Aumenta"
                               >
