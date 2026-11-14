@@ -246,6 +246,16 @@ export const help = {
         "presente oppure in aggiunta. L'esportazione Terraform è soltanto una bozza e non si può " +
         'applicare.',
     },
+    language: {
+      title: 'Scegli la lingua',
+      text:
+        "L'interfaccia è in italiano e in inglese: si sceglie con IT ed EN in alto a destra, " +
+        'accanto al tema, oppure in Impostazioni → Aspetto. Cambia subito, senza ricaricare la ' +
+        'pagina, e la scelta resta salvata in questo browser. Quello che hai scritto tu non ' +
+        "cambia, e nemmeno i nomi che l'applicazione ha già dato: un progetto, un canvas, i " +
+        'dispositivi di una rete di esempio restano nella lingua in cui sono nati. Il terminale ' +
+        'parla inglese in entrambe le lingue.',
+    },
   },
 
   prototype:'PixelCake è un prototipo: serve a ragionare su una piccola rete, non a validarne una reale.',

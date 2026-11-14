@@ -246,6 +246,16 @@ export const help: Dictionary['help'] = {
         'one that is there or in addition to it. The Terraform export is only a draft and cannot ' +
         'be applied.',
     },
+    language: {
+      title: 'Choose the language',
+      text:
+        'The interface is in Italian and in English: choose with IT and EN at the top right, ' +
+        'next to the theme, or in Settings → Appearance. It changes at once, without reloading ' +
+        'the page, and the choice is kept in this browser. What you wrote does not change, nor ' +
+        'do the names the app has already given: a project, a board, the devices of a sample ' +
+        'network stay in the language they were made in. The terminal speaks English in both ' +
+        'languages.',
+    },
   },
 
   prototype:

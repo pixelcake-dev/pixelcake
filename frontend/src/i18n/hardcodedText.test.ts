@@ -28,11 +28,12 @@ const NOT_READ = [
 ];
 
 /**
- * Words that are Italian and are not text for the user: the id of a device
+ * Words that are Italian and are not text to translate: the id of a device
  * of a sample network, which nobody is shown (ids with a dash in them are
- * not read in the first place).
+ * not read in the first place), and the name of the Italian language, which
+ * the switch writes in Italian whatever the language of the interface.
  */
-const NOT_TEXT = new Set(['/src/utils/sampleCompany.ts|stampante']);
+const NOT_TEXT = new Set(['/src/utils/sampleCompany.ts|stampante', '/src/i18n/language.ts|Italiano']);
 
 interface Finding {
   file: string;
