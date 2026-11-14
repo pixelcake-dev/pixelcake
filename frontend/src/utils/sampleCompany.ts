@@ -50,9 +50,16 @@
  * outside), so that whatever proposes a first question starts inside: the
  * simulation panel takes the first PC and the first server it finds. The
  * data is fully deterministic (fixed MACs) so tests can rely on it.
+ *
+ * The names above are the Italian ones. Whatever is called differently in
+ * another language (devices, places, ports, notes, DNS names) is read from
+ * the dictionary, `samples.company`, at the moment the sample is created;
+ * what is called the same everywhere (SW-Core, Mail, Internet, VLAN 10…) is
+ * written here. Ids and addresses never change.
  */
 
 import type { NetworkDevice, NetworkConnection, NetworkInterfaceCard, Port } from '@/types';
+import { getT } from '@/i18n';
 
 const MASK = '255.255.255.0';
 const P2P_MASK = '255.255.255.252';
@@ -163,36 +170,41 @@ export function createCompanySample(): {
   devices: NetworkDevice[];
   connections: NetworkConnection[];
 } {
+  // The names are read now, in the language the interface is in: once on the
+  // board they are content, and they stay as they were created
+  const names = getT().samples.company;
+  const { offices, serverRoom, offSite } = names.places;
+
   const devices: NetworkDevice[] = [
     // ── Offices (VLAN 10, 192.168.10.0/24) and Wi-Fi (VLAN 20, 192.168.20.0/24)
-    switchDevice('sw-uffici', 'SW-Uffici', '10.99.0.3', '', 'Uffici', { x: 200, y: 740 }, [10, 20], {
-      1: { name: 'PC-Contabilità', vlan: 10 },
-      2: { name: 'PC-Vendite', vlan: 10 },
-      3: { name: 'Stampante', vlan: 10 },
-      4: { name: 'AP-Uffici', vlan: 20, poe: true },
+    switchDevice('sw-uffici', names.devices.officeSwitch, '10.99.0.3', '', offices, { x: 200, y: 740 }, [10, 20], {
+      1: { name: names.devices.accountsPc, vlan: 10 },
+      2: { name: names.devices.salesPc, vlan: 10 },
+      3: { name: names.devices.printer, vlan: 10 },
+      4: { name: names.devices.accessPoint, vlan: 20, poe: true },
       8: { name: 'SW-Core', portType: 'trunk', vlan: [10, 20] },
     }),
     endDevice(
-      'pc-contabilita', 'PC', 'tpl-pc', 'PC-Contabilità',
-      '192.168.10.11', OFFICE_GATEWAY, '02:00:C0:A8:0A:0B', 'Uffici', { x: 0, y: 920 }, DNS_SERVER
+      'pc-contabilita', 'PC', 'tpl-pc', names.devices.accountsPc,
+      '192.168.10.11', OFFICE_GATEWAY, '02:00:C0:A8:0A:0B', offices, { x: 0, y: 920 }, DNS_SERVER
     ),
     endDevice(
-      'pc-vendite', 'PC', 'tpl-pc', 'PC-Vendite',
-      '192.168.10.12', OFFICE_GATEWAY, '02:00:C0:A8:0A:0C', 'Uffici', { x: 200, y: 920 }, DNS_SERVER
+      'pc-vendite', 'PC', 'tpl-pc', names.devices.salesPc,
+      '192.168.10.12', OFFICE_GATEWAY, '02:00:C0:A8:0A:0C', offices, { x: 200, y: 920 }, DNS_SERVER
     ),
     endDevice(
-      'stampante', 'PC', 'tpl-printer', 'Stampante',
-      '192.168.10.50', OFFICE_GATEWAY, '02:00:C0:A8:0A:32', 'Uffici', { x: 400, y: 920 }, DNS_SERVER
+      'stampante', 'PC', 'tpl-printer', names.devices.printer,
+      '192.168.10.50', OFFICE_GATEWAY, '02:00:C0:A8:0A:32', offices, { x: 400, y: 920 }, DNS_SERVER
     ),
     {
       id: 'ap-uffici',
       type: 'AccessPoint',
       templateId: 'tpl-accesspoint',
-      label: 'AP-Uffici',
+      label: names.devices.accessPoint,
       ip: '192.168.20.2',
       subnet: MASK,
       gateway: WIFI_GATEWAY,
-      location: 'Uffici',
+      location: offices,
       position: { x: 700, y: 740 },
       // The cable to the switch, and a radio card for each device on the Wi-Fi
       nics: [
@@ -203,8 +215,8 @@ export function createCompanySample(): {
     },
     // The laptops come and go: they take their address from Router-Core, and
     // with it the DNS server to ask
-    dhcpClient('portatile-1', 'Portatile-1', '02:00:C0:A8:14:0B', 'Uffici', { x: 600, y: 920 }),
-    dhcpClient('portatile-2', 'Portatile-2', '02:00:C0:A8:14:0C', 'Uffici', { x: 840, y: 920 }),
+    dhcpClient('portatile-1', names.devices.laptop(1), '02:00:C0:A8:14:0B', offices, { x: 600, y: 920 }),
+    dhcpClient('portatile-2', names.devices.laptop(2), '02:00:C0:A8:14:0C', offices, { x: 840, y: 920 }),
 
     // ── Core ─────────────────────────────────────────────────────────────
     {
@@ -218,14 +230,14 @@ export function createCompanySample(): {
       // Default route: everything that is not inside goes to the firewall
       gateway: '10.0.0.2',
       vendor: '',
-      location: 'Sala Server',
+      location: serverRoom,
       position: { x: 620, y: 380 },
       portCount: 4,
       // The two networks people sit on get their addresses from the router,
       // and with them the DNS server of the inside
       ports: ports(4, 'lan', {
         1: {
-          name: 'Uffici (VLAN 10)',
+          name: names.ports.offices(10),
           ip: OFFICE_GATEWAY,
           subnet: MASK,
           dhcpServer: { start: '192.168.10.100', end: '192.168.10.199', dns: DNS_SERVER },
@@ -236,21 +248,21 @@ export function createCompanySample(): {
           subnet: MASK,
           dhcpServer: { start: '192.168.20.100', end: '192.168.20.199', dns: DNS_SERVER },
         },
-        3: { name: 'Server (VLAN 30)', ip: SERVER_GATEWAY, subnet: MASK },
+        3: { name: names.ports.servers(30), ip: SERVER_GATEWAY, subnet: MASK },
         4: { name: 'Firewall', ip: '10.0.0.1', subnet: P2P_MASK },
       }),
     },
     // Management addresses of the VLAN switches are on a network of their own:
     // a switch answers in VLAN 1, and here every cabled port is in another one
-    switchDevice('sw-core', 'SW-Core', '10.99.0.2', '', 'Sala Server', { x: 200, y: 560 }, [10, 20], {
-      1: { name: 'SW-Uffici', portType: 'trunk', vlan: [10, 20] },
+    switchDevice('sw-core', 'SW-Core', '10.99.0.2', '', serverRoom, { x: 200, y: 560 }, [10, 20], {
+      1: { name: names.devices.officeSwitch, portType: 'trunk', vlan: [10, 20] },
       7: { name: 'Router VLAN 10', vlan: 10 },
       8: { name: 'Router VLAN 20', vlan: 20 },
     }),
-    switchDevice('sw-server', 'SW-Server', '10.99.0.4', '', 'Sala Server', { x: 1300, y: 560 }, [30], {
+    switchDevice('sw-server', names.devices.serverSwitch, '10.99.0.4', '', serverRoom, { x: 1300, y: 560 }, [30], {
       1: { name: 'Srv-Auth', vlan: 30 },
-      2: { name: 'DB-Gestionale', vlan: 30 },
-      3: { name: 'Web-Gestionale', vlan: 30 },
+      2: { name: names.devices.erpDatabase, vlan: 30 },
+      3: { name: names.devices.erpWebServer, vlan: 30 },
       4: { name: 'Mail', vlan: 30 },
       5: { name: 'NAS', vlan: 30 },
       8: { name: 'Router VLAN 30', vlan: 30 },
@@ -260,41 +272,41 @@ export function createCompanySample(): {
     {
       ...endDevice(
         'srv-auth', 'Server', 'tpl-server', 'Srv-Auth',
-        DNS_SERVER, SERVER_GATEWAY, '02:00:C0:A8:1E:0A', 'Sala Server', { x: 900, y: 740 }
+        DNS_SERVER, SERVER_GATEWAY, '02:00:C0:A8:1E:0A', serverRoom, { x: 900, y: 740 }
       ),
       // The names of the inside. The portal is known by its address in the
       // DMZ: from inside it is reached there, not at the public one
       dnsRecords: [
-        { id: 'record-1', name: 'gestionale.azienda.example', address: '192.168.30.30' },
-        { id: 'record-2', name: 'posta.azienda.example', address: '192.168.30.40' },
-        { id: 'record-3', name: 'portale.azienda.example', address: '172.16.0.10' },
+        { id: 'record-1', name: names.hostNames.erp, address: '192.168.30.30' },
+        { id: 'record-2', name: names.hostNames.mail, address: '192.168.30.40' },
+        { id: 'record-3', name: names.hostNames.portal, address: '172.16.0.10' },
       ],
     },
     endDevice(
-      'db-gestionale', 'Database', 'tpl-database', 'DB-Gestionale',
-      '192.168.30.20', SERVER_GATEWAY, '02:00:C0:A8:1E:14', 'Sala Server', { x: 1100, y: 740 }
+      'db-gestionale', 'Database', 'tpl-database', names.devices.erpDatabase,
+      '192.168.30.20', SERVER_GATEWAY, '02:00:C0:A8:1E:14', serverRoom, { x: 1100, y: 740 }
     ),
     endDevice(
-      'web-gestionale', 'Server', 'tpl-webserver', 'Web-Gestionale',
-      '192.168.30.30', SERVER_GATEWAY, '02:00:C0:A8:1E:1E', 'Sala Server', { x: 1300, y: 740 }
+      'web-gestionale', 'Server', 'tpl-webserver', names.devices.erpWebServer,
+      '192.168.30.30', SERVER_GATEWAY, '02:00:C0:A8:1E:1E', serverRoom, { x: 1300, y: 740 }
     ),
     endDevice(
       'mail', 'Server', 'tpl-mailserver', 'Mail',
-      '192.168.30.40', SERVER_GATEWAY, '02:00:C0:A8:1E:28', 'Sala Server', { x: 1500, y: 740 }
+      '192.168.30.40', SERVER_GATEWAY, '02:00:C0:A8:1E:28', serverRoom, { x: 1500, y: 740 }
     ),
     endDevice(
       'nas', 'Database', 'tpl-nas', 'NAS',
-      '192.168.30.50', SERVER_GATEWAY, '02:00:C0:A8:1E:32', 'Sala Server', { x: 1700, y: 740 }
+      '192.168.30.50', SERVER_GATEWAY, '02:00:C0:A8:1E:32', serverRoom, { x: 1700, y: 740 }
     ),
 
     // ── DMZ (172.16.0.0/24) ──────────────────────────────────────────────
-    switchDevice('sw-dmz', 'SW-DMZ', '172.16.0.2', '172.16.0.1', 'Sala Server', { x: 960, y: 200 }, [], {
-      1: { name: 'Portale-Clienti' },
+    switchDevice('sw-dmz', 'SW-DMZ', '172.16.0.2', '172.16.0.1', serverRoom, { x: 960, y: 200 }, [], {
+      1: { name: names.devices.customerPortal },
       8: { name: 'Firewall' },
     }),
     endDevice(
-      'portale-clienti', 'Server', 'tpl-webserver', 'Portale-Clienti',
-      '172.16.0.10', '172.16.0.1', '02:00:AC:10:00:0A', 'Sala Server', { x: 1300, y: 200 }
+      'portale-clienti', 'Server', 'tpl-webserver', names.devices.customerPortal,
+      '172.16.0.10', '172.16.0.1', '02:00:AC:10:00:0A', serverRoom, { x: 1300, y: 200 }
     ),
 
     // ── Edge ─────────────────────────────────────────────────────────────
@@ -308,11 +320,11 @@ export function createCompanySample(): {
       subnet: P2P_MASK,
       gateway: '',
       vendor: '',
-      location: 'Sala Server',
+      location: serverRoom,
       position: { x: 620, y: 200 },
       portCount: 4,
       ports: ports(4, 'lan', {
-        1: { name: 'Interno', ip: '10.0.0.2', subnet: P2P_MASK, securityZone: 'trust' },
+        1: { name: names.ports.inside, ip: '10.0.0.2', subnet: P2P_MASK, securityZone: 'trust' },
         2: { name: 'DMZ', portType: 'dmz', ip: '172.16.0.1', subnet: MASK, securityZone: 'dmz' },
         3: {
           name: 'Internet',
@@ -324,13 +336,13 @@ export function createCompanySample(): {
         },
       }),
       routes: [
-        { id: 'route-1', destination: '192.168.0.0/16', nextHop: '10.0.0.1', description: 'reti interne' },
+        { id: 'route-1', destination: '192.168.0.0/16', nextHop: '10.0.0.1', description: names.notes.insideNetworks },
       ],
       // What is published at the public address: a forward says where the
       // traffic goes, a rule below says that it may
       portForwards: [
-        { id: 'forward-1', service: 'web', port: 3, to: '172.16.0.10', description: 'portale clienti' },
-        { id: 'forward-2', service: 'email', port: 3, to: '192.168.30.40', description: 'posta in arrivo' },
+        { id: 'forward-1', service: 'web', port: 3, to: '172.16.0.10', description: names.notes.customerPortal },
+        { id: 'forward-2', service: 'email', port: 3, to: '192.168.30.40', description: names.notes.incomingMail },
       ],
       firewallRules: [
         {
@@ -339,7 +351,7 @@ export function createCompanySample(): {
           service: 'web',
           source: 'untrust',
           destination: '172.16.0.10',
-          description: 'portale clienti',
+          description: names.notes.customerPortal,
         },
         {
           id: 'rule-2',
@@ -347,7 +359,7 @@ export function createCompanySample(): {
           service: 'email',
           source: 'untrust',
           destination: '192.168.30.40',
-          description: 'posta in arrivo',
+          description: names.notes.incomingMail,
         },
         {
           id: 'rule-3',
@@ -355,15 +367,15 @@ export function createCompanySample(): {
           service: 'web',
           source: '172.16.0.10',
           destination: '192.168.30.20',
-          description: 'il portale legge il database',
+          description: names.notes.portalReadsDatabase,
         },
       ],
     },
 
     // ── Outside ──────────────────────────────────────────────────────────
     endDevice(
-      'cliente-remoto', 'PC', 'tpl-pc', 'Cliente-Remoto',
-      '203.0.113.50', '203.0.113.1', '02:00:CB:00:71:32', 'Fuori sede', { x: 320, y: 20 }
+      'cliente-remoto', 'PC', 'tpl-pc', names.devices.remoteCustomer,
+      '203.0.113.50', '203.0.113.1', '02:00:CB:00:71:32', offSite, { x: 320, y: 20 }
     ),
     {
       id: 'internet',
