@@ -209,11 +209,14 @@ const BulkAddDeviceModal = () => {
           />
         </div>
 
-        {/* Content Area with Scrollbars */}
+        {/* Content Area with Scrollbars. The list takes what the window of the
+            browser leaves it: the dialog is at most 85vh tall, and its title,
+            search field, total and buttons take about 240px of that. With a
+            fixed height the two buttons fell out of the dialog on a low window */}
         <div className="flex-1 overflow-hidden mb-4">
           <Scrollbars
             autoHeight
-            autoHeightMax={500}
+            autoHeightMax="min(500px, calc(85vh - 240px))"
             style={{ width: '100%' }}
             renderView={({ style, ...props }) => (
               <div {...props} style={{

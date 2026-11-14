@@ -96,6 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Two-part processing: configurable devices (with ports) + standard devices (with NICs)
 
 ### Fixed
+- **«Aggiungi in Blocco»: on a low window the two buttons at the bottom were cut off**, with no way to reach them (a laptop screen was enough). The list between the search field and the buttons now takes the height the browser window leaves it.
 - **Six colours of the interface had no value.** A few lists and buttons used style variables that nothing defined (`--bg-color-hover`, `--bg-color-secondary`, `--input-bg`, `--color-canvas`, `--color-bg`, `--accent-color-hover`): what they coloured was see-through. They take the colours of the theme, and a test fails when a variable is used that has no value in light and in dark.
 - **Dark theme: the address under a device was a different grey on screen and in the exported picture**, and so were the labels of the cables. Both take the greys of the theme.
 - **White letters on orange** (the mark of a link on a port, the badge of presentation mode, the start of a question) could hardly be read: they are the graphite of the logo.
