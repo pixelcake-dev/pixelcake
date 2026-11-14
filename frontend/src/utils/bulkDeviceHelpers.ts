@@ -8,6 +8,7 @@ import type {
 } from '@/types/network';
 import { findNextAvailableIP, generateMacAddress } from './ipHelpers';
 import { isEndDeviceKind } from './defaultDns';
+import { newDeviceName } from './newDevice';
 import { isL3Type } from '@/engine';
 
 /**
@@ -21,19 +22,6 @@ interface ConfigurableDeviceRow {
   portCount: number;
   quantity: number;
 }
-
-/**
- * The name of a new device of a template: the name of the template, and how
- * many devices of its type are there already (those just added count too).
- * It is the name the window that adds one device proposes (AddDeviceModal)
- */
-export const generateDeviceName = (
-  template: DeviceTemplate,
-  existingDevices: NetworkDevice[]
-): string => {
-  const typeCount = existingDevices.filter((d) => d.type === template.type).length;
-  return `${template.name.replace(/\s+/g, '-')}-${typeCount}`;
-};
 
 /**
  * Generates grid-based positions to spread devices evenly
@@ -174,7 +162,8 @@ export const bulkAddDevices = (
     const type = template.type;
 
     for (let i = 0; i < row.quantity; i++) {
-      const deviceName = generateDeviceName(template, currentDevices);
+      // (the devices just made are in the list: their names are taken)
+      const deviceName = newDeviceName(template.name, currentDevices);
       const ip = findNextAvailableIP(currentDevices, globalSettings);
       const position = allPositions[positionIndex++];
 
@@ -212,7 +201,7 @@ export const bulkAddDevices = (
     const type = template.type;
 
     for (let i = 0; i < quantity; i++) {
-      const deviceName = generateDeviceName(template, currentDevices);
+      const deviceName = newDeviceName(template.name, currentDevices);
       const ip = findNextAvailableIP(currentDevices, globalSettings);
       const position = allPositions[positionIndex++];
 
