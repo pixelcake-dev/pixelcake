@@ -4,6 +4,7 @@ import SymbolColour from '@/assets/pixelcake-simbolo-colore.svg';
 import SymbolNegative from '@/assets/pixelcake-simbolo-negativo.svg';
 import { APP_NAME } from '@/constants/brand';
 import { useUIStore } from '@/store/uiStore';
+import { useT } from '@/i18n';
 
 interface LogoProps {
   /**
@@ -22,6 +23,7 @@ interface LogoProps {
  * Always one of its own files, never drawn or typed here.
  */
 const Logo = ({ symbol = false, size = 190, className = '' }: LogoProps) => {
+  const t = useT();
   const darkMode = useUIStore((state) => state.darkMode);
   const file = symbol
     ? darkMode
@@ -33,7 +35,7 @@ const Logo = ({ symbol = false, size = 190, className = '' }: LogoProps) => {
   return (
     <img
       src={file}
-      alt={`${APP_NAME} ${symbol ? 'Icon' : 'Logo'}`}
+      alt={symbol ? t.ui.logo.symbol(APP_NAME) : t.ui.logo.withName(APP_NAME)}
       style={symbol ? { height: `${size}px`, width: 'auto' } : { maxWidth: `${size}px` }}
       className={className}
       onError={(e) => {

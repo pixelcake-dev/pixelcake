@@ -12,6 +12,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { openProject, saveProject } from '@/utils/projectFileAccess';
 import { askConfirm } from '@/store/confirmStore';
+import { useT } from '@/i18n';
 
 /** What is being edited in place, if anything */
 type Editing =
@@ -20,11 +21,8 @@ type Editing =
   | { kind: 'canvas'; canvasId: string }
   | null;
 
-function deviceCountLabel(count: number): string {
-  return count === 1 ? '1 dispositivo' : `${count} dispositivi`;
-}
-
 const ExplorerPanel = () => {
+  const t = useT();
   const projectName = useProjectStore(state => state.name);
   const projectDescription = useProjectStore(state => state.description);
   const canvases = useProjectStore(state => state.canvases);
@@ -56,12 +54,9 @@ const ExplorerPanel = () => {
 
   const handleDeleteCanvas = async (canvasId: string, canvasName: string, deviceCount: number) => {
     const confirmed = await askConfirm({
-      title: `Eliminare il canvas «${canvasName}»?`,
-      detail:
-        deviceCount > 0
-          ? `Contiene ${deviceCountLabel(deviceCount)}: il suo contenuto andrà perso.`
-          : undefined,
-      confirmLabel: 'Elimina',
+      title: t.explorer.deleteCanvasQuestion.title(canvasName),
+      detail: deviceCount > 0 ? t.explorer.deleteCanvasQuestion.detail(deviceCount) : undefined,
+      confirmLabel: t.common.actions.delete,
       danger: true,
     });
     if (!confirmed) return;
@@ -82,7 +77,7 @@ const ExplorerPanel = () => {
             <InlineEdit
               className="explorer-inline-input"
               value={projectName}
-              label="Nome del progetto"
+              label={t.explorer.projectName}
               onCommit={value => {
                 renameProject(value);
                 stopEditing();
@@ -108,8 +103,8 @@ const ExplorerPanel = () => {
               </div>
               <button
                 className="explorer-icon-button"
-                title="Rinomina progetto"
-                aria-label="Rinomina progetto"
+                title={t.explorer.renameProject}
+                aria-label={t.explorer.renameProject}
                 onClick={() => setEditing({ kind: 'projectName' })}
               >
                 <Icon icon="lucide:pencil" width={14} />
@@ -123,8 +118,8 @@ const ExplorerPanel = () => {
             <InlineEdit
               className="explorer-inline-input"
               value={projectDescription}
-              label="Descrizione del progetto"
-              placeholder="Descrizione..."
+              label={t.explorer.projectDescription}
+              placeholder={t.explorer.descriptionPlaceholder}
               onCommit={value => {
                 setDescription(value);
                 stopEditing();
@@ -134,10 +129,10 @@ const ExplorerPanel = () => {
           ) : (
             <button
               className="explorer-description"
-              title="Modifica descrizione"
+              title={t.explorer.editDescription}
               onClick={() => setEditing({ kind: 'projectDescription' })}
             >
-              {projectDescription || 'Aggiungi una descrizione…'}
+              {projectDescription || t.explorer.addDescription}
             </button>
           )}
         </div>
@@ -145,7 +140,7 @@ const ExplorerPanel = () => {
         {hasUnsavedChanges && (
           <div className="explorer-unsaved-hint" style={{ marginLeft: '26px', marginTop: '8px' }}>
             <span className="explorer-unsaved-dot" aria-hidden="true" />
-            Modifiche non salvate su file
+            {t.explorer.unsavedChanges}
           </div>
         )}
       </div>
@@ -162,7 +157,7 @@ const ExplorerPanel = () => {
             paddingLeft: '4px',
           }}
         >
-          CANVASES
+          {t.explorer.heading}
         </div>
 
         {/* Canvas Items */}
@@ -185,7 +180,7 @@ const ExplorerPanel = () => {
                     <InlineEdit
                       className="explorer-inline-input"
                       value={canvas.name}
-                      label={`Nome del canvas ${canvas.name}`}
+                      label={t.explorer.canvasName(canvas.name)}
                       onCommit={value => {
                         renameCanvas(canvas.id, value);
                         stopEditing();
@@ -209,14 +204,14 @@ const ExplorerPanel = () => {
                   <div
                     style={{ fontSize: '0.8em', opacity: isActive ? 0.9 : 0.6, marginTop: '2px' }}
                   >
-                    {deviceCountLabel(deviceCount)}
+                    {t.explorer.devices(deviceCount)}
                   </div>
                 </div>
                 {!isRenaming && (
                   <button
                     className="explorer-icon-button"
-                    title="Rinomina canvas"
-                    aria-label={`Rinomina canvas ${canvas.name}`}
+                    title={t.explorer.renameCanvas}
+                    aria-label={t.explorer.renameCanvasNamed(canvas.name)}
                     onClick={e => {
                       e.stopPropagation();
                       setEditing({ kind: 'canvas', canvasId: canvas.id });
@@ -228,8 +223,8 @@ const ExplorerPanel = () => {
                 {canvases.length > 1 && !isRenaming && (
                   <button
                     className="explorer-icon-button"
-                    title="Elimina canvas"
-                    aria-label={`Elimina canvas ${canvas.name}`}
+                    title={t.explorer.deleteCanvas}
+                    aria-label={t.explorer.deleteCanvasNamed(canvas.name)}
                     onClick={e => {
                       e.stopPropagation();
                       handleDeleteCanvas(canvas.id, canvas.name, deviceCount);
@@ -250,8 +245,8 @@ const ExplorerPanel = () => {
               type="text"
               value={newCanvasName}
               onChange={e => setNewCanvasName(e.target.value)}
-              placeholder="Nome canvas..."
-              aria-label="Nome del nuovo canvas"
+              placeholder={t.explorer.newCanvasPlaceholder}
+              aria-label={t.explorer.newCanvasName}
               autoFocus
               onKeyDown={e => {
                 if (e.key === 'Enter') handleCreateCanvas();
@@ -277,8 +272,8 @@ const ExplorerPanel = () => {
             <button
               onClick={handleCreateCanvas}
               disabled={!newCanvasName.trim()}
-              title="Crea canvas"
-              aria-label="Crea canvas"
+              title={t.explorer.createCanvas}
+              aria-label={t.explorer.createCanvas}
               style={{
                 padding: '6px 10px',
                 background: 'var(--text-color)',
@@ -296,8 +291,8 @@ const ExplorerPanel = () => {
                 setShowNewCanvasInput(false);
                 setNewCanvasName('');
               }}
-              title="Annulla"
-              aria-label="Annulla nuovo canvas"
+              title={t.common.actions.cancel}
+              aria-label={t.explorer.cancelNewCanvas}
               style={{
                 padding: '6px 10px',
                 background: 'var(--bg-component)',
@@ -318,7 +313,7 @@ const ExplorerPanel = () => {
             style={{ marginTop: '8px' }}
           >
             <Icon icon="lucide:plus" width={14} />
-            Nuovo Canvas
+            {t.explorer.newCanvas}
           </button>
         )}
       </div>
@@ -331,11 +326,11 @@ const ExplorerPanel = () => {
           style={{ marginBottom: '8px' }}
         >
           <Icon icon="lucide:save" width={14} />
-          Salva su file
+          {t.explorer.saveToFile}
         </button>
         <button onClick={() => void openProject()} className="explorer-button">
           <Icon icon="lucide:folder-open" width={14} />
-          Apri file…
+          {t.explorer.openFile}
         </button>
       </div>
     </div>

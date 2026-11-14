@@ -15,8 +15,9 @@ import { toast } from 'sonner';
 import { useNetworkStore } from '@/store/networkStore';
 import { useProjectStore, type NewProjectInput } from '@/store/projectStore';
 import { useUIStore } from '@/store/uiStore';
-import { askConfirm } from '@/store/confirmStore';
+import { askConfirm, type ConfirmQuestion } from '@/store/confirmStore';
 import { parseProjectFile, projectFileName, serializeProject } from './projectFile';
+import { getT } from '@/i18n';
 
 // ---------- File System Access API: only what is used here ----------
 // (showSaveFilePicker / showOpenFilePicker are not in TypeScript's DOM lib)
@@ -48,9 +49,10 @@ interface FilePickerHost {
   }) => Promise<ProjectFileHandle[]>;
 }
 
-const FILE_TYPES: FilePickerType[] = [
-  { description: 'Progetto PixelCake', accept: { 'application/json': ['.json'] } },
-];
+/** Read when a picker opens: its words are in the language of that moment */
+function fileTypes(): FilePickerType[] {
+  return [{ description: getT().files.fileType, accept: { 'application/json': ['.json'] } }];
+}
 
 function pickerHost(): Window & FilePickerHost {
   return window;
@@ -149,7 +151,7 @@ async function pickFile(): Promise<{ file: File; handle: ProjectFileHandle | nul
   if (pickerOpen) return null;
   pickerOpen = true;
   try {
-    const [handle] = await host.showOpenFilePicker({ multiple: false, types: FILE_TYPES });
+    const [handle] = await host.showOpenFilePicker({ multiple: false, types: fileTypes() });
     return { file: await handle.getFile(), handle };
   } finally {
     pickerOpen = false;
@@ -165,7 +167,7 @@ async function save(askWhere: boolean): Promise<SaveOutcome> {
     const { text, changeToken } = snapshotProject();
     downloadText(text, fileName);
     useNetworkStore.getState().markSaved(changeToken);
-    toast.success(`Progetto scaricato come ${fileName}`);
+    toast.success(getT().files.downloaded(fileName));
     return 'downloaded';
   }
 
@@ -174,11 +176,11 @@ async function save(askWhere: boolean): Promise<SaveOutcome> {
     if (pickerOpen) return 'cancelled';
     pickerOpen = true;
     try {
-      handle = await host.showSaveFilePicker({ suggestedName: fileName, types: FILE_TYPES });
+      handle = await host.showSaveFilePicker({ suggestedName: fileName, types: fileTypes() });
     } catch (error) {
       if (isAbort(error)) return 'cancelled';
       console.error('[ProjectFile] Save picker failed:', error);
-      toast.error('Impossibile scegliere dove salvare il file', { description: reasonOf(error) });
+      toast.error(getT().files.cannotChooseWhere, { description: reasonOf(error) });
       return 'failed';
     } finally {
       pickerOpen = false;
@@ -196,8 +198,8 @@ async function save(askWhere: boolean): Promise<SaveOutcome> {
     console.error('[ProjectFile] Write failed:', error);
     // Do not keep writing to a file that refuses: next time ask where to save
     if (handle === currentHandle) currentHandle = null;
-    toast.error(`Impossibile salvare su "${handle.name}"`, {
-      description: 'Usa File → Salva con nome… per scegliere un altro file.',
+    toast.error(getT().files.cannotSaveTo(handle.name), {
+      description: getT().files.useSaveAs,
     });
     return 'failed';
   }
@@ -206,19 +208,22 @@ async function save(askWhere: boolean): Promise<SaveOutcome> {
   // An edit made while the file was being written is not in it: the token
   // keeps the project marked as changed in that case
   useNetworkStore.getState().markSaved(changeToken);
-  toast.success('Progetto salvato su file', { description: handle.name });
+  toast.success(getT().files.saved, { description: handle.name });
   return 'saved';
 }
 
 // ---------- public API ----------
 
 /** Asked before the open project is replaced while it has changes not saved to a file */
-export const DISCARD_CHANGES_QUESTION = {
-  title: 'Continuare senza salvare?',
-  detail: 'Il progetto ha modifiche non ancora salvate su file: andranno perse.',
-  confirmLabel: 'Continua senza salvare',
-  danger: true,
-};
+export function discardChangesQuestion(): ConfirmQuestion {
+  const { discardChanges } = getT().files;
+  return {
+    title: discardChanges.title,
+    detail: discardChanges.detail,
+    confirmLabel: discardChanges.confirm,
+    danger: true,
+  };
+}
 
 /**
  * True when the open project can be replaced: it has no changes waiting to
@@ -226,7 +231,7 @@ export const DISCARD_CHANGES_QUESTION = {
  */
 export async function confirmDiscardChanges(): Promise<boolean> {
   if (!useNetworkStore.getState().hasUnsavedChanges) return true;
-  return askConfirm(DISCARD_CHANGES_QUESTION);
+  return askConfirm(discardChangesQuestion());
 }
 
 /** File → Salva, Ctrl+S: write to the file of this session, or ask where */
@@ -257,13 +262,13 @@ export async function openProject(): Promise<OpenOutcome> {
   } catch (error) {
     if (isAbort(error)) return 'cancelled';
     console.error('[ProjectFile] Open failed:', error);
-    toast.error('Impossibile leggere il file', { description: reasonOf(error) });
+    toast.error(getT().files.cannotRead, { description: reasonOf(error) });
     return 'failed';
   }
 
   const result = parseProjectFile(text);
   if (!result.ok) {
-    toast.error(`Impossibile aprire "${picked.file.name}"`, { description: result.error });
+    toast.error(getT().files.cannotOpen(picked.file.name), { description: result.error });
     return 'failed';
   }
 
@@ -275,9 +280,9 @@ export async function openProject(): Promise<OpenOutcome> {
 
   const { project, warnings } = result;
   if (warnings.length === 0) {
-    toast.success(`Progetto "${project.name}" aperto`);
+    toast.success(getT().files.opened(project.name));
   } else {
-    toast.warning(`Progetto "${project.name}" aperto con alcune correzioni`, {
+    toast.warning(getT().files.openedWithRepairs(project.name), {
       description: warnings.join('\n'),
       descriptionClassName: 'whitespace-pre-line',
       duration: 12000,
@@ -302,7 +307,7 @@ export function createNewProject(input: NewProjectInput): void {
   // The new project has no file yet: "Salva" must ask where
   currentHandle = null;
   useUIStore.getState().setShowWelcomeScreen(false);
-  toast.success(`Progetto "${useProjectStore.getState().name}" creato`);
+  toast.success(getT().files.created(useProjectStore.getState().name));
 }
 
 /** Ctrl+S (Cmd+S) anywhere in the app saves the project; returns the cleanup */

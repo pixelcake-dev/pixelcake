@@ -1,5 +1,6 @@
 import { useUIStore } from '@/store/uiStore';
 import { X } from 'lucide-react';
+import { useT } from '@/i18n';
 
 interface SidebarPanelProps {
   isOpen: boolean;
@@ -8,6 +9,7 @@ interface SidebarPanelProps {
 }
 
 const SidebarPanel = ({ isOpen, title, children }: SidebarPanelProps) => {
+  const t = useT();
   const setActiveSidebarPanel = useUIStore((state) => state.setActiveSidebarPanel);
 
   if (!isOpen) return null;
@@ -20,7 +22,7 @@ const SidebarPanel = ({ isOpen, title, children }: SidebarPanelProps) => {
         <button
           className="sidebar-panel-close"
           onClick={() => setActiveSidebarPanel(null)}
-          title="Chiudi"
+          title={t.common.actions.close}
         >
           <X size={18} />
         </button>

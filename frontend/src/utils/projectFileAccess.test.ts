@@ -581,7 +581,7 @@ describe('project file access', () => {
       expect(await app.access.openProject()).toBe('cancelled');
 
       expect(asked).toHaveLength(1);
-      expect(asked).toEqual([app.access.DISCARD_CHANGES_QUESTION]);
+      expect(asked).toEqual([app.access.discardChangesQuestion()]);
       // it says what is lost, and its yes names what it does
       expect(asked[0].title).toBe('Continuare senza salvare?');
       expect(asked[0].detail).toContain('modifiche non ancora salvate su file');
@@ -767,7 +767,7 @@ describe('project file access', () => {
 
       expect(await app.access.openProject()).toBe('cancelled');
 
-      expect(asked).toEqual([app.access.DISCARD_CHANGES_QUESTION]);
+      expect(asked).toEqual([app.access.discardChangesQuestion()]);
       expect(app.project.getState().name).toBe('Sede Milano');
       expect(labels(app.network.getState().devices)).toEqual(['B-1']);
       expect(app.network.getState().hasUnsavedChanges).toBe(true);
@@ -819,7 +819,7 @@ describe('project file access', () => {
 
       expect(await app.access.requestNewProject()).toBe(false);
 
-      expect(asked).toEqual([app.access.DISCARD_CHANGES_QUESTION]);
+      expect(asked).toEqual([app.access.discardChangesQuestion()]);
       expect(app.ui.getState().modals.newProject).toBe(false);
       expect(app.project.getState().name).toBe('Sede Milano');
       expect(labels(app.network.getState().devices)).toEqual(['B-1']);

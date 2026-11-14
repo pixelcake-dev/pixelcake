@@ -11,20 +11,23 @@ import { createCompanySample } from '@/utils/sampleCompany';
 import { openProject, requestNewProject } from '@/utils/projectFileAccess';
 import Logo from '@/components/ui/Logo';
 import { GITHUB_REPO, GITHUB_ISSUES } from '@/constants/links';
-import { APP_DESCRIPTOR, APP_MOTTO, APP_NAME } from '@/constants/brand';
+import { APP_DESCRIPTOR, APP_NAME } from '@/constants/brand';
+import { useT } from '@/i18n';
+import LanguageSwitch from '@/components/ui/LanguageSwitch';
 
 const WelcomeScreen = () => {
+  const t = useT();
   const dismissWelcomeScreen = useUIStore((state) => state.dismissWelcomeScreen);
   const openHelp = useUIStore((state) => state.openHelp);
   const [neverShowAgain, setNeverShowAgain] = useState(false);
 
   useEffect(() => {
-    // Se localStorage non ha il flag, resetta il checkbox
+    // Without the flag in localStorage the checkbox starts unticked
     const hideWelcome = localStorage.getItem('pixelcake-hide-welcome');
     if (!hideWelcome) {
       setNeverShowAgain(false);
     }
-  }, []); // Esegui al mount del componente
+  }, []); // Once, when the screen is shown
 
   const handleNewProject = async () => {
     if (await requestNewProject()) {
@@ -69,69 +72,68 @@ const WelcomeScreen = () => {
       </div>
 
       {/* What the app is for, in three steps */}
-      <h3 className="welcome-motto">{APP_MOTTO}</h3>
+      <h3 className="welcome-motto">{t.common.brand.motto}</h3>
       <ol className="welcome-steps">
         <li>
           <span className="welcome-step-number" aria-hidden="true">
             1
           </span>
-          <strong>Disegna</strong>
-          <span className="welcome-step-text">aggiungi i dispositivi e collegali</span>
+          <strong>{t.welcome.steps.draw.title}</strong>
+          <span className="welcome-step-text">{t.welcome.steps.draw.text}</span>
         </li>
         <li>
           <span className="welcome-step-number" aria-hidden="true">
             2
           </span>
-          <strong>Configura</strong>
-          <span className="welcome-step-text">indirizzi, VLAN, rotte, regole del firewall</span>
+          <strong>{t.welcome.steps.configure.title}</strong>
+          <span className="welcome-step-text">{t.welcome.steps.configure.text}</span>
         </li>
         <li>
           <span className="welcome-step-number" aria-hidden="true">
             3
           </span>
-          <strong>Chiedi</strong>
-          <span className="welcome-step-text">
-            manda un pacchetto e guarda dove si ferma, e perché
-          </span>
+          <strong>{t.welcome.steps.ask.title}</strong>
+          <span className="welcome-step-text">{t.welcome.steps.ask.text}</span>
         </li>
       </ol>
 
       {/* The three ways to start: the first is the main one */}
       <div className="welcome-actions">
         <button onClick={handleNewProject} className="welcome-button primary">
-          Nuovo Progetto
+          {t.welcome.newProject}
         </button>
         <button onClick={handleOpenProject} className="welcome-button">
-          Apri Progetto
+          {t.welcome.openProject}
         </button>
         <button onClick={handleLoadSample} className="welcome-button">
-          Carica la rete di esempio
+          {t.welcome.loadSample}
         </button>
       </div>
 
       {/* Links */}
       <div className="welcome-links">
         <a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer">
-          Codice su GitHub
+          {t.welcome.codeOnGitHub}
         </a>
         <a href="#" onClick={handleDocumentation}>
-          Guida
+          {t.welcome.guide}
         </a>
         <a href={GITHUB_ISSUES} target="_blank" rel="noopener noreferrer">
-          Segnala un problema
+          {t.welcome.reportProblem}
         </a>
       </div>
 
-      {/* Checkbox "Non mostrare più" */}
-      <div className="welcome-checkbox-container">
+      {/* The tick that puts the screen away for good, and the language */}
+      <div className="welcome-checkbox-container flex items-center justify-between gap-4">
         <label className="welcome-checkbox">
           <input
             type="checkbox"
             checked={neverShowAgain}
             onChange={(e) => setNeverShowAgain(e.target.checked)}
           />
-          <span>Non mostrare più questa schermata</span>
+          <span>{t.welcome.doNotShowAgain}</span>
         </label>
+        <LanguageSwitch />
       </div>
     </div>
   );
