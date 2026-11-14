@@ -245,6 +245,39 @@ describe('the interface in English', () => {
     expect(italianOnScreen()).toEqual([]);
   });
 
+  it('a device left without an address says so in words, on the board and in the menus that list it', () => {
+    // A PC on DHCP with no server on its network: nobody hands it an address
+    act(() => {
+      network().clearAllDevices();
+      network().addDevice({
+        type: 'PC',
+        label: 'PC-1',
+        ip: '',
+        subnet: '',
+        gateway: '',
+        position: { x: 100, y: 100 },
+        nics: [{ id: 'nic-1', name: 'eth0', enabled: true, speed: 'auto', ip: '', subnet: '', gateway: '', dhcp: true }],
+      });
+      network().addDevice({
+        type: 'PC',
+        label: 'PC-2',
+        ip: '192.168.1.11',
+        subnet: '255.255.255.0',
+        gateway: '',
+        position: { x: 300, y: 100 },
+      });
+    });
+    render(<App />);
+    act(() => ui().setActiveSidebarPanel('simulation'));
+    expect(document.body.textContent).toContain('DHCP: nessun indirizzo');
+
+    act(() => setLanguage('en'));
+
+    expect(italianOnScreen()).toEqual([]);
+    expect(document.body.textContent).toContain('DHCP: no address');
+    expect(document.body.textContent).not.toContain('nessun indirizzo');
+  });
+
   it('the window of a link', () => {
     render(<App />);
     act(() => {

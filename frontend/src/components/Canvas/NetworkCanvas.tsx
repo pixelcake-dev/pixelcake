@@ -40,6 +40,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { useUIStore } from '@/store/uiStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import type { CanvasArea, NetworkDevice as NetworkDeviceType } from '@/types/network';
+import { useLanguage } from '@/i18n';
 
 // Define node and edge types outside component to prevent re-renders
 const nodeTypes: NodeTypes = {
@@ -257,6 +258,7 @@ const NetworkCanvas = () => {
   // What each device shows under its name: its address, the leased one
   // for a device on DHCP
   const dhcp = useDhcp();
+  const language = useLanguage();
 
   // The areas come first and lie under everything: under the cables too,
   // which React Flow draws at depth 0. An area is not React Flow's to
@@ -285,8 +287,11 @@ const NetworkCanvas = () => {
   );
 
   // Sync Zustand devices to React Flow nodes (memoized to prevent unnecessary re-renders)
-  const deviceNodes: Node[] = useMemo(() =>
-    devices.map((device) => ({
+  const deviceNodes: Node[] = useMemo(() => {
+    // (a card on DHCP that was given no address says so in words, in the
+    // language of the moment: the list is made again when it changes)
+    void language;
+    return devices.map((device) => ({
       id: device.id,
       type: 'device',
       position: device.position,
@@ -298,9 +303,8 @@ const NetworkCanvas = () => {
         onContextMenu: handleDeviceContextMenu,
         onDoubleClick: handleDeviceDoubleClick,
       },
-    })),
-    [devices, dhcp, selectedDeviceIds, handleDeviceContextMenu, handleDeviceDoubleClick]
-  );
+    }));
+  }, [devices, dhcp, language, selectedDeviceIds, handleDeviceContextMenu, handleDeviceDoubleClick]);
 
   const reactFlowNodes: Node[] = useMemo(
     () => (areaNodes.length > 0 ? [...areaNodes, ...deviceNodes] : deviceNodes),
@@ -418,7 +422,7 @@ const NetworkCanvas = () => {
     (changes: NodeChange[]) => {
       onNodesChange(changes);
 
-      // Update Zustand store when node position changes (anche durante drag)
+      // Update Zustand store when node position changes (while it is dragged too)
       changes.forEach((change) => {
         if (change.type === 'position' && 'position' in change && change.position) {
           // (an area moved by one of its resize handles writes itself to the store)
@@ -575,7 +579,7 @@ const NetworkCanvas = () => {
 
   return (
     <div className="relative w-full h-full">
-      {/* Welcome Screen - integrata nel canvas */}
+      {/* Welcome Screen: drawn inside the canvas */}
       {shouldShowWelcome && <WelcomeScreen />}
 
       {/* React Flow Canvas */}
