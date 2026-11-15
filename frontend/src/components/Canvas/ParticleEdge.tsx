@@ -7,6 +7,7 @@
 
 import { type EdgeProps, getSmoothStepPath } from 'reactflow';
 import CustomEdge from './CustomEdge';
+import { useCableRun } from './useCableRun';
 import type { NetworkConnection } from '@/types/network';
 
 interface ParticleEdgeProps extends EdgeProps<NetworkConnection> {
@@ -21,6 +22,8 @@ interface ParticleEdgeProps extends EdgeProps<NetworkConnection> {
 const ParticleEdge = (props: ParticleEdgeProps) => {
   const {
     id,
+    source,
+    target,
     sourceX,
     sourceY,
     targetX,
@@ -30,7 +33,8 @@ const ParticleEdge = (props: ParticleEdgeProps) => {
     data,
   } = props;
 
-  // Calculate smooth step path (same logic as CustomEdge)
+  // Calculate smooth step path (same logic as CustomEdge, the same middle run)
+  const run = useCableRun(source, target, sourcePosition, targetPosition);
   const [edgePath] = getSmoothStepPath({
     sourceX,
     sourceY,
@@ -38,6 +42,7 @@ const ParticleEdge = (props: ParticleEdgeProps) => {
     targetX,
     targetY,
     targetPosition,
+    ...run,
   });
 
   // Particle settings (from connection data or defaults)

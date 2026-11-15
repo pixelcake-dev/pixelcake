@@ -188,6 +188,7 @@ describe('layoutDrawing — devices', () => {
 describe('layoutDrawing — cables', () => {
   it('hangs a cable where the screen does: from under the address to just above what is drawn', () => {
     const scene = layoutDrawing(pair());
+    // (its middle run halfway between the two frames, 94 and 300, as on the canvas: cableRun)
     const [onScreen] = getSmoothStepPath({
       sourceX: 52,
       sourceY: 94,
@@ -195,6 +196,7 @@ describe('layoutDrawing — cables', () => {
       targetX: 52,
       targetY: 300 + 12.5,
       targetPosition: Position.Top,
+      centerY: 197,
     });
     expect(onScreen.startsWith('M52 94')).toBe(true);
     expect(scene.cables[0].path).toBe(onScreen);
@@ -305,11 +307,11 @@ describe('layoutDrawing — cables', () => {
       { text: '1 Gbps', strong: true },
       { text: 'Linea principale', strong: false },
     ]);
-    // the middle of the cable: half way between y 94 and y 312.5
+    // on the middle run of the cable: half way between the two frames, y 94 and y 300
     // 16 letters × 6 = 96, + 8 of padding and 1 of border on each side
-    expect(both.label?.box).toEqual({ x: 52 - 57, y: 203.25 - 21, width: 114, height: 42 });
+    expect(both.label?.box).toEqual({ x: 52 - 57, y: 197 - 21, width: 114, height: 42 });
     // 6 letters × 6 = 36 → 54 wide, one line → 26 high
-    expect(speed.label?.box).toEqual({ x: 52 - 27, y: 203.25 - 13, width: 54, height: 26 });
+    expect(speed.label?.box).toEqual({ x: 52 - 27, y: 197 - 13, width: 54, height: 26 });
     expect(bare.label).toBeNull();
   });
 });

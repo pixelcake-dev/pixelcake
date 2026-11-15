@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { DEVICE_DRAWINGS, DEVICE_DRAWING_IDS } from '@/data/deviceDrawings';
 import styleSheet from '../index.css?raw';
-import { DEVICE_METRICS, cableEnd, deviceHeight, drawingPlace, type Side } from './deviceGeometry';
+import { DEVICE_METRICS, cableEnd, cableRun, deviceHeight, drawingPlace, type Side } from './deviceGeometry';
 
 const css = styleSheet.replace(/\r\n/g, '\n');
 /** The declarations of the first rule with exactly this selector */
@@ -213,5 +213,33 @@ describe('the marks and the bands of the four sides (style sheet)', () => {
     );
     // (which is something even for the lowest frame)
     expect(deviceHeight(false) - (top + sides)).toBeGreaterThanOrEqual(BAND);
+  });
+});
+
+describe('the middle run of a cable', () => {
+  const frame = (x: number, y: number, height = deviceHeight(true)) => ({ x, y, width: DEVICE_METRICS.width, height });
+
+  it('is halfway between the two frames, whatever is drawn in them: a switch and a row of devices share one line', () => {
+    const switchFrame = frame(300, 0);
+    // the ends of five different drawings are each at its own height...
+    const drawings = ['server', 'database', 'server-web', 'server-mail', 'nas'] as const;
+    const tops = drawings.map((drawing) => cableEnd(drawing, 'top', deviceHeight(true)).y);
+    expect(new Set(tops).size).toBeGreaterThan(1);
+    // ...and the run of each cable, from the bottom of the switch to the top of its device, is the same
+    const runs = drawings.map((_, index) => cableRun(switchFrame, 'bottom', frame(index * 136, 200), 'top'));
+    expect(runs.every((run) => run.centerY === (deviceHeight(true) + 200) / 2)).toBe(true);
+    expect(runs.every((run) => run.centerX === undefined)).toBe(true);
+    // the other way round, and on the sides
+    expect(cableRun(frame(0, 200), 'top', switchFrame, 'bottom')).toEqual({ centerY: (deviceHeight(true) + 200) / 2 });
+    expect(cableRun(frame(0, 0), 'right', frame(300, 40), 'left')).toEqual({ centerX: (DEVICE_METRICS.width + 300) / 2 });
+    expect(cableRun(frame(300, 40), 'left', frame(0, 0), 'right')).toEqual({ centerX: (DEVICE_METRICS.width + 300) / 2 });
+  });
+
+  it('is React Flow\'s own where the sides do not face each other, or the frames do not leave room between them', () => {
+    expect(cableRun(frame(0, 0), 'bottom', frame(300, 200), 'left')).toEqual({});
+    expect(cableRun(frame(0, 0), 'top', frame(300, 0), 'top')).toEqual({});
+    // (the device under the switch, but higher than its bottom: no room for a run between them)
+    expect(cableRun(frame(0, 0), 'bottom', frame(300, 50), 'top')).toEqual({});
+    expect(cableRun(frame(0, 0), 'right', frame(60, 200), 'left')).toEqual({});
   });
 });

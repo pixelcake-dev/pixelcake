@@ -28,6 +28,7 @@ import {
 import {
   DEVICE_METRICS,
   cableEnd,
+  cableRun,
   deviceHeight,
   drawingPlace,
   type Side,
@@ -486,6 +487,7 @@ export function layoutDrawing(input: DrawingInput): Scene {
     const toSide = sideOf(connection.targetHandle);
     const start = endOf(from, fromSide);
     const end = endOf(to, toSide);
+    // (the middle run halfway between the two frames, as on the canvas)
     const [path, labelX, labelY] = getSmoothStepPath({
       sourceX: start.x,
       sourceY: start.y,
@@ -493,6 +495,7 @@ export function layoutDrawing(input: DrawingInput): Scene {
       targetX: end.x,
       targetY: end.y,
       targetPosition: SIDES[toSide],
+      ...cableRun(from.box, fromSide, to.box, toSide),
     });
 
     const template = connection.type

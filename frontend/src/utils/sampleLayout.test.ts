@@ -169,6 +169,40 @@ describe.each(SAMPLES)('%s, as a visitor first sees it', (_, create) => {
     expect(crowding(create())).toEqual([]);
   });
 
+  it('the cables of one device to a row of devices run on one line, their labels on it', () => {
+    const sample = create();
+    const scene = sceneOf(sample);
+    const box = (id: string) => scene.devices.find((device) => device.id === id)!.box;
+    /** The heights the horizontal parts of a path are at */
+    const runsOf = (path: string) => {
+      const points = [...path.matchAll(/(-?[\d.]+)[ ,](-?[\d.]+)/g)].map((found) => [Number(found[1]), Number(found[2])]);
+      return points.slice(1).flatMap(([x, y], index) => (y === points[index][1] && x !== points[index][0] ? [y] : []));
+    };
+    // cables that leave one device by its bottom for the tops of devices that stand in one row
+    const groups = new Map<string, Array<{ label: number | null; runs: number[] }>>();
+    for (const connection of sample.connections) {
+      const cable = scene.cables.find((one) => one.id === connection.id)!;
+      const ends = [
+        [connection.source, connection.sourceHandle, connection.target, connection.targetHandle],
+        [connection.target, connection.targetHandle, connection.source, connection.sourceHandle],
+      ];
+      for (const [from, fromSide, to, toSide] of ends) {
+        if (fromSide !== 'bottom' || toSide !== 'top') continue;
+        const key = `${from} ${box(to!).y}`;
+        const label = cable.label ? cable.label.box.y + cable.label.box.height / 2 : null;
+        groups.set(key, [...(groups.get(key) ?? []), { label, runs: runsOf(cable.path) }]);
+      }
+    }
+    const rows = [...groups.values()].filter((group) => group.length > 1);
+    if (create === createCompanySample) expect(rows.some((group) => group.length === 5)).toBe(true);
+    for (const group of rows) {
+      const runs = new Set(group.flatMap((cable) => cable.runs.map((y) => y.toFixed(2))));
+      expect(runs.size, JSON.stringify(group)).toBeLessThanOrEqual(1);
+      const labels = new Set(group.flatMap((cable) => (cable.label === null ? [] : [cable.label.toFixed(2)])));
+      expect(labels.size, JSON.stringify(group)).toBeLessThanOrEqual(1);
+    }
+  });
+
   it.each(LANGUAGES)('%s: no device and no label of a cable is under the small map of the board', (language) => {
     setLanguage(language);
     const scene = sceneOf(create());

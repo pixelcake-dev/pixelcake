@@ -43,6 +43,45 @@ export interface Point {
   y: number;
 }
 
+/** Where a device is on the canvas, and how large its frame is */
+export interface FrameBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Where the middle run of a stepped cable goes, when it leaves a device by a
+ * side and reaches another by the side that faces it (bottom to top, top to
+ * bottom, right to left, left to right): halfway between the two frames.
+ * React Flow puts it halfway between the two ends, and an end sits next to
+ * what is drawn, higher or lower in each drawing: the cables of one switch
+ * to a row of different devices would each run a pixel or two from the
+ * next, and read as a double line. Any other pair of sides, or frames that
+ * do not face each other, keep React Flow's own run (nothing is returned).
+ */
+export function cableRun(
+  from: FrameBox,
+  fromSide: Side,
+  to: FrameBox,
+  toSide: Side
+): { centerX?: number; centerY?: number } {
+  if (fromSide === 'bottom' && toSide === 'top' && to.y >= from.y + from.height) {
+    return { centerY: (from.y + from.height + to.y) / 2 };
+  }
+  if (fromSide === 'top' && toSide === 'bottom' && from.y >= to.y + to.height) {
+    return { centerY: (to.y + to.height + from.y) / 2 };
+  }
+  if (fromSide === 'right' && toSide === 'left' && to.x >= from.x + from.width) {
+    return { centerX: (from.x + from.width + to.x) / 2 };
+  }
+  if (fromSide === 'left' && toSide === 'right' && from.x >= to.x + to.width) {
+    return { centerX: (to.x + to.width + from.x) / 2 };
+  }
+  return {};
+}
+
 /** The height of a device: it is lower when it shows no address */
 export function deviceHeight(hasAddress: boolean): number {
   const m = DEVICE_METRICS;

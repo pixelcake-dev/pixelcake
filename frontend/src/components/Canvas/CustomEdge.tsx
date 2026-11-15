@@ -23,6 +23,7 @@ import type { NetworkConnection } from '@/types/network';
 import { FLOW_MODEL_COLORS } from '@/types/network';
 import { MARK_COLORS } from '@/utils/drawingImage';
 import { useT } from '@/i18n';
+import { useCableRun } from './useCableRun';
 
 /**
  * The colour of a simulated failure, readable on both themes. The picture of
@@ -32,6 +33,8 @@ const FAILURE_COLOR = MARK_COLORS.failure;
 
 const CustomEdge = ({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   targetX,
@@ -71,7 +74,10 @@ const CustomEdge = ({
   // Ref for animateMotion element to trigger animation programmatically
   const animationRef = useRef<SVGAnimateMotionElement>(null);
 
-  // Calculate smooth step path (needed for both early return and normal render)
+  // Calculate smooth step path (needed for both early return and normal render).
+  // Its middle run is halfway between the two frames (useCableRun): the
+  // cables of one switch to a row of devices share one line
+  const run = useCableRun(source, target, sourcePosition, targetPosition);
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
@@ -79,6 +85,7 @@ const CustomEdge = ({
     targetX,
     targetY,
     targetPosition,
+    ...run,
   });
 
   // Trigger animation when this edge becomes active OR when the packet
@@ -175,6 +182,7 @@ const CustomEdge = ({
     targetX: sourceX,
     targetY: sourceY,
     targetPosition: sourcePosition,
+    ...run,
   });
 
   // Determine which path to use for animation
