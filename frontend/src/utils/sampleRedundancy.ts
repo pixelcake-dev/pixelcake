@@ -133,7 +133,7 @@ export function createRedundancySample(): SampleNetwork {
       gateway: '',
       vendor: '',
       location: names.places.backupCarrier,
-      position: { x: 560, y: 20 },
+      position: { x: 560, y: 0 },
       portCount: 4,
       ports: ports(4, 'wan', {
         1: { name: names.ports.toHeadOffice, ip: '10.0.1.2', subnet: P2P_MASK },
@@ -155,7 +155,7 @@ export function createRedundancySample(): SampleNetwork {
       gateway: '',
       vendor: '',
       location: headOffice,
-      position: { x: 280, y: 200 },
+      position: { x: 280, y: 150 },
       portCount: 4,
       ports: ports(4, 'lan', {
         1: { name: names.ports.headOfficeNetwork, ip: '192.168.1.1', subnet: MASK },
@@ -178,7 +178,7 @@ export function createRedundancySample(): SampleNetwork {
       gateway: '',
       vendor: '',
       location: branch,
-      position: { x: 840, y: 200 },
+      position: { x: 840, y: 150 },
       portCount: 4,
       ports: ports(4, 'lan', {
         1: { name: names.ports.branchNetwork, ip: '192.168.2.1', subnet: MASK },
@@ -192,7 +192,7 @@ export function createRedundancySample(): SampleNetwork {
     },
 
     // ── Main site (192.168.1.0/24) ───────────────────────────────────────
-    switchDevice('sw-core', 'SW-Core', '192.168.1.2', '192.168.1.1', headOffice, { x: 280, y: 380 }, {
+    switchDevice('sw-core', 'SW-Core', '192.168.1.2', '192.168.1.1', headOffice, { x: 280, y: 300 }, {
       1: { name: 'Srv-File' },
       6: { name: names.devices.floorSwitch(1) },
       7: { name: names.devices.floorSwitch(2) },
@@ -200,7 +200,7 @@ export function createRedundancySample(): SampleNetwork {
     }),
     switchDevice(
       'sw-piano-1', names.devices.floorSwitch(1),
-      '192.168.1.3', '192.168.1.1', headOfficeFloor(1), { x: 160, y: 560 },
+      '192.168.1.3', '192.168.1.1', headOfficeFloor(1), { x: 160, y: 450 },
       {
         1: { name: names.devices.headOfficePc(1) },
         7: { name: names.devices.floorSwitch(2) },
@@ -209,7 +209,7 @@ export function createRedundancySample(): SampleNetwork {
     ),
     switchDevice(
       'sw-piano-2', names.devices.floorSwitch(2),
-      '192.168.1.4', '192.168.1.1', headOfficeFloor(2), { x: 400, y: 560 },
+      '192.168.1.4', '192.168.1.1', headOfficeFloor(2), { x: 400, y: 450 },
       {
         1: { name: names.devices.headOfficePc(2) },
         7: { name: names.devices.floorSwitch(1) },
@@ -218,30 +218,30 @@ export function createRedundancySample(): SampleNetwork {
     ),
     endDevice(
       'srv-file', 'Server', 'tpl-server', 'Srv-File',
-      '192.168.1.10', '192.168.1.1', '02:00:C0:A8:01:0A', headOffice, { x: 40, y: 380 }
+      '192.168.1.10', '192.168.1.1', '02:00:C0:A8:01:0A', headOffice, { x: 40, y: 300 }
     ),
     endDevice(
       'pc-sede-1', 'PC', 'tpl-pc', names.devices.headOfficePc(1),
-      '192.168.1.11', '192.168.1.1', '02:00:C0:A8:01:0B', headOfficeFloor(1), { x: 160, y: 740 }
+      '192.168.1.11', '192.168.1.1', '02:00:C0:A8:01:0B', headOfficeFloor(1), { x: 160, y: 600 }
     ),
     endDevice(
       'pc-sede-2', 'PC', 'tpl-pc', names.devices.headOfficePc(2),
-      '192.168.1.12', '192.168.1.1', '02:00:C0:A8:01:0C', headOfficeFloor(2), { x: 400, y: 740 }
+      '192.168.1.12', '192.168.1.1', '02:00:C0:A8:01:0C', headOfficeFloor(2), { x: 400, y: 600 }
     ),
 
     // ── Branch (192.168.2.0/24) ──────────────────────────────────────────
-    switchDevice('sw-filiale', names.devices.branchSwitch, '192.168.2.2', '192.168.2.1', branch, { x: 840, y: 380 }, {
+    switchDevice('sw-filiale', names.devices.branchSwitch, '192.168.2.2', '192.168.2.1', branch, { x: 840, y: 300 }, {
       1: { name: names.devices.branchPc(1) },
       2: { name: names.devices.branchPc(2) },
       8: { name: names.devices.branchRouter },
     }),
     endDevice(
       'pc-filiale-1', 'PC', 'tpl-pc', names.devices.branchPc(1),
-      '192.168.2.11', '192.168.2.1', '02:00:C0:A8:02:0B', branch, { x: 720, y: 560 }
+      '192.168.2.11', '192.168.2.1', '02:00:C0:A8:02:0B', branch, { x: 720, y: 450 }
     ),
     endDevice(
       'pc-filiale-2', 'PC', 'tpl-pc', names.devices.branchPc(2),
-      '192.168.2.12', '192.168.2.1', '02:00:C0:A8:02:0C', branch, { x: 960, y: 560 }
+      '192.168.2.12', '192.168.2.1', '02:00:C0:A8:02:0C', branch, { x: 960, y: 450 }
     ),
   ];
 

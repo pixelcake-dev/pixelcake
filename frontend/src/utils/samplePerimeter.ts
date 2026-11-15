@@ -28,8 +28,10 @@
  *  - FW-Edge does NAT on the port that faces the Internet, and one port
  *    forward publishes Web-Public (web) at its public address, 203.0.113.1
  *
- * Devices have the shape AddDeviceModal produces. Positions are hand-placed,
- * top-down. The data is fully deterministic (fixed MACs) so tests can rely
+ * Devices have the shape AddDeviceModal produces. Positions are hand-placed
+ * around the firewall: the outside above it, the DMZ on its right, the
+ * inside on its left, laid out to be read at once in a window of the size
+ * of a laptop (utils/sampleLayout.test.ts). The data is fully deterministic (fixed MACs) so tests can rely
  * on it.
  *
  * The names above are the Italian ones. Whatever is called differently in
@@ -104,7 +106,7 @@ export function createPerimeterSample(): SampleNetwork {
       ip: '',
       subnet: MASK,
       gateway: '',
-      position: { x: 560, y: 20 },
+      position: { x: 440, y: 0 },
       // Two cards without an address: the symbol only stands for "outside"
       nics: [
         { id: 'nic-1', name: 'eth0', enabled: true, speed: 'auto', ip: '', subnet: MASK, gateway: '', mac: '02:00:CB:00:71:01' },
@@ -112,8 +114,8 @@ export function createPerimeterSample(): SampleNetwork {
       ],
     },
     endDevice('remote-pc', 'PC', 'tpl-pc', 'Remote-PC', '203.0.113.50', '203.0.113.1', '02:00:CB:00:71:32', {
-      x: 820,
-      y: 20,
+      x: 640,
+      y: 0,
     }),
 
     // ── Edge ─────────────────────────────────────────────────────────────
@@ -128,7 +130,7 @@ export function createPerimeterSample(): SampleNetwork {
       gateway: '',
       vendor: '',
       location: serverRoom,
-      position: { x: 560, y: 190 },
+      position: { x: 440, y: 176 },
       portCount: 4,
       ports: ports(4, 'lan', {
         1: { name: names.ports.inside, ip: '10.0.0.2', subnet: P2P_MASK, securityZone: 'trust' },
@@ -171,13 +173,13 @@ export function createPerimeterSample(): SampleNetwork {
       gateway: '172.16.0.1',
       vendor: '',
       location: serverRoom,
-      position: { x: 820, y: 360 },
+      position: { x: 660, y: 176 },
       portCount: 8,
       ports: ports(8, 'access', { 1: { name: 'Web-Public' }, 8: { name: 'Uplink' } }),
     },
     endDevice('web-public', 'Server', 'tpl-webserver', 'Web-Public', '172.16.0.10', '172.16.0.1', '02:00:AC:10:00:0A', {
-      x: 820,
-      y: 540,
+      x: 660,
+      y: 362,
     }),
 
     // ── Inside ───────────────────────────────────────────────────────────
@@ -193,7 +195,7 @@ export function createPerimeterSample(): SampleNetwork {
       gateway: '10.0.0.2',
       vendor: '',
       location: serverRoom,
-      position: { x: 320, y: 360 },
+      position: { x: 136, y: 216 },
       portCount: 4,
       ports: ports(4, 'lan', {
         1: { name: names.ports.offices(10), ip: '192.168.10.1', subnet: MASK },
@@ -213,7 +215,7 @@ export function createPerimeterSample(): SampleNetwork {
       gateway: '',
       vendor: '',
       location: offices,
-      position: { x: 320, y: 540 },
+      position: { x: 136, y: 402 },
       vlan: [10, 20],
       portCount: 8,
       ports: ports(8, 'access', {
@@ -226,15 +228,15 @@ export function createPerimeterSample(): SampleNetwork {
     },
     endDevice(
       'pc-uffici-1', 'PC', 'tpl-pc', names.devices.officePc(1),
-      '192.168.10.11', '192.168.10.1', '02:00:C0:A8:0A:0B', { x: 100, y: 720 }
+      '192.168.10.11', '192.168.10.1', '02:00:C0:A8:0A:0B', { x: 0, y: 546 }
     ),
     endDevice(
       'pc-uffici-2', 'PC', 'tpl-pc', names.devices.officePc(2),
-      '192.168.10.12', '192.168.10.1', '02:00:C0:A8:0A:0C', { x: 320, y: 720 }
+      '192.168.10.12', '192.168.10.1', '02:00:C0:A8:0A:0C', { x: 136, y: 546 }
     ),
     endDevice(
       'srv-interno', 'Server', 'tpl-server', names.devices.internalServer,
-      '192.168.20.10', '192.168.20.1', '02:00:C0:A8:14:0A', { x: 540, y: 720 }
+      '192.168.20.10', '192.168.20.1', '02:00:C0:A8:14:0A', { x: 272, y: 546 }
     ),
   ];
 
@@ -268,7 +270,7 @@ export function createPerimeterSample(): SampleNetwork {
       source: 'fw-edge',
       target: 'sw-dmz',
       sourceHandle: 'right',
-      targetHandle: 'top',
+      targetHandle: 'left',
       sourcePort: 2,
       targetPort: 8,
       type: 'uplink',
@@ -289,6 +291,7 @@ export function createPerimeterSample(): SampleNetwork {
       id: 'link-inside',
       source: 'fw-edge',
       target: 'router-core',
+      // (the router is a little lower than the firewall: the cable comes in from above)
       sourceHandle: 'left',
       targetHandle: 'top',
       sourcePort: 1,

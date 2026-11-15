@@ -1,0 +1,221 @@
+/**
+ * The samples as a visitor first sees them: loaded, and fit to a window of
+ * 1568 × 779 with the side panel closed, a board of 1520 × 735. Each is
+ * drawn large enough for its names to be read, and nothing is written over
+ * anything else: no label of a cable on the border of an area, on the name
+ * of an area, on a device or on another label.
+ *
+ * The boxes are those of the exported image (layoutDrawing), which repeats
+ * the numbers of the style sheet; texts are measured roughly
+ * (approximateTextWidth), so a few pixels of room are asked for around
+ * each label.
+ */
+import { describe, it, expect, afterEach } from 'vitest';
+import { setLanguage, type Language } from '@/i18n';
+import { useTemplateStore } from '@/store/templateStore';
+import type { NetworkDevice } from '@/types';
+import { createCompanySample } from './sampleCompany';
+import { createPerimeterSample } from './samplePerimeter';
+import { createRedundancySample } from './sampleRedundancy';
+import { createSampleTopology } from './sampleTopology';
+import type { SampleNetwork } from './sampleNetwork';
+import {
+  AREA_METRICS,
+  DEVICE_METRICS,
+  approximateTextWidth,
+  areaLabelReach,
+  layoutDrawing,
+  type Box,
+  type Scene,
+} from './drawingImage';
+
+const SAMPLES: Array<[string, () => SampleNetwork]> = [
+  ['the company', createCompanySample],
+  ['the small office', createSampleTopology],
+  ['the site', createPerimeterSample],
+  ['the two sites', createRedundancySample],
+];
+const LANGUAGES: Language[] = ['it', 'en'];
+
+/** The board of a 1568 × 779 window, the side panel closed (measured in the browser) */
+const BOARD = { width: 1520, height: 735 } as const;
+/** The room NetworkCanvas leaves around a drawing it fits to the window */
+const FIT_PADDING = 0.2;
+/** The least zoom a sample is fitted at: a drawing 38 px wide, names of 10 px */
+const LEAST_ZOOM = 0.8;
+/** The room asked for around a label of a cable */
+const ROOM = 4;
+
+afterEach(() => setLanguage('it'));
+
+/** A sample as the board draws it: a device on DHCP shows the address it is leased */
+function sceneOf(sample: SampleNetwork): Scene {
+  const shown = (device: NetworkDevice) =>
+    device.ip || (device.nics ?? []).some((nic) => nic.dhcp === true) ? { ...device, ip: device.ip || '192.168.1.100 · DHCP' } : device;
+  const { templates, connectionTemplates } = useTemplateStore.getState();
+  return layoutDrawing({
+    devices: sample.devices.map(shown),
+    connections: sample.connections,
+    areas: sample.areas.map((area, index) => ({ ...area, id: `area-${index + 1}` })),
+    deviceTemplates: templates,
+    connectionTemplates,
+    measureText: approximateTextWidth,
+  });
+}
+
+/**
+ * The zoom React Flow fits the drawing at (fitView): the box of its devices
+ * and areas, with the padding around, in the board
+ */
+function fitZoom(scene: Scene): number {
+  const boxes = [...scene.devices.map((device) => device.box), ...scene.areas.map((area) => area.box)];
+  const left = Math.min(...boxes.map((box) => box.x));
+  const top = Math.min(...boxes.map((box) => box.y));
+  const width = Math.max(...boxes.map((box) => box.x + box.width)) - left;
+  const height = Math.max(...boxes.map((box) => box.y + box.height)) - top;
+  return Math.min(BOARD.width / (width * (1 + FIT_PADDING)), BOARD.height / (height * (1 + FIT_PADDING)), 4);
+}
+
+/** The small map in the bottom right corner of the board (React Flow's MiniMap: 200 × 150, 15 from the sides) */
+const SMALL_MAP: Box = { x: BOARD.width - 15 - 200, y: BOARD.height - 15 - 150, width: 200, height: 150 };
+
+/** Where a box of the drawing is on the board once it is fitted: centred, at the zoom of fitZoom */
+function onBoard(scene: Scene, box: Box): Box {
+  const boxes = [...scene.devices.map((device) => device.box), ...scene.areas.map((area) => area.box)];
+  const left = Math.min(...boxes.map((one) => one.x));
+  const top = Math.min(...boxes.map((one) => one.y));
+  const right = Math.max(...boxes.map((one) => one.x + one.width));
+  const bottom = Math.max(...boxes.map((one) => one.y + one.height));
+  const zoom = fitZoom(scene);
+  const x = BOARD.width / 2 - ((left + right) / 2) * zoom;
+  const y = BOARD.height / 2 - ((top + bottom) / 2) * zoom;
+  return { x: x + box.x * zoom, y: y + box.y * zoom, width: box.width * zoom, height: box.height * zoom };
+}
+
+const grown = (box: Box, by: number): Box => ({
+  x: box.x - by,
+  y: box.y - by,
+  width: box.width + 2 * by,
+  height: box.height + 2 * by,
+});
+const touch = (a: Box, b: Box) =>
+  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+const holds = (outer: Box, inner: Box) =>
+  outer.x <= inner.x &&
+  outer.y <= inner.y &&
+  outer.x + outer.width >= inner.x + inner.width &&
+  outer.y + outer.height >= inner.y + inner.height;
+
+/** What a device takes on the board: its frame, and its name or address where wider */
+function deviceBox(device: Scene['devices'][number]): Box {
+  const wide = Math.max(
+    approximateTextWidth(device.label, { size: DEVICE_METRICS.nameSize, weight: 600 }),
+    approximateTextWidth(device.ip, { size: DEVICE_METRICS.ipSize, weight: 400, mono: true })
+  );
+  const half = Math.max(device.box.width / 2, wide / 2 + DEVICE_METRICS.textPad);
+  const centre = device.box.x + device.box.width / 2;
+  return { x: centre - half, y: device.box.y, width: 2 * half, height: device.box.height };
+}
+
+/** Where the name of an area is written, in its top left corner */
+function areaNameBox(area: Scene['areas'][number], sample: SampleNetwork): Box {
+  const source = sample.areas.find((one) => one.position.x === area.box.x && one.position.y === area.box.y)!;
+  return {
+    x: area.box.x,
+    y: area.box.y,
+    width: areaLabelReach(source, approximateTextWidth),
+    height: AREA_METRICS.labelTop + AREA_METRICS.labelLine,
+  };
+}
+
+/** Every label of a cable written over something else, in words */
+function crowding(sample: SampleNetwork): string[] {
+  const scene = sceneOf(sample);
+  const name = (id: string) => sample.devices.find((device) => device.id === id)?.label ?? id;
+  const cableName = (id: string) => {
+    const connection = sample.connections.find((one) => one.id === id)!;
+    return `the label of ${name(connection.source)}–${name(connection.target)}`;
+  };
+  const labels = scene.cables.flatMap((cable) => (cable.label ? [{ id: cable.id, box: cable.label.box }] : []));
+  const found: string[] = [];
+  for (const [index, label] of labels.entries()) {
+    const room = grown(label.box, ROOM);
+    for (const area of scene.areas) {
+      const inside = holds(grown(area.box, -ROOM), label.box);
+      if (touch(room, area.box) && !inside) found.push(`${cableName(label.id)} is on the border of ${area.label}`);
+      if (touch(room, areaNameBox(area, sample))) found.push(`${cableName(label.id)} is on the name of ${area.label}`);
+    }
+    for (const device of scene.devices) {
+      if (touch(room, deviceBox(device))) found.push(`${cableName(label.id)} is on ${device.label}`);
+    }
+    for (const other of labels.slice(index + 1)) {
+      if (touch(grown(label.box, ROOM / 2), other.box)) found.push(`${cableName(label.id)} touches ${cableName(other.id)}`);
+    }
+  }
+  return found;
+}
+
+describe.each(SAMPLES)('%s, as a visitor first sees it', (_, create) => {
+  it.each(LANGUAGES)('%s: fit to the window, its drawings are large enough to read', (language) => {
+    setLanguage(language);
+    const zoom = fitZoom(sceneOf(create()));
+    expect(zoom).toBeGreaterThanOrEqual(LEAST_ZOOM);
+    // (and no smaller than the company, the first one shown)
+    expect(zoom).toBeGreaterThanOrEqual(fitZoom(sceneOf(createCompanySample())) - 0.001);
+  });
+
+  it.each(LANGUAGES)('%s: no label of a cable is written over an area border or name, a device, another label', (language) => {
+    setLanguage(language);
+    expect(crowding(create())).toEqual([]);
+  });
+
+  it.each(LANGUAGES)('%s: no device and no label of a cable is under the small map of the board', (language) => {
+    setLanguage(language);
+    const scene = sceneOf(create());
+    const hidden = [
+      ...scene.devices.filter((device) => touch(onBoard(scene, deviceBox(device)), SMALL_MAP)).map((device) => device.label),
+      ...scene.cables
+        .filter((cable) => cable.label && touch(onBoard(scene, cable.label.box), SMALL_MAP))
+        .map((cable) => `the label of ${cable.id}`),
+    ];
+    expect(hidden).toEqual([]);
+  });
+});
+
+describe('the measure itself', () => {
+  it('finds a label on the border of an area, and the zoom the board fits a drawing at', () => {
+    setLanguage('en');
+    const sample = createCompanySample();
+    // the label of the cable from the router to the firewall, on the top border of the core
+    const router = sample.devices.find((device) => device.id === 'router-core')!;
+    const core = sample.areas.find((area) => area.label === 'Core')!;
+    const moved: SampleNetwork = {
+      ...sample,
+      areas: sample.areas.map((area) =>
+        area === core ? { ...area, position: { x: area.position.x, y: router.position.y - 160 } } : area
+      ),
+    };
+    expect(crowding(moved).some((said) => said.includes('border of CORE'))).toBe(true);
+    // a drawing as large as the board, less its padding, is fitted at 1
+    const scene = sceneOf(sample);
+    const one: Scene = {
+      ...scene,
+      areas: [],
+      devices: [{ ...scene.devices[0], box: { x: 0, y: 0, width: BOARD.width / 1.2, height: BOARD.height / 1.2 } }],
+    };
+    expect(fitZoom(one)).toBeCloseTo(1, 5);
+    // and is centred on the board, with the room of the padding around it
+    const placed = onBoard(one, one.devices[0].box);
+    expect(placed.x).toBeCloseTo((BOARD.width - placed.width) / 2, 5);
+    expect(placed.y).toBeCloseTo((BOARD.height - placed.height) / 2, 5);
+    // a device in the bottom right corner of a drawing as wide as the board is under the small map
+    const corner: Scene = {
+      ...one,
+      devices: [
+        ...one.devices,
+        { ...scene.devices[0], box: { x: BOARD.width / 1.2 - 104, y: BOARD.height / 1.2 - 94, width: 104, height: 94 } },
+      ],
+    };
+    expect(touch(onBoard(corner, corner.devices[1].box), SMALL_MAP)).toBe(true);
+  });
+});

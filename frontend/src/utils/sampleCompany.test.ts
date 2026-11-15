@@ -7,6 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { createCompanySample } from './sampleCompany';
+import { drawnSize } from './sampleNetwork';
 import { isValidIP, isValidMAC } from './ipHelpers';
 import {
   assessImpact,
@@ -234,12 +235,18 @@ describe('createCompanySample — structure', () => {
   });
 
   it('is laid out with no device over another', () => {
-    // A device is about 120 px wide (a long name makes it wider) and 117 tall
+    // A device is the frame it is drawn in, a name longer than it sticking out
+    // a little: two frames keep at least 24 between them, side by side or one
+    // above the other
+    const GAP = 24;
     for (const a of sample.devices) {
       for (const b of sample.devices) {
         if (a.id >= b.id) continue;
+        const [left, right] = a.position.x <= b.position.x ? [a, b] : [b, a];
+        const [upper, lower] = a.position.y <= b.position.y ? [a, b] : [b, a];
         const apart =
-          Math.abs(a.position.x - b.position.x) >= 180 || Math.abs(a.position.y - b.position.y) >= 150;
+          right.position.x - (left.position.x + drawnSize(left).width) >= GAP ||
+          lower.position.y - (upper.position.y + drawnSize(upper).height) >= GAP;
         expect(apart, `${a.label} and ${b.label}`).toBe(true);
       }
     }

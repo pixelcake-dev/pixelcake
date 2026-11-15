@@ -59,8 +59,17 @@
  * a sample that is loaded is given new ones, `dev-1`, `conn-1`…).
  *
  * The sample brings the network settings of its project (`settings`) and its
- * areas (`areas`): see utils/sampleNetwork.ts. The rows of devices are 200
- * apart, the room two areas one above the other need not to touch.
+ * areas (`areas`): see utils/sampleNetwork.ts.
+ *
+ * It is laid out to be read at once in a window of the size of a laptop
+ * (utils/sampleLayout.test.ts): on top the outside and the edge, side by
+ * side; under them the core, and the offices on its right; at the bottom
+ * the servers under the core and the desks under the offices. The access
+ * point is on the right of the offices, its two laptops above it, so that
+ * the bottom right corner, where the small map of the board is, stays
+ * empty. The rows leave room between two areas for the label of a cable
+ * that crosses them, and the five cables of the servers print their labels
+ * side by side on their run, above the area of the servers.
  */
 
 import type { NetworkDevice, NetworkConnection, NetworkInterfaceCard, Port } from '@/types';
@@ -181,7 +190,7 @@ export function createCompanySample(): SampleNetwork {
 
   const devices: NetworkDevice[] = [
     // ── Offices (VLAN 10, 192.168.10.0/24) and Wi-Fi (VLAN 20, 192.168.20.0/24)
-    switchDevice('sw-uffici', names.devices.officeSwitch, '10.99.0.3', '', offices, { x: 200, y: 820 }, [10, 20], {
+    switchDevice('sw-uffici', names.devices.officeSwitch, '10.99.0.3', '', offices, { x: 972, y: 224 }, [10, 20], {
       1: { name: names.devices.accountsPc, vlan: 10 },
       2: { name: names.devices.salesPc, vlan: 10 },
       3: { name: names.devices.printer, vlan: 10 },
@@ -190,15 +199,15 @@ export function createCompanySample(): SampleNetwork {
     }),
     endDevice(
       'pc-contabilita', 'PC', 'tpl-pc', names.devices.accountsPc,
-      '192.168.10.11', OFFICE_GATEWAY, '02:00:C0:A8:0A:0B', offices, { x: 0, y: 1020 }, DNS_SERVER
+      '192.168.10.11', OFFICE_GATEWAY, '02:00:C0:A8:0A:0B', offices, { x: 836, y: 492 }, DNS_SERVER
     ),
     endDevice(
       'pc-vendite', 'PC', 'tpl-pc', names.devices.salesPc,
-      '192.168.10.12', OFFICE_GATEWAY, '02:00:C0:A8:0A:0C', offices, { x: 200, y: 1020 }, DNS_SERVER
+      '192.168.10.12', OFFICE_GATEWAY, '02:00:C0:A8:0A:0C', offices, { x: 972, y: 492 }, DNS_SERVER
     ),
     endDevice(
       'stampante', 'PC', 'tpl-printer', names.devices.printer,
-      '192.168.10.50', OFFICE_GATEWAY, '02:00:C0:A8:0A:32', offices, { x: 400, y: 1020 }, DNS_SERVER
+      '192.168.10.50', OFFICE_GATEWAY, '02:00:C0:A8:0A:32', offices, { x: 1108, y: 492 }, DNS_SERVER
     ),
     {
       id: 'ap-uffici',
@@ -209,7 +218,7 @@ export function createCompanySample(): SampleNetwork {
       subnet: MASK,
       gateway: WIFI_GATEWAY,
       location: offices,
-      position: { x: 700, y: 820 },
+      position: { x: 1268, y: 224 },
       // The cable to the switch, and a radio card for each device on the Wi-Fi
       nics: [
         nic('nic-1', 'eth0', '02:00:C0:A8:14:02', '192.168.20.2', WIFI_GATEWAY),
@@ -219,8 +228,8 @@ export function createCompanySample(): SampleNetwork {
     },
     // The laptops come and go: they take their address from Router-Core, and
     // with it the DNS server to ask
-    dhcpClient('portatile-1', names.devices.laptop(1), '02:00:C0:A8:14:0B', offices, { x: 600, y: 1020 }),
-    dhcpClient('portatile-2', names.devices.laptop(2), '02:00:C0:A8:14:0C', offices, { x: 840, y: 1020 }),
+    dhcpClient('portatile-1', names.devices.laptop(1), '02:00:C0:A8:14:0B', offices, { x: 1176, y: 0 }),
+    dhcpClient('portatile-2', names.devices.laptop(2), '02:00:C0:A8:14:0C', offices, { x: 1360, y: 0 }),
 
     // ── Core ─────────────────────────────────────────────────────────────
     {
@@ -235,7 +244,7 @@ export function createCompanySample(): SampleNetwork {
       gateway: '10.0.0.2',
       vendor: '',
       location: serverRoom,
-      position: { x: 620, y: 420 },
+      position: { x: 472, y: 224 },
       portCount: 4,
       // The two networks people sit on get their addresses from the router,
       // and with them the DNS server of the inside
@@ -258,12 +267,12 @@ export function createCompanySample(): SampleNetwork {
     },
     // Management addresses of the VLAN switches are on a network of their own:
     // a switch answers in VLAN 1, and here every cabled port is in another one
-    switchDevice('sw-core', 'SW-Core', '10.99.0.2', '', serverRoom, { x: 200, y: 620 }, [10, 20], {
+    switchDevice('sw-core', 'SW-Core', '10.99.0.2', '', serverRoom, { x: 672, y: 224 }, [10, 20], {
       1: { name: names.devices.officeSwitch, portType: 'trunk', vlan: [10, 20] },
       7: { name: 'Router VLAN 10', vlan: 10 },
       8: { name: 'Router VLAN 20', vlan: 20 },
     }),
-    switchDevice('sw-server', names.devices.serverSwitch, '10.99.0.4', '', serverRoom, { x: 1300, y: 620 }, [30], {
+    switchDevice('sw-server', names.devices.serverSwitch, '10.99.0.4', '', serverRoom, { x: 272, y: 264 }, [30], {
       1: { name: 'Srv-Auth', vlan: 30 },
       2: { name: names.devices.erpDatabase, vlan: 30 },
       3: { name: names.devices.erpWebServer, vlan: 30 },
@@ -276,7 +285,7 @@ export function createCompanySample(): SampleNetwork {
     {
       ...endDevice(
         'srv-auth', 'Server', 'tpl-server', 'Srv-Auth',
-        DNS_SERVER, SERVER_GATEWAY, '02:00:C0:A8:1E:0A', serverRoom, { x: 900, y: 820 }
+        DNS_SERVER, SERVER_GATEWAY, '02:00:C0:A8:1E:0A', serverRoom, { x: 0, y: 492 }
       ),
       // The names of the inside. The portal is known by its address in the
       // DMZ: from inside it is reached there, not at the public one
@@ -288,29 +297,29 @@ export function createCompanySample(): SampleNetwork {
     },
     endDevice(
       'db-gestionale', 'Database', 'tpl-database', names.devices.erpDatabase,
-      '192.168.30.20', SERVER_GATEWAY, '02:00:C0:A8:1E:14', serverRoom, { x: 1100, y: 820 }
+      '192.168.30.20', SERVER_GATEWAY, '02:00:C0:A8:1E:14', serverRoom, { x: 136, y: 492 }
     ),
     endDevice(
       'web-gestionale', 'Server', 'tpl-webserver', names.devices.erpWebServer,
-      '192.168.30.30', SERVER_GATEWAY, '02:00:C0:A8:1E:1E', serverRoom, { x: 1300, y: 820 }
+      '192.168.30.30', SERVER_GATEWAY, '02:00:C0:A8:1E:1E', serverRoom, { x: 272, y: 492 }
     ),
     endDevice(
       'mail', 'Server', 'tpl-mailserver', 'Mail',
-      '192.168.30.40', SERVER_GATEWAY, '02:00:C0:A8:1E:28', serverRoom, { x: 1500, y: 820 }
+      '192.168.30.40', SERVER_GATEWAY, '02:00:C0:A8:1E:28', serverRoom, { x: 408, y: 492 }
     ),
     endDevice(
       'nas', 'Database', 'tpl-nas', 'NAS',
-      '192.168.30.50', SERVER_GATEWAY, '02:00:C0:A8:1E:32', serverRoom, { x: 1700, y: 820 }
+      '192.168.30.50', SERVER_GATEWAY, '02:00:C0:A8:1E:32', serverRoom, { x: 544, y: 492 }
     ),
 
     // ── DMZ (172.16.0.0/24) ──────────────────────────────────────────────
-    switchDevice('sw-dmz', 'SW-DMZ', '172.16.0.2', '172.16.0.1', serverRoom, { x: 960, y: 220 }, [], {
+    switchDevice('sw-dmz', 'SW-DMZ', '172.16.0.2', '172.16.0.1', serverRoom, { x: 664, y: 0 }, [], {
       1: { name: names.devices.customerPortal },
       8: { name: 'Firewall' },
     }),
     endDevice(
       'portale-clienti', 'Server', 'tpl-webserver', names.devices.customerPortal,
-      '172.16.0.10', '172.16.0.1', '02:00:AC:10:00:0A', serverRoom, { x: 1300, y: 220 }
+      '172.16.0.10', '172.16.0.1', '02:00:AC:10:00:0A', serverRoom, { x: 872, y: 0 }
     ),
 
     // ── Edge ─────────────────────────────────────────────────────────────
@@ -325,7 +334,7 @@ export function createCompanySample(): SampleNetwork {
       gateway: '',
       vendor: '',
       location: serverRoom,
-      position: { x: 620, y: 220 },
+      position: { x: 472, y: 0 },
       portCount: 4,
       ports: ports(4, 'lan', {
         1: { name: names.ports.inside, ip: '10.0.0.2', subnet: P2P_MASK, securityZone: 'trust' },
@@ -379,7 +388,7 @@ export function createCompanySample(): SampleNetwork {
     // ── Outside ──────────────────────────────────────────────────────────
     endDevice(
       'cliente-remoto', 'PC', 'tpl-pc', names.devices.remoteCustomer,
-      '203.0.113.50', '203.0.113.1', '02:00:CB:00:71:32', offSite, { x: 320, y: 20 }
+      '203.0.113.50', '203.0.113.1', '02:00:CB:00:71:32', offSite, { x: 60, y: 0 }
     ),
     {
       id: 'internet',
@@ -389,7 +398,7 @@ export function createCompanySample(): SampleNetwork {
       ip: '',
       subnet: MASK,
       gateway: '',
-      position: { x: 620, y: 20 },
+      position: { x: 260, y: 0 },
       // Two cards without an address: the symbol only stands for "outside"
       nics: [nic('nic-1', 'eth0', '02:00:CB:00:71:01'), nic('nic-2', 'eth1', '02:00:CB:00:71:02')],
     },
@@ -426,8 +435,8 @@ export function createCompanySample(): SampleNetwork {
       id: 'link-wan',
       source: 'internet',
       target: 'fw-edge',
-      sourceHandle: 'bottom',
-      targetHandle: 'top',
+      sourceHandle: 'right',
+      targetHandle: 'left',
       sourceNic: 'nic-1',
       targetPort: 3,
       type: 'uplink',
@@ -470,8 +479,8 @@ export function createCompanySample(): SampleNetwork {
       id: 'link-vlan-10',
       source: 'router-core',
       target: 'sw-core',
-      sourceHandle: 'left',
-      targetHandle: 'top',
+      sourceHandle: 'right',
+      targetHandle: 'left',
       sourcePort: 1,
       targetPort: 7,
       type: 'uplink',
@@ -482,8 +491,9 @@ export function createCompanySample(): SampleNetwork {
       id: 'link-vlan-20',
       source: 'router-core',
       target: 'sw-core',
+      // (under the two: the switch of the servers is lower, the core leaves the room)
       sourceHandle: 'bottom',
-      targetHandle: 'right',
+      targetHandle: 'bottom',
       sourcePort: 2,
       targetPort: 8,
       type: 'uplink',
@@ -494,8 +504,8 @@ export function createCompanySample(): SampleNetwork {
       id: 'link-vlan-30',
       source: 'router-core',
       target: 'sw-server',
-      sourceHandle: 'right',
-      targetHandle: 'top',
+      sourceHandle: 'left',
+      targetHandle: 'right',
       sourcePort: 3,
       targetPort: 8,
       type: 'uplink',
@@ -506,8 +516,8 @@ export function createCompanySample(): SampleNetwork {
       id: 'link-trunk-uffici',
       source: 'sw-core',
       target: 'sw-uffici',
-      sourceHandle: 'bottom',
-      targetHandle: 'top',
+      sourceHandle: 'right',
+      targetHandle: 'left',
       sourcePort: 1,
       targetPort: 8,
       type: 'trunk',
@@ -533,8 +543,8 @@ export function createCompanySample(): SampleNetwork {
       id: 'link-portatile-1',
       source: 'portatile-1',
       target: 'ap-uffici',
-      sourceHandle: 'top',
-      targetHandle: 'bottom',
+      sourceHandle: 'bottom',
+      targetHandle: 'top',
       sourceNic: 'nic-1',
       targetNic: 'nic-2',
       type: 'access',
@@ -545,8 +555,8 @@ export function createCompanySample(): SampleNetwork {
       id: 'link-portatile-2',
       source: 'portatile-2',
       target: 'ap-uffici',
-      sourceHandle: 'top',
-      targetHandle: 'bottom',
+      sourceHandle: 'bottom',
+      targetHandle: 'top',
       sourceNic: 'nic-1',
       targetNic: 'nic-3',
       type: 'access',
@@ -576,7 +586,7 @@ export function createCompanySample(): SampleNetwork {
   });
 
   // What its groups of devices are, at a glance. The access point and the
-  // two laptops are in none: they sit between the offices and the servers.
+  // two laptops are in none: they sit on the right of the offices.
   // (Internet, Edge and Core are called the same in every language)
   const areas = areasAround(
     [
