@@ -183,7 +183,7 @@ The app's icons are bundled with it: nothing is fetched from the Iconify API.
 
 ```bash
 cd frontend
-pnpm test:run      # 3369 tests: engine, terminal, project files, import/export, images, screens, the two languages
+pnpm test:run      # 3475 tests: engine, terminal, project files, import/export, images, screens, the two languages
 pnpm type-check
 pnpm lint
 pnpm build
