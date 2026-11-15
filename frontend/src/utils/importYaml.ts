@@ -1,6 +1,9 @@
 /**
  * YAML Import Utility
  * Parses PixelCake YAML topology files into NetworkDevice[] and NetworkConnection[]
+ *
+ * The warnings are for the user: they are read from the dictionary, in the
+ * language of the moment the file is parsed in.
  */
 
 import YAML from 'yaml';
@@ -17,12 +20,16 @@ import type {
 } from '@/types';
 import type { ConnectionBinding, ConnectionEnd } from '@/engine/interfaces';
 import { tidyNotes } from '@/utils/deviceNotes';
+import { getT } from '@/i18n';
 
 export interface ImportResult {
   devices: NetworkDevice[];
   connections: NetworkConnection[];
   warnings: string[];
 }
+
+/** The words of the warnings, in the language of the moment */
+const words = () => getT().importExport.warnings;
 
 /** Validate IP address format (basic check) */
 function isValidIP(ip: string): boolean {
@@ -32,17 +39,21 @@ function isValidIP(ip: string): boolean {
 /**
  * The DHCP server of an interface (`dhcp_server`: `start`, `end` and, when
  * they are handed out, `gateway` and `dns`). Without both ends of the range
- * it is left out with a warning. `where` names the interface: `Port 2`,
- * `FW: eth0`.
+ * it is left out with the warning `incomplete` gives, which names the
+ * interface: `Port 2`, `FW: eth0`.
  */
-function parsePool(value: unknown, where: string, warnings: string[]): DhcpPool | undefined {
+function parsePool(
+  value: unknown,
+  incomplete: () => string,
+  warnings: string[]
+): DhcpPool | undefined {
   if (value === undefined || value === null) return undefined;
   const data = typeof value === 'object' ? (value as Record<string, unknown>) : {};
   // String(): YAML reads a bare number where an address was mistyped
   const start = data.start === undefined || data.start === null ? '' : String(data.start);
   const end = data.end === undefined || data.end === null ? '' : String(data.end);
   if (!start || !end) {
-    warnings.push(`${where}: server DHCP senza primo o ultimo indirizzo, ignorato`);
+    warnings.push(incomplete());
     return undefined;
   }
   const pool: DhcpPool = { start, end };
@@ -64,7 +75,7 @@ function parsePort(data: Record<string, unknown>, warnings: string[]): Port {
 
   if (typeof data.name === 'string') port.name = data.name;
   if (typeof data.ip === 'string' && data.ip) {
-    if (!isValidIP(data.ip)) warnings.push(`Port ${port.id}: IP "${data.ip}" non valido`);
+    if (!isValidIP(data.ip)) warnings.push(words().portAddressNotValid(port.id, data.ip));
     port.ip = data.ip;
   }
   if (typeof data.subnet === 'string' && data.subnet) port.subnet = data.subnet;
@@ -72,7 +83,7 @@ function parsePort(data: Record<string, unknown>, warnings: string[]): Port {
   if (typeof data.mode === 'string') port.portType = data.mode as Port['portType'];
   if (typeof data.poe === 'boolean') port.poe = data.poe;
   if (typeof data.nat === 'boolean') port.nat = data.nat;
-  const pool = parsePool(data.dhcp_server, `Port ${port.id}`, warnings);
+  const pool = parsePool(data.dhcp_server, () => words().portPoolIncomplete(port.id), warnings);
   if (pool) port.dhcpServer = pool;
   if (typeof data.security_zone === 'string') port.securityZone = data.security_zone as Port['securityZone'];
   if (typeof data.ips === 'boolean') port.ips = data.ips;
@@ -84,7 +95,7 @@ function parsePort(data: Record<string, unknown>, warnings: string[]): Port {
   } else if (Array.isArray(data.vlan)) {
     const vlans = data.vlan.filter((v): v is number => typeof v === 'number');
     const invalid = vlans.some((v) => v < 1 || v > 4094);
-    if (invalid) warnings.push(`Port ${port.id}: VLAN fuori range (1-4094)`);
+    if (invalid) warnings.push(words().portVlanOutOfRange(port.id));
     port.vlan = vlans;
   }
 
@@ -120,7 +131,11 @@ function parseNic(
     return nic;
   }
   if (typeof data.dns === 'string' && data.dns) nic.dns = data.dns;
-  const pool = parsePool(data.dhcp_server, `${deviceName}: ${name}`, warnings);
+  const pool = parsePool(
+    data.dhcp_server,
+    () => words().cardPoolIncomplete(deviceName, name),
+    warnings
+  );
   if (pool) nic.dhcpServer = pool;
   return nic;
 }
@@ -138,7 +153,7 @@ function parseRecords(list: unknown[], deviceName: string, warnings: string[]): 
     const name = text(data.name);
     const address = text(data.address);
     if (!name || !address) {
-      warnings.push(`${deviceName}: record DNS ${index + 1} senza nome o indirizzo, ignorato`);
+      warnings.push(words().recordIncomplete(deviceName, index + 1));
       return;
     }
     records.push({ id: `record-${records.length + 1}`, name, address });
@@ -158,7 +173,7 @@ function parseRoutes(list: unknown[], deviceName: string, warnings: string[]): S
     const destination = data.destination === undefined ? '' : String(data.destination);
     const nextHop = data.via === undefined ? '' : String(data.via);
     if (!destination || !nextHop) {
-      warnings.push(`${deviceName}: rotta ${index + 1} senza destinazione o prossimo salto, ignorata`);
+      warnings.push(words().routeIncomplete(deviceName, index + 1));
       return;
     }
     const route: StaticRoute = { id: `route-${routes.length + 1}`, destination, nextHop };
@@ -182,7 +197,7 @@ function parseForwards(list: unknown[], deviceName: string, warnings: string[]):
     const port = typeof data.interface === 'number' ? data.interface : Number.NaN;
     const to = data.to === undefined ? '' : String(data.to);
     if (!service || !Number.isInteger(port) || !to) {
-      warnings.push(`${deviceName}: inoltro ${index + 1} incompleto o non valido, ignorato`);
+      warnings.push(words().forwardNotValid(deviceName, index + 1));
       return;
     }
     const forward: PortForward = { id: `forward-${forwards.length + 1}`, service, port, to };
@@ -206,7 +221,7 @@ function parseRules(list: unknown[], deviceName: string, warnings: string[]): Fi
     const source = data.from === undefined ? '' : String(data.from);
     const destination = data.to === undefined ? '' : String(data.to);
     if ((action !== 'allow' && action !== 'deny') || !service || !source || !destination) {
-      warnings.push(`${deviceName}: regola ${index + 1} incompleta o non valida, ignorata`);
+      warnings.push(words().ruleNotValid(deviceName, index + 1));
       return;
     }
     const rule: FirewallRule = { id: `rule-${rules.length + 1}`, action, service, source, destination };
@@ -234,20 +249,18 @@ function parseBinding(
   claimed: Set<string>,
   warnings: string[],
 ): Partial<ConnectionBinding> {
-  const where = `Connessione ${connectionNumber}`;
-  const unbound = 'estremità non assegnata';
   const portValue = raw[`${end}_port`];
   const nicValue = raw[`${end}_nic`];
 
   if (portValue !== undefined && portValue !== null) {
     const port = device.ports?.find((p) => p.id === portValue);
     if (!port) {
-      warnings.push(`${where}: porta ${String(portValue)} non trovata su "${device.label}", ${unbound}`);
+      warnings.push(words().portNotFound(connectionNumber, String(portValue), device.label));
       return {};
     }
     const key = `${device.id}|port:${port.id}`;
     if (claimed.has(key)) {
-      warnings.push(`${where}: porta ${port.id} di "${device.label}" già usata da un'altra connessione, ${unbound}`);
+      warnings.push(words().portTaken(connectionNumber, port.id, device.label));
       return {};
     }
     claimed.add(key);
@@ -258,12 +271,12 @@ function parseBinding(
     // String(): a NIC named "1" comes back from YAML as the number 1
     const nic = device.nics?.find((n) => n.name === String(nicValue));
     if (!nic) {
-      warnings.push(`${where}: interfaccia "${String(nicValue)}" non trovata su "${device.label}", ${unbound}`);
+      warnings.push(words().cardNotFound(connectionNumber, String(nicValue), device.label));
       return {};
     }
     const key = `${device.id}|nic:${nic.id}`;
     if (claimed.has(key)) {
-      warnings.push(`${where}: interfaccia "${nic.name}" di "${device.label}" già usata da un'altra connessione, ${unbound}`);
+      warnings.push(words().cardTaken(connectionNumber, nic.name, device.label));
       return {};
     }
     claimed.add(key);
@@ -306,18 +319,18 @@ export function parseYamlTopology(content: string): ImportResult {
   try {
     parsed = YAML.parse(content);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Errore sconosciuto';
-    return { devices: [], connections: [], warnings: [`Errore parsing YAML: ${msg}`] };
+    const reason = e instanceof Error ? e.message : undefined;
+    return { devices: [], connections: [], warnings: [words().yamlError(reason)] };
   }
 
   if (!parsed || typeof parsed !== 'object') {
-    return { devices: [], connections: [], warnings: ['Il file YAML non contiene dati validi'] };
+    return { devices: [], connections: [], warnings: [words().noData] };
   }
 
   // Extract root — support both { pixelcake: { ... } } and flat { devices: [...] }
   const root = (parsed as Record<string, unknown>).pixelcake || parsed;
   if (typeof root !== 'object' || root === null) {
-    return { devices: [], connections: [], warnings: ['Struttura YAML non riconosciuta'] };
+    return { devices: [], connections: [], warnings: [words().unknownStructure] };
   }
 
   const data = root as Record<string, unknown>;
@@ -325,7 +338,7 @@ export function parseYamlTopology(content: string): ImportResult {
   // Parse devices
   const rawDevices = Array.isArray(data.devices) ? data.devices : [];
   if (rawDevices.length === 0) {
-    warnings.push('Nessun dispositivo trovato nel file');
+    warnings.push(words().noDevices);
   }
 
   const positions = calculatePositions(rawDevices.length);
@@ -334,7 +347,7 @@ export function parseYamlTopology(content: string): ImportResult {
   for (let i = 0; i < rawDevices.length; i++) {
     const raw = rawDevices[i];
     if (!raw || typeof raw !== 'object') {
-      warnings.push(`Dispositivo ${i + 1}: formato non valido, ignorato`);
+      warnings.push(words().deviceNotValid(i + 1));
       continue;
     }
 
@@ -345,7 +358,7 @@ export function parseYamlTopology(content: string): ImportResult {
 
     // Validate IP if present
     if (typeof d.ip === 'string' && d.ip && !isValidIP(d.ip)) {
-      warnings.push(`${name}: IP "${d.ip}" non valido`);
+      warnings.push(words().deviceAddressNotValid(name, d.ip));
     }
 
     const device: NetworkDevice = {
@@ -431,7 +444,7 @@ export function parseYamlTopology(content: string): ImportResult {
   for (let i = 0; i < rawConnections.length; i++) {
     const raw = rawConnections[i];
     if (!raw || typeof raw !== 'object') {
-      warnings.push(`Connessione ${i + 1}: formato non valido, ignorata`);
+      warnings.push(words().connectionNotValid(i + 1));
       continue;
     }
 
@@ -443,11 +456,11 @@ export function parseYamlTopology(content: string): ImportResult {
     const targetId = nameToId.get(targetName);
 
     if (!sourceId) {
-      warnings.push(`Connessione ${i + 1}: sorgente "${sourceName}" non trovata`);
+      warnings.push(words().sourceNotFound(i + 1, sourceName));
       continue;
     }
     if (!targetId) {
-      warnings.push(`Connessione ${i + 1}: destinazione "${targetName}" non trovata`);
+      warnings.push(words().targetNotFound(i + 1, targetName));
       continue;
     }
 

@@ -194,7 +194,7 @@ describe('DHCP in a project file', () => {
     expect(named(opened, 'A')?.nics?.[0]).not.toHaveProperty('dhcp');
     // C was not touched: it is not counted
     expect(named(opened, 'C')?.nics?.[0].dhcp).toBe(true);
-    expect(result.warnings).toEqual(['Canvas "Canvas 1": 3 dispositivi incompleti corretti.']);
+    expect(result.warnings).toEqual(['Canvas «Canvas 1»: 3 dispositivi incompleti corretti.']);
   });
 
   it('a card set to DHCP that carries an address in the file opens without it, and with no warning', () => {
@@ -405,9 +405,9 @@ describe('DHCP through YAML', () => {
       { start: '10.0.1.50', end: '10.0.1.59', gateway: '10.0.1.1' },
     ]);
     expect(result.warnings).toEqual([
-      'Port 1: server DHCP senza primo o ultimo indirizzo, ignorato',
-      'Port 2: server DHCP senza primo o ultimo indirizzo, ignorato',
-      'Port 4: server DHCP senza primo o ultimo indirizzo, ignorato',
+      'Porta 1: server DHCP senza primo o ultimo indirizzo, ignorato',
+      'Porta 2: server DHCP senza primo o ultimo indirizzo, ignorato',
+      'Porta 4: server DHCP senza primo o ultimo indirizzo, ignorato',
       'Srv: ens3: server DHCP senza primo o ultimo indirizzo, ignorato',
     ]);
   });

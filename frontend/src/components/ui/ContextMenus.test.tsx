@@ -63,7 +63,7 @@ describe('context menus', () => {
       const { container } = openOn('PC-1');
 
       expect(entries(container)).toEqual([
-        'Dettagli (Modifica)',
+        'Dettagli (modifica)',
         'Console',
         'Racchiudi in un riquadro',
         'Elimina',
@@ -72,10 +72,10 @@ describe('context menus', () => {
       expect(screen.queryByText('Configurazione...')).toBeNull();
     });
 
-    it('"Dettagli (Modifica)" opens the inspector on the device', () => {
+    it('"Dettagli (modifica)" opens the inspector on the device', () => {
       const { device } = openOn('PC-1');
 
-      fireEvent.click(screen.getByText('Dettagli (Modifica)'));
+      fireEvent.click(screen.getByText('Dettagli (modifica)'));
 
       expect(useUIStore.getState().modals.inspector).toBe(true);
       expect(useUIStore.getState().inspectorDevice).toEqual(device);
@@ -128,25 +128,25 @@ describe('context menus', () => {
     it('offers edit and delete, and nothing switched off', () => {
       const { container } = openOnLink();
 
-      expect(entries(container)).toEqual(['Modifica Connessione', 'Elimina Connessione']);
+      expect(entries(container)).toEqual(['Modifica connessione', 'Elimina connessione']);
       expect(container.querySelector('li.disabled')).toBeNull();
       expect(screen.queryByText('Evidenzia Percorso')).toBeNull();
     });
 
-    it('"Modifica Connessione" opens the connection inspector on the link', () => {
+    it('"Modifica connessione" opens the connection inspector on the link', () => {
       const { connection } = openOnLink();
 
-      fireEvent.click(screen.getByText('Modifica Connessione'));
+      fireEvent.click(screen.getByText('Modifica connessione'));
 
       expect(useUIStore.getState().modals.connectionInspector).toBe(true);
       expect(useUIStore.getState().inspectorConnection).toEqual(connection);
     });
 
-    it('"Elimina Connessione" removes the link once confirmed', async () => {
+    it('"Elimina connessione" removes the link once confirmed', async () => {
       answerConfirms(true);
       openOnLink();
 
-      fireEvent.click(screen.getByText('Elimina Connessione'));
+      fireEvent.click(screen.getByText('Elimina connessione'));
       await settled();
 
       expect(useNetworkStore.getState().connections).toEqual([]);

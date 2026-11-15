@@ -21,9 +21,15 @@
  * Devices have the shape AddDeviceModal produces (templateId, default port
  * arrays, one NIC with MAC). Positions are hand-placed, top-down. The data is
  * fully deterministic (fixed MACs) so tests can rely on it.
+ *
+ * The devices are called the same in every language. The places and the two
+ * port names of the router are read from the dictionary, `samples.office`, at
+ * the moment the sample is created.
  */
 
 import type { NetworkDevice, NetworkConnection, NetworkInterfaceCard, Port } from '@/types';
+import { getT } from '@/i18n';
+import { sampleSettings, type SampleNetwork } from '@/utils/sampleNetwork';
 
 const MASK = '255.255.255.0';
 
@@ -98,12 +104,13 @@ function endDevice(
   };
 }
 
-export function createSampleTopology(): {
-  devices: NetworkDevice[];
-  connections: NetworkConnection[];
-} {
+export function createSampleTopology(): SampleNetwork {
   const OFFICE_GATEWAY = '192.168.10.1';
   const SERVERS_GATEWAY = '192.168.20.1';
+
+  // The names are read now, in the language the interface is in: once on the
+  // board they are content, and they stay as they were created
+  const names = getT().samples.office;
 
   const devices: NetworkDevice[] = [
     // ── Routing ──────────────────────────────────────────────────────────
@@ -117,12 +124,12 @@ export function createSampleTopology(): {
       subnet: MASK,
       gateway: '',
       vendor: '',
-      location: 'Sala Server',
+      location: names.places.serverRoom,
       position: { x: 400, y: 60 },
       portCount: 4,
       ports: configurePorts(defaultPorts(4, 'lan'), {
-        1: { name: 'LAN Uffici', ip: OFFICE_GATEWAY, subnet: MASK },
-        2: { name: 'LAN Server', ip: SERVERS_GATEWAY, subnet: MASK },
+        1: { name: names.ports.officeLan, ip: OFFICE_GATEWAY, subnet: MASK },
+        2: { name: names.ports.serverLan, ip: SERVERS_GATEWAY, subnet: MASK },
       }),
     },
 
@@ -132,7 +139,7 @@ export function createSampleTopology(): {
       'SW-Office',
       '192.168.10.2',
       OFFICE_GATEWAY,
-      'Uffici',
+      names.places.offices,
       { x: 180, y: 260 },
       { 1: { name: 'PC-1' }, 2: { name: 'PC-2' }, 8: { name: 'Uplink' } }
     ),
@@ -141,7 +148,7 @@ export function createSampleTopology(): {
       'SW-Servers',
       '192.168.20.2',
       SERVERS_GATEWAY,
-      'Sala Server',
+      names.places.serverRoom,
       { x: 620, y: 260 },
       { 1: { name: 'Web-01' }, 2: { name: 'Mail-01' }, 8: { name: 'Uplink' } }
     ),
@@ -250,5 +257,12 @@ export function createSampleTopology(): {
     },
   ];
 
-  return { devices, connections };
+  // What the project is set to with this network: a new device starts on the
+  // network of the offices. The sample has no DNS server and no VLAN
+  const settings = sampleSettings({ network: '192.168.10.0', gateway: OFFICE_GATEWAY });
+
+  // No area: the two networks are plain to see, a switch under the router
+  // with its devices under it, and the label of each cable from the router
+  // would sit on the top of an area
+  return { devices, connections, settings, areas: [] };
 }

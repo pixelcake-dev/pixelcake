@@ -4,11 +4,13 @@
  * knows where one goes, how one is named and coloured, and how a list of
  * them is read from a file or from the browser's storage.
  *
- * Pure: no React, no stores, no DOM.
+ * Pure: no React, no DOM, and no store but the language of the interface,
+ * which the two names the app gives (a new area, a colour) are read in.
  */
 
 import { AREA_COLOURS } from '@/types';
 import type { AreaColour, CanvasArea } from '@/types';
+import { getT } from '@/i18n';
 
 export interface AreaBox {
   x: number;
@@ -23,8 +25,6 @@ export const AREA_MIN_SIZE = { width: 120, height: 80 } as const;
 export const AREA_DEFAULT_SIZE = { width: 360, height: 240 } as const;
 /** How long the label of an area can be: it is a word or two in a corner */
 export const AREA_LABEL_MAX_LENGTH = 40;
-/** What a new area is called until it is given its name */
-export const DEFAULT_AREA_LABEL = 'Riquadro';
 /**
  * The room left around the devices an area is drawn around: more above,
  * where its label is. It is counted from the frame of a device, which has
@@ -44,6 +44,11 @@ export const AREA_LABEL_ROOM = 24;
 export interface NearArea extends AreaBox {
   /** How far its label reaches from its left side; unknown, it is taken to reach across the whole area */
   labelReach?: number;
+}
+
+/** What a new area is called until it is given its name, in the language of the moment */
+export function defaultAreaLabel(): string {
+  return getT().canvas.area.defaultName;
 }
 
 /**
@@ -75,15 +80,10 @@ export const AREA_PALETTE: Record<'light' | 'dark', Record<AreaColour, string>> 
 /** How much of its colour the inside of an area takes: a light tint, the rest is the canvas */
 export const AREA_TINT = 0.1;
 
-/** The colours of the palette, as the menu of an area names them */
-export const AREA_COLOUR_NAMES: Record<AreaColour, string> = {
-  slate: 'Ardesia',
-  green: 'Verde',
-  amber: 'Ocra',
-  red: 'Rosso',
-  violet: 'Viola',
-  teal: 'Petrolio',
-};
+/** The colours of the palette, as the menu of an area names them in the language of the moment */
+export function areaColourNames(): Record<AreaColour, string> {
+  return getT().contextMenu.area.colours;
+}
 
 export function isAreaColour(value: unknown): value is AreaColour {
   return typeof value === 'string' && (AREA_COLOURS as readonly string[]).includes(value);

@@ -1,5 +1,5 @@
 /**
- * DevicePanel tests — the sample networks of the "Topologie" tab, and the
+ * DevicePanel tests — the sample networks of the "Esempi" tab, and the
  * custom templates in the device list (they could be created, never placed).
  */
 
@@ -15,7 +15,7 @@ const labels = () => useNetworkStore.getState().devices.map(d => d.label);
 
 function openSamples() {
   render(<DevicePanel />);
-  fireEvent.click(screen.getByRole('button', { name: 'Topologie' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Esempi' }));
 }
 
 beforeEach(() => {
@@ -117,6 +117,39 @@ describe('DevicePanel — sample networks', () => {
     expect(confirms.asked).toEqual([]);
   });
 
+  it('a sample brings the network settings of its project: a new device starts on its network', async () => {
+    // a project set for another network, with a VLAN of its own
+    useNetworkStore.getState().setGlobalNetworkSettings({
+      ipClass: '192.168.1.0',
+      gateway: '192.168.1.1',
+      dns: undefined,
+      vlans: [{ id: 99, name: 'Magazzino' }],
+    });
+    openSamples();
+    answerConfirms(true);
+
+    fireEvent.click(screen.getByRole('button', { name: /Azienda: uffici, Wi-Fi, server e DMZ/ }));
+    await settled();
+    const company = useNetworkStore.getState().globalNetworkSettings;
+    expect(company).toMatchObject({ ipClass: '192.168.10.0', gateway: '192.168.10.1', dns: '192.168.30.10' });
+    expect(company.vlans).toEqual([
+      { id: 1, name: 'Predefinita' },
+      { id: 10, name: 'Uffici' },
+      { id: 20, name: 'Wi-Fi' },
+      { id: 30, name: 'Server' },
+    ]);
+    expect(useNetworkStore.getState().findNextAvailableIP()).toBe('192.168.10.2');
+
+    // another sample: its own, and nothing left of the one before (no DNS server, no VLAN)
+    fireEvent.click(screen.getByRole('button', { name: /Due sedi:/ }));
+    await settled();
+    const twoSites = useNetworkStore.getState().globalNetworkSettings;
+    expect(twoSites).toMatchObject({ ipClass: '192.168.1.0', gateway: '192.168.1.1' });
+    expect(twoSites.dns).toBeUndefined();
+    expect(twoSites.vlans).toBeUndefined();
+    expect(useNetworkStore.getState().findNextAvailableIP()).toBe('192.168.1.5');
+  });
+
   it('asks before replacing a drawing, and leaves it alone on "no"', async () => {
     openSamples();
     fireEvent.click(screen.getByRole('button', { name: /Ufficio: due reti e un router/ }));
@@ -130,6 +163,9 @@ describe('DevicePanel — sample networks', () => {
     // the question says what a yes does, and its button names the action
     expect(confirms.asked[0].title).toBe('Caricare la rete di esempio?');
     expect(confirms.asked[0].detail).toContain('Prende il posto');
+    // (the settings of the project go with the drawing: the question says so)
+    expect(confirms.asked[0].detail).toContain('le impostazioni di rete del progetto diventano le sue');
+    expect(useNetworkStore.getState().globalNetworkSettings.vlans).toBeUndefined();
     expect(confirms.asked[0].confirmLabel).toBe('Carica');
     expect(labels()).toContain('Router-1');
     expect(labels()).not.toContain('FW-Edge');
@@ -139,6 +175,22 @@ describe('DevicePanel — sample networks', () => {
     await settled();
     expect(labels()).toContain('FW-Edge');
     expect(labels()).not.toContain('Router-1');
+  });
+});
+
+describe('DevicePanel — what each device is', () => {
+  it('a template says what it is under its name, not what it is built on', () => {
+    render(<DevicePanel />);
+    const row = (name: string) => screen.getByText(name).closest('.device-list-item');
+    expect(row('IoT Gateway')).toHaveTextContent('Collega sensori e dispositivi IoT alla rete');
+    expect(row('Access Point')).toHaveTextContent('Punto di accesso Wi-Fi');
+    expect(row('Printer')).toHaveTextContent('Stampante di rete');
+    expect(row('DNS Server')).toHaveTextContent('Traduce i nomi in indirizzi');
+    expect(row('Tablet')).toHaveTextContent('Computer a schermo tattile');
+    // (none is left with the words of another)
+    const said = Array.from(document.querySelectorAll('.device-list-description')).map(node => node.textContent);
+    expect(said).toHaveLength(24);
+    expect(new Set(said).size).toBe(24);
   });
 });
 

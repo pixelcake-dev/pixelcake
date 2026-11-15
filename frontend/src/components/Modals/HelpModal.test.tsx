@@ -5,12 +5,13 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import { useUIStore, type HelpTab } from '@/store/uiStore';
 import { COMMAND_REFERENCE, executeCommand } from '@/terminal/executor';
 import { GITHUB_REPO } from '@/constants/links';
 import { BUNDLED_FONTS } from '@/constants/thirdParty';
 import { BUNDLED_ICON_SET_INFO } from '@/data/bundledIcons';
+import { setLanguage } from '@/i18n';
 import HelpModal from './HelpModal';
 
 /** The texts of the licences that travel with the app, by the path the built app has them at */
@@ -179,6 +180,21 @@ describe('HelpModal', () => {
       for (const link of links) expect(link).toHaveAttribute('target', '_blank');
       // the files are in public/: the build carries them as they are
       for (const link of links) expect(shippedLicences).toContain(link.getAttribute('href')?.slice(1));
+    });
+
+    it('says the same line in English, the names as they are', () => {
+      try {
+        act(() => setLanguage('en'));
+        openOn('about');
+        const panel = screen.getByRole('tabpanel');
+        const row = within(panel).getByText('Third-party licences').nextElementSibling as HTMLElement;
+        expect(row.textContent).toBe(
+          'Fonts Inter (SIL OFL 1.1) and JetBrains Mono (SIL OFL 1.1), icons Material Design Icons (Apache 2.0) and Lucide (ISC)'
+        );
+        expect(within(row).getAllByRole('link')).toHaveLength(BUNDLED_FONTS.length + BUNDLED_ICON_SET_INFO.length);
+      } finally {
+        act(() => setLanguage('it'));
+      }
     });
 
     it('has no user profile to fill in', () => {

@@ -53,7 +53,7 @@ describe('TopMenuBar — File → Esporta immagine…', () => {
     fireEvent.click(screen.getByText('Esporta immagine…'));
 
     expect(ui().modals.exportImage).toBe(false);
-    expect(toast.info).toHaveBeenCalledWith("Il canvas è vuoto: non c'è nulla da esportare.");
+    expect(toast.info).toHaveBeenCalledWith("Il canvas è vuoto: non c'è nulla da esportare");
   });
 
   it('sits in the File menu, after the entries that save the project', () => {

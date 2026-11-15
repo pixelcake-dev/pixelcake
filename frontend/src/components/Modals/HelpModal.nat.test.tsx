@@ -69,7 +69,7 @@ describe('the guide — NAT', () => {
   });
 
   it('names what is on the screen', () => {
-    expect(quoted(step(TITLE))).toEqual(['Internet', 'NAT', 'NAT Abilitato', 'Porte', 'Aggiungi inoltro', 'Regole']);
+    expect(quoted(step(TITLE))).toEqual(['Internet', 'NAT', 'NAT attivo', 'Porte', 'Aggiungi inoltro', 'Regole']);
   });
 
   it('the tabs it names are those of a firewall', () => {
@@ -90,13 +90,13 @@ describe('the guide — NAT', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^Porte/ }));
     fireEvent.click(screen.getByText('3'));
-    expect(screen.getByLabelText(/^NAT Abilitato/)).toBeChecked();
+    expect(screen.getByLabelText(/^NAT attivo/)).toBeChecked();
   });
 
   it('the symbol it names is the one that refuses private addresses, and the ranges are the ones it lists', () => {
     expect(isPublicInternet(device('Internet'))).toBe(true);
     const text = step(TITLE);
-    expect(text).toContain('10.x, 172.16-31.x, 192.168.x');
+    expect(text).toContain('10.x, 172.16–31.x, 192.168.x');
     for (const ip of ['10.1.2.3', '172.16.0.1', '172.31.255.254', '192.168.1.1']) {
       expect(isPrivateAddress(ip), ip).toBe(true);
     }
@@ -104,7 +104,7 @@ describe('the guide — NAT', () => {
   });
 
   it('the sample of the welcome screen is made the way the step says', () => {
-    expect(step(TITLE)).toContain('La rete di esempio della schermata iniziale è fatta così.');
+    expect(step(TITLE)).toContain('La rete di esempio della schermata di benvenuto è fatta così.');
     const firewall = device('FW-Edge');
     const facing = firewall.ports?.find(p => p.nat);
     expect(facing?.name).toBe('Internet');

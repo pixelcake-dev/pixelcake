@@ -171,7 +171,7 @@ describe('the templates in the settings', () => {
 
   it('a template of the user is made with a drawing chosen among those of the app, starting from the one of its type', () => {
     render(<CustomTemplatesTab templates={[]} />);
-    fireEvent.click(screen.getByRole('button', { name: /Nuovo Template/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Nuovo template/ }));
     fireEvent.change(screen.getByPlaceholderText(/AWS EC2/), { target: { value: 'Archivio S3' } });
 
     const chosen = () => screen.getAllByRole('radio').find((choice) => choice.getAttribute('aria-checked') === 'true');

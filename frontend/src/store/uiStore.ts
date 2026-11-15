@@ -350,7 +350,7 @@ export const useUIStore = create<UIStore>()(
       },
       onRehydrateStorage: () => (state, error) => {
         if (error) {
-          console.warn('UI store hydration error (ignorato):', error);
+          console.warn('UI store hydration error (ignored):', error);
         }
         // Dark mode is a class on <html>: put the page in line with the
         // state once, here. Toggling at start-up instead (as an earlier

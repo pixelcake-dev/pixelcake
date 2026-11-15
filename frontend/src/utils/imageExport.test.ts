@@ -329,7 +329,7 @@ describe('saveImage — where the browser lets the user choose', () => {
     });
 
     expect(await saveImage(PNG, 'rete.png', 'png')).toBe('failed');
-    expect(toast.error).toHaveBeenCalledWith("Impossibile scegliere dove salvare l'immagine", {
+    expect(toast.error).toHaveBeenCalledWith("Impossibile aprire la finestra di salvataggio", {
       description: 'not allowed here',
     });
   });
@@ -347,7 +347,7 @@ describe('saveImage — where the browser lets the user choose', () => {
 
     expect(await saveImage(PNG, 'rete.png', 'png')).toBe('failed');
     expect(toast.success).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith('Impossibile salvare su "rete.png"', {
+    expect(toast.error).toHaveBeenCalledWith('Impossibile salvare su «rete.png»', {
       description: "Riprova scegliendo un altro file o un'altra cartella.",
     });
   });

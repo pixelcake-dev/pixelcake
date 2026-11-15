@@ -69,7 +69,7 @@ describe('ConnectionInspectorModal — interfaces', () => {
   it('no label is glued to the field above it: bandwidth and label are spaced', () => {
     openInspector('PC-1', 'SW-Office');
 
-    const fields = ['Bandwidth (es: 1Gbps, 100Mbps)', 'Etichetta Custom'].map(label =>
+    const fields = ['Banda (es. 1 Gbps, 100 Mbps)', 'Etichetta personalizzata'].map(label =>
       screen.getByLabelText(label)
     );
     expectSpacedApart(fields);

@@ -473,7 +473,7 @@ describe('the menu of an area', () => {
     expect(answers.asked).toEqual([
       {
         title: 'Eliminare il riquadro «Core»?',
-        detail: 'I dispositivi che ha intorno restano dove sono.',
+        detail: 'I dispositivi che racchiude restano dove sono.',
         confirmLabel: 'Elimina',
         danger: true,
       },

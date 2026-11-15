@@ -6,7 +6,7 @@
  */
 
 import { useNetworkStore } from '@/store/networkStore';
-import { DEFAULT_AREA_LABEL, areaAround, areaAt, nextAreaColour } from '@/utils/canvasAreas';
+import { areaAround, areaAt, defaultAreaLabel, nextAreaColour } from '@/utils/canvasAreas';
 import { createTextMeasure, measureDeviceSizes } from '@/utils/drawingMeasure';
 import { areaLabelReach } from '@/utils/drawingImage';
 import { DEVICE_METRICS, deviceHeight } from '@/utils/deviceGeometry';
@@ -28,7 +28,7 @@ function viewCentre(): { x: number; y: number } {
 function addAndName(place: ReturnType<typeof areaAt>): string {
   const network = useNetworkStore.getState();
   const id = network.addArea({
-    label: DEFAULT_AREA_LABEL,
+    label: defaultAreaLabel(),
     color: nextAreaColour(network.areas),
     ...place,
   });

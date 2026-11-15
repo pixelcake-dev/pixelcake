@@ -211,7 +211,7 @@ describe('summarizeAnswer', () => {
     const answer = planAndEvaluateFlow('ping', id('PC-Sede-1'), id('Srv-File'), island);
     const summary = summarizeAnswer(answer, 'ping', 'PC-Sede-1', 'Srv-File');
     expect(summary.tone).toBe('ko');
-    expect(summary.detail).toBe('Nessun cavo collega i due dispositivi.');
+    expect(summary.detail).toBe('Nessun percorso di cavi collega i due dispositivi.');
     expect(summary.reason).toBe('no physical path between PC-Sede-1 and Srv-File');
   });
 });

@@ -6,13 +6,15 @@
 import { useState } from 'react';
 import ConnectionTemplatesTab from './ConnectionTemplatesTab';
 import DeviceTemplatesTab from './DeviceTemplatesTab';
+import { useT } from '@/i18n';
 
 const TemplatesSettingsTab = () => {
+  const t = useT();
   const [templateType, setTemplateType] = useState<'connections' | 'devices'>('connections');
 
   return (
     <div className="settings-panel">
-      <h3>Template</h3>
+      <h3>{t.templates.title}</h3>
 
       {/* Sub-tabs: Connections and Devices */}
       <div className="settings-tabs mb-4">
@@ -20,13 +22,13 @@ const TemplatesSettingsTab = () => {
           className={`settings-tab ${templateType === 'connections' ? 'active' : ''}`}
           onClick={() => setTemplateType('connections')}
         >
-          Connessioni
+          {t.templates.kinds.links}
         </button>
         <button
           className={`settings-tab ${templateType === 'devices' ? 'active' : ''}`}
           onClick={() => setTemplateType('devices')}
         >
-          Dispositivi
+          {t.templates.kinds.devices}
         </button>
       </div>
 

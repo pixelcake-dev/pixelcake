@@ -7,6 +7,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { DeviceTemplate, ConnectionTemplate } from '@/types/network';
 import { safeJSONStorage } from '@/utils/safeStorage';
+import { dictionaryOf } from '@/i18n';
 
 interface TemplateStore {
   // Device Templates State
@@ -157,7 +158,7 @@ const DEFAULT_TEMPLATES: DeviceTemplate[] = [
     supportsPorts: false, // Cloud does not support port management
     supportsNICs: true, // Cloud supports Network Interface Cards
   },
-  // === Server Applicativi (type: Server) ===
+  // === Application servers (type: Server) ===
   {
     id: 'tpl-mailserver',
     name: 'Mail Server',
@@ -345,13 +346,22 @@ const DEFAULT_TEMPLATES: DeviceTemplate[] = [
   },
 ];
 
+/**
+ * What each built-in link type is for, as it is kept in the browser with the
+ * template: the Italian words, whatever the language of the interface. On
+ * screen the description follows the language of the interface for as long
+ * as the user has not rewritten it (utils/templateText.ts, which also knows
+ * the words stored by earlier versions).
+ */
+const BUILT_IN_DESCRIPTIONS = dictionaryOf('it').templates.links.builtInDescriptions;
+
 // Default connection templates
 const DEFAULT_CONNECTION_TEMPLATES: ConnectionTemplate[] = [
   {
     id: 'conn-access',
     name: 'Access',
     type: 'access',
-    description: 'Porta di accesso a dispositivi finali',
+    description: BUILT_IN_DESCRIPTIONS.access,
     color: '#3b82f6', // Blue
     lineStyle: 'solid',
     strokeWidth: 2.5,
@@ -362,7 +372,7 @@ const DEFAULT_CONNECTION_TEMPLATES: ConnectionTemplate[] = [
     id: 'conn-trunk',
     name: 'Trunk',
     type: 'trunk',
-    description: 'Link trunk tra switch',
+    description: BUILT_IN_DESCRIPTIONS.trunk,
     color: '#9333ea', // Purple
     lineStyle: 'solid',
     strokeWidth: 3.5,
@@ -373,7 +383,7 @@ const DEFAULT_CONNECTION_TEMPLATES: ConnectionTemplate[] = [
     id: 'conn-uplink',
     name: 'Uplink',
     type: 'uplink',
-    description: 'Uplink a core/internet',
+    description: BUILT_IN_DESCRIPTIONS.uplink,
     color: '#f59e0b', // Orange
     lineStyle: 'dashed',
     strokeWidth: 3,
@@ -385,7 +395,7 @@ const DEFAULT_CONNECTION_TEMPLATES: ConnectionTemplate[] = [
     id: 'conn-backbone',
     name: 'Backbone',
     type: 'backbone',
-    description: 'Infrastruttura critica',
+    description: BUILT_IN_DESCRIPTIONS.backbone,
     color: '#ef4444', // Red
     lineStyle: 'dotted',
     strokeWidth: 4,
@@ -397,7 +407,7 @@ const DEFAULT_CONNECTION_TEMPLATES: ConnectionTemplate[] = [
     id: 'conn-mpls',
     name: 'MPLS',
     type: 'mpls',
-    description: 'Connessione MPLS WAN',
+    description: BUILT_IN_DESCRIPTIONS.mpls,
     color: '#10b981', // Green
     lineStyle: 'dashed',
     strokeWidth: 3.5,
@@ -553,7 +563,7 @@ export const useTemplateStore = create<TemplateStore>()(
       }),
       onRehydrateStorage: () => (state, error) => {
         if (error) {
-          console.warn('Template store hydration error (ignorato):', error);
+          console.warn('Template store hydration error (ignored):', error);
         }
 
         // Migration: add supportsPorts and supportsNICs fields to existing templates (v4 → v5 → v6 → v7)

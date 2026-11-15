@@ -7,6 +7,7 @@ import { useNetworkStore } from '@/store/networkStore';
 import { useUIStore } from '@/store/uiStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { AREA_LABEL_MAX_LENGTH, AREA_MIN_SIZE } from '@/utils/canvasAreas';
+import { useT } from '@/i18n';
 
 /** A press that moved less than this far is a click, not a move */
 const MOVE_THRESHOLD = 3;
@@ -42,6 +43,7 @@ const RESIZE_HANDLES = [
  * are selected are never dragged along with it.
  */
 const AreaNode = memo(({ id, data }: NodeProps<CanvasArea>) => {
+  const t = useT();
   const selected = useNetworkStore((state) => state.selectedAreaId === id);
   const editing = useNetworkStore((state) => state.editingAreaId === id);
   // While presenting an area is shown and nothing else
@@ -159,8 +161,8 @@ const AreaNode = memo(({ id, data }: NodeProps<CanvasArea>) => {
       {editing && !presenting ? (
         <InlineEdit
           value={data.label}
-          label="Nome del riquadro"
-          placeholder="Nome"
+          label={t.canvas.area.name}
+          placeholder={t.canvas.area.namePlaceholder}
           className="area-label-input nodrag nopan"
           maxLength={AREA_LABEL_MAX_LENGTH}
           onCommit={(label) => {
@@ -177,7 +179,7 @@ const AreaNode = memo(({ id, data }: NodeProps<CanvasArea>) => {
           type="button"
           className={`area-label nopan ${data.label ? '' : 'area-label-empty'}`}
           aria-pressed={selected}
-          title="Trascina per spostare il riquadro, doppio clic per rinominarlo"
+          title={t.canvas.area.labelHint}
           onDoubleClick={(event) => {
             event.stopPropagation();
             useNetworkStore.getState().setEditingArea(id);
@@ -191,7 +193,7 @@ const AreaNode = memo(({ id, data }: NodeProps<CanvasArea>) => {
           }}
           {...grip}
         >
-          {data.label || 'Senza nome'}
+          {data.label || t.canvas.area.unnamed}
         </button>
       )}
     </div>

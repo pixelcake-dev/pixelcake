@@ -2,6 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { Scrollbars } from 'react-custom-scrollbars-2';
 import { useEscapeToClose } from './useEscapeToClose';
+import { useT } from '@/i18n';
 
 // Modal variants for different use cases
 export type ModalVariant = 'fixed' | 'scrollable' | 'auto' | 'fullscreen' | 'tabbed';
@@ -125,6 +126,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   showCloseButton = true,
   verticalAlign = 'center',
 }) => {
+  const t = useT();
   // Esc closes the window as its X does; with more windows open, the one on top
   useEscapeToClose(isOpen, onClose);
 
@@ -276,7 +278,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
               <button
                 onClick={onClose}
                 className="p-1 text-[var(--text-color-light)] hover:text-[var(--text-color)] hover:bg-[var(--bg-hover)] rounded transition-colors"
-                aria-label="Close modal"
+                aria-label={t.ui.closeWindow}
               >
                 <X size={20} />
               </button>

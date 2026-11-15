@@ -25,6 +25,7 @@ import { useNetworkStore } from '@/store/networkStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
 import { createCompanySample } from '@/utils/sampleCompany';
+import { setLanguage } from '@/i18n';
 import languageReference from '../../../docs/terminal-commands.md?raw';
 import type { NetworkDevice, NetworkInterfaceCard } from '@/types';
 
@@ -947,24 +948,26 @@ describe('the DNS session of docs/terminal-commands.md', () => {
     return session;
   }
 
-  it('is there, on the sample of the welcome screen', () => {
+  it('is there, on the sample of the welcome screen loaded in English', () => {
     expect(languageReference).toContain('DNS on the same sample:');
     expect(documentedSession().map(step => step.command)).toEqual([
       'show dns',
-      'resolve gestionale.azienda.example from PC-Vendite',
-      'ping gestionale.azienda.example from PC-Vendite',
-      'browse portale.azienda.example from Portatile-1',
-      'resolve intranet.azienda.example from PC-Vendite',
-      'add record intranet.azienda.example Web-Gestionale on Srv-Auth',
-      'resolve intranet.azienda.example from PC-Vendite',
-      'resolve portale.azienda.example from Cliente-Remoto',
-      'interface eth0 dns none on PC-Vendite',
-      'ping gestionale.azienda.example from PC-Vendite',
-      'show dns PC-Vendite',
+      'resolve erp.company.example from PC-Sales',
+      'ping erp.company.example from PC-Sales',
+      'browse portal.company.example from Laptop-1',
+      'resolve intranet.company.example from PC-Sales',
+      'add record intranet.company.example Web-ERP on Srv-Auth',
+      'resolve intranet.company.example from PC-Sales',
+      'resolve portal.company.example from Remote-Customer',
+      'interface eth0 dns none on PC-Sales',
+      'ping erp.company.example from PC-Sales',
+      'show dns PC-Sales',
     ]);
   });
 
   it('prints, command after command, exactly what the reference shows', () => {
+    // The reference is in English, and so are the names of its sample
+    setLanguage('en');
     loadCompany();
     for (const { command, printed } of documentedSession()) {
       expect(transcript(command), command).toEqual(printed);

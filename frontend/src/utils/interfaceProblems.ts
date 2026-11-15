@@ -3,9 +3,11 @@
  * what is wrong with one (said under its fields while it is typed, and again
  * when the device is saved), and how one is kept (trimmed, without what was
  * left empty). The window edits its ports and cards in place and saves them
- * all together: nothing here knows of React.
+ * all together: nothing here knows of React. What is wrong is said in the
+ * language of the interface at the moment it is asked.
  */
 
+import { getT } from '@/i18n';
 import { isValidIP } from '@/utils/ipHelpers';
 import { isBlankPool, nicPoolProblemText, portPoolProblemText, tidyPool } from '@/utils/dhcpLabels';
 import { dnsServerProblem } from '@/utils/networkConfigValidation';
@@ -36,13 +38,14 @@ function keptAddress(port: Port): Pick<Port, 'ip' | 'subnet'> {
 
 /** What is wrong with a port as typed; an empty object when it is fine */
 export function portProblems(deviceType: string, port: Port): PortProblems {
+  const t = getT();
   const problems: PortProblems = {};
   if (portsCarryAddress(deviceType)) {
     const ip = (port.ip ?? '').trim();
     const subnet = (port.subnet ?? '').trim();
-    if (ip && !isValidIP(ip)) problems.address = `"${ip}" non è un indirizzo IPv4 valido`;
-    else if (subnet && !isValidIP(subnet)) problems.address = `"${subnet}" non è una subnet mask valida`;
-    else if (!ip && subnet) problems.address = 'Inserisci un indirizzo IP oppure svuota la subnet mask';
+    if (ip && !isValidIP(ip)) problems.address = t.common.validation.notIPv4(ip);
+    else if (subnet && !isValidIP(subnet)) problems.address = t.interfaces.problems.notSubnetMask(subnet);
+    else if (!ip && subnet) problems.address = t.interfaces.problems.addressOrNoMask;
 
     const pool = port.dhcpServer;
     if (pool && !isBlankPool(pool)) {
@@ -51,7 +54,7 @@ export function portProblems(deviceType: string, port: Port): PortProblems {
     }
   }
   if (deviceType === 'Switch' && typeof port.vlan === 'number' && !isVlanNumber(port.vlan)) {
-    problems.vlan = `${port.vlan} non è una VLAN: il numero va da 1 a 4094`;
+    problems.vlan = t.interfaces.problems.notVlan(port.vlan);
   }
   return problems;
 }
@@ -87,7 +90,7 @@ export interface NicProblems {
 /** What is wrong with a card as typed; an empty object when it is fine */
 export function nicProblems(nic: NetworkInterfaceCard): NicProblems {
   const problems: NicProblems = {};
-  if (!nic.name.trim()) problems.name = 'La scheda deve avere un nome, per esempio eth0';
+  if (!nic.name.trim()) problems.name = getT().interfaces.problems.cardNeedsName;
   // A card on DHCP has no address, no DNS server and no pool of its own
   if (nic.dhcp === true) return problems;
   const dns = dnsServerProblem(nic.dns ?? '');
@@ -133,18 +136,19 @@ export function firstInterfaceProblem(
   ports: Port[],
   nics: NetworkInterfaceCard[]
 ): string | undefined {
+  const say = getT().interfaces.problems;
   for (const port of ports) {
     const { address, vlan } = portProblems(deviceType, port);
     const problem = address ?? vlan;
-    if (problem) return `Porta ${port.id}: ${problem}`;
+    if (problem) return say.ofPort(port.id, problem);
   }
   const names = new Set<string>();
   for (const nic of nics) {
     const { name, dns } = nicProblems(nic);
     const problem = name ?? dns;
-    if (problem) return `Scheda ${nic.name.trim() || nic.id}: ${problem}`;
+    if (problem) return say.ofCard(nic.name.trim() || nic.id, problem);
     const key = nic.name.trim().toLowerCase();
-    if (names.has(key)) return `Due schede si chiamano ${nic.name.trim()}: ogni scheda ha un nome suo`;
+    if (names.has(key)) return say.sameCardName(nic.name.trim());
     names.add(key);
   }
   return undefined;
@@ -168,17 +172,18 @@ export function readVlanText(
     .map((part) => part.trim())
     .filter(Boolean);
   if (parts.length === 0) return { vlan: undefined };
+  const say = getT().interfaces.problems;
   const numbers: number[] = [];
   for (const part of parts) {
     const value = /^\d+$/.test(part) ? Number(part) : NaN;
     if (!isVlanNumber(value)) {
-      return { vlan: undefined, error: `${part} non è una VLAN: il numero va da 1 a 4094` };
+      return { vlan: undefined, error: say.notVlan(part) };
     }
     if (!numbers.includes(value)) numbers.push(value);
   }
   if (mode === 'access') {
     if (numbers.length > 1) {
-      return { vlan: undefined, error: 'Una porta di accesso sta in una sola VLAN: per più VLAN serve un trunk' };
+      return { vlan: undefined, error: say.accessPortOneVlan };
     }
     return { vlan: numbers[0] };
   }

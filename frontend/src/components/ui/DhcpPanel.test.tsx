@@ -17,7 +17,7 @@ function renderPanel(server: NetworkDevice) {
     <DhcpPanel
       deviceId={server.id}
       dhcp={resolveDhcp({ devices: [server], connections: [] })}
-      setIn="Schede di rete"
+      setIn="cards"
       interfaces={listInterfaces(server)}
       onPoolChange={onPoolChange}
       onOpenInterface={onOpenInterface}

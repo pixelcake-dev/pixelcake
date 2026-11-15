@@ -73,7 +73,7 @@ describe('runFlowSimulation', () => {
   it('refuses to simulate on a canvas with fewer than two devices', () => {
     network().clearAllDevices();
     expect(runFlowSimulation('a', 'b', 'ping')).toBe(false);
-    expect(toast.warning).toHaveBeenCalledWith('Aggiungi almeno due dispositivi per avviare una simulazione.');
+    expect(toast.warning).toHaveBeenCalledWith('Aggiungi almeno due dispositivi per avviare una simulazione');
   });
 
   it('animates a failing exchange as far as it gets, and gives the reason', () => {

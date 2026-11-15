@@ -24,9 +24,12 @@ import SymbolColour from '@/assets/pixelcake-simbolo-colore.svg';
 import SymbolNegative from '@/assets/pixelcake-simbolo-negativo.svg';
 import { APP_NAME } from '@/constants/brand';
 import { useProjectStore } from '@/store/projectStore';
+import { useT } from '@/i18n';
+import LanguageSwitch from '@/components/ui/LanguageSwitch';
 import { encloseDevices } from '@/utils/areaActions';
 
 const TopMenuBar = () => {
+  const t = useT();
   const darkMode = useUIStore((state) => state.darkMode);
   const toggleDarkMode = useUIStore((state) => state.toggleDarkMode);
   const openHelp = useUIStore((state) => state.openHelp);
@@ -66,7 +69,7 @@ const TopMenuBar = () => {
   const handleAutoLayout = (algorithm: 'hierarchical' | 'subnet-grouped', direction: 'TB' | 'LR') => {
     const deviceCount = useNetworkStore.getState().devices.length;
     if (deviceCount === 0) {
-      toast.info('Nessun dispositivo sul canvas: non c\'è nulla da disporre.');
+      toast.info(t.menu.notices.nothingToArrange);
       return;
     }
     applyAutoLayout(algorithm, direction);
@@ -75,7 +78,7 @@ const TopMenuBar = () => {
   const handleAutoConnect = () => {
     const deviceCount = useNetworkStore.getState().devices.length;
     if (deviceCount < 2) {
-      toast.info('Servono almeno due dispositivi per collegarli automaticamente.');
+      toast.info(t.menu.notices.needTwoToConnect);
       return;
     }
     autoConnectDevices();
@@ -87,10 +90,7 @@ const TopMenuBar = () => {
     const { devices, areas } = useNetworkStore.getState();
     const hasDrawing = devices.length > 0 || areas.length > 0;
     if (hasDrawing) {
-      toast.info(
-        'La schermata di benvenuto compare solo su un canvas vuoto. ' +
-          'Il disegno non è stato toccato. Per rivederla passa a un canvas vuoto o creane uno nuovo.'
-      );
+      toast.info(t.menu.notices.welcomeNeedsEmptyCanvas);
       return;
     }
 
@@ -103,7 +103,7 @@ const TopMenuBar = () => {
   // File → Esporta immagine…: a picture of the drawing needs a drawing
   const handleExportImage = () => {
     if (useNetworkStore.getState().devices.length === 0) {
-      toast.info('Il canvas è vuoto: non c\'è nulla da esportare.');
+      toast.info(t.menu.notices.nothingToExport);
       return;
     }
     openModal('exportImage');
@@ -112,14 +112,14 @@ const TopMenuBar = () => {
   // Presentation mode shows a drawing: there must be one
   const handlePresent = () => {
     if (!usePresentationStore.getState().enter()) {
-      toast.info('Il canvas è vuoto: non c\'è nulla da presentare.');
+      toast.info(t.menu.notices.nothingToPresent);
     }
   };
 
   const handleFitView = () => {
     const deviceCount = useNetworkStore.getState().devices.length;
     if (deviceCount === 0) {
-      toast.info('Nessun dispositivo sul canvas: non c\'è nulla da inquadrare.');
+      toast.info(t.menu.notices.nothingToFit);
       return;
     }
     triggerFitView();
@@ -127,7 +127,7 @@ const TopMenuBar = () => {
 
   const handleCopy = () => {
     if (selectedDeviceIds.length === 0) {
-      toast.info('Seleziona almeno un dispositivo prima di copiare.');
+      toast.info(t.menu.notices.selectBeforeCopy);
       return;
     }
     copySelection();
@@ -135,7 +135,7 @@ const TopMenuBar = () => {
 
   const handlePaste = () => {
     if (!clipboard || clipboard.devices.length === 0) {
-      toast.info('Non c\'è nulla da incollare: copia prima uno o più dispositivi.');
+      toast.info(t.menu.notices.nothingToPaste);
       return;
     }
     paste();
@@ -151,7 +151,7 @@ const TopMenuBar = () => {
       {/* Logo */}
       <img
         src={darkMode ? SymbolNegative : SymbolColour}
-        alt={`${APP_NAME} Icon`}
+        alt={t.ui.logo.symbol(APP_NAME)}
         className="h-8 mr-4"
         onError={(e) => {
           // Hide image if not found
@@ -161,43 +161,43 @@ const TopMenuBar = () => {
 
       {/* File Menu */}
       <div className="menu-item">
-        <span>File</span>
+        <span>{t.menu.file.title}</span>
         <div className="dropdown-content">
           <ul>
-            <li onClick={handleNewProject}>Nuovo progetto…</li>
-            <li onClick={handleOpen}>Apri…</li>
+            <li onClick={handleNewProject}>{t.menu.file.newProject}</li>
+            <li onClick={handleOpen}>{t.menu.file.open}</li>
             <hr />
-            <li onClick={handleSave}>Salva</li>
-            <li onClick={handleSaveAs}>Salva con nome…</li>
+            <li onClick={handleSave}>{t.menu.file.save}</li>
+            <li onClick={handleSaveAs}>{t.menu.file.saveAs}</li>
             <hr />
-            <li onClick={handleExportImage}>Esporta immagine…</li>
+            <li onClick={handleExportImage}>{t.menu.file.exportPicture}</li>
           </ul>
         </div>
       </div>
 
       {/* Modifica Menu: every entry is enabled only when it can do something */}
       <div className="menu-item">
-        <span>Modifica</span>
+        <span>{t.menu.edit.title}</span>
         <div className="dropdown-content">
           <ul>
             <li
               onClick={selectedDeviceIds.length === 0 ? undefined : handleCopy}
               className={selectedDeviceIds.length === 0 ? 'disabled' : ''}
             >
-              Copia
+              {t.menu.edit.copy}
             </li>
             <li
               onClick={!clipboard || clipboard.devices.length === 0 ? undefined : handlePaste}
               className={!clipboard || clipboard.devices.length === 0 ? 'disabled' : ''}
             >
-              Incolla
+              {t.menu.edit.paste}
             </li>
             <hr />
             <li
               onClick={selectedDeviceIds.length === 0 ? undefined : handleEnclose}
               className={selectedDeviceIds.length === 0 ? 'disabled' : ''}
             >
-              Racchiudi in un riquadro
+              {t.menu.edit.enclose}
             </li>
           </ul>
         </div>
@@ -205,51 +205,51 @@ const TopMenuBar = () => {
 
       {/* Vista Menu */}
       <div className="menu-item">
-        <span>Vista</span>
+        <span>{t.menu.view.title}</span>
         <div className="dropdown-content">
           <ul>
-            <li onClick={handleFitView}>Adatta alla finestra</li>
-            <li onClick={handlePresent}>Modalità presentazione</li>
+            <li onClick={handleFitView}>{t.menu.view.fit}</li>
+            <li onClick={handlePresent}>{t.menu.view.presentation}</li>
             <hr />
             {/* Auto-Layout Submenu */}
             <li className="has-submenu">
-              Auto-Layout Rete
+              {t.menu.view.autoLayout}
               <div className="nested-dropdown">
                 <ul>
                   <li onClick={(e) => { e.stopPropagation(); handleAutoLayout('hierarchical', 'TB'); }}>
                     <Network size={14} style={{ display: 'inline', marginRight: '6px' }} />
                     <ArrowDown size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                    Hierarchical Verticale
+                    {t.menu.view.layouts.hierarchicalVertical}
                   </li>
                   <li onClick={(e) => { e.stopPropagation(); handleAutoLayout('hierarchical', 'LR'); }}>
                     <Network size={14} style={{ display: 'inline', marginRight: '6px' }} />
                     <ArrowRight size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                    Hierarchical Orizzontale
+                    {t.menu.view.layouts.hierarchicalHorizontal}
                   </li>
                   <hr />
                   <li onClick={(e) => { e.stopPropagation(); handleAutoLayout('subnet-grouped', 'TB'); }}>
                     <Building2 size={14} style={{ display: 'inline', marginRight: '6px' }} />
                     <ArrowDown size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                    Subnet-Grouped Verticale
+                    {t.menu.view.layouts.subnetVertical}
                   </li>
                   <li onClick={(e) => { e.stopPropagation(); handleAutoLayout('subnet-grouped', 'LR'); }}>
                     <Building2 size={14} style={{ display: 'inline', marginRight: '6px' }} />
                     <ArrowRight size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                    Subnet-Grouped Orizzontale
+                    {t.menu.view.layouts.subnetHorizontal}
                   </li>
                 </ul>
               </div>
             </li>
-            <li onClick={handleAutoConnect}>Auto-Connect Rete</li>
+            <li onClick={handleAutoConnect}>{t.menu.view.autoConnect}</li>
             <hr />
             {/* Magnifica Submenu */}
             <li className="has-submenu">
-              Magnifica
+              {t.menu.view.magnify}
               <div className="nested-dropdown">
                 <ul>
                   {/* Dispositivi Submenu */}
                   <li className="has-submenu">
-                    Dispositivi
+                    {t.menu.view.magnifyDevices}
                     <div className="nested-dropdown">
                       <ul>
                         <li
@@ -312,7 +312,7 @@ const TopMenuBar = () => {
 
                   {/* Connessioni Submenu */}
                   <li className="has-submenu">
-                    Connessioni
+                    {t.menu.view.magnifyConnections}
                     <div className="nested-dropdown">
                       <ul>
                         {connectionTemplates.map((template) => (
@@ -332,7 +332,7 @@ const TopMenuBar = () => {
 
                   {/* Reset Magnification */}
                   <li onClick={(e) => { e.stopPropagation(); resetMagnification(); }}>
-                    Reset Magnifica
+                    {t.menu.view.resetMagnify}
                   </li>
                 </ul>
               </div>
@@ -343,7 +343,7 @@ const TopMenuBar = () => {
               {particleAnimationEnabled && <Check size={14} style={{ display: 'inline', marginRight: '6px' }} />}
               {!particleAnimationEnabled && <span style={{ display: 'inline-block', width: '14px', marginRight: '6px' }}></span>}
               <Sparkles size={14} style={{ display: 'inline', marginRight: '6px' }} />
-              Animazione Rete
+              {t.menu.view.animation}
             </li>
           </ul>
         </div>
@@ -351,13 +351,13 @@ const TopMenuBar = () => {
 
       {/* Aiuto Menu */}
       <div className="menu-item">
-        <span>Aiuto</span>
+        <span>{t.menu.help.title}</span>
         <div className="dropdown-content">
           <ul>
-            <li onClick={() => openHelp('guide')}>Guida</li>
-            <li onClick={() => openHelp('commands')}>Comandi del terminale</li>
-            <li onClick={handleShowWelcome}>Mostra la schermata di benvenuto</li>
-            <li onClick={() => openHelp('about')}>Informazioni</li>
+            <li onClick={() => openHelp('guide')}>{t.menu.help.guide}</li>
+            <li onClick={() => openHelp('commands')}>{t.menu.help.commands}</li>
+            <li onClick={handleShowWelcome}>{t.menu.help.welcome}</li>
+            <li onClick={() => openHelp('about')}>{t.menu.help.about}</li>
           </ul>
         </div>
       </div>
@@ -369,14 +369,14 @@ const TopMenuBar = () => {
         type="button"
         className="topbar-project"
         onClick={() => setActiveSidebarPanel('explorer')}
-        title="Progetto aperto. Clic per aprire l'Explorer: nome, canvas, salvataggio"
+        title={t.menu.project.hint}
       >
         {hasUnsavedChanges && (
           <span
             className="explorer-unsaved-dot"
             role="img"
-            aria-label="Modifiche non salvate su file"
-            title="Modifiche non salvate su file"
+            aria-label={t.menu.project.unsavedChanges}
+            title={t.menu.project.unsavedChanges}
           />
         )}
         <span className="topbar-project-name">{projectName}</span>
@@ -390,16 +390,19 @@ const TopMenuBar = () => {
         type="button"
         className="present-button"
         onClick={handlePresent}
-        title="Mostra il disegno: fai una domanda alla rete, simula un guasto"
+        title={t.menu.presentHint}
       >
-        <Presentation size={16} aria-hidden="true" /> Presenta
+        <Presentation size={16} aria-hidden="true" /> {t.menu.present}
       </button>
+
+      {/* The language of the interface, next to the theme */}
+      <LanguageSwitch className="ml-3" />
 
       {/* Theme Toggle */}
       <button
         className="ml-2 px-2 py-1 hover:text-[var(--accent-color)] cursor-pointer border-none bg-transparent"
         onClick={toggleDarkMode}
-        title={darkMode ? 'Passa a tema chiaro' : 'Passa a tema scuro'}
+        title={darkMode ? t.menu.lightTheme : t.menu.darkTheme}
       >
         {darkMode ? <Sun size={18} /> : <Moon size={18} />}
       </button>

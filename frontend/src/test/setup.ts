@@ -3,6 +3,18 @@ import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { registerBundledIcons } from '@/utils/bundledIcons';
 import { resetConfirms } from './confirm';
+import { LANGUAGE_KEY, getLanguage, setLanguage } from '@/i18n';
+
+// Tests read the interface in Italian, the language its words were first
+// written in: a test that wants English asks for it (`setLanguage('en')`).
+// jsdom presents itself as an English browser, so the browser of the tests
+// is made an Italian one: whatever starts the app again in a test (a store
+// loaded from scratch) then detects Italian, with nothing remembered
+Object.defineProperty(window.navigator, 'language', { value: 'it-IT', configurable: true });
+Object.defineProperty(window.navigator, 'languages', { value: ['it-IT', 'it'], configurable: true });
+// (the language was detected when this file was loaded, before the two lines above)
+setLanguage('it');
+localStorage.removeItem(LANGUAGE_KEY);
 
 // The app registers its icons at start-up (main.tsx); tests do the same.
 // Without this every icon drawn by a test is requested from the icon API,
@@ -14,4 +26,9 @@ afterEach(() => {
   cleanup();
   // A question asked in the window of the app does not outlive its test
   resetConfirms();
+  // Nor does a language chosen by a test
+  if (getLanguage() !== 'it') {
+    setLanguage('it');
+    localStorage.removeItem(LANGUAGE_KEY);
+  }
 });

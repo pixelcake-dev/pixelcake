@@ -31,9 +31,17 @@
  * Devices have the shape AddDeviceModal produces. Positions are hand-placed,
  * top-down. The data is fully deterministic (fixed MACs) so tests can rely
  * on it.
+ *
+ * The names above are the Italian ones. Whatever is called differently in
+ * another language (the two PCs and the server of the inside, places, ports,
+ * notes) is read from the dictionary, `samples.site`, at the moment the
+ * sample is created; what is called the same everywhere (FW-Edge, SW-Core,
+ * Internet, VLAN 10…) is written here. Ids and addresses never change.
  */
 
 import type { NetworkDevice, NetworkConnection, NetworkInterfaceCard, Port } from '@/types';
+import { getT } from '@/i18n';
+import { areasAround, sampleSettings, type SampleNetwork } from '@/utils/sampleNetwork';
 
 const MASK = '255.255.255.0';
 const P2P_MASK = '255.255.255.252';
@@ -80,10 +88,12 @@ function endDevice(
   };
 }
 
-export function createPerimeterSample(): {
-  devices: NetworkDevice[];
-  connections: NetworkConnection[];
-} {
+export function createPerimeterSample(): SampleNetwork {
+  // The names are read now, in the language the interface is in: once on the
+  // board they are content, and they stay as they were created
+  const names = getT().samples.site;
+  const { offices, serverRoom } = names.places;
+
   const devices: NetworkDevice[] = [
     // ── Outside ──────────────────────────────────────────────────────────
     {
@@ -117,11 +127,11 @@ export function createPerimeterSample(): {
       subnet: P2P_MASK,
       gateway: '',
       vendor: '',
-      location: 'Sala Server',
+      location: serverRoom,
       position: { x: 560, y: 190 },
       portCount: 4,
       ports: ports(4, 'lan', {
-        1: { name: 'Interno', ip: '10.0.0.2', subnet: P2P_MASK, securityZone: 'trust' },
+        1: { name: names.ports.inside, ip: '10.0.0.2', subnet: P2P_MASK, securityZone: 'trust' },
         2: { name: 'DMZ', portType: 'dmz', ip: '172.16.0.1', subnet: MASK, securityZone: 'dmz' },
         3: {
           name: 'Internet',
@@ -133,10 +143,10 @@ export function createPerimeterSample(): {
         },
       }),
       routes: [
-        { id: 'route-1', destination: '192.168.0.0/16', nextHop: '10.0.0.1', description: 'reti interne' },
+        { id: 'route-1', destination: '192.168.0.0/16', nextHop: '10.0.0.1', description: names.notes.insideNetworks },
       ],
       portForwards: [
-        { id: 'forward-1', service: 'web', port: 3, to: '172.16.0.10', description: 'sito pubblico' },
+        { id: 'forward-1', service: 'web', port: 3, to: '172.16.0.10', description: names.notes.publicWebsite },
       ],
       firewallRules: [
         {
@@ -145,7 +155,7 @@ export function createPerimeterSample(): {
           service: 'web',
           source: 'untrust',
           destination: '172.16.0.10',
-          description: 'sito pubblico',
+          description: names.notes.publicWebsite,
         },
       ],
     },
@@ -160,7 +170,7 @@ export function createPerimeterSample(): {
       subnet: MASK,
       gateway: '172.16.0.1',
       vendor: '',
-      location: 'Sala Server',
+      location: serverRoom,
       position: { x: 820, y: 360 },
       portCount: 8,
       ports: ports(8, 'access', { 1: { name: 'Web-Public' }, 8: { name: 'Uplink' } }),
@@ -182,12 +192,12 @@ export function createPerimeterSample(): {
       // Default route: everything that is not inside goes to the firewall
       gateway: '10.0.0.2',
       vendor: '',
-      location: 'Sala Server',
+      location: serverRoom,
       position: { x: 320, y: 360 },
       portCount: 4,
       ports: ports(4, 'lan', {
-        1: { name: 'Uffici (VLAN 10)', ip: '192.168.10.1', subnet: MASK },
-        2: { name: 'Server (VLAN 20)', ip: '192.168.20.1', subnet: MASK },
+        1: { name: names.ports.offices(10), ip: '192.168.10.1', subnet: MASK },
+        2: { name: names.ports.servers(20), ip: '192.168.20.1', subnet: MASK },
         3: { name: 'Firewall', ip: '10.0.0.1', subnet: P2P_MASK },
       }),
     },
@@ -202,30 +212,30 @@ export function createPerimeterSample(): {
       subnet: MASK,
       gateway: '',
       vendor: '',
-      location: 'Uffici',
+      location: offices,
       position: { x: 320, y: 540 },
       vlan: [10, 20],
       portCount: 8,
       ports: ports(8, 'access', {
-        1: { name: 'PC-Uffici-1', vlan: 10 },
-        2: { name: 'PC-Uffici-2', vlan: 10 },
-        3: { name: 'Srv-Interno', vlan: 20 },
+        1: { name: names.devices.officePc(1), vlan: 10 },
+        2: { name: names.devices.officePc(2), vlan: 10 },
+        3: { name: names.devices.internalServer, vlan: 20 },
         7: { name: 'Router VLAN 10', vlan: 10 },
         8: { name: 'Router VLAN 20', vlan: 20 },
       }),
     },
-    endDevice('pc-uffici-1', 'PC', 'tpl-pc', 'PC-Uffici-1', '192.168.10.11', '192.168.10.1', '02:00:C0:A8:0A:0B', {
-      x: 100,
-      y: 720,
-    }),
-    endDevice('pc-uffici-2', 'PC', 'tpl-pc', 'PC-Uffici-2', '192.168.10.12', '192.168.10.1', '02:00:C0:A8:0A:0C', {
-      x: 320,
-      y: 720,
-    }),
-    endDevice('srv-interno', 'Server', 'tpl-server', 'Srv-Interno', '192.168.20.10', '192.168.20.1', '02:00:C0:A8:14:0A', {
-      x: 540,
-      y: 720,
-    }),
+    endDevice(
+      'pc-uffici-1', 'PC', 'tpl-pc', names.devices.officePc(1),
+      '192.168.10.11', '192.168.10.1', '02:00:C0:A8:0A:0B', { x: 100, y: 720 }
+    ),
+    endDevice(
+      'pc-uffici-2', 'PC', 'tpl-pc', names.devices.officePc(2),
+      '192.168.10.12', '192.168.10.1', '02:00:C0:A8:0A:0C', { x: 320, y: 720 }
+    ),
+    endDevice(
+      'srv-interno', 'Server', 'tpl-server', names.devices.internalServer,
+      '192.168.20.10', '192.168.20.1', '02:00:C0:A8:14:0A', { x: 540, y: 720 }
+    ),
   ];
 
   // Every link is bound on both ends: NIC id on end devices, port id elsewhere
@@ -345,5 +355,33 @@ export function createPerimeterSample(): {
     },
   ];
 
-  return { devices, connections };
+  // What the project is set to with this network: a new device starts on the
+  // network of the offices, and the VLANs of the drawing have their names (1
+  // is where the ports nobody set are). The sample has no DNS server
+  const settings = sampleSettings({
+    network: '192.168.10.0',
+    gateway: '192.168.10.1',
+    vlans: [
+      { id: 1, name: names.vlans.default },
+      { id: 10, name: names.vlans.offices },
+      { id: 20, name: names.vlans.servers },
+    ],
+  });
+
+  // The three sides of the firewall, at a glance: what is outside, the DMZ,
+  // the inside. The firewall itself stands between them, in none
+  const areas = areasAround(
+    [
+      { label: 'Internet', color: 'slate', devices: ['internet', 'remote-pc'] },
+      { label: 'DMZ', color: 'green', devices: ['sw-dmz', 'web-public'] },
+      {
+        label: names.areas.inside,
+        color: 'amber',
+        devices: ['router-core', 'sw-core', 'pc-uffici-1', 'pc-uffici-2', 'srv-interno'],
+      },
+    ],
+    devices
+  );
+
+  return { devices, connections, settings, areas };
 }

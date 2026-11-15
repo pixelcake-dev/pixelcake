@@ -5,11 +5,12 @@
  * The tab shown is in the UI store (`helpTab`), so that each entry of the
  * Help menu can open the guide where it should (`openHelp(tab)`).
  *
- * The command list is not written here: it is rendered from the table the
- * terminal's own `help` command prints (COMMAND_REFERENCE), so the two can
- * never disagree. Whoever changes a behaviour described in "Come si usa"
- * must change that text too: every sentence there states something the
- * application really does.
+ * The words of the guide are in the dictionaries (`i18n/it/help.ts`,
+ * `i18n/en/help.ts`): its steps are drawn here in the order that file gives
+ * them. The command list is not written anywhere: it is rendered from the
+ * table the terminal's own `help` command prints (COMMAND_REFERENCE), so the
+ * two can never disagree, and it is English in both languages, as the
+ * terminal is.
  */
 
 import type { ReactNode } from 'react';
@@ -20,300 +21,84 @@ import Logo from '@/components/ui/Logo';
 import { useUIStore, type HelpTab } from '@/store/uiStore';
 import { COMMAND_REFERENCE } from '@/terminal/executor';
 import { GITHUB_REPO } from '@/constants/links';
-import { APP_MOTTO, APP_NAME } from '@/constants/brand';
+import { APP_NAME, APP_VERSION } from '@/constants/brand';
 import { BUNDLED_FONTS } from '@/constants/thirdParty';
 import { BUNDLED_ICON_SET_INFO } from '@/data/bundledIcons';
+import { useT } from '@/i18n';
+import { Rich } from '@/i18n/Rich';
 
-const TABS: Array<{ id: HelpTab; label: string }> = [
-  { id: 'guide', label: 'Come si usa' },
-  { id: 'commands', label: 'Comandi del terminale' },
-  { id: 'about', label: 'Informazioni' },
-];
+const TABS: HelpTab[] = ['guide', 'commands', 'about'];
 
-/* ── "Come si usa" ────────────────────────────────────────────────────── */
-
-const Step = ({ title, children }: { title: string; children: ReactNode }) => (
-  <li>
-    <p className="font-semibold text-[var(--text-color)]">{title}</p>
-    <p className="mt-1">{children}</p>
-  </li>
-);
+/* ── how to use it ────────────────────────────────────────────────────── */
 
 /** Something to type, or the name of a file: shown in monospace */
 const Mono = ({ children }: { children: ReactNode }) => (
   <code className="font-mono text-[0.9em] px-1 rounded bg-[var(--bg-canvas)]">{children}</code>
 );
 
-const GuideTab = () => (
-  <div className="settings-panel text-sm leading-relaxed text-[var(--text-color-light)]">
-    <p className="mb-4">
-      PixelCake serve a disegnare una piccola rete, configurarla e verificare se un dispositivo ne
-      raggiunge un altro.
+const mono = (words: string) => <Mono>{words}</Mono>;
+
+const Step = ({ title, text }: { title: string; text: string }) => (
+  <li>
+    <p className="font-semibold text-[var(--text-color)]">{title}</p>
+    <p className="mt-1">
+      <Rich text={text} code={mono} />
     </p>
-
-    <ol className="list-decimal pl-5 space-y-4">
-      <Step title="Aggiungi i dispositivi">
-        Nella barra a sinistra apri «Aggiungi Dispositivo» (il pulsante +) e scegli un tipo
-        dall&apos;elenco: controlla il nome e conferma, l&apos;indirizzo IP viene proposto in
-        automatico e si può cambiare, o lasciare al DHCP. Il dispositivo compare al centro della parte di canvas che stai guardando
-        (o nel primo posto libero lì accanto) ed è già selezionato.
-        «Aggiungi in Blocco» ne crea molti in una volta. Nella scheda
-        «Topologie» dello stesso pannello ci sono quattro reti di esempio già pronte: quella di
-        una piccola azienda (la stessa della schermata iniziale), una semplice, una con VLAN, DMZ
-        e firewall, e una con due sedi e una linea di riserva. Caricarne una prende il posto di
-        quanto è sul canvas.
-      </Step>
-
-      <Step title="Spostali e selezionali">
-        Trascina un dispositivo per spostarlo. Con Ctrl + clic ne selezioni più di uno, trascinando
-        su un&apos;area vuota disegni un riquadro di selezione. Trascinando con il tasto destro su
-        un&apos;area vuota sposti la vista, con la rotellina fai lo zoom. Tutte le scorciatoie sono
-        in Impostazioni → Avanzate.
-      </Step>
-
-      <Step title="Collegali">
-        Passa con il mouse sul bordo di un dispositivo: il lato sotto il puntatore diventa
-        arancione. Trascina da lì fino a un altro dispositivo e lascialo andare sopra: il cavo
-        arriva sul lato dove lo lasci. A ciascun capo il collegamento viene assegnato a una porta
-        o a una scheda di rete libera. Su un firewall con zone di sicurezza la porta va scelta a
-        mano. Con un clic destro sul collegamento, «Modifica Connessione» permette di cambiare le
-        interfacce, il tipo, la banda, l&apos;etichetta e il colore.
-      </Step>
-
-      <Step title="Raggruppa con i riquadri">
-        Un riquadro è un rettangolo colorato con un nome, disegnato dietro a un gruppo di
-        dispositivi per dire cosa sono: Core, Edge, Uffici, Internet. Nel pannello «Aggiungi
-        Dispositivo» c&apos;è «Riquadro», che ne aggiunge uno al centro della vista; oppure
-        seleziona i dispositivi e scegli Modifica → «Racchiudi in un riquadro» (c&apos;è anche nel
-        clic destro su un dispositivo): il riquadro nasce intorno a loro. Scrivi il nome e premi
-        Invio. Un riquadro si prende dal nome o dal bordo: trascinandolo si sposta, e i dispositivi
-        restano dove sono; quando è selezionato mostra otto maniglie per ridimensionarlo. Un doppio
-        clic sul nome lo rinomina, il clic destro apre un menu con «Rinomina», i colori ed
-        «Elimina», e il tasto Canc elimina il riquadro selezionato. L&apos;interno di un riquadro
-        non intralcia: lì dentro i dispositivi si selezionano, si collegano e si spostano come
-        sempre. I riquadri si vedono anche in presentazione e nell&apos;immagine esportata, e
-        vengono salvati con il progetto.
-      </Step>
-
-      <Step title="Configurali">
-        Un doppio clic su un dispositivo ne apre la scheda (la stessa di clic destro → «Dettagli
-        (Modifica)»). La prima schermata, «Generale», è fatta per il dispositivo: di un PC o di un
-        server mostra nome e indirizzo, che si scrive lì; di uno switch le VLAN e come sono divise
-        le porte; di un router o di un firewall le porte in uso, ciascuna con indirizzo,
-        collegamento e cosa fa. Switch, router e firewall hanno anche la scheda «Porte»: scegli una
-        porta e sotto compaiono le sue impostazioni; lì si cambia anche il «Numero di porte». Gli
-        altri dispositivi hanno «Schede di rete», con nome, velocità e MAC di ogni scheda. Su
-        «Generale» ogni dispositivo ha anche le «Note»: un testo libero, di più righe, per ciò che
-        non sta in un campo. Sul disegno le leggi fermando il puntatore sul dispositivo. Quello
-        che non va viene detto sotto il campo mentre scrivi; le modifiche valgono solo dopo aver
-        premuto «Salva».
-      </Step>
-
-      <Step title="Instrada tra le reti">
-        Ogni porta di un router o di un firewall può avere un indirizzo (scheda «Porte»): è il
-        gateway dei dispositivi collegati lì, e la rete di quella porta è raggiunta senza altro. Le
-        reti che stanno dietro un altro router si scrivono nella scheda «Rotte», con l&apos;indirizzo
-        del prossimo salto; il gateway del router è la sua rotta predefinita. La stessa scheda mostra
-        la tabella di instradamento che ne risulta. Serve una rotta anche per il ritorno. Una
-        seconda rotta per la stessa rete è di riserva: subentra quando la linea della prima è giù.
-      </Step>
-
-      <Step title="Separa con le VLAN">
-        Nella scheda «Porte» di uno switch ogni porta è di accesso, in una VLAN, oppure trunk, e
-        trasporta più VLAN con l&apos;etichetta. Due porte in VLAN diverse non si parlano: per farle
-        comunicare serve un router con una porta in ciascuna. Appena una porta ha una VLAN, quelle
-        che non hai toccato sono nella VLAN 1. Le VLAN si possono chiamare per nome: in
-        Impostazioni → Rete, sotto «VLAN del progetto», trovi quelle usate sul canvas e scrivi il
-        nome di ciascuna; «Aggiungi VLAN» ne aggiunge un&apos;altra. Dopo aver salvato, il nome
-        compare accanto al numero, per esempio VLAN 10 «Uffici», nella scheda dello switch e nelle
-        impostazioni delle sue porte. Nel terminale le VLAN restano numeri.
-      </Step>
-
-      <Step title="Filtra con il firewall">
-        Le porte di un firewall si mettono in una zona: trust, untrust o dmz. Senza regole decide
-        la politica delle zone: verso una zona più fidata il traffico è negato, il resto passa.
-        Nella scheda «Regole» si scrivono le eccezioni, lette dall&apos;alto in basso: decide la
-        prima che corrisponde, per servizio (ping, web, email, DNS), origine e destinazione. La
-        risposta a un flusso permesso passa sempre.
-      </Step>
-
-      <Step title="Esci su Internet con il NAT">
-        Un simbolo Cloud chiamato «Internet» non trasporta gli indirizzi privati (10.x, 172.16-31.x,
-        192.168.x): chi sta dentro non esce e chi sta fuori non entra, finché un router o un
-        firewall non traduce gli indirizzi. Nella scheda «NAT» del router o del firewall spunta
-        la porta rivolta a Internet (è la stessa scelta di «NAT Abilitato» sulla porta, nella
-        scheda «Porte»): ciò che esce prende l&apos;indirizzo di quella porta, e la risposta
-        torna a chi aveva chiesto. Per raggiungere da fuori un server che sta dentro, lì sotto
-        premi «Aggiungi inoltro»: servizio, porta su cui arriva, indirizzo interno. Chi è fuori
-        chiede all&apos;indirizzo della porta e la risposta gli torna da lì. Su un firewall serve
-        anche la regola che lo permette, nella scheda «Regole». La rete di esempio della
-        schermata iniziale è fatta così.
-      </Step>
-
-      <Step title="Dai gli indirizzi con il DHCP">
-        Un dispositivo può prendere l&apos;indirizzo da solo: nella scheda «Schede di rete», alla
-        voce «Indirizzo», scegli «Automatico (DHCP)» al posto di «Manuale». Glielo dà un server
-        DHCP della stessa rete: una porta di router o di firewall, oppure la scheda di un server.
-        Si accende nella scheda «DHCP» di quel dispositivo, con la spunta accanto alla porta o
-        alla scheda: l&apos;intervallo da «Primo indirizzo» a «Ultimo indirizzo» viene proposto,
-        e si può cambiare (è la stessa scelta di «Server DHCP Abilitato» sulla porta o sulla
-        scheda). Con l&apos;indirizzo arrivano la subnet mask e il gateway. Gli indirizzi si calcolano dal
-        disegno, sempre allo stesso modo: i dispositivi vengono serviti nell&apos;ordine in cui
-        compaiono e ciascuno prende il primo indirizzo libero, saltando quelli scritti a mano. La
-        scheda «DHCP» elenca anche chi ha preso quale indirizzo, e sul disegno un indirizzo
-        assegnato è seguito da «DHCP». Una scheda che non trova un server resta senza indirizzo,
-        e la sua finestra dice perché; quando è la prima scheda del dispositivo, sul canvas la
-        parte alta del suo disegno diventa gialla. Un router non passa la richiesta a un&apos;altra rete: il
-        relay non è simulato, e nemmeno le prenotazioni e le scadenze. Nella rete di esempio della
-        schermata iniziale i due portatili prendono l&apos;indirizzo così, da Router-Core.
-      </Step>
-
-      <Step title="Chiama i dispositivi per nome con il DNS">
-        Un server può fare da server DNS: nella sua scheda «DNS» premi «Aggiungi record» e scrivi
-        un nome, per esempio <Mono>gestionale.azienda.example</Mono>, e l&apos;indirizzo a cui
-        corrisponde. A chi chiedere lo decide ogni dispositivo: nella scheda «Schede di rete» il
-        campo «Server DNS» contiene l&apos;indirizzo del server. Per non scriverlo ogni volta, in
-        Impostazioni → Rete c&apos;è «Server DNS di Default»: i nuovi dispositivi nascono con
-        quello sulla scheda e, una volta salvato, lì sotto si può assegnarlo anche ai dispositivi
-        del canvas che non ne hanno uno. Chi prende l&apos;indirizzo dal
-        DHCP riceve anche quello, se nel server DHCP è compilato «Server DNS consegnato
-        (opzionale)». Un nome si usa nel terminale al posto di un indirizzo:{' '}
-        <Mono>ping gestionale.azienda.example from PC-Vendite</Mono> chiede prima l&apos;indirizzo
-        al server DNS, con una domanda che attraversa la rete come ogni altro scambio e può
-        fermarsi allo stesso modo, e poi fa il ping;{' '}
-        <Mono>resolve gestionale.azienda.example from PC-Vendite</Mono> fa soltanto la domanda.
-        Per un firewall la domanda è il servizio «DNS», che si sceglie nelle regole e negli
-        inoltri. Nulla viene ricordato: il nome viene chiesto di nuovo ogni volta. Non sono
-        simulati un secondo server DNS di riserva, l&apos;inoltro ad altri server e la ricerca
-        inversa; la simulazione e la presentazione scelgono i dispositivi dai menu e non usano i
-        nomi. Nella rete di esempio della schermata iniziale Srv-Auth conosce tre nomi, gli uffici
-        e i portatili chiedono a lui, e Cliente-Remoto non ha nessuno a cui chiedere.
-      </Step>
-
-      <Step title="Chiedi se un dispositivo ne raggiunge un altro">
-        Apri «Simulazione» (il pulsante con il fulmine), scegli «Partenza», «Destinazione» e il
-        «Modello di Flusso» (ping, email, pagina web o download), poi premi «Avvia Simulazione». Il
-        pacchetto percorre la rete sul disegno. Se non arriva, l&apos;animazione si ferma dove il
-        traffico viene bloccato e un messaggio ne spiega il motivo: quale apparato, quale porta,
-        quale rotta o quale regola. Quando il pacchetto è arrivato in fondo, la parte alta del
-        disegno del dispositivo che risponde diventa verde, o quella del dispositivo dove la
-        domanda si ferma diventa rossa, con il bordo dello stesso colore; restano così fino alla
-        domanda successiva, a una modifica del disegno o a un clic su un punto vuoto del canvas.
-        Vale anche per le domande fatte dal terminale.
-      </Step>
-
-      <Step title="Usa il terminale">
-        «Console», nella barra a sinistra, apre il terminale. Con un clic destro su un dispositivo →
-        «Console» si apre già posizionato su quel dispositivo. I comandi sono in inglese, per
-        esempio, sulla rete di esempio della schermata iniziale,{' '}
-        <Mono>ping Web-Gestionale from PC-Vendite</Mono>,{' '}
-        <Mono>trace Web-Gestionale from Portatile-1 as web</Mono> oppure{' '}
-        <Mono>show routes Router-Core</Mono>. Quelli che cambiano la rete, come{' '}
-        <Mono>add route 192.168.40.0/24 via 10.0.0.2 on Router-Core</Mono>, modificano lo stesso
-        disegno che vedi. L&apos;elenco è nella scheda «Comandi del terminale».
-      </Step>
-
-      <Step title="Presenta la rete">
-        «Presenta», in alto a destra, mette via gli strumenti per disegnare: resta il disegno,
-        adattato alla finestra e non più modificabile con il mouse, con un pannello accanto. Un
-        clic su un dispositivo apre un piccolo menu: «Parti da qui» e «Arriva qui» scelgono i due
-        capi della domanda, che si possono scegliere anche dai menu «Da» e «A» del pannello. Scelto
-        il tipo di scambio (Ping, Web o Email) il pacchetto parte da solo e il pannello dice se
-        arriva, per quali dispositivi passa e, se si ferma, dove e perché. Nella barra in alto si
-        regola la velocità del pacchetto, si apre il terminale e si passa a schermo intero. Si esce
-        con «Esci» o con il tasto Esc.
-      </Step>
-
-      <Step title="Chiedi cosa succede se qualcosa si rompe">
-        In presentazione, un clic su un dispositivo o su un cavo e poi «Simula un guasto» lo
-        considera rotto. Il disegno non cambia, e all&apos;uscita il guasto sparisce. La domanda
-        sullo schermo viene rifatta subito: se c&apos;è un&apos;altra strada il pacchetto la prende,
-        altrimenti si ferma e il pannello dice dove. Tra switch la strada è la più corta che
-        funziona; un router passa alla rotta di riserva quando la linea della rotta principale è
-        guasta. Sotto «Guasti simulati» c&apos;è l&apos;effetto sul resto della rete: quante
-        comunicazioni tra i dispositivi finali si interrompono, quante passano da un&apos;altra
-        strada, quante non cambiano. Un clic su una di esse la mostra. La rete di esempio «Due
-        sedi: linea principale e di riserva» è fatta per provarlo. Lo spanning tree non è
-        simulato.
-      </Step>
-
-      <Step title="Esporta il disegno come immagine">
-        File → Esporta immagine… mostra l&apos;anteprima del disegno intero, senza selezioni.
-        Scegli il formato: PNG, per documenti, presentazioni e messaggi, in
-        tre dimensioni, oppure SVG, vettoriale. Scegli il tema, chiaro o scuro qualunque sia quello
-        dello schermo, e con «Nome del progetto in alto» e «Sfondo trasparente» cosa c&apos;è
-        intorno al disegno. «Salva PNG…» chiede dove salvare il file; nei browser che non possono
-        chiederlo il pulsante è «Scarica PNG». Dove il browser lo permette, «Copia negli appunti»
-        lascia l&apos;immagine pronta da incollare. In presentazione la stessa finestra si apre dal
-        pulsante «Esporta immagine» della barra in alto: l&apos;immagine mostra i guasti simulati e
-        il percorso della risposta e, con «Domanda e risposta sotto il disegno», riporta la domanda
-        e la sua risposta.
-      </Step>
-
-      <Step title="Dividi il progetto in canvas">
-        Un progetto può avere più canvas. In «Explorer», il primo pulsante della barra a sinistra,
-        ne aggiungi con «Nuovo Canvas», li rinomini, li elimini (ne resta sempre almeno uno) e passi
-        dall&apos;uno all&apos;altro con un clic. Lì si cambiano anche il nome e la descrizione del
-        progetto.
-      </Step>
-
-      <Step title="Salva su file">
-        Il lavoro resta nel browser anche dopo aver ricaricato la pagina. Per conservarlo, o per
-        portarlo su un altro computer, usa File → Salva (Ctrl + S): il progetto, con tutti i suoi
-        canvas, viene scritto in un file <Mono>.pixelcake.json</Mono> che si riapre con File →
-        Apri…. In Chrome e in Edge il file scelto viene aggiornato a ogni salvataggio, negli altri
-        browser viene scaricato.
-      </Step>
-
-      <Step title="Importa ed esporta in YAML">
-        «Import/Export», nella barra a sinistra, esporta in YAML la rete del canvas aperto, da
-        copiare o da scaricare, e la ricarica da un file <Mono>.yaml</Mono> o <Mono>.yml</Mono>, al
-        posto di quella presente oppure in aggiunta. L&apos;esportazione Terraform è soltanto una
-        bozza e non si può applicare.
-      </Step>
-    </ol>
-
-    <p className="modal-info-box mt-6">
-      PixelCake è un prototipo: serve a ragionare su una piccola rete, non a validarne una reale.
-    </p>
-  </div>
+  </li>
 );
 
-/* ── "Comandi del terminale" ──────────────────────────────────────────── */
+const GuideTab = () => {
+  const t = useT();
+  return (
+    <div className="settings-panel text-sm leading-relaxed text-[var(--text-color-light)]">
+      <p className="mb-4">{t.help.intro}</p>
 
-const CommandsTab = () => (
-  <div className="settings-panel text-sm">
-    <p className="mb-4 leading-relaxed text-[var(--text-color-light)]">
-      Lo stesso elenco compare scrivendo <Mono>help</Mono> nel terminale. I nomi dei dispositivi non
-      distinguono maiuscole e minuscole e possono essere di più parole. Dove un comando chiede una
-      destinazione si può scrivere anche un nome come <Mono>www.azienda.example</Mono>: il
-      dispositivo di partenza ne chiede prima l&apos;indirizzo al proprio server DNS.
-    </p>
-
-    <table className="w-full border-collapse">
-      <thead>
-        <tr className="text-left border-b border-[var(--border-color)]">
-          <th scope="col" className="py-2 pr-4 font-semibold">
-            Comando
-          </th>
-          <th scope="col" className="py-2 font-semibold">
-            Cosa fa
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {COMMAND_REFERENCE.map(([syntax, description]) => (
-          <tr key={syntax} className="border-b border-[var(--border-color)] align-top">
-            <td className="py-2 pr-4 font-mono text-xs text-[var(--text-color)]">{syntax}</td>
-            <td className="py-2 text-[var(--text-color-light)]">{description}</td>
-          </tr>
+      <ol className="list-decimal pl-5 space-y-4">
+        {Object.entries(t.help.steps).map(([key, step]) => (
+          <Step key={key} title={step.title} text={step.text} />
         ))}
-      </tbody>
-    </table>
-  </div>
-);
+      </ol>
 
-/* ── "Informazioni" ───────────────────────────────────────────────────── */
+      <p className="modal-info-box mt-6">{t.help.prototype}</p>
+    </div>
+  );
+};
+
+/* ── the terminal commands ────────────────────────────────────────────── */
+
+const CommandsTab = () => {
+  const t = useT();
+  return (
+    <div className="settings-panel text-sm">
+      <p className="mb-4 leading-relaxed text-[var(--text-color-light)]">
+        <Rich text={t.help.commands.intro} code={mono} />
+      </p>
+
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className="text-left border-b border-[var(--border-color)]">
+            <th scope="col" className="py-2 pr-4 font-semibold">
+              {t.help.commands.command}
+            </th>
+            <th scope="col" className="py-2 font-semibold">
+              {t.help.commands.does}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {COMMAND_REFERENCE.map(([syntax, description]) => (
+            <tr key={syntax} className="border-b border-[var(--border-color)] align-top">
+              <td className="py-2 pr-4 font-mono text-xs text-[var(--text-color)]">{syntax}</td>
+              <td className="py-2 text-[var(--text-color-light)]">{description}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+/* ── what the application is ──────────────────────────────────────────── */
 
 const AboutRow = ({
   icon,
@@ -333,68 +118,75 @@ const AboutRow = ({
   </div>
 );
 
-/** `A (licence) e B (licence)`, each name a link to the text of its licence */
-const LicenceLinks = ({ items }: { items: ReadonlyArray<{ name: string; license: string; file: string }> }) => (
-  <>
-    {items.map((item, index) => (
-      <span key={item.file}>
-        {index > 0 && (index === items.length - 1 ? ' e ' : ', ')}
-        <a
-          href={`${import.meta.env.BASE_URL}${item.file}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[var(--accent-text)] underline"
-        >
-          {item.name}
-        </a>{' '}
-        ({item.license})
-      </span>
-    ))}
-  </>
-);
+/** `A (licence) and B (licence)`, each name a link to the text of its licence */
+const LicenceLinks = ({ items }: { items: ReadonlyArray<{ name: string; license: string; file: string }> }) => {
+  const t = useT();
+  return (
+    <>
+      {items.map((item, index) => (
+        <span key={item.file}>
+          {index > 0 && (index === items.length - 1 ? t.help.about.thirdParty.and : ', ')}
+          <a
+            href={`${import.meta.env.BASE_URL}${item.file}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[var(--accent-text)] underline"
+          >
+            {item.name}
+          </a>{' '}
+          ({item.license})
+        </span>
+      ))}
+    </>
+  );
+};
 
-const AboutTab = () => (
-  <div className="settings-panel">
-    <div className="space-y-3">
-      <AboutRow icon="mdi:application" title={APP_NAME}>
-        Ambiente visuale per disegnare una piccola rete e verificarla
-      </AboutRow>
+const AboutTab = () => {
+  const t = useT();
+  return (
+    <div className="settings-panel">
+      <div className="space-y-3">
+        <AboutRow icon="mdi:application" title={APP_NAME}>
+          {t.help.about.description}
+        </AboutRow>
 
-      <AboutRow icon="mdi:tag" title="Versione">
-        0.1.0 (Beta)
-      </AboutRow>
+        <AboutRow icon="mdi:tag" title={t.help.about.version}>
+          {APP_VERSION} (Beta)
+        </AboutRow>
 
-      <AboutRow icon="mdi:license" title="Licenza">
-        AGPL-3.0, open source
-      </AboutRow>
+        <AboutRow icon="mdi:license" title={t.help.about.licence}>
+          {t.help.about.licenceText}
+        </AboutRow>
 
-      <AboutRow icon="mdi:github" title="Repository">
-        <a
-          href={GITHUB_REPO}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[var(--accent-text)] underline"
-        >
-          {GITHUB_REPO.replace('https://', '')}
-        </a>
-      </AboutRow>
+        <AboutRow icon="mdi:github" title={t.help.about.repository}>
+          <a
+            href={GITHUB_REPO}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[var(--accent-text)] underline"
+          >
+            {GITHUB_REPO.replace('https://', '')}
+          </a>
+        </AboutRow>
 
-      <AboutRow icon="mdi:code-tags" title="Tecnologie">
-        React 19, TypeScript, Vite, Zustand, React Flow, Tailwind CSS
-      </AboutRow>
+        <AboutRow icon="mdi:code-tags" title={t.help.about.technologies}>
+          React 19, TypeScript, Vite, Zustand, React Flow, Tailwind CSS
+        </AboutRow>
 
-      {/* What is bundled from others: each name opens the text of its licence, which travels with the app */}
-      <AboutRow icon="mdi:license" title="Licenze di terzi">
-        Caratteri <LicenceLinks items={BUNDLED_FONTS} />, icone{' '}
-        <LicenceLinks items={BUNDLED_ICON_SET_INFO} />
-      </AboutRow>
+        {/* What is bundled from others: each name opens the text of its licence, which travels with the app */}
+        <AboutRow icon="mdi:license" title={t.help.about.thirdParty.title}>
+          {t.help.about.thirdParty.fonts} <LicenceLinks items={BUNDLED_FONTS} />, {t.help.about.thirdParty.icons}{' '}
+          <LicenceLinks items={BUNDLED_ICON_SET_INFO} />
+        </AboutRow>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /* ── the modal ────────────────────────────────────────────────────────── */
 
 const HelpModal = () => {
+  const t = useT();
   const isOpen = useUIStore(state => state.modals.help);
   const activeTab = useUIStore(state => state.helpTab);
   const setHelpTab = useUIStore(state => state.setHelpTab);
@@ -403,7 +195,7 @@ const HelpModal = () => {
   const handleClose = () => {
     closeModal('help');
     // Back to the first tab, like the settings: whoever opens the guide
-    // without asking for a tab starts from "Come si usa"
+    // without asking for a tab starts from how to use the app
     setHelpTab('guide');
   };
 
@@ -424,11 +216,11 @@ const HelpModal = () => {
         <>
           {/* Header with Title and Close Button */}
           <div className="modal-header flex items-center justify-between mx-6 pt-5 pb-3 flex-shrink-0">
-            <h3 className="text-base font-semibold tracking-tight">Guida</h3>
+            <h3 className="text-base font-semibold tracking-tight">{t.help.title}</h3>
             <button
               onClick={handleClose}
               className="p-1 text-[var(--text-color-light)] hover:text-[var(--text-color)] hover:bg-[var(--bg-hover)] rounded transition-colors"
-              aria-label="Chiudi la guida"
+              aria-label={t.help.close}
             >
               <X size={20} />
             </button>
@@ -437,18 +229,18 @@ const HelpModal = () => {
           {/* Tabs */}
           <div
             role="tablist"
-            aria-label="Sezioni della guida"
+            aria-label={t.help.sections}
             className="settings-tabs px-6 pt-1 border-b border-[var(--border-color)]"
           >
             {TABS.map(tab => (
               <button
-                key={tab.id}
+                key={tab}
                 role="tab"
-                aria-selected={activeTab === tab.id}
-                className={`settings-tab ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => setHelpTab(tab.id)}
+                aria-selected={activeTab === tab}
+                className={`settings-tab ${activeTab === tab ? 'active' : ''}`}
+                onClick={() => setHelpTab(tab)}
               >
-                {tab.label}
+                {t.help.tabs[tab]}
               </button>
             ))}
           </div>
@@ -458,7 +250,9 @@ const HelpModal = () => {
         <div className="modal-actions px-6 pb-6 pt-4">
           <div className="flex items-center justify-center gap-2 w-full">
             <Logo symbol size={18} />
-            <p className="text-sm text-[var(--text-color-light)] italic">«{APP_MOTTO}»</p>
+            <p className="text-sm text-[var(--text-color-light)] italic">
+              {t.common.quote(t.common.brand.motto)}
+            </p>
           </div>
         </div>
       }

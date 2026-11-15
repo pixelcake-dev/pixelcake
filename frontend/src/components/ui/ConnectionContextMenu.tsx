@@ -2,8 +2,10 @@ import { useEffect, useRef } from 'react';
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { askConfirm } from '@/store/confirmStore';
+import { useT } from '@/i18n';
 
 const ConnectionContextMenu = () => {
+  const t = useT();
   const contextMenuConnection = useUIStore((state) => state.contextMenuConnection);
   const contextMenuPosition = useUIStore((state) => state.contextMenuPosition);
   const closeContextMenu = useUIStore((state) => state.closeContextMenu);
@@ -43,8 +45,8 @@ const ConnectionContextMenu = () => {
     const { id } = contextMenuConnection;
     closeContextMenu();
     const confirmed = await askConfirm({
-      title: 'Eliminare questa connessione?',
-      confirmLabel: 'Elimina',
+      title: t.contextMenu.connection.deleteQuestion.title,
+      confirmLabel: t.common.actions.delete,
       danger: true,
     });
     if (confirmed) removeConnection(id);
@@ -63,10 +65,10 @@ const ConnectionContextMenu = () => {
       }}
     >
       <ul>
-        <li onClick={handleEdit}>Modifica Connessione</li>
+        <li onClick={handleEdit}>{t.contextMenu.connection.edit}</li>
         <hr />
         <li className="danger" onClick={handleDelete}>
-          Elimina Connessione
+          {t.contextMenu.connection.delete}
         </li>
       </ul>
     </div>

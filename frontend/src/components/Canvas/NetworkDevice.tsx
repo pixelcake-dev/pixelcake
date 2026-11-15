@@ -6,7 +6,7 @@ import { ZapOff } from 'lucide-react';
 import type { NetworkDevice as NetworkDeviceType } from '@/types/network';
 import DeviceDrawing from '@/components/ui/DeviceDrawing';
 import { deviceState, drawingOf } from '@/utils/deviceDrawing';
-import { NO_LEASE_LABEL } from '@/utils/dhcpLabels';
+import { noLeaseLabel } from '@/utils/dhcpLabels';
 import { DEVICE_METRICS, cableEnd, type Side } from '@/utils/deviceGeometry';
 import type { DeviceDrawingId } from '@/data/deviceDrawings';
 import { useNetworkStore } from '@/store/networkStore';
@@ -14,6 +14,7 @@ import { useTemplateStore } from '@/store/templateStore';
 import { useUIStore } from '@/store/uiStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
+import { useT } from '@/i18n';
 
 interface NetworkDeviceData extends NetworkDeviceType {
   /**
@@ -95,6 +96,9 @@ function arePropsEqual(
 }
 
 const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>) => {
+  // (the comparator below knows nothing of the language: this hook is what
+  // draws the device again when the language changes)
+  const t = useT();
   const setHoveredDevice = useNetworkStore((state) => state.setHoveredDevice);
   const templates = useTemplateStore((state) => state.templates);
   const magnifiedDeviceTypes = useUIStore((state) => state.magnifiedDeviceTypes);
@@ -123,8 +127,8 @@ const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>
 
   // Find template by ID (preferred) or fallback to type (backward compatibility)
   const template = data.templateId
-    ? templates.find((t) => t.id === data.templateId)
-    : templates.find((t) => t.type === data.type);
+    ? templates.find((entry) => entry.id === data.templateId)
+    : templates.find((entry) => entry.type === data.type);
 
   // The drawing of the device: the one of its template, else the one of its type
   const drawing = drawingOf(template, data.type);
@@ -157,7 +161,8 @@ const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>
     stopsHere: isDropPoint || answered === 'error',
     arrivesHere: isArrival || answered === 'ok',
     selected,
-    waiting: address === NO_LEASE_LABEL,
+    // (both in the language of the interface: the address is worked out in it, and t draws this again when it changes)
+    waiting: address === noLeaseLabel(),
   });
 
   // Magnification logic
@@ -242,24 +247,24 @@ const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>
       {/* Presentation mode: the ends of the question, and a broken device */}
       {(isSource || isTarget) && (
         <span className={`device-role ${isSource ? 'device-role-source' : 'device-role-target'}`}>
-          {isSource ? 'Da' : 'A'}
+          {isSource ? t.canvas.device.from : t.canvas.device.to}
         </span>
       )}
       {isFailed && (
-        <span className="device-failed-badge" title="Guasto simulato">
+        <span className="device-failed-badge" title={t.canvas.device.failed}>
           <ZapOff size={14} aria-hidden="true" />
-          <span className="sr-only">Guasto simulato</span>
+          <span className="sr-only">{t.canvas.device.failed}</span>
         </span>
       )}
 
       {/* The note of the device: the app shows it to the eye in a panel of its
           own when the pointer rests here (DeviceNote); a screen reader has it
           here. The drawing carries no mark for it */}
-      {data.notes?.trim() && <span className="sr-only">Nota: {data.notes.trim()}</span>}
+      {data.notes?.trim() && <span className="sr-only">{t.canvas.device.note(data.notes.trim())}</span>}
 
       {/* (what the lamp says of the answer on screen, for who cannot see its colour) */}
-      {state === 'error' && <span className="sr-only">Qui si ferma</span>}
-      {state === 'ok' && <span className="sr-only">Qui arriva</span>}
+      {state === 'error' && <span className="sr-only">{t.canvas.device.stopsHere}</span>}
+      {state === 'ok' && <span className="sr-only">{t.canvas.device.getsHere}</span>}
 
       {/* Device Content */}
       <div className="device-content pointer-events-none">

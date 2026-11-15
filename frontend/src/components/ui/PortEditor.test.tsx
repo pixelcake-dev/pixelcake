@@ -49,10 +49,10 @@ const type = (label: string, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
 const ACCESS = 'VLAN (singola)';
-const TRUNK = 'VLANs (separati da virgola)';
-const MODE = 'Modalità Porta';
-const NAT = 'NAT Abilitato';
-const SERVER = 'Server DHCP Abilitato';
+const TRUNK = 'VLAN (separate da virgola)';
+const MODE = 'Modalità della porta';
+const NAT = 'NAT attivo';
+const SERVER = 'Server DHCP attivo';
 const MASK = '255.255.255.0';
 
 describe('PortEditor — port address', () => {
@@ -60,24 +60,24 @@ describe('PortEditor — port address', () => {
     for (const deviceType of ['Router', 'Firewall']) {
       renderEditor({ id: 1, enabled: true }, deviceType);
       expect(screen.getByLabelText('Indirizzo IP')).toBeInTheDocument();
-      expect(screen.getByLabelText('Subnet Mask')).toBeInTheDocument();
+      expect(screen.getByLabelText('Subnet mask')).toBeInTheDocument();
       cleanup();
     }
     renderEditor({ id: 1, enabled: true }, 'Switch');
     expect(screen.queryByLabelText('Indirizzo IP')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Subnet Mask')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Subnet mask')).not.toBeInTheDocument();
   });
 
   it('shows the address the port already has', () => {
     renderEditor({ id: 2, enabled: true, ip: '192.168.20.1', subnet: MASK }, 'Router');
     expect(screen.getByLabelText('Indirizzo IP')).toHaveValue('192.168.20.1');
-    expect(screen.getByLabelText('Subnet Mask')).toHaveValue(MASK);
+    expect(screen.getByLabelText('Subnet mask')).toHaveValue(MASK);
   });
 
   it('a valid address goes to the port as it is typed, and is kept trimmed with its mask', () => {
     const { port, kept } = renderEditor({ id: 1, enabled: true, portType: 'lan' }, 'Router');
     type('Indirizzo IP', ' 192.168.10.1 ');
-    type('Subnet Mask', '255.255.0.0');
+    type('Subnet mask', '255.255.0.0');
     expect(port()).toMatchObject({ ip: ' 192.168.10.1 ', subnet: '255.255.0.0' });
     expect(kept()).toMatchObject({ ip: '192.168.10.1', subnet: '255.255.0.0' });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -102,25 +102,25 @@ describe('PortEditor — port address', () => {
   it('says so of an invalid mask, and of a mask without an IP', () => {
     renderEditor({ id: 1, enabled: true }, 'Router');
     type('Indirizzo IP', '192.168.10.1');
-    type('Subnet Mask', '255.255.255');
+    type('Subnet mask', '255.255.255');
     expect(screen.getByRole('alert')).toHaveTextContent('"255.255.255" non è una subnet mask valida');
 
     type('Indirizzo IP', '');
-    type('Subnet Mask', MASK);
+    type('Subnet mask', MASK);
     expect(screen.getByRole('alert')).toHaveTextContent('Inserisci un indirizzo IP oppure svuota la subnet mask');
   });
 
   it('clearing the IP removes the address from the port', () => {
     const { kept } = renderEditor({ id: 2, enabled: true, ip: '192.168.20.1', subnet: MASK }, 'Router');
     type('Indirizzo IP', '');
-    type('Subnet Mask', '');
+    type('Subnet mask', '');
     expect(kept().ip).toBeUndefined();
     expect(kept().subnet).toBeUndefined();
   });
 
   it('does not write address fields for a Switch port', () => {
     const { kept } = renderEditor({ id: 1, enabled: true, portType: 'access' }, 'Switch');
-    type('Nome Porta (opzionale)', 'PC-1');
+    type('Nome della porta (facoltativo)', 'PC-1');
     expect(kept().name).toBe('PC-1');
     expect('ip' in kept()).toBe(false);
     expect('subnet' in kept()).toBe(false);
@@ -131,16 +131,16 @@ describe('PortEditor — what every port has', () => {
   it('names the port in its title, with the name it is given', () => {
     renderEditor({ id: 3, enabled: true }, 'Router');
     expect(screen.getByRole('heading', { name: 'Porta 3' })).toBeInTheDocument();
-    type('Nome Porta (opzionale)', 'Internet');
+    type('Nome della porta (facoltativo)', 'Internet');
     expect(screen.getByRole('heading', { name: 'Porta 3 «Internet»' })).toBeInTheDocument();
   });
 
   it('is switched off and on, and its speed and note go to the port', () => {
     const { port, kept } = renderEditor({ id: 3, enabled: true }, 'Switch');
-    fireEvent.click(screen.getByLabelText('Porta Abilitata'));
+    fireEvent.click(screen.getByLabelText('Porta attiva'));
     expect(port().enabled).toBe(false);
-    type('Velocità Link', '1G');
-    type('Note / Descrizione', ' uplink ');
+    type('Velocità', '1G');
+    type('Note / descrizione', ' uplink ');
     expect(kept()).toMatchObject({ enabled: false, speed: '1G', description: 'uplink' });
   });
 });
@@ -251,13 +251,13 @@ describe('PortEditor — VLAN of a switch port', () => {
 });
 
 describe('PortEditor — security zone of a firewall port', () => {
-  const ZONE = 'Zona di Sicurezza';
+  const ZONE = 'Zona di sicurezza';
 
   it('a port without a zone stays without one when something else is typed', () => {
     // a name must not put the port in "trust" behind the user's back
     const { kept } = renderEditor({ id: 3, enabled: true, portType: 'lan' }, 'Firewall');
     expect(screen.getByLabelText(ZONE)).toHaveValue('');
-    type('Nome Porta (opzionale)', 'Riserva');
+    type('Nome della porta (facoltativo)', 'Riserva');
     expect(kept().name).toBe('Riserva');
     expect(kept().securityZone).toBeUndefined();
   });
@@ -333,7 +333,7 @@ describe('PortEditor — the DHCP server of a port', () => {
     fireEvent.click(screen.getByLabelText(SERVER));
     type('Primo indirizzo', ' 192.168.10.50 ');
     type('Ultimo indirizzo', '192.168.10.59');
-    type('Gateway consegnato (opzionale)', '192.168.10.254');
+    type('Gateway consegnato (facoltativo)', '192.168.10.254');
     expect(kept().dhcpServer).toEqual({ start: '192.168.10.50', end: '192.168.10.59', gateway: '192.168.10.254' });
 
     fireEvent.click(screen.getByLabelText(SERVER));
@@ -400,7 +400,7 @@ describe('PortGrid — link markers', () => {
     expect(screen.queryByTestId('port-link-marker-1')).not.toBeInTheDocument();
     expect(screen.queryByTestId('port-link-marker-3')).not.toBeInTheDocument();
     // the tooltip of the port itself says it too
-    expect(screen.getByTitle('Port 2 — collegata a SW-Servers (porta 8)')).toBeInTheDocument();
+    expect(screen.getByTitle('Porta 2 — collegata a SW-Servers (porta 8)')).toBeInTheDocument();
   });
 
   it('renders without markers when no link info is given', () => {

@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronDown, ChevronRight, Link2, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import NicEditor, { type CardLease } from '@/components/ui/NicEditor';
+import { useT } from '@/i18n';
 import type { NetworkInterfaceCard } from '@/types/network';
 
 interface NicRowsProps {
@@ -52,21 +53,20 @@ const NicRows: React.FC<NicRowsProps> = ({
   canServe = false,
   poolStatus,
 }) => {
+  const t = useT();
   // One card: there is nothing to choose, its settings are simply there
   const openId = nics.length === 1 ? nics[0].id : openNicId;
 
   return (
     <div className="nic-rows flex flex-col gap-2">
       {nics.length === 0 ? (
-        <p className="text-sm text-[var(--text-color-light)]">
-          Nessuna scheda di rete: senza una scheda il dispositivo non si collega a nulla.
-        </p>
+        <p className="text-sm text-[var(--text-color-light)]">{t.interfaces.cards.none}</p>
       ) : (
         <ul className="flex flex-col">
           {nics.map((nic) => {
             const open = nic.id === openId;
             const linkedTo = linkedNics?.get(nic.id);
-            const address = leasedAddresses?.get(nic.id) ?? (nic.ip || 'nessun indirizzo');
+            const address = leasedAddresses?.get(nic.id) ?? (nic.ip || t.interfaces.cards.noAddress);
             return (
               <li
                 key={nic.id}
@@ -84,26 +84,28 @@ const NicRows: React.FC<NicRowsProps> = ({
                     {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     <span className="nic-name">{nic.name}</span>
                     <span className="nic-address">{address}</span>
-                    <span className="nic-meta">{nic.mac ? `MAC ${nic.mac}` : 'MAC non indicato'}</span>
+                    <span className="nic-meta">{nic.mac ? `MAC ${nic.mac}` : t.interfaces.cards.noMac}</span>
                     <span className="nic-meta">{speedText(nic.speed)}</span>
                     {linkedTo && (
                       <span
                         className="nic-link"
-                        title={`Collegata a ${linkedTo}`}
+                        title={t.interfaces.link.linkedToPeer(linkedTo)}
                         data-testid={`nic-link-marker-${nic.id}`}
                       >
                         <Link2 size={12} />
                         {linkedTo}
                       </span>
                     )}
-                    {nic.enabled === false && <span className="nic-status-badge disabled">Disabilitata</span>}
+                    {nic.enabled === false && (
+                      <span className="nic-status-badge disabled">{t.interfaces.cards.disabled}</span>
+                    )}
                   </button>
                   {nics.length > 1 && (
                     <button
                       type="button"
                       className="nic-remove-button"
-                      title="Rimuovi scheda"
-                      aria-label={`Rimuovi la scheda ${nic.name}`}
+                      title={t.interfaces.cards.remove}
+                      aria-label={t.interfaces.cards.removeNamed(nic.name)}
                       onClick={() => onRemove(nic.id)}
                     >
                       <Trash2 size={15} />
@@ -129,7 +131,7 @@ const NicRows: React.FC<NicRowsProps> = ({
       <div>
         <Button variant="secondary" size="sm" onClick={onAdd}>
           <Plus size={14} />
-          Aggiungi scheda
+          {t.interfaces.cards.add}
         </Button>
       </div>
     </div>

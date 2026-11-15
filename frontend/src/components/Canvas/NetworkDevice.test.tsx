@@ -14,6 +14,7 @@ import { useNetworkStore } from '@/store/networkStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
 import { useUIStore } from '@/store/uiStore';
+import { setLanguage } from '@/i18n';
 import { createNewProject } from '@/utils/projectFileAccess';
 import { DEVICE_METRICS, cableEnd, type Side } from '@/utils/deviceGeometry';
 import NetworkCanvas from './NetworkCanvas';
@@ -157,6 +158,12 @@ describe('a device on the canvas', () => {
       [...frameOf(label).querySelectorAll('.sr-only')].map((span) => span.textContent);
     expect(words('PC-1')).toEqual(['Nota: In sala riunioni']);
     expect(words('PC-2')).toEqual([]);
+    try {
+      act(() => setLanguage('en'));
+      expect(words('PC-1')).toEqual(['Note: In sala riunioni']);
+    } finally {
+      act(() => setLanguage('it'));
+    }
     // what is drawn is the same, and the browser has no tooltip of its own to show
     const drawn = (label: string) => frameOf(label).querySelector('.device-content')?.children.length;
     expect(drawn('PC-1')).toBe(drawn('PC-2'));
@@ -301,6 +308,15 @@ describe('what the upper layer of a device says', () => {
     expect(wordsOf('PC-2')).toEqual(['Qui si ferma']);
     expect(frameOf('PC-1').className).not.toContain('device-drop');
     expect(wordsOf('PC-1')).toEqual([]);
+
+    // in the language of the interface, which can change while it is drawn
+    try {
+      act(() => setLanguage('en'));
+      expect(wordsOf('PC-2')).toEqual(['Stops here']);
+    } finally {
+      act(() => setLanguage('it'));
+    }
+    expect(wordsOf('PC-2')).toEqual(['Qui si ferma']);
 
     // the same answer, with the device itself taken as broken
     act(() => {

@@ -285,7 +285,7 @@ describe('AddDeviceModal — the address of a new end device is typed where it i
     const network = screen.getByRole('group', { name: 'Rete · eth0' });
     expect(screen.getByLabelText('Indirizzo')).toHaveValue('manual');
     expect(screen.getByLabelText('Indirizzo IP')).toHaveValue('192.168.1.2');
-    expect(screen.getByLabelText('Subnet Mask')).toHaveValue('255.255.255.0');
+    expect(screen.getByLabelText('Subnet mask')).toHaveValue('255.255.255.0');
     expect(screen.getByLabelText('Gateway')).toHaveValue('192.168.1.1');
     expect(network).toHaveTextContent("L'indirizzo è proposto: il primo libero della rete del progetto.");
 
@@ -332,9 +332,9 @@ describe('AddDeviceModal — the address of a new end device is typed where it i
     open('Switch', 'tpl-switch');
     expect(screen.getByRole('group', { name: 'Rete' })).toBeInTheDocument();
     expect(screen.getByLabelText('Indirizzo IP')).toHaveValue('192.168.1.2');
-    expect(screen.getByLabelText('Subnet Mask')).toHaveAttribute('readonly');
-    expect(screen.getByLabelText('Numero di Porte')).toHaveValue('24');
-    fireEvent.change(screen.getByLabelText('Numero di Porte'), { target: { value: '8' } });
+    expect(screen.getByLabelText('Subnet mask')).toHaveAttribute('readonly');
+    expect(screen.getByLabelText('Numero di porte')).toHaveValue('24');
+    fireEvent.change(screen.getByLabelText('Numero di porte'), { target: { value: '8' } });
     confirm();
     expect(last().ports).toHaveLength(8);
     expect(last().portCount).toBe(8);
@@ -358,9 +358,9 @@ describe('AddDeviceModal — the name of a new device is proposed, to be changed
     useUIStore.getState().setAddDeviceType(type, templateId);
     useUIStore.getState().openModal('addDevice');
     const view = render(<AddDeviceModal />);
-    const shown = screen.getByLabelText<HTMLInputElement>(/^Nome Dispositivo/).value;
+    const shown = screen.getByLabelText<HTMLInputElement>(/^Nome del dispositivo/).value;
     if (typed !== undefined) {
-      fireEvent.change(screen.getByLabelText(/^Nome Dispositivo/), { target: { value: typed } });
+      fireEvent.change(screen.getByLabelText(/^Nome del dispositivo/), { target: { value: typed } });
     }
     fireEvent.click(screen.getByRole('button', { name: 'Aggiungi' }));
     view.unmount();

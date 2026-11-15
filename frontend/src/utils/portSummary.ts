@@ -5,6 +5,7 @@
  */
 
 import { maskToPrefix, portVlanMode } from '@/engine';
+import { getT } from '@/i18n';
 import { isValidIP } from '@/utils/ipHelpers';
 import { vlanLabel, vlanShort } from '@/utils/vlanNames';
 import type { Port, ProjectVlan } from '@/types';
@@ -54,7 +55,8 @@ function appliesVlans(ports: Port[]): boolean {
  * The VLAN of a port in a few words, as the engine reads the port among the
  * others of its device: `VLAN 10 «Uffici»` for an access port, `trunk: VLAN
  * 10 «Uffici», 20` or `trunk: tutte le VLAN` for a trunk. Empty when the
- * device applies no VLAN: a router, a firewall, a switch nobody split.
+ * device applies no VLAN: a router, a firewall, a switch nobody split. In
+ * the language of the interface at the moment it is asked.
  */
 export function portVlanText(
   port: Port,
@@ -64,9 +66,10 @@ export function portVlanText(
   if (!appliesVlans(ports)) return '';
   const mode = portVlanMode(port);
   if (mode.kind === 'access') return vlanLabel(mode.vlan, names);
-  if (mode.vlans.length === 0) return 'trunk: tutte le VLAN';
+  const say = getT().interfaces.vlanOfPort;
+  if (mode.vlans.length === 0) return say.trunkAll;
   const carried = [...mode.vlans].sort((a, b) => a - b).map((vlan) => vlanShort(vlan, names));
-  return `trunk: VLAN ${carried.join(', ')}`;
+  return say.trunk(carried);
 }
 
 export function summariseSwitch(ports: Port[], linkedPorts: ReadonlyMap<number, string>): SwitchSummary {

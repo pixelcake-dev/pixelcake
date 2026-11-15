@@ -1,47 +1,54 @@
 /**
  * Presentation mode — turning what the engine answers into what is shown.
- * Pure helpers: no React, no stores. The words for the audience are Italian;
- * the reasons and notes of the engine are shown as the engine wrote them.
+ * Pure helpers: no React. The words for the audience come from the
+ * dictionary, in the language the interface has at the moment of the call:
+ * a component that shows them must be drawn again when the language changes
+ * (`useT`). The reasons and notes of the engine are shown as the engine
+ * wrote them.
  */
 
 import { sameWay } from '@/engine';
 import type { FlowResult, ImpactReport, ImpactedFlow } from '@/engine';
 import type { PresentationFlow, PresentationRoute } from '@/store/presentationStore';
+import { getT, type Dictionary } from '@/i18n';
 
-export const FLOW_NAMES: Record<PresentationFlow, string> = {
-  ping: 'Ping',
-  web: 'Web',
-  email: 'Email',
-};
-
-export const FLOW_HINTS: Record<PresentationFlow, string> = {
-  ping: 'Una domanda e la sua risposta: il modo più semplice per sapere se due dispositivi si vedono',
-  web: 'La richiesta di una pagina e la pagina che torna indietro',
-  email: 'Una mail: dal mittente al server di posta, dal server al destinatario',
-};
-
-/** `A`, `A e B`, `A, B e C` */
-export function listInWords(items: string[]): string {
-  if (items.length <= 1) return items.join('');
-  return `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`;
+/** The name of an exchange: Ping, Web, Email */
+export function flowName(flow: PresentationFlow): string {
+  return getT().common.services[flow];
 }
 
-const LEG_TITLES: Record<string, string> = {
-  request: 'Andata',
-  reply: 'Ritorno',
-  'HTTP request': 'Richiesta della pagina',
-  'HTTP response': 'Risposta del server',
-  'download request': 'Richiesta del file',
-  'download data': 'Arrivo del file',
-  'SMTP submit': 'Invio al server di posta',
-  delivery: 'Consegna al destinatario',
-  'SMTP to cloud provider': 'Invio al servizio di posta esterno',
-  'cloud delivery': 'Consegna dal servizio esterno',
-};
+/** What an exchange is, in one line */
+export function flowHint(flow: PresentationFlow): string {
+  return getT().presentation.flowHints[flow];
+}
 
-/** The Italian title of one leg of an exchange (the engine names them in English) */
+/** A list the way a sentence says it: `A`, `A and B`, `A, B and C` */
+export function listInWords(items: string[]): string {
+  return getT().presentation.list(items);
+}
+
+/** The legs the engine names, and the entry of the dictionary that titles each */
+const LEG_KEYS = new Map<string, keyof Dictionary['presentation']['legs']>([
+  ['request', 'request'],
+  ['reply', 'reply'],
+  ['HTTP request', 'httpRequest'],
+  ['HTTP response', 'httpResponse'],
+  ['download request', 'downloadRequest'],
+  ['download data', 'downloadData'],
+  ['SMTP submit', 'smtpSubmit'],
+  ['delivery', 'delivery'],
+  ['SMTP to cloud provider', 'smtpToCloud'],
+  ['cloud delivery', 'cloudDelivery'],
+]);
+
+/**
+ * The title of one leg of an exchange, in the language of the interface.
+ * The engine names the legs in English: a leg it names in a way not known
+ * here keeps the name the engine gave it.
+ */
 export function legTitle(purpose: string): string {
-  return LEG_TITLES[purpose] ?? purpose;
+  const key = LEG_KEYS.get(purpose);
+  return key ? getT().presentation.legs[key] : purpose;
 }
 
 /** One device the packet goes through, as a row of the answer */
@@ -128,7 +135,7 @@ export type AnswerTone = 'ok' | 'ko' | 'unknown';
 
 export interface AnswerSummary {
   tone: AnswerTone;
-  /** "Arriva" / "Non arriva" / "Non si può provare" */
+  /** It arrives, it does not arrive, it cannot be tried: a word or two */
   headline: string;
   /** One plain sentence */
   detail: string;
@@ -143,13 +150,14 @@ export function summarizeAnswer(
   sourceLabel: string,
   targetLabel: string
 ): AnswerSummary {
+  const words = getT().presentation.answer;
+
   if (answer.verdict === 'success') {
-    const detail: Record<PresentationFlow, string> = {
-      ping: `${targetLabel} risponde a ${sourceLabel}.`,
-      web: `${sourceLabel} apre la pagina di ${targetLabel}.`,
-      email: `La mail di ${sourceLabel} arriva a ${targetLabel}.`,
+    return {
+      tone: 'ok',
+      headline: words.headlines.ok,
+      detail: words.arrives[flow](sourceLabel, targetLabel),
     };
-    return { tone: 'ok', headline: 'Arriva', detail: detail[flow] };
   }
 
   const failing = answer.legs[answer.legs.length - 1];
@@ -157,33 +165,21 @@ export function summarizeAnswer(
   const reason = failing?.trace.failureReason ?? answer.failureReason ?? 'unknown reason';
 
   if (answer.verdict === 'error') {
-    return {
-      tone: 'unknown',
-      headline: 'Non si può provare',
-      detail: 'Manca qualcosa per fare la prova.',
-      reason,
-    };
+    return { tone: 'unknown', headline: words.headlines.unknown, detail: words.cannotTry, reason };
   }
   if (answer.verdict === 'unreachable') {
-    return {
-      tone: 'ko',
-      headline: 'Non arriva',
-      detail: 'Nessun cavo collega i due dispositivi.',
-      reason,
-    };
+    return { tone: 'ko', headline: words.headlines.ko, detail: words.noCable, reason };
   }
 
   const drop = dropHop(answer);
-  if (!drop) return { tone: 'ko', headline: 'Non arriva', detail: 'Il pacchetto si perde per strada.', reason };
+  if (!drop) return { tone: 'ko', headline: words.headlines.ko, detail: words.lost, reason };
 
-  const leg = legTitle(drop.leg.purpose).toLowerCase();
+  const leg = legTitle(drop.leg.purpose);
   const neverLeft = drop.leg.trace.hops.length === 1;
   return {
     tone: 'ko',
-    headline: 'Non arriva',
-    detail: neverLeft
-      ? `Non esce nemmeno da ${drop.hop.label} (${leg}).`
-      : `Si ferma su ${drop.hop.label} (${leg}).`,
+    headline: words.headlines.ko,
+    detail: neverLeft ? words.neverLeaves(drop.hop.label, leg) : words.stopsAt(drop.hop.label, leg),
     reason,
   };
 }
@@ -197,20 +193,19 @@ export function compareWithIntact(
   intact: FlowResult,
   labelOf: (deviceId: string) => string
 ): string {
+  const words = getT().presentation.comparison;
   const arrived = intact.verdict === 'success';
   const arrives = now.verdict === 'success';
 
   if (arrived && arrives) {
-    if (sameWay(intact, now)) return 'I guasti non toccano questo percorso: va come prima.';
+    if (sameWay(intact, now)) return words.untouched;
     const before = new Set(intact.animationPath);
     const added = [...new Set(now.animationPath)].filter(id => !before.has(id)).map(labelOf);
-    return added.length > 0
-      ? `Arriva lo stesso, per un'altra strada: ora passa da ${listInWords(added)}.`
-      : "Arriva lo stesso, per un'altra strada.";
+    return added.length > 0 ? words.anotherWayThrough(added) : words.anotherWay;
   }
-  if (arrived) return 'Senza guasti arrivava.';
-  if (arrives) return 'Senza guasti non arrivava.';
-  return 'Non arrivava nemmeno senza guasti.';
+  if (arrived) return words.arrivedBefore;
+  if (arrives) return words.didNotArriveBefore;
+  return words.neverArrived;
 }
 
 /** The exchanges of one device that a failure touched */
@@ -256,9 +251,9 @@ export function groupBySource(
   return [...groups.values()];
 }
 
-/** `1 comunicazione` / `3 comunicazioni` */
+/** So many exchanges, counted in words: one, or several */
 export function exchanges(count: number): string {
-  return count === 1 ? '1 comunicazione' : `${count} comunicazioni`;
+  return getT().presentation.exchanges(count);
 }
 
 /**
@@ -268,24 +263,14 @@ export function exchanges(count: number): string {
 export function impactSentence(impact: ImpactReport, flow: PresentationFlow): string | undefined {
   if (impact.endpoints.length < 2 || impact.working === 0) return undefined;
 
-  const broken = impact.broken.length;
-  const rerouted = impact.rerouted.length;
-  const parts = [
-    broken === 0
-      ? impact.working === 1
-        ? "l'unica comunicazione non si interrompe"
-        : `nessuna delle ${impact.working} comunicazioni si interrompe`
-      : impact.working === 1
-        ? "l'unica comunicazione si interrompe"
-        : `${broken} ${broken === 1 ? 'comunicazione' : 'comunicazioni'} su ${impact.working} ${broken === 1 ? 'si interrompe' : 'si interrompono'}`,
-  ];
-  if (rerouted > 0) {
-    parts.push(`${rerouted} ${rerouted === 1 ? 'passa' : 'passano'} da un'altra strada`);
-  }
-  if (impact.unchanged > 0 && impact.working > 1) {
-    parts.push(`${impact.unchanged} ${impact.unchanged === 1 ? 'non cambia' : 'non cambiano'}`);
-  }
-  return `Sul resto della rete (${FLOW_NAMES[flow]} tra i ${impact.endpoints.length} dispositivi finali): ${parts.join(', ')}.`;
+  return getT().presentation.impact.sentence({
+    flowName: flowName(flow),
+    endpoints: impact.endpoints.length,
+    working: impact.working,
+    broken: impact.broken.length,
+    rerouted: impact.rerouted.length,
+    unchanged: impact.unchanged,
+  });
 }
 
 /** What a picture of the presentation says under the drawing */
@@ -316,33 +301,31 @@ export interface CaptionInput {
  */
 export function captionOf(input: CaptionInput): PresentationCaption | null {
   const { flow, question, answer, intactAnswer, failures, impact, labelOf } = input;
+  const words = getT().presentation.caption;
 
-  const failureLine =
-    failures.length === 0
-      ? undefined
-      : `${failures.length === 1 ? 'Guasto simulato' : 'Guasti simulati'}: ${listInWords(failures)}.`;
   const impactLine = impact ? impactSentence(impact, flow) : undefined;
 
   if (!question || !answer) {
-    if (!failureLine) return null;
+    if (failures.length === 0) return null;
     return {
       tone: null,
-      heading: failureLine.slice(0, -1),
+      heading: words.failures(failures),
       lines: impactLine ? [impactLine] : [],
     };
   }
 
   const summary = summarizeAnswer(answer, flow, question.sourceLabel, question.targetLabel);
   const comparison = intactAnswer ? compareWithIntact(answer, intactAnswer, labelOf) : undefined;
+  // (two whole sentences, one after the other)
   const lines = [comparison ? `${summary.detail} ${comparison}` : summary.detail];
   // The reason is the engine's own (English), as in the panel
-  if (summary.reason) lines.push(`Motivo: ${summary.reason}`);
-  if (failureLine) lines.push(failureLine);
+  if (summary.reason) lines.push(words.reason(summary.reason));
+  if (failures.length > 0) lines.push(words.failuresLine(failures));
   if (impactLine) lines.push(impactLine);
 
   return {
     tone: summary.tone,
-    heading: `${FLOW_NAMES[flow]} da ${question.sourceLabel} a ${question.targetLabel}: ${summary.headline.toLowerCase()}`,
+    heading: words.heading(flowName(flow), question.sourceLabel, question.targetLabel, summary.tone),
     lines,
   };
 }

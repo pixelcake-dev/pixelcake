@@ -8,10 +8,7 @@
 
 import { createJSONStorage, type StateStorage } from 'zustand/middleware';
 import { toast } from 'sonner';
-
-export const STORAGE_FULL_MESSAGE =
-  'Spazio del browser esaurito: le ultime modifiche non sono state memorizzate. ' +
-  'Salva il progetto su file (File → Salva) per non perderle.';
+import { getT } from '@/i18n';
 
 /** Keys whose last write failed; one toast per run of failures, not per write */
 const failingKeys = new Set<string>();
@@ -25,7 +22,7 @@ const safeLocalStorage: StateStorage = {
     } catch (error) {
       if (failingKeys.size === 0) {
         console.warn(`[Storage] Could not write "${name}":`, error);
-        toast.error(STORAGE_FULL_MESSAGE, { id: 'storage-full', duration: 15000 });
+        toast.error(getT().files.storageFull, { id: 'storage-full', duration: 15000 });
       }
       failingKeys.add(name);
     }

@@ -18,6 +18,7 @@ import { newDeviceName, newDevicePorts } from '@/utils/newDevice';
 import { nicProblems, tidyNic } from '@/utils/interfaceProblems';
 import { isEndDeviceKind } from '@/utils/defaultDns';
 import { isL3Type, withLeases } from '@/engine';
+import { useT } from '@/i18n';
 import type { DeviceType, Port, NetworkInterfaceCard } from '@/types/network';
 
 /**
@@ -28,6 +29,7 @@ import type { DeviceType, Port, NetworkInterfaceCard } from '@/types/network';
  * rest of a device is set in its window once it is on the canvas.
  */
 const AddDeviceModal = () => {
+  const t = useT();
   const isOpen = useUIStore((state) => state.modals.addDevice);
   const addDeviceType = useUIStore((state) => state.addDeviceType);
   const addDeviceTemplateId = useUIStore((state) => state.addDeviceTemplateId);
@@ -48,8 +50,8 @@ const AddDeviceModal = () => {
     if (isOpen && addDeviceType) {
       // Find template by ID (preferred) or fallback to type
       const template = addDeviceTemplateId
-        ? templates.find((t) => t.id === addDeviceTemplateId)
-        : templates.find((t) => t.type === addDeviceType);
+        ? templates.find((tpl) => tpl.id === addDeviceTemplateId)
+        : templates.find((tpl) => tpl.type === addDeviceType);
 
       // The name is proposed: the name of the template and the lowest number
       // that leaves it free on the canvas (the same name bulk add gives)
@@ -103,7 +105,7 @@ const AddDeviceModal = () => {
     // A card on DHCP needs no address; any other device is asked for one
     const address = card ? (card.dhcp ? 'dhcp' : (card.ip ?? '').trim()) : ip.trim();
     if (!name.trim() || !address) {
-      toast.error('Nome e IP sono obbligatori');
+      toast.error(t.addDevice.nameAndAddressRequired);
       return;
     }
     const cardProblem = card ? nicProblems(card).dns : undefined;
@@ -128,8 +130,8 @@ const AddDeviceModal = () => {
 
     // Initialize ports array if device supports ports (the ports bulk add gives too)
     const template = addDeviceTemplateId
-      ? templates.find((t) => t.id === addDeviceTemplateId)
-      : templates.find((t) => t.type === addDeviceType);
+      ? templates.find((tpl) => tpl.id === addDeviceTemplateId)
+      : templates.find((tpl) => tpl.type === addDeviceType);
     const ports: Port[] | undefined = template?.supportsPorts && portCount
       ? newDevicePorts(portCount, addDeviceType)
       : undefined;
@@ -170,8 +172,8 @@ const AddDeviceModal = () => {
 
   // Get template for current device to check port support and display name
   const template = addDeviceTemplateId
-    ? templates.find((t) => t.id === addDeviceTemplateId)
-    : templates.find((t) => t.type === addDeviceType);
+    ? templates.find((tpl) => tpl.id === addDeviceTemplateId)
+    : templates.find((tpl) => tpl.type === addDeviceType);
 
   const deviceTypeName = template?.name || addDeviceType;
   const isPC = addDeviceType === 'PC';
@@ -183,64 +185,67 @@ const AddDeviceModal = () => {
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={`Aggiungi Nuovo ${deviceTypeName}`}
+      title={t.addDevice.title(deviceTypeName)}
       size="md"
+      // (four fields to a row: at the 42rem of "md" each is too narrow for the
+      // longest choice of a select and for the example of an address)
+      className="!max-w-[46rem]"
       autoHeight={true}
       footer={
         <div className="modal-actions px-6 pb-6 pt-4">
           <Button variant="secondary" onClick={handleClose}>
-            Annulla
+            {t.common.actions.cancel}
           </Button>
           <Button variant="primary" onClick={handleSave}>
-            Aggiungi
+            {t.common.actions.add}
           </Button>
         </div>
       }
     >
       <div className="flex flex-col">
-        <FormFieldset legend="Identità" className="first:mt-0">
+        <FormFieldset legend={t.addDevice.identity.legend} className="first:mt-0">
           <FieldRow>
-            <ReadOnlyField label="Tipo">
+            <ReadOnlyField label={t.addDevice.type}>
               <DeviceDrawing drawing={drawingOf(template, addDeviceType)} size={24} />
               <span className="font-medium truncate">{deviceTypeName}</span>
             </ReadOnlyField>
             <TextField
-              label="Nome Dispositivo"
+              label={t.addDevice.identity.name}
               span={isPC ? 3 : 1}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={`es. ${addDeviceType}-Ufficio-01`}
+              placeholder={t.addDevice.identity.namePlaceholder(addDeviceType)}
               required
             />
             {/* Who made it and where it is: not asked of a PC */}
             {!isPC && (
               <TextField
-                label="Vendor"
+                label={t.addDevice.identity.vendor}
                 value={vendor}
                 onChange={(e) => setVendor(e.target.value)}
-                placeholder="es. Cisco, HP..."
+                placeholder={t.addDevice.identity.vendorPlaceholder}
               />
             )}
             {!isPC && (
               <TextField
-                label="Posizione"
+                label={t.addDevice.identity.location}
                 value={position}
                 onChange={(e) => setPosition(e.target.value)}
-                placeholder="es. Rack 01..."
+                placeholder={t.addDevice.identity.locationPlaceholder}
               />
             )}
             {/* How many ports: only for the devices that are made with ports */}
             {template?.supportsPorts && template.portOptions && (
               <SelectField
-                label="Numero di Porte"
+                label={t.addDevice.identity.portCount}
                 value={portCount?.toString() || ''}
                 onChange={(e) => setPortCount(Number(e.target.value))}
                 required
-                hint="Si può cambiare anche dopo."
+                hint={t.addDevice.identity.portCountHint}
               >
                 {template.portOptions.map((count) => (
                   <option key={count} value={count}>
-                    {count} porte
+                    {t.addDevice.ports(count)}
                   </option>
                 ))}
               </SelectField>
@@ -250,34 +255,41 @@ const AddDeviceModal = () => {
 
         {card ? (
           /* An end device: the address of its card, typed here or left to DHCP */
-          <FormFieldset legend={`Rete · ${card.name}`}>
+          <FormFieldset legend={t.addDevice.network.legendOfCard(card.name)}>
             <NicAddressFields
               nic={card}
               onChange={(patch) => setNics([{ ...card, ...patch }])}
             />
-            <p className={`${hintClass} mt-2`}>
-              L&apos;indirizzo è proposto: il primo libero della rete del progetto. Subnet mask
-              {takesDns ? ', gateway e server DNS' : ' e gateway'} sono quelli delle
-              Impostazioni → Rete.
-            </p>
+            <p className={`${hintClass} mt-2`}>{t.addDevice.network.cardHint(takesDns)}</p>
           </FormFieldset>
         ) : (
-          <FormFieldset legend="Rete">
+          <FormFieldset legend={t.addDevice.network.legend}>
             <FieldRow>
               <TextField
-                label="Indirizzo IP"
+                label={t.addDevice.network.ipAddress}
                 mono
                 value={ip}
                 onChange={(e) => setIp(e.target.value)}
                 required
-                hint="Proposto: il primo libero."
+                hint={t.addDevice.network.ipAddressHint}
               />
-              <TextField label="Subnet Mask" mono value={globalSettings.subnet} readOnly />
-              {!routesTraffic && <TextField label="Gateway" mono value={globalSettings.gateway} readOnly />}
+              <TextField
+                label={t.addDevice.network.subnetMask}
+                mono
+                value={globalSettings.subnet}
+                readOnly
+              />
+              {!routesTraffic && (
+                <TextField
+                  label={t.addDevice.network.gateway}
+                  mono
+                  value={globalSettings.gateway}
+                  readOnly
+                />
+              )}
               {routesTraffic && (
                 <span className={`col-span-2 pt-[18px] ${hintClass}`}>
-                  Gli indirizzi delle porte, le rotte e la rotta predefinita si impostano dopo,
-                  nella scheda del dispositivo.
+                  {t.addDevice.network.setLater}
                 </span>
               )}
             </FieldRow>

@@ -52,7 +52,7 @@ function renderEditor(start: NetworkInterfaceCard, props: { lease?: CardLease; c
 const mode = () => screen.getByLabelText<HTMLSelectElement>('Indirizzo');
 const type = (label: string, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
-const SERVER = 'Server DHCP Abilitato';
+const SERVER = 'Server DHCP attivo';
 
 describe('NicEditor — where the address comes from', () => {
   it('by hand: the fields, kept as typed and with no word about DHCP', () => {
@@ -101,7 +101,7 @@ describe('NicEditor — where the address comes from', () => {
   it('a card kept on DHCP opens on DHCP', () => {
     renderEditor({ ...CARD, dhcp: true, ip: '', subnet: '', gateway: '' });
     expect(mode().value).toBe('dhcp');
-    expect(screen.queryByLabelText('Subnet Mask')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Subnet mask')).not.toBeInTheDocument();
   });
 
   it('with nothing known of the drawing says where the address will come from', () => {
@@ -147,16 +147,16 @@ describe('NicEditor — where the address comes from', () => {
 describe('NicEditor — the card itself', () => {
   it('is switched off, renamed, given a speed and a note', () => {
     const { kept } = renderEditor(CARD);
-    fireEvent.click(screen.getByLabelText('Scheda Abilitata'));
-    type('Nome Interfaccia', ' ens192 ');
-    type('Velocità Link', '10G');
-    type('Note / Descrizione', 'uplink');
+    fireEvent.click(screen.getByLabelText('Scheda attiva'));
+    type('Nome dell\'interfaccia', ' ens192 ');
+    type('Velocità', '10G');
+    type('Note / descrizione', 'uplink');
     expect(kept()).toMatchObject({ enabled: false, name: 'ens192', speed: '10G', description: 'uplink' });
   });
 
   it('must have a name: an empty one is said so', () => {
     renderEditor(CARD);
-    type('Nome Interfaccia', ' ');
+    type('Nome dell\'interfaccia', ' ');
     expect(screen.getByRole('alert')).toHaveTextContent('La scheda deve avere un nome');
   });
 
@@ -246,7 +246,7 @@ describe('NicRows — the cards of a device', () => {
     fireEvent.click(screen.getByText('eth0', { selector: '.nic-name' }));
     expect(onOpen).toHaveBeenLastCalledWith('nic-1');
     // one card cannot be taken away
-    expect(screen.queryByRole('button', { name: /^Rimuovi la scheda/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Elimina la scheda/ })).not.toBeInTheDocument();
   });
 
   it('with several cards one is opened by its row, and closed by the same row', () => {
@@ -274,7 +274,7 @@ describe('NicRows — the cards of a device', () => {
     const { onAdd, onRemove } = renderRows([CARD, second]);
     fireEvent.click(screen.getByRole('button', { name: 'Aggiungi scheda' }));
     expect(onAdd).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Rimuovi la scheda eth1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Elimina la scheda eth1' }));
     expect(onRemove).toHaveBeenCalledWith('nic-2');
   });
 

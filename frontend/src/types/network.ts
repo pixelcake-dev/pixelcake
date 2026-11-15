@@ -162,7 +162,7 @@ export interface NetworkDevice {
   stp?: {
     enabled: boolean;
     mode?: 'STP' | 'RSTP' | 'PVST+' | 'MST';
-    priority?: number; // Bridge priority (0-65535, step 4096, default 32768)
+    priority?: number; // Bridge priority (0-61440, step 4096, default 32768)
   };
   // Port Management (Switch, Router, Firewall)
   portCount?: number; // Total number of ports (5, 8, 16, 24, 48)
@@ -210,7 +210,7 @@ export interface NetworkConnection {
   targetNic?: string;
   // Enhanced connection metadata
   type?: ConnectionType; // Type of connection
-  bandwidth?: string; // e.g., "1Gbps", "100Mbps"
+  bandwidth?: string; // e.g., "1 Gbps", "100 Mbps"
   vlan?: number[]; // VLAN IDs (for future network logic)
   label?: string; // Custom label
   color?: string; // Custom color override
@@ -332,7 +332,7 @@ export interface ConnectionTemplate {
   id: string;
   name: string; // Display name (e.g., "Trunk", "Access")
   type: string; // Unique identifier (e.g., "trunk", "access")
-  description?: string; // Italian description for UI
+  description?: string; // What the type is for: shown in the language of the interface until the user rewrites it (utils/templateText.ts)
   color: string; // Hex color (e.g., "#9333ea")
   lineStyle: 'solid' | 'dashed' | 'dotted'; // Visual line style
   strokeWidth: number; // Base stroke width (e.g., 2.5, 3, 4)

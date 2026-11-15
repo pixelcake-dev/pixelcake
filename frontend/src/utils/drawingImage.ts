@@ -41,6 +41,8 @@ import type {
   NetworkDevice,
 } from '@/types/network';
 import { AREA_PALETTE, AREA_TINT } from '@/utils/canvasAreas';
+// (the few words written into the picture: plain data, read when it is drawn)
+import { getT } from '@/i18n';
 
 export { DEVICE_METRICS };
 export type { Side };
@@ -682,7 +684,8 @@ function deviceSvg(device: SceneDevice, look: DeviceLook): string {
 
   // The end of the question this device is
   if (device.role) {
-    const text = device.role === 'source' ? 'DA' : 'A';
+    const words = getT().exportImage.picture;
+    const text = device.role === 'source' ? words.from : words.to;
     const spacing = ROLE_FONT.size * 0.04;
     const textWidth = measureText(text, ROLE_FONT) + spacing * text.length;
     const pillWidth = Math.round(textWidth + 16);
@@ -947,7 +950,7 @@ export function renderDrawingImage(input: DrawingInput, options: ImageOptions): 
   }
 
   const height = Math.ceil(cursor) + PAGE.margin;
-  const name = title?.name ?? 'Network';
+  const name = title?.name ?? getT().exportImage.picture.untitled;
   // The windows of the drawings that are in the picture, once each
   const drawings = [...new Set(scene.devices.map(device => device.drawing))];
   const svg = [

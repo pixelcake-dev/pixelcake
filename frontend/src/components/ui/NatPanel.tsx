@@ -3,6 +3,8 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { forwardProblemText } from '@/utils/networkConfigValidation';
 import { isValidIP } from '@/utils/ipHelpers';
+import { useT, type Dictionary } from '@/i18n';
+import { Rich } from '@/i18n/Rich';
 import type { Port, PortForward } from '@/types';
 
 interface NatPanelProps {
@@ -14,7 +16,7 @@ interface NatPanelProps {
   onChange: (forwards: PortForward[]) => void;
   /** NAT is switched on and off here, port by port: the ports as they become */
   onPortsChange: (ports: Port[]) => void;
-  /** Go to the «Porte» tab, on a port when one is given: an address is typed there */
+  /** Go to the “Ports” tab, on a port when one is given: an address is typed there */
   onOpenPort: (portId?: number) => void;
 }
 
@@ -25,9 +27,10 @@ function nextForwardId(forwards: PortForward[]): string {
   return `forward-${n}`;
 }
 
-/** `Porta 3 «Internet»` */
-function portName(port: Port): string {
-  return port.name ? `Porta ${port.id} «${port.name}»` : `Porta ${port.id}`;
+/** `Port 3 “Internet”` */
+function portName(port: Port, t: Dictionary): string {
+  const { interfaces } = t.common;
+  return port.name ? interfaces.portNamed(port.id, port.name) : interfaces.port(port.id);
 }
 
 const hasAddress = (port: Port): boolean => Boolean(port.ip && isValidIP(port.ip));
@@ -44,9 +47,9 @@ const link = 'text-[var(--accent-text)] underline cursor-pointer';
  * NatPanel
  * Address translation of a router or a firewall: which ports give their
  * address to what leaves by them (a tick for each port that has an address:
- * the same setting as «NAT Abilitato» on the port), and what is published
- * from a port to an address inside. The forwards are ordered: the first that
- * matches is taken, so each row can be moved up and down.
+ * the same setting as the NAT tick of the port in the “Ports” tab), and what
+ * is published from a port to an address inside. The forwards are ordered:
+ * the first that matches is taken, so each row can be moved up and down.
  */
 const NatPanel: React.FC<NatPanelProps> = ({
   ports,
@@ -56,6 +59,7 @@ const NatPanel: React.FC<NatPanelProps> = ({
   onPortsChange,
   onOpenPort,
 }) => {
+  const t = useT();
   const update = (id: string, patch: Partial<PortForward>) => {
     onChange(forwards.map((forward) => (forward.id === id ? { ...forward, ...patch } : forward)));
   };
@@ -80,111 +84,115 @@ const NatPanel: React.FC<NatPanelProps> = ({
 
   return (
     <div className="flex flex-col gap-4 text-sm">
-      <p className="text-[var(--text-color-light)]">
-        Internet non trasporta gli indirizzi privati. Una porta con il NAT attivo dà il proprio
-        indirizzo a ciò che esce da lì, e il dispositivo riporta la risposta a chi aveva chiesto.
-        Un inoltro fa il contrario: pubblica sull&apos;indirizzo di una porta un servizio che sta
-        dentro, perché sia raggiungibile da fuori.
-      </p>
+      <p className="text-[var(--text-color-light)]">{t.nat.intro}</p>
 
-      <section aria-label="Porte con NAT">
-        <h4 className="text-sm font-semibold text-[var(--text-color)] mb-1">Porte con NAT</h4>
+      <section aria-label={t.nat.ports.title}>
+        <h4 className="text-sm font-semibold text-[var(--text-color)] mb-1">{t.nat.ports.title}</h4>
         {listed.length === 0 ? (
           <p className="text-[var(--text-color-light)]">
-            Nessuna porta ha un indirizzo: il NAT dà a ciò che esce l&apos;indirizzo della porta,
-            quindi si attiva su una porta che ne ha uno.{' '}
+            {t.nat.ports.noAddressedPort}{' '}
             <button type="button" className={link} onClick={() => onOpenPort()}>
-              Vai alla scheda «Porte»
+              {t.nat.ports.goToPorts}
             </button>
           </p>
         ) : (
           <>
             {natPorts.length === 0 && (
-              <p className="text-[var(--text-color-light)] mb-1">
-                Nessuna porta fa NAT. Spunta la porta da cui si esce verso Internet.
-              </p>
+              <p className="text-[var(--text-color-light)] mb-1">{t.nat.ports.noneDoesNat}</p>
             )}
             <ul className="flex flex-col gap-1">
-              {listed.map((port) => (
-                <li key={port.id} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id={`nat-port-${port.id}`}
-                    aria-label={`NAT sulla porta ${port.id}`}
-                    className="w-4 h-4 shrink-0 cursor-pointer"
-                    checked={Boolean(port.nat)}
-                    onChange={(e) => setNat(port.id, e.target.checked)}
-                  />
-                  <span className={port.nat ? '' : 'text-[var(--text-color-light)]'}>
-                    <label htmlFor={`nat-port-${port.id}`} className="cursor-pointer">
-                      {portName(port)}
-                    </label>
-                    {!port.nat && (
-                      <>
-                        {' '}
-                        (<code className="font-mono">{port.ip}</code>)
-                      </>
-                    )}
-                    {port.nat && hasAddress(port) && (
-                      <>
-                        : ciò che esce prende l&apos;indirizzo{' '}
-                        <code className="font-mono">{port.ip}</code>
-                      </>
-                    )}
-                    {port.nat && !hasAddress(port) && (
-                      <>
-                        :{' '}
-                        <span className="text-[var(--danger-color)]" role="alert">
-                          non ha un indirizzo, quindi non traduce nulla.
-                        </span>{' '}
-                        <button type="button" className={link} onClick={() => onOpenPort(port.id)}>
-                          Dagliene uno
-                        </button>
-                      </>
-                    )}
-                  </span>
-                </li>
-              ))}
+              {listed.map((port) => {
+                // The name of the port is the label of its tick, wherever the sentence puts it
+                const name = () => (
+                  <label htmlFor={`nat-port-${port.id}`} className="cursor-pointer">
+                    {portName(port, t)}
+                  </label>
+                );
+                const address = () => <code className="font-mono">{port.ip}</code>;
+                return (
+                  <li key={port.id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id={`nat-port-${port.id}`}
+                      aria-label={t.nat.ports.natOn(port.id)}
+                      className="w-4 h-4 shrink-0 cursor-pointer"
+                      checked={Boolean(port.nat)}
+                      onChange={(e) => setNat(port.id, e.target.checked)}
+                    />
+                    <span className={port.nat ? '' : 'text-[var(--text-color-light)]'}>
+                      {!port.nat && (
+                        <>
+                          {name()} ({address()})
+                        </>
+                      )}
+                      {port.nat && hasAddress(port) && (
+                        <Rich text={t.nat.ports.translates} parts={{ port: name, address }} />
+                      )}
+                      {port.nat && !hasAddress(port) && (
+                        <>
+                          <Rich
+                            text={t.nat.ports.withoutAddress}
+                            parts={{
+                              port: name,
+                              problem: (words) => (
+                                <span className="text-[var(--danger-color)]" role="alert">
+                                  {words}
+                                </span>
+                              ),
+                            }}
+                          />{' '}
+                          <button type="button" className={link} onClick={() => onOpenPort(port.id)}>
+                            {t.nat.ports.giveAddress}
+                          </button>
+                        </>
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
             {listed.length < ports.length && (
               <p className="text-xs text-[var(--text-color-light)] mt-2">
-                Sono elencate le porte che hanno un indirizzo. Per darne uno a un&apos;altra:{' '}
-                <button type="button" className={link} onClick={() => onOpenPort()}>
-                  scheda «Porte»
-                </button>
-                .
+                <Rich
+                  text={t.nat.ports.onlyAddressed}
+                  parts={{
+                    link: (words) => (
+                      <button type="button" className={link} onClick={() => onOpenPort()}>
+                        {words}
+                      </button>
+                    ),
+                  }}
+                />
               </p>
             )}
           </>
         )}
       </section>
 
-      <section aria-label="Servizi pubblicati">
+      <section aria-label={t.nat.forwards.label}>
         <h4 className="text-sm font-semibold text-[var(--text-color)] mb-1">
-          Servizi pubblicati (port forward)
+          {t.nat.forwards.title}
         </h4>
         {forwards.length === 0 ? (
-          <p className="text-[var(--text-color-light)] mb-2">
-            Nessun inoltro: da fuori si raggiunge soltanto il dispositivo stesso.
-          </p>
+          <p className="text-[var(--text-color-light)] mb-2">{t.nat.forwards.none}</p>
         ) : (
           <table className="w-full border-collapse mb-2">
             <thead>
               <tr className="text-left text-xs text-[var(--text-color-light)]">
                 <th scope="col" className="font-medium pb-1 pr-2 w-6">
-                  N.
+                  {t.nat.forwards.columns.number}
                 </th>
                 <th scope="col" className="font-medium pb-1 pr-2">
-                  Servizio
+                  {t.nat.forwards.columns.service}
                 </th>
                 <th scope="col" className="font-medium pb-1 pr-2">
-                  Arriva sulla porta
+                  {t.nat.forwards.columns.arrivesOn}
                 </th>
                 <th scope="col" className="font-medium pb-1 pr-2">
-                  Va all&apos;indirizzo
+                  {t.nat.forwards.columns.goesTo}
                 </th>
                 <th scope="col" className="font-medium pb-1 pr-2">
-                  Attivo
+                  {t.nat.forwards.columns.enabled}
                 </th>
                 <th scope="col" className="pb-1" />
               </tr>
@@ -202,42 +210,42 @@ const NatPanel: React.FC<NatPanelProps> = ({
                       </td>
                       <td className="pr-2 py-1 w-[18%]">
                         <select
-                          aria-label={`Servizio dell'inoltro ${n}`}
+                          aria-label={t.nat.forwards.serviceOf(n)}
                           className={cell}
                           value={forward.service}
                           onChange={(e) =>
                             update(forward.id, { service: e.target.value as PortForward['service'] })
                           }
                         >
-                          <option value="web">Web</option>
-                          <option value="email">Email</option>
-                          <option value="dns">DNS</option>
-                          <option value="ping">Ping</option>
-                          <option value="any">Qualsiasi</option>
+                          <option value="web">{t.common.services.web}</option>
+                          <option value="email">{t.common.services.email}</option>
+                          <option value="dns">{t.common.services.dns}</option>
+                          <option value="ping">{t.common.services.ping}</option>
+                          <option value="any">{t.common.services.any}</option>
                         </select>
                       </td>
                       <td className="pr-2 py-1">
                         <select
-                          aria-label={`Porta dell'inoltro ${n}`}
+                          aria-label={t.nat.forwards.portOf(n)}
                           className={cell}
                           value={forward.port}
                           onChange={(e) => update(forward.id, { port: Number(e.target.value) })}
                         >
                           {!known && (
                             <option value={forward.port}>
-                              Porta {forward.port} (senza indirizzo)
+                              {t.nat.forwards.portWithoutAddress(forward.port)}
                             </option>
                           )}
                           {publishing.map((port) => (
                             <option key={port.id} value={port.id}>
-                              {portName(port)} ({port.ip})
+                              {portName(port, t)} ({port.ip})
                             </option>
                           ))}
                         </select>
                       </td>
                       <td className="pr-2 py-1 w-[24%]">
                         <input
-                          aria-label={`Indirizzo interno dell'inoltro ${n}`}
+                          aria-label={t.nat.forwards.insideAddressOf(n)}
                           className={`${cell} font-mono`}
                           placeholder="172.16.0.10"
                           value={forward.to}
@@ -247,7 +255,7 @@ const NatPanel: React.FC<NatPanelProps> = ({
                       <td className="pr-2 py-1 text-center w-12">
                         <input
                           type="checkbox"
-                          aria-label={`Inoltro ${n} attivo`}
+                          aria-label={t.nat.forwards.enabledOf(n)}
                           className="w-4 h-4 cursor-pointer"
                           checked={forward.enabled !== false}
                           onChange={(e) =>
@@ -258,8 +266,8 @@ const NatPanel: React.FC<NatPanelProps> = ({
                       <td className="py-1 whitespace-nowrap text-right w-[84px]">
                         <button
                           type="button"
-                          aria-label={`Sposta in su l'inoltro ${n}`}
-                          title="Sposta in su"
+                          aria-label={t.nat.forwards.moveUpNumbered(n)}
+                          title={t.nat.forwards.moveUp}
                           className={iconButton}
                           disabled={index === 0}
                           onClick={() => move(index, -1)}
@@ -268,8 +276,8 @@ const NatPanel: React.FC<NatPanelProps> = ({
                         </button>
                         <button
                           type="button"
-                          aria-label={`Sposta in giù l'inoltro ${n}`}
-                          title="Sposta in giù"
+                          aria-label={t.nat.forwards.moveDownNumbered(n)}
+                          title={t.nat.forwards.moveDown}
                           className={iconButton}
                           disabled={index === forwards.length - 1}
                           onClick={() => move(index, 1)}
@@ -278,8 +286,8 @@ const NatPanel: React.FC<NatPanelProps> = ({
                         </button>
                         <button
                           type="button"
-                          aria-label={`Elimina l'inoltro ${n}`}
-                          title="Elimina l'inoltro"
+                          aria-label={t.nat.forwards.deleteNumbered(n)}
+                          title={t.nat.forwards.delete}
                           className={`${iconButton} hover:text-[var(--danger-color)]`}
                           onClick={() => onChange(forwards.filter((entry) => entry.id !== forward.id))}
                         >
@@ -314,28 +322,18 @@ const NatPanel: React.FC<NatPanelProps> = ({
           }
         >
           <Plus size={14} />
-          Aggiungi inoltro
+          {t.nat.forwards.add}
         </Button>
         {firstPort === undefined && (
           <p className="text-xs text-[var(--text-color-light)] mt-1">
-            Nessuna porta ha un indirizzo da pubblicare: dagliene uno nella scheda «Porte».
+            {t.nat.forwards.nothingToPublish}
           </p>
         )}
       </section>
 
-      <section aria-label="Come si leggono gli inoltri" className="text-[var(--text-color-light)]">
-        <p>
-          Gli inoltri si leggono dall&apos;alto in basso: vale il primo che corrisponde per
-          servizio e porta. Chi è fuori chiede all&apos;indirizzo della porta, e la risposta gli
-          torna da quell&apos;indirizzo: quello interno non lo vede mai.
-        </p>
-        {isFirewall && (
-          <p className="mt-2">
-            Su un firewall l&apos;inoltro dice dove va il traffico, non che può passare: serve
-            anche una regola che lo permetta, scritta per l&apos;indirizzo interno (scheda
-            «Regole»).
-          </p>
-        )}
+      <section aria-label={t.nat.reading.title} className="text-[var(--text-color-light)]">
+        <p>{t.nat.reading.text}</p>
+        {isFirewall && <p className="mt-2">{t.nat.reading.onFirewall}</p>}
       </section>
     </div>
   );

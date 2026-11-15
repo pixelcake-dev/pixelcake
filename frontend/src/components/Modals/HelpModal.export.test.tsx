@@ -97,7 +97,7 @@ describe(`the guide — "${TITLE}"`, () => {
     await settle();
 
     // the formats and the themes it lists, the three sizes it counts
-    expect(text).toMatch(/PNG.*in\s+tre dimensioni.*oppure SVG/s);
+    expect(text).toMatch(/PNG.*in\s+tre grandezze.*oppure SVG/s);
     for (const format of ['PNG', 'SVG']) {
       expect(screen.getByRole('button', { name: format })).toBeInTheDocument();
     }

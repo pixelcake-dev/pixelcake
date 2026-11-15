@@ -13,24 +13,11 @@ import { Plug, Package, SquareDashed } from 'lucide-react';
 import { addAreaInView } from '@/utils/areaActions';
 import type { DeviceType } from '@/types/network';
 import { askConfirm } from '@/store/confirmStore';
-
-// Helper function for device descriptions
-const getDeviceDescription = (type: DeviceType): string => {
-  const descriptions: Record<DeviceType, string> = {
-    PC: 'Dispositivo endpoint per utenti',
-    Switch: 'Aggregatore di rete locale',
-    Router: 'Gateway e routing tra reti',
-    Server: 'Server applicativo o dati',
-    Firewall: 'Protezione e sicurezza di rete',
-    AccessPoint: 'Punto di accesso WiFi',
-    LoadBalancer: 'Bilanciatore di carico',
-    Database: 'Database server',
-    Cloud: 'Servizio cloud o virtuale',
-  };
-  return descriptions[type] || 'Dispositivo di rete';
-};
+import { useT } from '@/i18n';
+import { deviceTemplateDescription } from '@/utils/templateText';
 
 const DevicePanel = () => {
+  const t = useT();
   const openModal = useUIStore((state) => state.openModal);
   const setAddDeviceType = useUIStore((state) => state.setAddDeviceType);
 
@@ -40,7 +27,7 @@ const DevicePanel = () => {
 
   const devices = useNetworkStore((state) => state.devices);
   const areaCount = useNetworkStore((state) => state.areas.length);
-  const loadTopology = useNetworkStore((state) => state.loadTopology);
+  const loadSample = useNetworkStore((state) => state.loadSample);
   const clearAllDevices = useNetworkStore((state) => state.clearAllDevices);
   const triggerFitView = useNetworkStore((state) => state.triggerFitView);
 
@@ -55,11 +42,11 @@ const DevicePanel = () => {
         type: template.type,
         name: template.name,
         description: template.isCustom
-          ? `Template personalizzato (${template.type})`
-          : getDeviceDescription(template.type),
+          ? t.devicePanel.customTemplate(template.type)
+          : deviceTemplateDescription(template, t),
         drawing: drawingOf(template, template.type),
       })),
-    [templates]
+    [templates, t]
   );
 
   // Filter devices based on search query
@@ -81,21 +68,21 @@ const DevicePanel = () => {
     setSearchQuery(''); // Reset search for next time
   };
 
-  // A sample network takes the place of what is on the canvas: ask first
+  // A sample network takes the place of what is on the canvas, and of the
+  // network settings of the project: ask first
   const handleLoadSample = async (create: typeof createSampleTopology) => {
     // (an area drawn on a canvas without devices is something to lose, too)
     const shouldLoad =
       (devices.length === 0 && areaCount === 0) ||
       (await askConfirm({
-        title: 'Caricare la rete di esempio?',
-        detail: 'Prende il posto di quello che c\'è sul canvas.',
-        confirmLabel: 'Carica',
+        title: t.devicePanel.samples.replaceQuestion.title,
+        detail: t.devicePanel.samples.replaceQuestion.detail,
+        confirmLabel: t.devicePanel.samples.replaceQuestion.confirm,
       }));
 
     if (shouldLoad) {
       clearAllDevices();
-      const topology = create();
-      loadTopology(topology.devices, topology.connections);
+      loadSample(create());
       // Whole in the window, whatever part of the board was on screen
       triggerFitView();
     }
@@ -109,13 +96,13 @@ const DevicePanel = () => {
           className={activeTab === 'devices' ? 'active' : ''}
           onClick={() => setActiveTab('devices')}
         >
-          Dispositivi
+          {t.devicePanel.tabs.devices}
         </button>
         <button
           className={activeTab === 'templates' ? 'active' : ''}
           onClick={() => setActiveTab('templates')}
         >
-          Topologie
+          {t.devicePanel.tabs.samples}
         </button>
       </div>
 
@@ -127,7 +114,7 @@ const DevicePanel = () => {
             <SearchInput
               value={searchQuery}
               onChange={setSearchQuery}
-              placeholder="Cerca dispositivo..."
+              placeholder={t.devicePanel.searchPlaceholder}
               autoFocus={true}
               inputWidth="100%"
               size="md"
@@ -141,7 +128,7 @@ const DevicePanel = () => {
               onClick={() => openModal('bulkAddDevice')}
             >
               <Package size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
-              <span>Aggiungi in Blocco</span>
+              <span>{t.devicePanel.bulkAdd}</span>
             </button>
           </div>
 
@@ -151,9 +138,9 @@ const DevicePanel = () => {
             <button className="sidebar-panel-item w-full" onClick={() => addAreaInView()}>
               <SquareDashed size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
               <span>
-                Riquadro
+                {t.devicePanel.area.name}
                 <span className="block text-xs text-[var(--text-color-light)]">
-                  Un&apos;area con un nome, dietro a un gruppo di dispositivi
+                  {t.devicePanel.area.description}
                 </span>
               </span>
             </button>
@@ -179,7 +166,7 @@ const DevicePanel = () => {
               ))
             ) : (
               <div className="text-center text-[var(--text-color-light)] py-4">
-                Nessun dispositivo trovato per "{searchQuery}"
+                {t.devicePanel.noDevicesFor(searchQuery)}
               </div>
             )}
           </div>
@@ -189,7 +176,7 @@ const DevicePanel = () => {
           {/* Templates Tab */}
           <div className="space-y-2">
             <p className="text-xs text-[var(--text-color-light)] mb-1">
-              Reti di esempio già configurate. Caricarne una sostituisce il canvas aperto.
+              {t.devicePanel.samples.intro}
             </p>
             <button
               className="sidebar-panel-item"
@@ -197,9 +184,9 @@ const DevicePanel = () => {
             >
               <Plug size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
               <span>
-                Azienda: uffici, Wi-Fi, server e DMZ
+                {t.devicePanel.samples.company.title}
                 <span className="block text-xs text-[var(--text-color-light)]">
-                  La rete di esempio: VLAN su un trunk, access point, firewall con tre regole
+                  {t.devicePanel.samples.company.description}
                 </span>
               </span>
             </button>
@@ -209,9 +196,9 @@ const DevicePanel = () => {
             >
               <Plug size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
               <span>
-                Ufficio: due reti e un router
+                {t.devicePanel.samples.office.title}
                 <span className="block text-xs text-[var(--text-color-light)]">
-                  Per cominciare: ping, web, email
+                  {t.devicePanel.samples.office.description}
                 </span>
               </span>
             </button>
@@ -221,9 +208,9 @@ const DevicePanel = () => {
             >
               <Plug size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
               <span>
-                Sede: VLAN, DMZ e firewall
+                {t.devicePanel.samples.site.title}
                 <span className="block text-xs text-[var(--text-color-light)]">
-                  Due VLAN, rotte, zone e una regola che pubblica un sito
+                  {t.devicePanel.samples.site.description}
                 </span>
               </span>
             </button>
@@ -233,9 +220,9 @@ const DevicePanel = () => {
             >
               <Plug size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
               <span>
-                Due sedi: linea principale e di riserva
+                {t.devicePanel.samples.twoSites.title}
                 <span className="block text-xs text-[var(--text-color-light)]">
-                  Per provare i guasti: quasi ogni cavo ha un&apos;altra strada
+                  {t.devicePanel.samples.twoSites.description}
                 </span>
               </span>
             </button>

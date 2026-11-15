@@ -33,19 +33,19 @@ describe('Logo', () => {
 
   it('with the name, in colour on a light page', () => {
     render(<Logo />);
-    const logo = screen.getByAltText(`${APP_NAME} Logo`);
+    const logo = screen.getByAltText(`Logo di ${APP_NAME}`);
     expect(fileOf(logo)).toBe(LogoColour);
   });
 
   it('with the name, in its negative on a dark page', () => {
     useUIStore.setState({ darkMode: true });
     render(<Logo />);
-    expect(fileOf(screen.getByAltText(`${APP_NAME} Logo`))).toBe(LogoNegative);
+    expect(fileOf(screen.getByAltText(`Logo di ${APP_NAME}`))).toBe(LogoNegative);
   });
 
   it('the symbol alone has its own files and its own name', () => {
     const { unmount } = render(<Logo symbol size={18} />);
-    const symbol = screen.getByAltText(`${APP_NAME} Icon`);
+    const symbol = screen.getByAltText(`Simbolo di ${APP_NAME}`);
     expect(fileOf(symbol)).toBe(SymbolColour);
     // its size is its height: the symbol is not a wide picture
     expect(symbol.style.height).toBe('18px');
@@ -53,7 +53,7 @@ describe('Logo', () => {
 
     useUIStore.setState({ darkMode: true });
     render(<Logo symbol size={18} />);
-    expect(fileOf(screen.getByAltText(`${APP_NAME} Icon`))).toBe(SymbolNegative);
+    expect(fileOf(screen.getByAltText(`Simbolo di ${APP_NAME}`))).toBe(SymbolNegative);
   });
 
   it('the logo with the name is never asked narrower than 110 pixels: a small place takes the symbol', () => {

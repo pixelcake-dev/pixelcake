@@ -2,6 +2,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useUIStore, type SidebarPanelId } from '@/store/uiStore';
 import { Zap, Plus, Files, Settings, Terminal, ArrowUpDown } from 'lucide-react';
+import { useT } from '@/i18n';
 
 /**
  * A button of the sidebar: an icon, and its name shown next to it while the
@@ -64,6 +65,7 @@ const SidebarButton = ({
 };
 
 const Sidebar = () => {
+  const t = useT();
   const activeSidebarPanel = useUIStore((state) => state.activeSidebarPanel);
   const setActiveSidebarPanel = useUIStore((state) => state.setActiveSidebarPanel);
   const openModal = useUIStore((state) => state.openModal);
@@ -84,7 +86,7 @@ const Sidebar = () => {
       <div className="sidebar-main">
         {/* File Menu Button */}
         <SidebarButton
-          label="Explorer"
+          label={t.sidebar.buttons.explorer}
           className="sidebar-toggle"
           active={activeSidebarPanel === 'explorer'}
           onClick={() => handleSectionClick('explorer')}
@@ -96,7 +98,7 @@ const Sidebar = () => {
 
         {/* Simulation */}
         <SidebarButton
-          label="Simulazione"
+          label={t.sidebar.buttons.simulation}
           active={activeSidebarPanel === 'simulation'}
           onClick={() => handleSectionClick('simulation')}
         >
@@ -105,7 +107,7 @@ const Sidebar = () => {
 
         {/* Add Device */}
         <SidebarButton
-          label="Aggiungi Dispositivo"
+          label={t.sidebar.buttons.addDevice}
           active={activeSidebarPanel === 'devices'}
           onClick={() => handleSectionClick('devices')}
         >
@@ -113,12 +115,15 @@ const Sidebar = () => {
         </SidebarButton>
 
         {/* Console */}
-        <SidebarButton label="Console" onClick={() => openModal('codeTerminal')}>
+        <SidebarButton label={t.sidebar.buttons.console} onClick={() => openModal('codeTerminal')}>
           <Terminal size={20} strokeWidth={1.75} />
         </SidebarButton>
 
         {/* Import/Export */}
-        <SidebarButton label="Import/Export" onClick={() => openModal('importExport')}>
+        <SidebarButton
+          label={t.sidebar.buttons.importExport}
+          onClick={() => openModal('importExport')}
+        >
           <ArrowUpDown size={20} strokeWidth={1.75} />
         </SidebarButton>
       </div>
@@ -126,7 +131,7 @@ const Sidebar = () => {
       {/* Footer Section */}
       <div className="sidebar-footer">
         <SidebarButton
-          label="Impostazioni"
+          label={t.sidebar.buttons.settings}
           onClick={() => (isSettingsOpen ? closeModal('settings') : openModal('settings'))}
         >
           <Settings size={20} strokeWidth={1.75} />

@@ -55,7 +55,7 @@ describe('a window and Esc', () => {
     esc();
     expect(onClose).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close modal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Chiudi la finestra' }));
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 

@@ -28,9 +28,18 @@
  *
  * Devices have the shape AddDeviceModal produces. Positions are hand-placed.
  * The data is fully deterministic (fixed MACs) so tests can rely on it.
+ *
+ * The names above are the Italian ones («sede» is the head office, «filiale»
+ * the branch, «riserva» the backup). Whatever is called differently in
+ * another language (routers, switches and PCs, places, ports, the two lines,
+ * notes) is read from the dictionary, `samples.twoSites`, at the moment the
+ * sample is created; SW-Core and Srv-File are called the same everywhere.
+ * Ids and addresses never change.
  */
 
 import type { NetworkDevice, NetworkConnection, NetworkInterfaceCard, Port } from '@/types';
+import { getT } from '@/i18n';
+import { areasAround, sampleSettings, type SampleNetwork } from '@/utils/sampleNetwork';
 
 const MASK = '255.255.255.0';
 const P2P_MASK = '255.255.255.252';
@@ -104,124 +113,136 @@ function switchDevice(
   };
 }
 
-export function createRedundancySample(): {
-  devices: NetworkDevice[];
-  connections: NetworkConnection[];
-} {
+export function createRedundancySample(): SampleNetwork {
+  // The names are read now, in the language the interface is in: once on the
+  // board they are content, and they stay as they were created
+  const names = getT().samples.twoSites;
+  const { headOffice, headOfficeFloor, branch } = names.places;
+  // A port on one of the two lines is named as the cable is labelled
+  const { mainLine, backupLine } = names.cables;
+
   const devices: NetworkDevice[] = [
     // ── Lines between the sites ──────────────────────────────────────────
     {
       id: 'r-riserva',
       type: 'Router',
       templateId: 'tpl-router',
-      label: 'R-Riserva',
+      label: names.devices.backupRouter,
       ip: '10.0.1.2',
       subnet: P2P_MASK,
       gateway: '',
       vendor: '',
-      location: 'Operatore di riserva',
+      location: names.places.backupCarrier,
       position: { x: 560, y: 20 },
       portCount: 4,
       ports: ports(4, 'wan', {
-        1: { name: 'Verso la sede', ip: '10.0.1.2', subnet: P2P_MASK },
-        2: { name: 'Verso la filiale', ip: '10.0.2.1', subnet: P2P_MASK },
+        1: { name: names.ports.toHeadOffice, ip: '10.0.1.2', subnet: P2P_MASK },
+        2: { name: names.ports.toBranch, ip: '10.0.2.1', subnet: P2P_MASK },
       }),
       routes: [
-        { id: 'route-1', destination: '192.168.1.0/24', nextHop: '10.0.1.1', description: 'sede' },
-        { id: 'route-2', destination: '192.168.2.0/24', nextHop: '10.0.2.2', description: 'filiale' },
+        { id: 'route-1', destination: '192.168.1.0/24', nextHop: '10.0.1.1', description: names.notes.headOffice },
+        { id: 'route-2', destination: '192.168.2.0/24', nextHop: '10.0.2.2', description: names.notes.branch },
       ],
     },
     {
       id: 'r-sede',
       type: 'Router',
       templateId: 'tpl-router',
-      label: 'R-Sede',
+      label: names.devices.headOfficeRouter,
       // Management address = its address on the site network
       ip: '192.168.1.1',
       subnet: MASK,
       gateway: '',
       vendor: '',
-      location: 'Sede',
+      location: headOffice,
       position: { x: 280, y: 200 },
       portCount: 4,
       ports: ports(4, 'lan', {
-        1: { name: 'Rete della sede', ip: '192.168.1.1', subnet: MASK },
-        2: { name: 'Linea principale', portType: 'wan', ip: '10.0.0.1', subnet: P2P_MASK },
-        3: { name: 'Linea di riserva', portType: 'wan', ip: '10.0.1.1', subnet: P2P_MASK },
+        1: { name: names.ports.headOfficeNetwork, ip: '192.168.1.1', subnet: MASK },
+        2: { name: mainLine, portType: 'wan', ip: '10.0.0.1', subnet: P2P_MASK },
+        3: { name: backupLine, portType: 'wan', ip: '10.0.1.1', subnet: P2P_MASK },
       }),
       // Two routes to the same network: the first is used while its line is up
       routes: [
-        { id: 'route-1', destination: '192.168.2.0/24', nextHop: '10.0.0.2', description: 'filiale, linea principale' },
-        { id: 'route-2', destination: '192.168.2.0/24', nextHop: '10.0.1.2', description: 'filiale, linea di riserva' },
+        { id: 'route-1', destination: '192.168.2.0/24', nextHop: '10.0.0.2', description: names.notes.branchMainLine },
+        { id: 'route-2', destination: '192.168.2.0/24', nextHop: '10.0.1.2', description: names.notes.branchBackupLine },
       ],
     },
     {
       id: 'r-filiale',
       type: 'Router',
       templateId: 'tpl-router',
-      label: 'R-Filiale',
+      label: names.devices.branchRouter,
       ip: '192.168.2.1',
       subnet: MASK,
       gateway: '',
       vendor: '',
-      location: 'Filiale',
+      location: branch,
       position: { x: 840, y: 200 },
       portCount: 4,
       ports: ports(4, 'lan', {
-        1: { name: 'Rete della filiale', ip: '192.168.2.1', subnet: MASK },
-        2: { name: 'Linea principale', portType: 'wan', ip: '10.0.0.2', subnet: P2P_MASK },
-        3: { name: 'Linea di riserva', portType: 'wan', ip: '10.0.2.2', subnet: P2P_MASK },
+        1: { name: names.ports.branchNetwork, ip: '192.168.2.1', subnet: MASK },
+        2: { name: mainLine, portType: 'wan', ip: '10.0.0.2', subnet: P2P_MASK },
+        3: { name: backupLine, portType: 'wan', ip: '10.0.2.2', subnet: P2P_MASK },
       }),
       routes: [
-        { id: 'route-1', destination: '192.168.1.0/24', nextHop: '10.0.0.1', description: 'sede, linea principale' },
-        { id: 'route-2', destination: '192.168.1.0/24', nextHop: '10.0.2.1', description: 'sede, linea di riserva' },
+        { id: 'route-1', destination: '192.168.1.0/24', nextHop: '10.0.0.1', description: names.notes.headOfficeMainLine },
+        { id: 'route-2', destination: '192.168.1.0/24', nextHop: '10.0.2.1', description: names.notes.headOfficeBackupLine },
       ],
     },
 
     // ── Main site (192.168.1.0/24) ───────────────────────────────────────
-    switchDevice('sw-core', 'SW-Core', '192.168.1.2', '192.168.1.1', 'Sede', { x: 280, y: 380 }, {
+    switchDevice('sw-core', 'SW-Core', '192.168.1.2', '192.168.1.1', headOffice, { x: 280, y: 380 }, {
       1: { name: 'Srv-File' },
-      6: { name: 'SW-Piano-1' },
-      7: { name: 'SW-Piano-2' },
-      8: { name: 'R-Sede' },
+      6: { name: names.devices.floorSwitch(1) },
+      7: { name: names.devices.floorSwitch(2) },
+      8: { name: names.devices.headOfficeRouter },
     }),
-    switchDevice('sw-piano-1', 'SW-Piano-1', '192.168.1.3', '192.168.1.1', 'Sede, piano 1', { x: 160, y: 560 }, {
-      1: { name: 'PC-Sede-1' },
-      7: { name: 'SW-Piano-2' },
-      8: { name: 'SW-Core' },
-    }),
-    switchDevice('sw-piano-2', 'SW-Piano-2', '192.168.1.4', '192.168.1.1', 'Sede, piano 2', { x: 400, y: 560 }, {
-      1: { name: 'PC-Sede-2' },
-      7: { name: 'SW-Piano-1' },
-      8: { name: 'SW-Core' },
-    }),
-    endDevice('srv-file', 'Server', 'tpl-server', 'Srv-File', '192.168.1.10', '192.168.1.1', '02:00:C0:A8:01:0A', 'Sede', {
-      x: 40,
-      y: 380,
-    }),
-    endDevice('pc-sede-1', 'PC', 'tpl-pc', 'PC-Sede-1', '192.168.1.11', '192.168.1.1', '02:00:C0:A8:01:0B', 'Sede, piano 1', {
-      x: 160,
-      y: 740,
-    }),
-    endDevice('pc-sede-2', 'PC', 'tpl-pc', 'PC-Sede-2', '192.168.1.12', '192.168.1.1', '02:00:C0:A8:01:0C', 'Sede, piano 2', {
-      x: 400,
-      y: 740,
-    }),
+    switchDevice(
+      'sw-piano-1', names.devices.floorSwitch(1),
+      '192.168.1.3', '192.168.1.1', headOfficeFloor(1), { x: 160, y: 560 },
+      {
+        1: { name: names.devices.headOfficePc(1) },
+        7: { name: names.devices.floorSwitch(2) },
+        8: { name: 'SW-Core' },
+      }
+    ),
+    switchDevice(
+      'sw-piano-2', names.devices.floorSwitch(2),
+      '192.168.1.4', '192.168.1.1', headOfficeFloor(2), { x: 400, y: 560 },
+      {
+        1: { name: names.devices.headOfficePc(2) },
+        7: { name: names.devices.floorSwitch(1) },
+        8: { name: 'SW-Core' },
+      }
+    ),
+    endDevice(
+      'srv-file', 'Server', 'tpl-server', 'Srv-File',
+      '192.168.1.10', '192.168.1.1', '02:00:C0:A8:01:0A', headOffice, { x: 40, y: 380 }
+    ),
+    endDevice(
+      'pc-sede-1', 'PC', 'tpl-pc', names.devices.headOfficePc(1),
+      '192.168.1.11', '192.168.1.1', '02:00:C0:A8:01:0B', headOfficeFloor(1), { x: 160, y: 740 }
+    ),
+    endDevice(
+      'pc-sede-2', 'PC', 'tpl-pc', names.devices.headOfficePc(2),
+      '192.168.1.12', '192.168.1.1', '02:00:C0:A8:01:0C', headOfficeFloor(2), { x: 400, y: 740 }
+    ),
 
     // ── Branch (192.168.2.0/24) ──────────────────────────────────────────
-    switchDevice('sw-filiale', 'SW-Filiale', '192.168.2.2', '192.168.2.1', 'Filiale', { x: 840, y: 380 }, {
-      1: { name: 'PC-Filiale-1' },
-      2: { name: 'PC-Filiale-2' },
-      8: { name: 'R-Filiale' },
+    switchDevice('sw-filiale', names.devices.branchSwitch, '192.168.2.2', '192.168.2.1', branch, { x: 840, y: 380 }, {
+      1: { name: names.devices.branchPc(1) },
+      2: { name: names.devices.branchPc(2) },
+      8: { name: names.devices.branchRouter },
     }),
-    endDevice('pc-filiale-1', 'PC', 'tpl-pc', 'PC-Filiale-1', '192.168.2.11', '192.168.2.1', '02:00:C0:A8:02:0B', 'Filiale', {
-      x: 720,
-      y: 560,
-    }),
-    endDevice('pc-filiale-2', 'PC', 'tpl-pc', 'PC-Filiale-2', '192.168.2.12', '192.168.2.1', '02:00:C0:A8:02:0C', 'Filiale', {
-      x: 960,
-      y: 560,
-    }),
+    endDevice(
+      'pc-filiale-1', 'PC', 'tpl-pc', names.devices.branchPc(1),
+      '192.168.2.11', '192.168.2.1', '02:00:C0:A8:02:0B', branch, { x: 720, y: 560 }
+    ),
+    endDevice(
+      'pc-filiale-2', 'PC', 'tpl-pc', names.devices.branchPc(2),
+      '192.168.2.12', '192.168.2.1', '02:00:C0:A8:02:0C', branch, { x: 960, y: 560 }
+    ),
   ];
 
   // Every link is bound on both ends: NIC id on end devices, port id elsewhere
@@ -237,7 +258,7 @@ export function createRedundancySample(): {
       targetPort: 2,
       type: 'backbone',
       bandwidth: '1 Gbps',
-      label: 'Linea principale',
+      label: mainLine,
     },
     {
       id: 'link-riserva-sede',
@@ -249,7 +270,7 @@ export function createRedundancySample(): {
       targetPort: 1,
       type: 'uplink',
       bandwidth: '100 Mbps',
-      label: 'Linea di riserva',
+      label: backupLine,
     },
     {
       id: 'link-riserva-filiale',
@@ -261,7 +282,7 @@ export function createRedundancySample(): {
       targetPort: 3,
       type: 'uplink',
       bandwidth: '100 Mbps',
-      label: 'Linea di riserva',
+      label: backupLine,
     },
 
     // Main site
@@ -379,5 +400,22 @@ export function createRedundancySample(): {
     },
   ];
 
-  return { devices, connections };
+  // What the project is set to with this network: a new device starts on the
+  // network of the head office. The sample has no DNS server and no VLAN
+  const settings = sampleSettings({ network: '192.168.1.0', gateway: '192.168.1.1' });
+
+  // The two sites, at a glance; the router of the backup carrier is in neither
+  const areas = areasAround(
+    [
+      {
+        label: headOffice,
+        color: 'slate',
+        devices: ['r-sede', 'sw-core', 'srv-file', 'sw-piano-1', 'sw-piano-2', 'pc-sede-1', 'pc-sede-2'],
+      },
+      { label: branch, color: 'teal', devices: ['r-filiale', 'sw-filiale', 'pc-filiale-1', 'pc-filiale-2'] },
+    ],
+    devices
+  );
+
+  return { devices, connections, settings, areas };
 }

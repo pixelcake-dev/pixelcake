@@ -138,7 +138,7 @@ describe('the note of a device in a project file', () => {
       });
       expect('notes' in device).toBe(false);
       expect(device).toMatchObject({ id: 'dev-0', ip: '192.168.1.10' });
-      expect(warnings).toEqual(['Canvas "Canvas 1": 1 dispositivo incompleto corretto.']);
+      expect(warnings).toEqual(['Canvas «Canvas 1»: 1 dispositivo incompleto corretto.']);
     }
   );
 });

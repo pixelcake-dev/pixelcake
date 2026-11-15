@@ -52,7 +52,7 @@ function nameVlan10() {
   render(<SettingsModal />);
   const group = screen.getByRole('group', { name: 'VLAN del progetto' });
   fireEvent.change(within(group).getByLabelText('Nome della VLAN 10'), { target: { value: 'Uffici' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Salva Impostazioni Rete' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Salva le impostazioni di rete' }));
   cleanup();
   ui().closeModal('settings');
 }

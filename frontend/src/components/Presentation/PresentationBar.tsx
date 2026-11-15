@@ -19,11 +19,14 @@ import { usePresentationStore } from '@/store/presentationStore';
 import { useProjectStore } from '@/store/projectStore';
 import { SIMULATION_SPEEDS, useSimulationStore, type SimulationSpeed } from '@/store/simulationStore';
 import { useUIStore } from '@/store/uiStore';
+import { useT, type Dictionary } from '@/i18n';
+import LanguageSwitch from '@/components/ui/LanguageSwitch';
 
-const SPEED_NAMES: Record<SimulationSpeed, string> = {
-  0.5: 'Lenta',
-  1: 'Normale',
-  2: 'Veloce',
+/** Each pace of the packet, and the entry of the dictionary that names it */
+const SPEED_KEYS: Record<SimulationSpeed, keyof Dictionary['presentation']['bar']['speeds']> = {
+  0.5: 'slow',
+  1: 'normal',
+  2: 'fast',
 };
 
 /** True while the user is typing somewhere: keys belong to that field */
@@ -35,6 +38,7 @@ function isTyping(target: EventTarget | null): boolean {
 }
 
 const PresentationBar = () => {
+  const t = useT();
   const exit = usePresentationStore((state) => state.exit);
   const projectName = useProjectStore((state) => state.name);
   const canvases = useProjectStore((state) => state.canvases);
@@ -94,15 +98,17 @@ const PresentationBar = () => {
 
   return (
     <header className="presentation-bar">
-      <span className="presentation-badge">
-        <Presentation size={16} aria-hidden="true" /> Presentazione
+      {/* (in a narrow window the badge keeps its symbol alone: the word stays for who cannot see it) */}
+      <span className="presentation-badge" title={t.presentation.bar.badge}>
+        <Presentation size={16} aria-hidden="true" />
+        <span className="presentation-badge-label">{t.presentation.bar.badge}</span>
       </span>
       <span className="presentation-project" title={projectName}>
         {projectName}
       </span>
 
       {canvases.length > 1 && (
-        <nav className="presentation-canvases" aria-label="Canvas del progetto">
+        <nav className="presentation-canvases" aria-label={t.presentation.bar.canvases}>
           {canvases.map((canvas) => (
             <button
               key={canvas.id}
@@ -118,7 +124,11 @@ const PresentationBar = () => {
       )}
 
       <div className="presentation-bar-tools">
-        <div className="presentation-segmented compact" role="group" aria-label="Velocità del pacchetto">
+        <div
+          className="presentation-segmented compact"
+          role="group"
+          aria-label={t.presentation.bar.packetSpeed}
+        >
           {SIMULATION_SPEEDS.map((entry) => (
             <button
               key={entry}
@@ -127,7 +137,7 @@ const PresentationBar = () => {
               aria-pressed={speed === entry}
               onClick={() => setSpeed(entry)}
             >
-              {SPEED_NAMES[entry]}
+              {t.presentation.bar.speeds[SPEED_KEYS[entry]]}
             </button>
           ))}
         </div>
@@ -135,8 +145,8 @@ const PresentationBar = () => {
         <button
           type="button"
           className="presentation-icon-button"
-          title="Terminale"
-          aria-label="Terminale"
+          title={t.presentation.bar.terminal}
+          aria-label={t.presentation.bar.terminal}
           onClick={() => openModal('codeTerminal')}
         >
           <Terminal size={18} />
@@ -145,8 +155,8 @@ const PresentationBar = () => {
         <button
           type="button"
           className="presentation-icon-button"
-          title="Esporta immagine"
-          aria-label="Esporta immagine"
+          title={t.presentation.bar.exportPicture}
+          aria-label={t.presentation.bar.exportPicture}
           onClick={() => openModal('exportImage')}
         >
           <ImageDown size={18} />
@@ -155,25 +165,28 @@ const PresentationBar = () => {
           <button
             type="button"
             className="presentation-icon-button"
-            title={isFullscreen ? 'Esci da schermo intero' : 'Schermo intero'}
-            aria-label={isFullscreen ? 'Esci da schermo intero' : 'Schermo intero'}
+            title={isFullscreen ? t.presentation.bar.exitFullScreen : t.presentation.bar.fullScreen}
+            aria-label={isFullscreen ? t.presentation.bar.exitFullScreen : t.presentation.bar.fullScreen}
             onClick={toggleFullscreen}
           >
             {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
           </button>
         )}
+        {/* The language, next to the theme as on the menu bar */}
+        <LanguageSwitch />
+
         <button
           type="button"
           className="presentation-icon-button"
-          title={darkMode ? 'Passa a tema chiaro' : 'Passa a tema scuro'}
-          aria-label={darkMode ? 'Passa a tema chiaro' : 'Passa a tema scuro'}
+          title={darkMode ? t.presentation.bar.lightTheme : t.presentation.bar.darkTheme}
+          aria-label={darkMode ? t.presentation.bar.lightTheme : t.presentation.bar.darkTheme}
           onClick={toggleDarkMode}
         >
           {darkMode ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
         <button type="button" className="presentation-exit" onClick={exit}>
-          <LogOut size={16} aria-hidden="true" /> Esci
+          <LogOut size={16} aria-hidden="true" /> {t.presentation.bar.exit}
         </button>
       </div>
     </header>

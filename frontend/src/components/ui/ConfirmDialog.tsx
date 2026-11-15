@@ -1,6 +1,7 @@
 import { useConfirmStore } from '@/store/confirmStore';
 import { Button } from './Button';
 import { useEscapeToClose } from './useEscapeToClose';
+import { useT } from '@/i18n';
 
 /**
  * ConfirmDialog
@@ -11,6 +12,7 @@ import { useEscapeToClose } from './useEscapeToClose';
  * the keyboard when the window opens.
  */
 const ConfirmDialog = () => {
+  const t = useT();
   const pending = useConfirmStore((state) => state.pending);
   const answer = useConfirmStore((state) => state.answer);
 
@@ -47,7 +49,7 @@ const ConfirmDialog = () => {
         </div>
         <div className="modal-actions px-6 pb-5">
           <Button variant="secondary" onClick={() => answer(false)}>
-            Annulla
+            {t.common.actions.cancel}
           </Button>
           <Button variant={pending.danger ? 'danger' : 'primary'} autoFocus onClick={() => answer(true)}>
             {pending.confirmLabel}

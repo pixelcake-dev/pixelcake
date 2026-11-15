@@ -3,8 +3,10 @@ import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { askConfirm } from '@/store/confirmStore';
 import { encloseDevices } from '@/utils/areaActions';
+import { useT } from '@/i18n';
 
 const ContextMenu = () => {
+  const t = useT();
   const contextMenuDevice = useUIStore((state) => state.contextMenuDevice);
   const contextMenuPosition = useUIStore((state) => state.contextMenuPosition);
   const closeContextMenu = useUIStore((state) => state.closeContextMenu);
@@ -65,9 +67,9 @@ const ContextMenu = () => {
     const { id, label } = contextMenuDevice;
     closeContextMenu();
     const confirmed = await askConfirm({
-      title: `Eliminare «${label}»?`,
-      detail: 'Con il dispositivo vengono tolti anche i suoi collegamenti.',
-      confirmLabel: 'Elimina',
+      title: t.contextMenu.device.deleteQuestion.title(label),
+      detail: t.contextMenu.device.deleteQuestion.detail,
+      confirmLabel: t.common.actions.delete,
       danger: true,
     });
     if (confirmed) removeDevice(id);
@@ -86,12 +88,12 @@ const ContextMenu = () => {
       }}
     >
       <ul>
-        <li onClick={handleDetails}>Dettagli (Modifica)</li>
-        <li onClick={handleConsole}>Console</li>
-        <li onClick={handleEnclose}>Racchiudi in un riquadro</li>
+        <li onClick={handleDetails}>{t.contextMenu.device.details}</li>
+        <li onClick={handleConsole}>{t.contextMenu.device.console}</li>
+        <li onClick={handleEnclose}>{t.contextMenu.device.enclose}</li>
         <hr />
         <li className="danger" onClick={handleDelete}>
-          Elimina
+          {t.common.actions.delete}
         </li>
       </ul>
     </div>

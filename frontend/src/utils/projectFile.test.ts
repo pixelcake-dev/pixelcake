@@ -515,14 +515,14 @@ describe('project file', () => {
 
     it('has a canvas without its list of devices', () => {
       expect(errorOf(fileWithCanvas({ devices: undefined }))).toBe(
-        'Canvas "Canvas 1": manca l\'elenco dei dispositivi ("devices").'
+        'Canvas «Canvas 1»: manca l\'elenco dei dispositivi ("devices").'
       );
       expect(errorOf(fileWithCanvas({ devices: {} }))).toContain('"devices"');
     });
 
     it('has a canvas without its list of connections', () => {
       expect(errorOf(fileWithCanvas({ connections: undefined }))).toBe(
-        'Canvas "Canvas 1": manca l\'elenco delle connessioni ("connections").'
+        'Canvas «Canvas 1»: manca l\'elenco delle connessioni ("connections").'
       );
       expect(errorOf(fileWithCanvas({ connections: 'none' }))).toContain('"connections"');
     });
@@ -569,7 +569,7 @@ describe('project file', () => {
       const { project, warnings } = parsed(file);
 
       expect(project.name).toBe('Progetto senza nome');
-      expect(warnings).toEqual(['Nome del progetto mancante: usato "Progetto senza nome".']);
+      expect(warnings).toEqual(['Nome del progetto mancante: usato «Progetto senza nome».']);
     });
 
     it('without settings: the default network, with a warning', () => {
@@ -617,7 +617,7 @@ describe('project file', () => {
 
       expect(canvas.viewport).toEqual({ x: 0, y: 0, zoom: 1 });
       expect(warnings).toEqual([
-        'Canvas "Canvas 1": vista mancante o non valida, riportata alla posizione iniziale.',
+        'Canvas «Canvas 1»: vista mancante o non valida, riportata alla posizione iniziale.',
       ]);
     });
 
@@ -692,7 +692,7 @@ describe('project file', () => {
       expect(new Set(project.canvases.map(c => c.id)).size).toBe(4);
       // the first one keeps the id, so it is still the active canvas
       expect(project.activeCanvasId).toBe('canvas-3');
-      expect(warnings).toEqual(['2 canvas con id mancante o duplicato: assegnati nuovi id.']);
+      expect(warnings).toEqual(['2 canvas con ID mancante o duplicato: assegnati nuovi ID.']);
     });
 
     it('with an activeCanvasId that is not there: the first canvas', () => {
@@ -700,7 +700,7 @@ describe('project file', () => {
         const { project, warnings } = parsed({ ...minimalFile(), activeCanvasId });
 
         expect(project.activeCanvasId).toBe('canvas-1');
-        expect(warnings).toEqual(['Canvas attivo non trovato: aperto "Canvas 1".']);
+        expect(warnings).toEqual(['Canvas attivo non trovato: aperto «Canvas 1».']);
       }
     });
 
@@ -722,7 +722,7 @@ describe('project file', () => {
         ['conn-0', 'first'],
         ['conn-1', undefined],
       ]);
-      expect(warnings).toEqual(['Canvas "Canvas 1": 1 connessione con id duplicato rimossa.']);
+      expect(warnings).toEqual(['Canvas «Canvas 1»: 1 connessione con ID duplicato rimossa.']);
     });
 
     it('with connections to devices that do not exist: they are dropped', () => {
@@ -741,7 +741,7 @@ describe('project file', () => {
 
       expect(canvas.connections.map(c => c.id)).toEqual(['conn-0']);
       expect(warnings).toEqual([
-        'Canvas "Canvas 1": 2 connessioni verso dispositivi inesistenti rimosse.',
+        'Canvas «Canvas 1»: 2 connessioni verso dispositivi inesistenti rimosse.',
       ]);
     });
 
@@ -758,7 +758,7 @@ describe('project file', () => {
       expect(canvas.deviceCounter).toBe(8);
       expect(canvas.connectionCounter).toBe(13);
       expect(warnings).toEqual([
-        'Canvas "Canvas 1": contatori degli id mancanti o troppo bassi, ricalcolati.',
+        'Canvas «Canvas 1»: contatori degli ID mancanti o troppo bassi, ricalcolati.',
       ]);
     });
 
@@ -799,8 +799,8 @@ describe('project file', () => {
       expect(canvas.devices.map(d => d.id)).toEqual(['dev-0', 'dev-1']);
       expect(canvas.connections.map(c => c.id)).toEqual(['conn-0']);
       expect(warnings).toEqual([
-        'Canvas "Canvas 1": 3 dispositivi non validi o duplicati ignorati.',
-        'Canvas "Canvas 1": 2 connessioni non valide ignorate.',
+        'Canvas «Canvas 1»: 3 dispositivi non validi o duplicati ignorati.',
+        'Canvas «Canvas 1»: 2 connessioni non valide ignorate.',
       ]);
     });
 
@@ -824,7 +824,7 @@ describe('project file', () => {
           ports: [{ id: 1, enabled: true }],
         },
       ]);
-      expect(warnings).toEqual(['Canvas "Canvas 1": 1 dispositivo incompleto corretto.']);
+      expect(warnings).toEqual(['Canvas «Canvas 1»: 1 dispositivo incompleto corretto.']);
     });
 
     it('lists every repair of a badly damaged file, and still opens it', () => {
@@ -841,14 +841,14 @@ describe('project file', () => {
       });
       expect(warnings).toEqual([
         'Versione del formato non indicata: il file è stato letto come versione 1.',
-        'Nome del progetto mancante: usato "Progetto senza nome".',
+        'Nome del progetto mancante: usato «Progetto senza nome».',
         'Descrizione del progetto mancante: lasciata vuota.',
         'Impostazioni di rete mancanti: usati i valori predefiniti.',
-        'Canvas n. 1 senza nome: chiamato "Canvas 1".',
-        'Canvas "Canvas 1": vista mancante o non valida, riportata alla posizione iniziale.',
-        'Canvas "Canvas 1": contatori degli id mancanti o troppo bassi, ricalcolati.',
-        '1 canvas con id mancante o duplicato: assegnato un nuovo id.',
-        'Canvas attivo non trovato: aperto "Canvas 1".',
+        'Canvas n. 1 senza nome: chiamato «Canvas 1».',
+        'Canvas «Canvas 1»: vista mancante o non valida, riportata alla posizione iniziale.',
+        'Canvas «Canvas 1»: contatori degli ID mancanti o troppo bassi, ricalcolati.',
+        '1 canvas con ID mancante o duplicato: assegnato un nuovo ID.',
+        'Canvas attivo non trovato: aperto «Canvas 1».',
         'Elenco dei template personalizzati mancante: nessun template importato.',
       ]);
     });

@@ -2592,11 +2592,15 @@ legend {
   font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .presentation-project {
   font-weight: 600;
   max-width: 28ch;
+  min-width: 0;
+  /* (cut short well before the canvases next to it start to scroll) */
+  flex-shrink: 6;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2607,6 +2611,13 @@ legend {
   gap: 4px;
   min-width: 0;
   overflow-x: auto;
+  /* (when they do not all fit they scroll, by wheel, touch or keyboard: a
+     scroll bar inside a bar this low would push the names out of line) */
+  scrollbar-width: none;
+}
+
+.presentation-canvases::-webkit-scrollbar {
+  display: none;
 }
 
 .presentation-canvases button {
@@ -2636,6 +2647,44 @@ legend {
   display: flex;
   align-items: center;
   gap: 8px;
+  /* (the tools and the way out are never the ones to give way) */
+  flex-shrink: 0;
+}
+
+/* A narrow window. What matters less gives way first, so that the tools and
+   the way out stay inside the window: the name of the project is cut short
+   as the bar narrows (and the canvases scroll); then the badge keeps its
+   symbol alone and the spaces tighten; last, the name of the project goes,
+   as it does on the menu bar. */
+@media (max-width: 800px) {
+  .presentation-bar {
+    gap: 8px;
+    padding: 0 8px;
+  }
+
+  .presentation-bar-tools {
+    gap: 4px;
+  }
+
+  .presentation-badge {
+    padding: 3px 6px;
+  }
+
+  /* (out of sight, still read aloud) */
+  .presentation-badge-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .presentation-project {
+    display: none;
+  }
 }
 
 .presentation-exit {
@@ -2790,35 +2839,37 @@ legend {
 .presentation-ends {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   margin-bottom: 10px;
 }
 
+/* The two ends of the question, one under the other. Their names share a
+   column as wide as the longer of the two, whatever the language («Da» and
+   «A», "From" and "To"), so the two menus start on one line. The spaces
+   are kept small: with the longer names a menu has just the room for the
+   name of a device of the samples and its address */
 .presentation-ends-fields {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
 }
 
 /* One end of the question: its name and its menu on one line */
 .presentation-end {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: contents;
 }
 
 .presentation-end > span {
-  width: 20px;
-  flex-shrink: 0;
+  min-width: 20px;
   font-size: 0.85em;
   font-weight: 600;
   color: var(--text-color-light);
 }
 
 .presentation-end > .form-group {
-  flex: 1;
   min-width: 0;
   margin: 0;
 }

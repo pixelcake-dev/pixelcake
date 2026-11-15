@@ -50,12 +50,12 @@ describe('NewProjectModal', () => {
   it('creates the project with what the form says and closes', () => {
     render(<NewProjectModal />);
 
-    type('Nome Progetto *', '  Sede Roma ');
+    type('Nome del progetto', '  Sede Roma ');
     type('Descrizione', 'Nuova sede');
-    type('Classe IP', '10.0.0.0');
-    type('Subnet Mask', '255.0.0.0');
+    type('Rete', '10.0.0.0');
+    type('Subnet mask', '255.0.0.0');
     type('Gateway', '10.0.0.1');
-    fireEvent.click(screen.getByRole('button', { name: 'Crea Progetto' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Crea progetto' }));
 
     expect(useProjectStore.getState()).toMatchObject({
       name: 'Sede Roma',
@@ -77,14 +77,14 @@ describe('NewProjectModal', () => {
     expect(useUIStore.getState().modals.newProject).toBe(false);
     // a new project starts on its empty canvas, not behind the welcome screen
     expect(useUIStore.getState().showWelcomeScreen).toBe(false);
-    expect(toast.success as Mock).toHaveBeenCalledWith('Progetto "Sede Roma" creato');
+    expect(toast.success as Mock).toHaveBeenCalledWith('Progetto «Sede Roma» creato');
   });
 
   it('asks for a name and changes nothing without one', () => {
     render(<NewProjectModal />);
 
-    type('Nome Progetto *', '   ');
-    fireEvent.click(screen.getByRole('button', { name: 'Crea Progetto' }));
+    type('Nome del progetto', '   ');
+    fireEvent.click(screen.getByRole('button', { name: 'Crea progetto' }));
 
     expect(screen.getByText(/Il nome del progetto è obbligatorio/)).toBeInTheDocument();
     expect(useUIStore.getState().modals.newProject).toBe(true);
@@ -96,7 +96,7 @@ describe('NewProjectModal', () => {
   it('"Annulla" closes the form and leaves the open project alone', () => {
     render(<NewProjectModal />);
 
-    type('Nome Progetto *', 'Sede Roma');
+    type('Nome del progetto', 'Sede Roma');
     fireEvent.click(screen.getByRole('button', { name: 'Annulla' }));
 
     expect(useUIStore.getState().modals.newProject).toBe(false);
@@ -109,11 +109,11 @@ describe('NewProjectModal', () => {
     render(<NewProjectModal />);
 
     expectSpacedApart(
-      ['Nome Progetto *', 'Descrizione'].map(label => screen.getByLabelText(label))
+      ['Nome del progetto', 'Descrizione'].map(label => screen.getByLabelText(label))
     );
     // the values of the network are short: low fields, two to a row, in a
     // grid that keeps them apart across and down
-    const fields = ['Classe IP', 'Subnet Mask', 'Gateway', 'Server DNS (facoltativo)'].map(label =>
+    const fields = ['Rete', 'Subnet mask', 'Gateway', 'Server DNS (facoltativo)'].map(label =>
       screen.getByLabelText(label)
     );
     const row = fields[0].closest('.grid');
@@ -126,15 +126,15 @@ describe('NewProjectModal', () => {
       expect(field.parentElement?.parentElement).toBe(row);
       expect(field.parentElement?.className).toContain('col-span-2');
     }
-    expect(screen.getByRole('group', { name: 'Impostazioni di Rete Globali' })).toContainElement(row as HTMLElement);
+    expect(screen.getByRole('group', { name: 'Impostazioni di rete globali' })).toContainElement(row as HTMLElement);
   });
 
   it('the DNS server of new devices can be given at once, and is kept trimmed', () => {
     render(<NewProjectModal />);
 
-    type('Nome Progetto *', 'Sede Roma');
+    type('Nome del progetto', 'Sede Roma');
     type('Server DNS (facoltativo)', ' 192.168.1.53 ');
-    fireEvent.click(screen.getByRole('button', { name: 'Crea Progetto' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Crea progetto' }));
 
     expect(useNetworkStore.getState().globalNetworkSettings).toEqual({
       ipClass: '192.168.1.0',
@@ -150,8 +150,8 @@ describe('NewProjectModal', () => {
     render(<NewProjectModal />);
     expect(screen.getByLabelText<HTMLInputElement>('Server DNS (facoltativo)').value).toBe('');
 
-    type('Nome Progetto *', 'Sede Roma');
-    fireEvent.click(screen.getByRole('button', { name: 'Crea Progetto' }));
+    type('Nome del progetto', 'Sede Roma');
+    fireEvent.click(screen.getByRole('button', { name: 'Crea progetto' }));
 
     expect('dns' in useNetworkStore.getState().globalNetworkSettings).toBe(false);
   });
@@ -159,9 +159,9 @@ describe('NewProjectModal', () => {
   it('a DNS server that is not an address is refused, and nothing is created', () => {
     render(<NewProjectModal />);
 
-    type('Nome Progetto *', 'Sede Roma');
+    type('Nome del progetto', 'Sede Roma');
     type('Server DNS (facoltativo)', 'srv-auth');
-    fireEvent.click(screen.getByRole('button', { name: 'Crea Progetto' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Crea progetto' }));
 
     expect(screen.getByText(/Server DNS: "srv-auth" non è un indirizzo IPv4 valido/)).toBeInTheDocument();
     expect(useUIStore.getState().modals.newProject).toBe(true);
@@ -172,9 +172,9 @@ describe('NewProjectModal', () => {
   it('starts from the default network settings every time it opens', () => {
     render(<NewProjectModal />);
 
-    expect(screen.getByLabelText<HTMLInputElement>('Nome Progetto *').value).toBe('');
-    expect(screen.getByLabelText<HTMLInputElement>('Classe IP').value).toBe('192.168.1.0');
-    expect(screen.getByLabelText<HTMLInputElement>('Subnet Mask').value).toBe('255.255.255.0');
+    expect(screen.getByLabelText<HTMLInputElement>('Nome del progetto').value).toBe('');
+    expect(screen.getByLabelText<HTMLInputElement>('Rete').value).toBe('192.168.1.0');
+    expect(screen.getByLabelText<HTMLInputElement>('Subnet mask').value).toBe('255.255.255.0');
     expect(screen.getByLabelText<HTMLInputElement>('Gateway').value).toBe('192.168.1.1');
     expect(screen.getByLabelText<HTMLInputElement>('Server DNS (facoltativo)').value).toBe('');
   });

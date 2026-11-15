@@ -218,7 +218,7 @@ describe('DNS in a project file', () => {
     // a pool that hands out something the engine cannot read is not a pool
     expect(named(opened, 'FW')?.ports?.[0]).not.toHaveProperty('dhcpServer');
     expect(named(opened, 'FW')?.ports?.[0].ip).toBe('192.168.1.1');
-    expect(result.warnings).toEqual(['Canvas "Canvas 1": 3 dispositivi incompleti corretti.']);
+    expect(result.warnings).toEqual(['Canvas «Canvas 1»: 3 dispositivi incompleti corretti.']);
   });
 
   it('a server left with no record that can be read has no list at all', () => {
@@ -228,7 +228,7 @@ describe('DNS in a project file', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(named(result.project.canvases[0].devices, 'NS')).not.toHaveProperty('dnsRecords');
-    expect(result.warnings).toEqual(['Canvas "Canvas 1": 1 dispositivo incompleto corretto.']);
+    expect(result.warnings).toEqual(['Canvas «Canvas 1»: 1 dispositivo incompleto corretto.']);
   });
 
   it('a rule or a forward for a service that does not exist is still dropped', () => {

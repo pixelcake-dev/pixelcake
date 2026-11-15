@@ -15,7 +15,11 @@ import TopMenuBar from '@/components/Toolbar/TopMenuBar';
 import SettingsModal from '@/components/Modals/SettingsModal';
 import HelpModal from '@/components/Modals/HelpModal';
 import Logo from '@/components/ui/Logo';
-import { APP_DESCRIPTOR, APP_MOTTO, APP_NAME, APP_TITLE } from './brand';
+import { APP_DESCRIPTOR, APP_NAME, APP_TITLE, APP_VERSION } from './brand';
+import { dictionaryOf } from '@/i18n';
+
+/** The motto of the Italian interface, the language these tests run in */
+const APP_MOTTO = dictionaryOf('it').common.brand.motto;
 
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
@@ -33,6 +37,16 @@ describe('the name, the descriptor and the motto', () => {
     expect(APP_DESCRIPTOR).toBe('Visual Network Designer');
     expect(APP_MOTTO).toBe('Una rete, un pezzo alla volta');
     expect(APP_TITLE).toBe('PixelCake - Visual Network Designer');
+  });
+});
+
+describe('the version', () => {
+  it('is the one of package.json', () => {
+    const [written] = Object.values(
+      import.meta.glob<string>('/package.json', { eager: true, import: 'version' })
+    );
+    expect(APP_VERSION).toMatch(/^\d+\.\d+\.\d+/);
+    expect(APP_VERSION).toBe(written);
   });
 });
 
@@ -72,7 +86,7 @@ describe('the interface', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(APP_NAME);
     expect(screen.getByText(APP_DESCRIPTOR)).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent(APP_MOTTO);
-    expect(screen.getByAltText(`${APP_NAME} Logo`)).toBeInTheDocument();
+    expect(screen.getByAltText(`Logo di ${APP_NAME}`)).toBeInTheDocument();
   });
 
   it('the settings and the guide end with the same motto as the welcome screen, in Italian', () => {
@@ -111,6 +125,6 @@ describe('the interface', () => {
     expect(names.length).toBeGreaterThan(3);
     expect(names.filter(name => name !== APP_NAME)).toEqual([]);
     // (the symbol alone: on the menu bar, and at the foot of the guide)
-    expect(screen.getAllByAltText(`${APP_NAME} Icon`).length).toBeGreaterThan(0);
+    expect(screen.getAllByAltText(`Simbolo di ${APP_NAME}`).length).toBeGreaterThan(0);
   });
 });

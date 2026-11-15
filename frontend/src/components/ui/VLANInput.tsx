@@ -2,23 +2,29 @@ import { useState, type KeyboardEvent } from 'react';
 import { X } from 'lucide-react';
 import { vlanShort } from '@/utils/vlanNames';
 import { useVlanNames } from '@/utils/useVlanNames';
+import { useT } from '@/i18n';
 
 interface VLANInputProps {
   label?: string;
   value: number[];
   onChange: (vlans: number[]) => void;
+  /** Shown while no VLAN is in the field; an example of what to type when not given */
   placeholder?: string;
   disabled?: boolean;
 }
+
+/** Why what was typed was not taken (kept as a kind: its words follow the language) */
+type Refusal = 'outOfRange' | 'duplicate';
 
 /**
  * VLANInput - Multi-value input for VLAN IDs with tag chips
  * Validates VLAN range (1-4094) and displays as removable tags. A VLAN the
  * project gave a name to shows it on its tag, after the number
  */
-export const VLANInput = ({ label, value, onChange, placeholder = 'es. 10, 20, 30', disabled = false }: VLANInputProps) => {
+export const VLANInput = ({ label, value, onChange, placeholder, disabled = false }: VLANInputProps) => {
+  const t = useT();
   const [inputValue, setInputValue] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState<Refusal | null>(null);
   const names = useVlanNames();
 
   const addVLAN = (vlanString: string) => {
@@ -29,20 +35,20 @@ export const VLANInput = ({ label, value, onChange, placeholder = 'es. 10, 20, 3
 
     // Validate VLAN range
     if (isNaN(vlanNum) || vlanNum < 1 || vlanNum > 4094) {
-      setError('VLAN deve essere tra 1 e 4094');
+      setError('outOfRange');
       return;
     }
 
     // Check for duplicates
     if (value.includes(vlanNum)) {
-      setError('VLAN già presente');
+      setError('duplicate');
       return;
     }
 
     // Add VLAN
     onChange([...value, vlanNum]);
     setInputValue('');
-    setError('');
+    setError(null);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -122,7 +128,7 @@ export const VLANInput = ({ label, value, onChange, placeholder = 'es. 10, 20, 3
                   alignItems: 'center',
                   color: 'var(--text-color-light)',
                 }}
-                aria-label={`Togli la VLAN ${vlan}`}
+                aria-label={t.vlan.input.remove(vlan)}
               >
                 <X size={14} />
               </button>
@@ -139,7 +145,7 @@ export const VLANInput = ({ label, value, onChange, placeholder = 'es. 10, 20, 3
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
-          placeholder={value.length === 0 ? placeholder : ''}
+          placeholder={value.length === 0 ? (placeholder ?? t.vlan.input.placeholder) : ''}
           disabled={disabled}
           style={{
             border: 'none',
@@ -157,13 +163,13 @@ export const VLANInput = ({ label, value, onChange, placeholder = 'es. 10, 20, 3
       {/* Error Message */}
       {error && (
         <p style={{ color: 'var(--danger-color)', fontSize: '12px', marginTop: '4px' }}>
-          {error}
+          {error === 'outOfRange' ? t.vlan.input.outOfRange : t.vlan.input.duplicate}
         </p>
       )}
 
       {/* Helper Text */}
       <p style={{ color: 'var(--text-color-light)', fontSize: '12px', marginTop: '4px' }}>
-        Premi Enter o virgola per aggiungere VLAN (1-4094)
+        {t.vlan.input.hint}
       </p>
     </div>
   );

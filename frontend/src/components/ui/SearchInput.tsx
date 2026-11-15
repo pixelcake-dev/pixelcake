@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
+import { useT } from '@/i18n';
 
 export interface SearchInputProps {
   value: string;
@@ -24,6 +25,7 @@ export const SearchInput = ({
   size = 'sm',
   onClear,
 }: SearchInputProps) => {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Auto-focus if requested
@@ -92,7 +94,7 @@ export const SearchInput = ({
             type="button"
             onClick={handleClear}
             className="text-[var(--text-color-light)] hover:text-[var(--text-color)] flex-shrink-0 transition-colors"
-            aria-label="Clear search"
+            aria-label={t.ui.clearSearch}
           >
             <X size={iconSize} />
           </button>

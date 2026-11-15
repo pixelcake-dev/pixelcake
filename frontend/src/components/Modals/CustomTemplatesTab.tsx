@@ -9,12 +9,15 @@ import { Select } from '@/components/ui/Select';
 import { useTemplateStore } from '@/store/templateStore';
 import type { DeviceTemplate, DeviceType } from '@/types/network';
 import { askConfirm } from '@/store/confirmStore';
+import { useT } from '@/i18n';
 
 interface CustomTemplatesTabProps {
   templates: DeviceTemplate[];
 }
 
 const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
+  const t = useT();
+  const words = t.templates.devices.custom;
   const addTemplate = useTemplateStore((state) => state.addTemplate);
   const deleteTemplate = useTemplateStore((state) => state.deleteTemplate);
 
@@ -57,8 +60,8 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
 
   const handleDelete = async (id: string) => {
     const confirmed = await askConfirm({
-      title: 'Eliminare questo template?',
-      confirmLabel: 'Elimina',
+      title: words.deleteQuestion,
+      confirmLabel: t.common.actions.delete,
       danger: true,
     });
     if (confirmed) {
@@ -69,12 +72,10 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
   return (
     <div className="custom-templates-tab">
       <div className="flex justify-between items-center mb-4">
-        <p className="text-sm text-[var(--text-color-light)]">
-          Template personalizzati con campi Terraform
-        </p>
+        <p className="text-sm text-[var(--text-color-light)]">{words.intro}</p>
         {!isCreating && (
           <Button variant="primary" onClick={() => setIsCreating(true)}>
-            + Nuovo Template
+            {words.add}
           </Button>
         )}
       </div>
@@ -82,19 +83,19 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
       {/* Create Form */}
       {isCreating && (
         <form onSubmit={handleSubmit} className="template-form mb-6 p-4 border border-[var(--border-color)] rounded-lg">
-          <h4 className="font-semibold mb-3">Crea Nuovo Template</h4>
+          <h4 className="font-semibold mb-3">{words.formTitle}</h4>
 
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Nome Template"
+              label={words.name}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="es: AWS EC2 Instance"
+              placeholder={words.namePlaceholder}
               required
             />
 
             <Select
-              label="Tipo Base"
+              label={t.templates.devices.baseType}
               value={formData.type}
               onChange={(e) =>
                 setFormData({
@@ -115,7 +116,7 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
 
             <div className="col-span-2">
               <DrawingPicker
-                label="Disegno"
+                label={t.templates.devices.drawing}
                 value={formData.icon}
                 onChange={(icon) => setFormData({ ...formData, icon })}
               />
@@ -124,10 +125,10 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
 
           <div className="flex gap-2 mt-4">
             <Button type="submit" variant="primary">
-              Salva Template
+              {words.save}
             </Button>
             <Button type="button" onClick={() => setIsCreating(false)}>
-              Annulla
+              {t.common.actions.cancel}
             </Button>
           </div>
         </form>
@@ -135,9 +136,7 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
 
       {/* Templates List */}
       {templates.length === 0 ? (
-        <p className="text-center text-[var(--text-color-light)] py-8">
-          Nessun template personalizzato. Creane uno!
-        </p>
+        <p className="text-center text-[var(--text-color-light)] py-8">{words.empty}</p>
       ) : (
         <div className="template-list space-y-2">
           {templates.map((template) => (
@@ -162,7 +161,7 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
                 size="sm"
                 onClick={() => handleDelete(template.id)}
               >
-                Elimina
+                {t.common.actions.delete}
               </Button>
             </div>
           ))}

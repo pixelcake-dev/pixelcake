@@ -16,10 +16,11 @@ import { PROJECT_FILE_FORMAT, PROJECT_FILE_VERSION } from '@/types';
 import {
   createEmptyCanvas,
   DEFAULT_NETWORK_SETTINGS,
-  DEFAULT_PROJECT_NAME,
+  defaultProjectName,
   nextCanvasId,
 } from '@/utils/projectFile';
 import { safeJSONStorage } from '@/utils/safeStorage';
+import { getT } from '@/i18n';
 import { useNetworkStore } from './networkStore';
 import { useSimulationStore } from './simulationStore';
 import { useTemplateStore } from './templateStore';
@@ -67,7 +68,19 @@ type PersistedProjectState = Pick<
 >;
 
 const FIRST_CANVAS_ID = 'canvas-1';
-const FIRST_CANVAS_NAME = 'Canvas 1';
+
+/**
+ * The name of a canvas nobody named, by its number. Like every name the app
+ * gives, it is in the language of the moment it is given in, and from then
+ * on it is the canvas's own: it does not follow the language.
+ */
+function canvasName(number: number): string {
+  return getT().project.canvasName(number);
+}
+
+function firstCanvasName(): string {
+  return canvasName(1);
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -95,7 +108,7 @@ function readPersistedProject(value: unknown): PersistedProjectState | null {
     ? (value.activeCanvasId as string)
     : canvases[0].id;
   return {
-    name: typeof value.name === 'string' && value.name ? value.name : DEFAULT_PROJECT_NAME,
+    name: typeof value.name === 'string' && value.name ? value.name : defaultProjectName(),
     description: typeof value.description === 'string' ? value.description : '',
     canvases,
     activeCanvasId,
@@ -114,17 +127,17 @@ export const useProjectStore = create<ProjectStore>()(
   persist(
     (set, get) => ({
       // Initial State: there is always a project
-      name: DEFAULT_PROJECT_NAME,
+      name: defaultProjectName(),
       description: '',
-      canvases: [createEmptyCanvas(FIRST_CANVAS_ID, FIRST_CANVAS_NAME)],
+      canvases: [createEmptyCanvas(FIRST_CANVAS_ID, firstCanvasName())],
       activeCanvasId: FIRST_CANVAS_ID,
 
       // Project Actions
       createProject: ({ name, description = '', settings }) => {
-        const canvas = createEmptyCanvas(FIRST_CANVAS_ID, FIRST_CANVAS_NAME);
+        const canvas = createEmptyCanvas(FIRST_CANVAS_ID, firstCanvasName());
         stopSimulation();
         set({
-          name: name.trim() || DEFAULT_PROJECT_NAME,
+          name: name.trim() || defaultProjectName(),
           description: description.trim(),
           canvases: [canvas],
           activeCanvasId: canvas.id,
@@ -172,7 +185,7 @@ export const useProjectStore = create<ProjectStore>()(
       addCanvas: name => {
         const { canvases } = get();
         const id = nextCanvasId(canvases.map(canvas => canvas.id));
-        const label = name?.trim() || `Canvas ${id.slice('canvas-'.length)}`;
+        const label = name?.trim() || canvasName(Number(id.slice('canvas-'.length)));
         set({ canvases: [...canvases, createEmptyCanvas(id, label)] });
         useNetworkStore.getState().markChanged();
         return id;
@@ -302,7 +315,7 @@ function adoptLiveCanvas() {
     useProjectStore.setState(
       liveId === null || liveId === project.activeCanvasId
         ? {}
-        : { canvases: [createEmptyCanvas(liveId, FIRST_CANVAS_NAME)], activeCanvasId: liveId }
+        : { canvases: [createEmptyCanvas(liveId, firstCanvasName())], activeCanvasId: liveId }
     );
     return;
   }
@@ -319,7 +332,7 @@ function adoptLiveCanvas() {
   useProjectStore.setState({
     canvases: [
       ...project.canvases,
-      { ...network.getCanvasSnapshot(), id: liveId, name: 'Canvas recuperato' },
+      { ...network.getCanvasSnapshot(), id: liveId, name: getT().project.recoveredCanvas },
     ],
     activeCanvasId: liveId,
   });

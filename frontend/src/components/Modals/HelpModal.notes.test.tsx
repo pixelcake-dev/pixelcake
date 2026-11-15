@@ -64,7 +64,7 @@ beforeEach(() => {
 describe('the guide — the window of a device and its note', () => {
   it('names what is on the screen', () => {
     expect(quoted(step(TITLE))).toEqual([
-      'Dettagli (Modifica)',
+      'Dettagli (modifica)',
       'Generale',
       'Porte',
       'Numero di porte',
@@ -83,7 +83,7 @@ describe('the guide — the window of a device and its note', () => {
         <InspectorModal />
       </>
     );
-    fireEvent.click(screen.getByText('Dettagli (Modifica)'));
+    fireEvent.click(screen.getByText('Dettagli (modifica)'));
     expect(document.querySelector('.tab-header.active')).toHaveTextContent('Generale');
     expect(screen.getByRole('button', { name: 'Salva' })).toBeInTheDocument();
   });

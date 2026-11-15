@@ -9,8 +9,8 @@ import { listInterfaces, poolProblem, resolveDhcp } from '@/engine';
 import type { Topology } from '@/engine';
 import { device, host, link, nic, port, switchWith, topo } from '@/test/networkFixtures';
 import {
-  BLANK_POOL_ERROR,
-  NO_LEASE_LABEL,
+  blankPoolError,
+  noLeaseLabel,
   cardLeaseText,
   firstPoolProblem,
   isBlankPool,
@@ -79,7 +79,7 @@ describe('the address shown for a device', () => {
   it('says so when the card got none', () => {
     const t = lab();
     expect(shownAddress(byId(t, 'b'), resolveDhcp(t))).toBe('DHCP: nessun indirizzo');
-    expect(NO_LEASE_LABEL).toBe('DHCP: nessun indirizzo');
+    expect(noLeaseLabel()).toBe('DHCP: nessun indirizzo');
   });
 
   it('is the one written by hand for everybody else, empty when there is none', () => {
@@ -248,7 +248,7 @@ describe('what is wrong with a pool as typed', () => {
     expect(isBlankPool({ start: '', end: '192.168.1.1' })).toBe(false);
     expect(isBlankPool({ start: '192.168.1.1', end: '' })).toBe(false);
     expect(isBlankPool({ start: '', end: '', gateway: '192.168.1.1' })).toBe(false);
-    expect(BLANK_POOL_ERROR).toContain('togli la spunta');
+    expect(blankPoolError()).toContain('togli la spunta');
   });
 
   it('the first pool of a device that cannot work is named by its port or its card', () => {

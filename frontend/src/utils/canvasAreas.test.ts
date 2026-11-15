@@ -11,7 +11,7 @@ import canvasSource from '../components/Canvas/NetworkCanvas.tsx?raw';
 import { AREA_COLOURS } from '@/types';
 import type { CanvasArea } from '@/types';
 import {
-  AREA_COLOUR_NAMES,
+  areaColourNames,
   AREA_DEFAULT_SIZE,
   AREA_LABEL_MAX_LENGTH,
   AREA_GAP,
@@ -386,8 +386,8 @@ describe('the palette', () => {
 
   it('is six calm colours, each with its name', () => {
     expect([...AREA_COLOURS]).toEqual(['slate', 'green', 'amber', 'red', 'violet', 'teal']);
-    expect(Object.keys(AREA_COLOUR_NAMES)).toEqual([...AREA_COLOURS]);
-    expect(Object.values(AREA_COLOUR_NAMES)).toEqual(['Ardesia', 'Verde', 'Ocra', 'Rosso', 'Viola', 'Petrolio']);
+    expect(Object.keys(areaColourNames())).toEqual([...AREA_COLOURS]);
+    expect(Object.values(areaColourNames())).toEqual(['Ardesia', 'Verde', 'Ocra', 'Rosso', 'Viola', 'Petrolio']);
     for (const colour of AREA_COLOURS) expect(isAreaColour(colour)).toBe(true);
     for (const other of ['orange', 'Slate', '', 7, null]) expect(isAreaColour(other)).toBe(false);
   });

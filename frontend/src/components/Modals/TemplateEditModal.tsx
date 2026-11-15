@@ -9,6 +9,12 @@ import { drawingOf } from '@/utils/deviceDrawing';
 import type { DeviceDrawingId } from '@/data/deviceDrawings';
 import { useTemplateStore } from '@/store/templateStore';
 import type { DeviceTemplate } from '@/types/network';
+import { useT, type Dictionary } from '@/i18n';
+
+/** What is wrong with a field: named here, said in the language of the interface when drawn */
+type FieldError = keyof Dictionary['templates']['devices']['editor']['errors'];
+// (the drawing is always one of the app's: there is nothing to get wrong in it)
+type FormErrors = Partial<Record<'name' | 'type', FieldError>>;
 
 /** What the form holds: the drawing is one of the app's, the one of the base type until another is chosen */
 interface TemplateForm {
@@ -26,6 +32,8 @@ interface TemplateEditModalProps {
 }
 
 const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps) => {
+  const t = useT();
+  const words = t.templates.devices.editor;
   const addTemplate = useTemplateStore((state) => state.addTemplate);
   const updateTemplate = useTemplateStore((state) => state.updateTemplate);
   const templates = useTemplateStore((state) => state.templates);
@@ -35,7 +43,7 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
   // Form state
   const [formData, setFormData] = useState<TemplateForm>(EMPTY_FORM);
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<FormErrors>({});
 
   // Initialize form data when template changes
   useEffect(() => {
@@ -56,21 +64,21 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
   const drawing = formData.icon || drawingOf(undefined, formData.type);
 
   const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: FormErrors = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Nome obbligatorio';
+      newErrors.name = 'nameRequired';
     }
 
     if (!formData.type || !formData.type.trim()) {
-      newErrors.type = 'Tipo base obbligatorio';
+      newErrors.type = 'typeRequired';
     } else if (!isEditMode) {
       // Check for duplicate type only in create mode
       const existingTemplate = templates.find(
-        (t) => t.type === formData.type && !t.isCustom
+        (existing) => existing.type === formData.type && !existing.isCustom
       );
       if (existingTemplate) {
-        newErrors.type = 'Tipo già esistente tra i template generici';
+        newErrors.type = 'typeExists';
       }
     }
 
@@ -139,47 +147,49 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
     <Modal
       isOpen={isOpen}
       onClose={handleCancel}
-      title={isEditMode ? 'Modifica Template Generico' : 'Nuovo Template Generico'}
+      title={isEditMode ? words.titleEdit : words.titleNew}
       size="sm"
       variant="scrollable"
       autoHeight={true}
       footer={
         <div className="modal-actions px-6 pb-6 pt-4">
           <Button variant="secondary" onClick={handleCancel}>
-            Annulla
+            {t.common.actions.cancel}
           </Button>
           <Button variant="primary" onClick={handleSave}>
-            {isEditMode ? 'Salva Modifiche' : 'Crea Template'}
+            {isEditMode ? words.saveChanges : words.create}
           </Button>
         </div>
       }
     >
       <FormContainer gap="4">
-        {/* Nome */}
+        {/* Name */}
         <div>
           <Input
-            label="Nome"
+            label={words.name}
             type="text"
-            placeholder="es: PC, Printer, IoT Device"
+            placeholder={words.namePlaceholder}
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             size="md"
             autoFocus
           />
-          {errors.name && <span className="text-sm text-[var(--danger-color)]">{errors.name}</span>}
+          {errors.name && (
+            <span className="text-sm text-[var(--danger-color)]">{words.errors[errors.name]}</span>
+          )}
         </div>
 
-        {/* Tipo Base */}
+        {/* Base type */}
         <div>
           <Select
-            label="Tipo Base"
+            label={t.templates.devices.baseType}
             value={formData.type}
             onChange={(e) => setFormData({ ...formData, type: e.target.value, icon: '' })}
             size="md"
             disabled={isEditMode}
             required
           >
-            <option value="">-- Seleziona tipo --</option>
+            <option value="">{words.chooseType}</option>
             <option value="PC">PC</option>
             <option value="Switch">Switch</option>
             <option value="Router">Router</option>
@@ -190,17 +200,17 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
             <option value="Database">Database</option>
             <option value="Cloud">Cloud</option>
           </Select>
-          {errors.type && <span className="text-sm text-[var(--danger-color)]">{errors.type}</span>}
+          {errors.type && (
+            <span className="text-sm text-[var(--danger-color)]">{words.errors[errors.type]}</span>
+          )}
           {isEditMode && (
-            <span className="text-xs text-[var(--text-color-light)] mt-1">
-              Il tipo non può essere modificato per evitare problemi con i dispositivi esistenti
-            </span>
+            <span className="text-xs text-[var(--text-color-light)] mt-1">{words.typeLocked}</span>
           )}
         </div>
 
         {/* The drawing a device of this template is shown with */}
         <DrawingPicker
-          label="Disegno"
+          label={t.templates.devices.drawing}
           value={drawing}
           onChange={(icon) => setFormData({ ...formData, icon })}
         />

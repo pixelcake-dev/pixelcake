@@ -11,7 +11,7 @@ import ConfirmDialog from './ConfirmDialog';
 
 const DELETE = {
   title: 'Eliminare «PC-1»?',
-  detail: 'Con il dispositivo vengono tolti anche i suoi collegamenti.',
+  detail: 'Con il dispositivo vengono tolte anche le sue connessioni.',
   confirmLabel: 'Elimina',
   danger: true,
 };

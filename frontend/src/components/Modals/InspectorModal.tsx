@@ -42,9 +42,15 @@ import {
 } from '@/engine';
 import type { DeviceInterface, DhcpResolution } from '@/engine';
 import { linkPeerLabel } from '@/utils/interfaceLabels';
-import { NO_LEASE_LABEL, cardLeaseText, firstPoolProblem, poolStatusText } from '@/utils/dhcpLabels';
+import { cardLeaseText, firstPoolProblem, noLeaseLabel, poolStatusText } from '@/utils/dhcpLabels';
 import { firstInterfaceProblem, tidyNic, tidyPort } from '@/utils/interfaceProblems';
 import { NOTES_MAX_LENGTH, noteRows, tidyNotes } from '@/utils/deviceNotes';
+import {
+  BRIDGE_PRIORITY_DEFAULT,
+  BRIDGE_PRIORITY_MAX,
+  BRIDGE_PRIORITY_STEP,
+  nearestBridgePriority,
+} from '@/utils/bridgePriority';
 import {
   forwardProblemText,
   isBlankForward,
@@ -55,6 +61,8 @@ import {
   ruleProblem,
   tidyRecord,
 } from '@/utils/networkConfigValidation';
+import { useT } from '@/i18n';
+import { Rich } from '@/i18n/Rich';
 import type {
   DeviceTemplate,
   DhcpPool,
@@ -90,6 +98,7 @@ type StpMode = 'STP' | 'RSTP' | 'PVST+' | 'MST';
  * saves all together; a tab can send to another one.
  */
 const InspectorModal = () => {
+  const t = useT();
   const isOpen = useUIStore((state) => state.modals.inspector);
   const inspectorDevice = useUIStore((state) => state.inspectorDevice);
   const closeModal = useUIStore((state) => state.closeModal);
@@ -113,7 +122,7 @@ const InspectorModal = () => {
   // STP Config
   const [stpEnabled, setStpEnabled] = useState(false);
   const [stpMode, setStpMode] = useState<StpMode>('RSTP');
-  const [stpPriority, setStpPriority] = useState(32768);
+  const [stpPriority, setStpPriority] = useState(BRIDGE_PRIORITY_DEFAULT);
 
   // Ports, and the one whose settings are open in «Porte»
   const [ports, setPorts] = useState<Port[]>([]);
@@ -147,7 +156,7 @@ const InspectorModal = () => {
       setVlans(inspectorDevice.vlan || []);
       setStpEnabled(inspectorDevice.stp?.enabled || false);
       setStpMode(inspectorDevice.stp?.mode || 'RSTP');
-      setStpPriority(inspectorDevice.stp?.priority || 32768);
+      setStpPriority(nearestBridgePriority(inspectorDevice.stp?.priority));
       setPorts(inspectorDevice.ports || []);
       setSelectedPortId(null);
       setNics(inspectorDevice.nics || []);
@@ -209,11 +218,8 @@ const InspectorModal = () => {
     setSelectedNicId(newNic.id);
   };
 
+  // (the last card of a device cannot be taken away: NicRows gives it no button)
   const handleRemoveNic = (nicId: string) => {
-    if (nics.length <= 1) {
-      toast.error('Impossibile rimuovere l\'ultima scheda di rete');
-      return;
-    }
     setNics(nics.filter((nic) => nic.id !== nicId));
     if (selectedNicId === nicId) {
       setSelectedNicId(null);
@@ -227,7 +233,7 @@ const InspectorModal = () => {
     // here only where it is typed here
     const viaCards = nics.length > 0 && (templateOf(inspectorDevice, templates)?.supportsNICs ?? false);
     if (!name.trim() || (!viaCards && !ip.trim())) {
-      toast.error(viaCards ? 'Il nome è obbligatorio' : 'Nome e IP sono obbligatori');
+      toast.error(viaCards ? t.inspector.toasts.nameRequired : t.inspector.toasts.nameAndIpRequired);
       return;
     }
 
@@ -242,7 +248,9 @@ const InspectorModal = () => {
       }));
     const routeIndex = keptRoutes.findIndex((route) => routeProblem(route) !== undefined);
     if (routeIndex >= 0) {
-      toast.error(`Rotta ${routeIndex + 1}: ${routeProblem(keptRoutes[routeIndex])}`);
+      toast.error(
+        t.inspector.toasts.routeProblem(routeIndex + 1, routeProblem(keptRoutes[routeIndex]) ?? '')
+      );
       return;
     }
     const keptRules = firewallRules.map((rule) => ({
@@ -252,7 +260,7 @@ const InspectorModal = () => {
     }));
     const ruleIndex = keptRules.findIndex((rule) => ruleProblem(rule) !== undefined);
     if (ruleIndex >= 0) {
-      toast.error(`Regola ${ruleIndex + 1}: ${ruleProblem(keptRules[ruleIndex])}`);
+      toast.error(t.inspector.toasts.ruleProblem(ruleIndex + 1, ruleProblem(keptRules[ruleIndex]) ?? ''));
       return;
     }
 
@@ -280,7 +288,10 @@ const InspectorModal = () => {
     );
     if (forwardIndex >= 0) {
       toast.error(
-        `Inoltro ${forwardIndex + 1}: ${forwardProblemText(keptForwards[forwardIndex], keptPorts)}`
+        t.inspector.toasts.forwardProblem(
+          forwardIndex + 1,
+          forwardProblemText(keptForwards[forwardIndex], keptPorts) ?? ''
+        )
       );
       return;
     }
@@ -293,7 +304,10 @@ const InspectorModal = () => {
     );
     if (recordIndex >= 0) {
       toast.error(
-        `Record DNS ${recordIndex + 1}: ${recordProblem(keptRecords[recordIndex], keptRecords)}`
+        t.inspector.toasts.recordProblem(
+          recordIndex + 1,
+          recordProblem(keptRecords[recordIndex], keptRecords) ?? ''
+        )
       );
       return;
     }
@@ -320,7 +334,8 @@ const InspectorModal = () => {
         ? {
             enabled: stpEnabled,
             mode: stpMode,
-            priority: stpPriority,
+            // (a number typed between two steps, or past the last one, is kept as the nearest)
+            priority: nearestBridgePriority(stpPriority),
           }
         : undefined,
       ports: keptPorts.length > 0 ? keptPorts : undefined,
@@ -405,7 +420,7 @@ const InspectorModal = () => {
   for (const nic of nics) {
     if (!nic.dhcp) continue;
     const lease = leaseOf(dhcp, liveDevice.id, nic.id);
-    leasedAddresses.set(nic.id, lease ? `${lease.ip} · DHCP` : NO_LEASE_LABEL);
+    leasedAddresses.set(nic.id, lease ? `${lease.ip} · DHCP` : noLeaseLabel());
   }
   /** What the DHCP server of an interface gave out, in words; undefined when it has none that works */
   const poolStatus = (interfaceKey: string): string | undefined => {
@@ -441,11 +456,7 @@ const InspectorModal = () => {
     const going = ports.slice(count);
     const linked = going.filter((port) => linkedPorts.has(port.id));
     if (linked.length > 0) {
-      toast.error(
-        linked.length === 1
-          ? `La porta ${linked[0].id} ha un cavo collegato: scollegalo prima di togliere la porta`
-          : `Le porte ${linked.map((port) => port.id).join(', ')} hanno un cavo collegato: scollegali prima di togliere le porte`
-      );
+      toast.error(t.inspector.toasts.portsWithCable(linked.map((port) => port.id)));
       return;
     }
     setPorts(ports.slice(0, count));
@@ -454,21 +465,29 @@ const InspectorModal = () => {
   // The sizes the device can be made with, and the one it has
   const portCounts = [...new Set([...(template?.portOptions ?? []), ports.length])].sort((a, b) => a - b);
 
+  // The words of the first tab, of the fields it shares with ports and cards, of the tab of the ports
+  const general = t.inspector.general;
+  const fields = t.interfaces.fields;
+  const portsTab = t.interfaces.portsTab;
+  const tabNames = t.common.deviceTabs;
+  /** The name of a tab, with how many things it holds when it holds any */
+  const tabLabel = (name: string, count: number) => (count > 0 ? `${name} (${count})` : name);
+
   // Define tabs
   const tabs: Tab[] = [
     {
       id: 'general',
-      label: 'Generale',
+      label: tabNames.general,
       content: (
         <div className="flex flex-col">
-          <FormFieldset legend="Identità" className="first:mt-0">
+          <FormFieldset legend={general.identity.legend} className="first:mt-0">
             <FieldRow>
-              <ReadOnlyField label="Tipo">
+              <ReadOnlyField label={general.identity.type}>
                 <DeviceDrawing drawing={drawingOf(template, inspectorDevice.type)} size={24} />
                 <span className="font-medium truncate">{template?.name || inspectorDevice.type}</span>
               </ReadOnlyField>
               <TextField
-                label="Nome Dispositivo"
+                label={general.identity.name}
                 span={isPC ? 2 : 1}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -476,16 +495,16 @@ const InspectorModal = () => {
               />
               {!isPC && (
                 <TextField
-                  label="Vendor"
-                  placeholder="es. Cisco, HP, Dell..."
+                  label={general.identity.vendor}
+                  placeholder={general.identity.vendorPlaceholder}
                   value={vendor}
                   onChange={(e) => setVendor(e.target.value)}
                 />
               )}
               {!isPC && (
                 <TextField
-                  label="Posizione"
-                  placeholder="es. Rack 01, Ufficio 102..."
+                  label={general.identity.location}
+                  placeholder={general.identity.locationPlaceholder}
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                 />
@@ -494,8 +513,8 @@ const InspectorModal = () => {
                   row until it is written, then as many as its lines (the
                   first screen of a device is for what the device is) */}
               <TextAreaField
-                label="Note"
-                placeholder="Testo libero. Si legge anche sul disegno, fermando il puntatore sul dispositivo."
+                label={general.identity.notes}
+                placeholder={general.identity.notesPlaceholder}
                 rows={noteRows(notes)}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -506,52 +525,61 @@ const InspectorModal = () => {
 
           {viaCards ? (
             /* An end device or a server: the address is the one of its first card, typed here */
-            <FormFieldset legend={`Rete · ${primaryNic.name}`}>
+            <FormFieldset legend={general.network.legendOfCard(primaryNic.name)}>
               <NicAddressFields
                 nic={primaryNic}
                 onChange={(patch) => changeNic(primaryNic.id, patch)}
                 lease={cardLease(primaryNic.id)}
               />
               <p className={`${hintClass} mt-2`}>
-                {linkedNics.has(primaryNic.id)
-                  ? `Collegata a ${linkedNics.get(primaryNic.id)}. `
-                  : 'Nessun cavo collegato. '}
-                {nics.length > 1
-                  ? `È la prima di ${nics.length} schede, quella con cui il dispositivo viene nominato: le altre, e nome, velocità e MAC di ciascuna, sono nella `
-                  : 'Nome, velocità e MAC della scheda sono nella '}
-                <button type="button" className={linkClass} onClick={() => openNic()}>
-                  scheda «Schede di rete»
-                </button>
-                .
+                <Rich
+                  text={
+                    linkedNics.has(primaryNic.id)
+                      ? general.network.firstCard.linkedTo
+                      : general.network.firstCard.noCable
+                  }
+                  parts={{ peer: () => linkedNics.get(primaryNic.id) }}
+                />{' '}
+                <Rich
+                  text={
+                    nics.length > 1
+                      ? general.network.firstCard.firstOfSeveral(nics.length)
+                      : general.network.firstCard.onlyCard
+                  }
+                  parts={{
+                    tab: (words) => (
+                      <button type="button" className={linkClass} onClick={() => openNic()}>
+                        {words}
+                      </button>
+                    ),
+                  }}
+                />
               </p>
             </FormFieldset>
           ) : (
-            <FormFieldset legend="Rete">
+            <FormFieldset legend={general.network.legend}>
               <FieldRow>
                 <TextField
-                  label="Indirizzo IP"
+                  label={fields.ipAddress}
                   mono
                   value={ip}
                   onChange={(e) => setIp(e.target.value)}
                   required
                 />
                 <TextField
-                  label="Subnet Mask"
+                  label={fields.subnetMask}
                   mono
                   value={subnet}
                   onChange={(e) => setSubnet(e.target.value)}
                 />
                 <TextField
-                  label={routesTraffic ? 'Gateway (rotta predefinita)' : 'Gateway'}
+                  label={routesTraffic ? general.network.gatewayDefaultRoute : fields.gateway}
                   mono
                   value={gateway}
                   onChange={(e) => setGateway(e.target.value)}
                 />
                 {routesTraffic && (
-                  <span className={`col-span-4 ${hintClass}`}>
-                    L&apos;indirizzo qui sopra è quello con cui il dispositivo viene nominato; le
-                    reti a cui è collegato sono gli indirizzi delle sue porte.
-                  </span>
+                  <span className={`col-span-4 ${hintClass}`}>{general.network.namedByAddress}</span>
                 )}
               </FieldRow>
             </FormFieldset>
@@ -564,16 +592,14 @@ const InspectorModal = () => {
                   <VLANInput value={vlans} onChange={setVlans} />
                 </div>
                 <span className={`col-span-2 ${hintClass}`}>
-                  {isSwitch
-                    ? 'Le VLAN che lo switch conosce: le altre vengono scartate. Vuoto: tutte. La VLAN di ogni porta si sceglie nella scheda «Porte».'
-                    : 'Le VLAN che il dispositivo accetta con etichetta su una porta trunk. Vuoto: solo traffico senza etichetta.'}
+                  {isSwitch ? general.vlans.hintSwitch : general.vlans.hintOther}
                 </span>
               </FieldRow>
             </FormFieldset>
           )}
 
           {supportsPorts && ports.length > 0 && routesTraffic && (
-            <FormFieldset legend="Porte in uso">
+            <FormFieldset legend={general.portsInUse}>
               <RoutedPortsOverview
                 ports={ports}
                 showZone={isFirewall}
@@ -583,16 +609,16 @@ const InspectorModal = () => {
             </FormFieldset>
           )}
           {supportsPorts && ports.length > 0 && isSwitch && (
-            <FormFieldset legend="Porte">
+            <FormFieldset legend={general.ports}>
               <SwitchPortsOverview ports={ports} linkedPorts={linkedPorts} onOpenPort={openPort} />
             </FormFieldset>
           )}
           {showStp && (
             <FormFieldset legend="Spanning tree">
               <FieldRow>
-                <CheckField label="STP attivo" inRow checked={stpEnabled} onChange={setStpEnabled} />
+                <CheckField label={general.stp.enabled} inRow checked={stpEnabled} onChange={setStpEnabled} />
                 <SelectField
-                  label="Modalità STP"
+                  label={general.stp.mode}
                   value={stpMode}
                   onChange={(e) => setStpMode(e.target.value as StpMode)}
                   disabled={!stpEnabled}
@@ -603,19 +629,22 @@ const InspectorModal = () => {
                   <option value="MST">MST (802.1s)</option>
                 </SelectField>
                 <TextField
-                  label="Priorità del bridge"
+                  label={general.stp.bridgePriority}
                   type="number"
                   value={stpPriority}
-                  onChange={(e) => setStpPriority(parseInt(e.target.value) || 32768)}
+                  onChange={(e) => {
+                    // (0 is a priority, the lowest: only an empty field is the default)
+                    const typed = parseInt(e.target.value, 10);
+                    setStpPriority(Number.isNaN(typed) ? BRIDGE_PRIORITY_DEFAULT : typed);
+                  }}
+                  onBlur={() => setStpPriority(nearestBridgePriority(stpPriority))}
                   min={0}
-                  max={65535}
-                  step={4096}
+                  max={BRIDGE_PRIORITY_MAX}
+                  step={BRIDGE_PRIORITY_STEP}
                   disabled={!stpEnabled}
-                  hint="Da 0 a 65535 a passi di 4096 (predefinita 32768)"
+                  hint={general.stp.bridgePriorityHint}
                 />
-                <span className={`pt-[18px] ${hintClass}`}>
-                  Lo spanning tree resta come documentazione: il motore non lo simula.
-                </span>
+                <span className={`pt-[18px] ${hintClass}`}>{general.stp.notSimulated}</span>
               </FieldRow>
             </FormFieldset>
           )}
@@ -629,24 +658,23 @@ const InspectorModal = () => {
   if (supportsPorts) {
     tabs.push({
       id: 'ports',
-      label: `Porte${ports.length > 0 ? ` (${ports.length})` : ''}`,
+      label: tabLabel(tabNames.ports, ports.length),
       content:
         ports.length > 0 ? (
           <div className="flex flex-col gap-4">
             <div className="flex items-end justify-between gap-4">
               <p className="text-sm text-[var(--text-color-light)]">
-                {linkedPorts.size} {linkedPorts.size === 1 ? 'porta collegata' : 'porte collegate'} su{' '}
-                {ports.length}. Scegli una porta per vederne e cambiarne le impostazioni.
+                {portsTab.summary(linkedPorts.size, ports.length)}
               </p>
               <div className="w-[150px] shrink-0">
                 <SelectField
-                  label="Numero di porte"
+                  label={portsTab.count}
                   value={ports.length}
                   onChange={(e) => resizePorts(Number(e.target.value))}
                 >
                   {portCounts.map((count) => (
                     <option key={count} value={count}>
-                      {count} porte
+                      {portsTab.countOption(count)}
                     </option>
                   ))}
                 </SelectField>
@@ -670,13 +698,11 @@ const InspectorModal = () => {
                 />
               </div>
             ) : (
-              <p className="port-config-empty">
-                Seleziona una porta per visualizzare e modificare le sue impostazioni.
-              </p>
+              <p className="port-config-empty">{portsTab.nonePicked}</p>
             )}
           </div>
         ) : (
-          <p className="port-config-empty">Nessuna porta configurata per questo dispositivo.</p>
+          <p className="port-config-empty">{portsTab.none}</p>
         ),
     });
   }
@@ -685,7 +711,7 @@ const InspectorModal = () => {
   if (supportsNICs) {
     tabs.push({
       id: 'nics',
-      label: `Schede di rete${nics.length > 0 ? ` (${nics.length})` : ''}`,
+      label: tabLabel(tabNames.cards, nics.length),
       content: (
         <NicRows
           nics={nics}
@@ -710,7 +736,7 @@ const InspectorModal = () => {
     const keptRoutes = routes.filter((route) => !isBlankRoute(route));
     tabs.push({
       id: 'routes',
-      label: `Rotte${keptRoutes.length > 0 ? ` (${keptRoutes.length})` : ''}`,
+      label: tabLabel(tabNames.routes, keptRoutes.length),
       content: (
         <RoutesPanel
           device={{ ...liveDevice, ip, subnet, gateway, ports, nics, routes: keptRoutes }}
@@ -725,7 +751,7 @@ const InspectorModal = () => {
   if (isFirewall) {
     tabs.push({
       id: 'rules',
-      label: `Regole${firewallRules.length > 0 ? ` (${firewallRules.length})` : ''}`,
+      label: tabLabel(tabNames.rules, firewallRules.length),
       content: <FirewallRulesPanel rules={firewallRules} ports={ports} onChange={setFirewallRules} />,
     });
   }
@@ -737,7 +763,7 @@ const InspectorModal = () => {
     const keptForwards = portForwards.filter((forward) => !isBlankForward(forward));
     tabs.push({
       id: 'nat',
-      label: `NAT${keptForwards.length > 0 ? ` (${keptForwards.length})` : ''}`,
+      label: tabLabel(tabNames.nat, keptForwards.length),
       content: (
         <NatPanel
           ports={ports}
@@ -758,12 +784,12 @@ const InspectorModal = () => {
     const poolCount = dhcp.pools.filter((pool) => pool.deviceId === liveDevice.id).length;
     tabs.push({
       id: 'dhcp',
-      label: `DHCP${poolCount > 0 ? ` (${poolCount})` : ''}`,
+      label: tabLabel(tabNames.dhcp, poolCount),
       content: (
         <DhcpPanel
           deviceId={liveDevice.id}
           dhcp={dhcp}
-          setIn={supportsPorts ? 'Porte' : 'Schede di rete'}
+          setIn={supportsPorts ? 'ports' : 'cards'}
           interfaces={listInterfaces({ ...liveDevice, ports, nics }).filter(
             (iface) => iface.kind === (supportsPorts ? 'port' : 'nic')
           )}
@@ -784,7 +810,7 @@ const InspectorModal = () => {
     const recordCount = dnsRecords.filter((record) => !isBlankRecord(record)).length;
     tabs.push({
       id: 'dns',
-      label: `DNS${recordCount > 0 ? ` (${recordCount})` : ''}`,
+      label: tabLabel(tabNames.dns, recordCount),
       content: (
         <DnsPanel
           records={dnsRecords}
@@ -799,17 +825,17 @@ const InspectorModal = () => {
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={`Modifica: ${inspectorDevice.label}`}
+      title={t.inspector.title(inspectorDevice.label)}
       size="lg"
       autoHeight={true}
       verticalAlign="start"
       footer={
         <div className="modal-actions px-6 pb-6 pt-4">
           <Button variant="secondary" onClick={handleClose}>
-            Annulla
+            {t.common.actions.cancel}
           </Button>
           <Button variant="primary" onClick={handleSave}>
-            Salva
+            {t.common.actions.save}
           </Button>
         </div>
       }

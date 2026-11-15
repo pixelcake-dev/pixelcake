@@ -1,12 +1,15 @@
 /**
  * Validation of what a person types for a static route, a firewall rule, a
- * port forward or a DNS record, with the reason in Italian for the forms that
- * show it. The engine has its own tolerance (it leaves out what it cannot
- * read); the forms refuse it before it is saved.
+ * port forward or a DNS record, with the reason for the forms that show it,
+ * in the language of the interface at the moment of the call (a component
+ * that shows a reason calls `useT()`, so that it is drawn again when the
+ * language changes). The engine has its own tolerance (it leaves out what it
+ * cannot read); the forms refuse it before it is saved.
  */
 
 import { hostNameKey, isHostName, isValidRuleEndpoint, parseNetwork } from '@/engine';
 import { isValidIP } from '@/utils/ipHelpers';
+import { getT } from '@/i18n';
 import type { DnsRecord, FirewallRule, Port, PortForward, StaticRoute } from '@/types';
 
 /** True for a route row left completely empty: it is dropped on save, not an error */
@@ -17,24 +20,19 @@ export function isBlankRoute(route: StaticRoute): boolean {
 /** What is wrong with a route as typed; undefined when it is fine (or blank) */
 export function routeProblem(route: StaticRoute): string | undefined {
   if (isBlankRoute(route)) return undefined;
-  if (!parseNetwork(route.destination)) {
-    return `"${route.destination}" non è una rete: scrivila come 192.168.30.0/24, oppure "default"`;
-  }
-  if (!isValidIP(route.nextHop.trim())) {
-    return `"${route.nextHop}" non è un indirizzo IPv4 valido`;
-  }
+  const t = getT();
+  if (!parseNetwork(route.destination)) return t.routes.problems.notANetwork(route.destination);
+  if (!isValidIP(route.nextHop.trim())) return t.common.validation.notIPv4(route.nextHop);
   return undefined;
 }
 
 /** What is wrong with a rule as typed; undefined when it is fine */
 export function ruleProblem(rule: FirewallRule): string | undefined {
   for (const [side, value] of [
-    ['Da', rule.source],
-    ['A', rule.destination],
+    ['source', rule.source],
+    ['destination', rule.destination],
   ] as const) {
-    if (!isValidRuleEndpoint(value)) {
-      return `«${side}»: "${value}" non è any, una zona (trust, untrust, dmz), un indirizzo o una rete`;
-    }
+    if (!isValidRuleEndpoint(value)) return getT().firewall.problems.invalidEndpoint(side, value);
   }
   return undefined;
 }
@@ -50,13 +48,12 @@ export function isBlankForward(forward: PortForward): boolean {
  */
 export function forwardProblemText(forward: PortForward, ports: Port[]): string | undefined {
   if (isBlankForward(forward)) return undefined;
+  const t = getT();
   const to = forward.to.trim();
-  if (!isValidIP(to)) return `"${forward.to}" non è un indirizzo IPv4 valido`;
+  if (!isValidIP(to)) return t.common.validation.notIPv4(forward.to);
   const port = ports.find((candidate) => candidate.id === forward.port);
-  if (!port?.ip || !isValidIP(port.ip)) {
-    return `la porta ${forward.port} non ha un indirizzo da pubblicare: dagliene uno nella scheda «Porte»`;
-  }
-  if (port.ip === to) return `${to} è l'indirizzo della porta ${forward.port} stessa`;
+  if (!port?.ip || !isValidIP(port.ip)) return t.nat.problems.portWithoutAddress(forward.port);
+  if (port.ip === to) return t.nat.problems.ownAddress(to, forward.port);
   return undefined;
 }
 
@@ -77,17 +74,14 @@ export function tidyRecord(record: DnsRecord): DnsRecord {
  */
 export function recordProblem(record: DnsRecord, records: DnsRecord[]): string | undefined {
   if (isBlankRecord(record)) return undefined;
+  const t = getT();
   const { name, address } = tidyRecord(record);
-  if (!name) return 'manca il nome';
-  if (!isHostName(name)) {
-    return `"${record.name.trim()}" non è un nome valido: lettere, cifre e trattini, con almeno un punto, come www.azienda.example`;
-  }
-  if (!address) return 'manca l\'indirizzo a cui corrisponde il nome';
-  if (!isValidIP(address)) return `"${address}" non è un indirizzo IPv4 valido`;
+  if (!name) return t.dns.problems.missingName;
+  if (!isHostName(name)) return t.dns.problems.invalidName(record.name.trim());
+  if (!address) return t.dns.problems.missingAddress;
+  if (!isValidIP(address)) return t.common.validation.notIPv4(address);
   const first = records.findIndex((other) => hostNameKey(other.name) === name);
-  if (first !== -1 && records[first] !== record) {
-    return `il nome ${name} è già nel record ${first + 1}: un nome ha un solo indirizzo`;
-  }
+  if (first !== -1 && records[first] !== record) return t.dns.problems.duplicateName(name, first + 1);
   return undefined;
 }
 
@@ -98,5 +92,5 @@ export function recordProblem(record: DnsRecord, records: DnsRecord[]): string |
 export function dnsServerProblem(text: string): string | undefined {
   const value = text.trim();
   if (!value || isValidIP(value)) return undefined;
-  return `"${value}" non è un indirizzo IPv4 valido: il server DNS si indica con il suo indirizzo`;
+  return getT().dns.problems.serverNotAnAddress(value);
 }

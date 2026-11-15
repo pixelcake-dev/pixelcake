@@ -381,14 +381,14 @@ describe('InspectorModal — the DNS server a pool hands out', () => {
     openInspector('Router-1');
     openTab(/^Porte/);
     selectPort(1);
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Abilitato/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     type('Primo indirizzo', OFFICE.start);
     type('Ultimo indirizzo', OFFICE.end);
   };
 
   it('is typed with the range, may be on another network, and is saved with the pool', () => {
     openPool();
-    type('Server DNS consegnato (opzionale)', ` ${WEB} `);
+    type('Server DNS consegnato (facoltativo)', ` ${WEB} `);
     expect(alerts()).toEqual([]);
     openTab(/^DHCP/);
     expect(section('Intervalli di indirizzi')).toHaveTextContent(
@@ -415,15 +415,15 @@ describe('InspectorModal — the DNS server a pool hands out', () => {
     openTab(/^DHCP/);
     openTab(/^Porte/);
     selectPort(1);
-    expect(screen.getByLabelText('Server DNS consegnato (opzionale)')).toHaveValue(WEB);
-    type('Server DNS consegnato (opzionale)', '');
+    expect(screen.getByLabelText('Server DNS consegnato (facoltativo)')).toHaveValue(WEB);
+    type('Server DNS consegnato (facoltativo)', '');
     saveDevice();
     expect(device('Router-1').ports?.[0].dhcpServer).toEqual(OFFICE);
   });
 
   it('has to be an address', () => {
     openPool();
-    type('Server DNS consegnato (opzionale)', 'web-01.azienda.example');
+    type('Server DNS consegnato (facoltativo)', 'web-01.azienda.example');
     expect(alerts()).toEqual(['"web-01.azienda.example" non è un indirizzo IPv4 valido']);
     expect(screen.getByLabelText('Primo indirizzo')).toHaveValue(OFFICE.start);
   });
@@ -432,10 +432,10 @@ describe('InspectorModal — the DNS server a pool hands out', () => {
     openInspector('Router-1');
     openTab(/^Porte/);
     selectPort(1);
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Abilitato/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     type('Primo indirizzo', '');
     type('Ultimo indirizzo', '');
-    type('Server DNS consegnato (opzionale)', WEB);
+    type('Server DNS consegnato (facoltativo)', WEB);
     expect(alerts()).toEqual(['servono il primo e l\'ultimo indirizzo']);
   });
 
@@ -443,10 +443,10 @@ describe('InspectorModal — the DNS server a pool hands out', () => {
     openInspector('Web-01');
     openTab(/^Schede di rete/);
     selectCard('eth0');
-    fireEvent.click(screen.getByLabelText(/^Server DHCP Abilitato/));
+    fireEvent.click(screen.getByLabelText(/^Server DHCP attivo/));
     type('Primo indirizzo', '192.168.20.100');
     type('Ultimo indirizzo', '192.168.20.110');
-    type('Server DNS consegnato (opzionale)', WEB);
+    type('Server DNS consegnato (facoltativo)', WEB);
     saveDevice();
     expect(device('Web-01').nics?.[0].dhcpServer).toEqual({
       start: '192.168.20.100',

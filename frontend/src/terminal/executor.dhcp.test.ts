@@ -20,6 +20,7 @@ import { useNetworkStore } from '@/store/networkStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
 import { createCompanySample } from '@/utils/sampleCompany';
+import { setLanguage } from '@/i18n';
 import languageReference from '../../../docs/terminal-commands.md?raw';
 import { resolveDhcp } from '@/engine';
 import type { NetworkDevice } from '@/types';
@@ -613,21 +614,23 @@ describe('the DHCP session of docs/terminal-commands.md', () => {
     return session;
   }
 
-  it('is there, on the sample of the welcome screen', () => {
+  it('is there, on the sample of the welcome screen loaded in English', () => {
     expect(languageReference).toContain('DHCP on the same sample:');
     expect(documentedSession().map(step => step.command)).toEqual([
       'show dhcp',
-      'show ip Portatile-1',
-      'interface eth0 dhcp on PC-Vendite',
-      'ping Web-Gestionale from PC-Vendite',
+      'show ip Laptop-1',
+      'interface eth0 dhcp on PC-Sales',
+      'ping Web-ERP from PC-Sales',
       'interface 1 pool none on Router-Core',
-      'ping Web-Gestionale from PC-Vendite',
+      'ping Web-ERP from PC-Sales',
       'interface 1 pool 192.168.10.100 to 192.168.10.149 dns 192.168.30.10 on Router-Core',
       'show dhcp Router-Core',
     ]);
   });
 
   it('prints, command after command, exactly what the reference shows', () => {
+    // The reference is in English, and so are the names of its sample
+    setLanguage('en');
     const store = useNetworkStore.getState();
     store.clearAllDevices();
     const sample = createCompanySample();

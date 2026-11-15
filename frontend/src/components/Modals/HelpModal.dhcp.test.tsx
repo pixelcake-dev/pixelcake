@@ -78,7 +78,7 @@ describe('the guide — DHCP', () => {
       'DHCP',
       'Primo indirizzo',
       'Ultimo indirizzo',
-      'Server DHCP Abilitato',
+      'Server DHCP attivo',
       'DHCP',
       'DHCP',
     ]);
@@ -101,7 +101,7 @@ describe('the guide — DHCP', () => {
     expect(tabNames()).toContain('DHCP');
     fireEvent.click(screen.getByRole('button', { name: /^Porte/ }));
     fireEvent.click(screen.getByText('2', { selector: '.port-number' }));
-    expect(screen.getByLabelText(/^Server DHCP Abilitato/)).toBeChecked();
+    expect(screen.getByLabelText(/^Server DHCP attivo/)).toBeChecked();
     expect(screen.getByLabelText('Primo indirizzo')).toHaveValue('192.168.20.100');
     expect(screen.getByLabelText('Ultimo indirizzo')).toHaveValue('192.168.20.199');
 
@@ -124,7 +124,7 @@ describe('the guide — DHCP', () => {
     openInspector('Srv-Auth');
     fireEvent.click(screen.getByRole('button', { name: /^Schede di rete/ }));
     fireEvent.click(screen.getByText('eth0', { selector: '.nic-name' }));
-    expect(screen.getByLabelText(/^Server DHCP Abilitato/)).not.toBeChecked();
+    expect(screen.getByLabelText(/^Server DHCP attivo/)).not.toBeChecked();
   });
 
   it('on the drawing a leased address is followed by the word it names', () => {
@@ -136,7 +136,7 @@ describe('the guide — DHCP', () => {
 
   it('the sample of the welcome screen is made the way the step says', () => {
     expect(step(TITLE)).toContain(
-      'Nella rete di esempio della schermata iniziale i due portatili prendono l\'indirizzo così, da Router-Core.'
+      'Nella rete di esempio della schermata di benvenuto i due portatili prendono l\'indirizzo così, da Router-Core.'
     );
     const { devices, connections } = useNetworkStore.getState();
     const dhcp = resolveDhcp({ devices, connections });

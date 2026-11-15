@@ -122,7 +122,10 @@ export const SelectField: React.FC<SelectFieldProps> = ({
       <label htmlFor={fieldId} className={labelClass}>
         {label}
       </label>
-      <select id={fieldId} className={cellClass} {...select}>
+      {/* (a select indents its own text and keeps room for its arrow: with the
+          padding of a text field on top of those, its words would start further
+          in than the words of the fields beside it, and a long option would be cut) */}
+      <select id={fieldId} className={`${cellClass} pl-1 pr-0`} {...select}>
         {children}
       </select>
       {hint && <span className={hintClass}>{hint}</span>}

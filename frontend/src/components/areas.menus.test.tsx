@@ -92,7 +92,7 @@ describe('the panel «Aggiungi»', () => {
     store().addArea(CORE);
     const answers = answerConfirms(false);
     render(<DevicePanel />);
-    fireEvent.click(screen.getByRole('button', { name: 'Topologie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Esempi' }));
 
     fireEvent.click(screen.getByRole('button', { name: /Ufficio: due reti e un router/ }));
     await settled();
@@ -102,6 +102,7 @@ describe('the panel «Aggiungi»', () => {
     expect(store().devices).toEqual([]);
 
     // a yes: the sample comes, as it is, and the areas of the old drawing go
+    // (the small office has none of its own)
     answers.say(true);
     fireEvent.click(screen.getByRole('button', { name: /Ufficio: due reti e un router/ }));
     await settled();
@@ -109,19 +110,25 @@ describe('the panel «Aggiungi»', () => {
     expect(store().areas).toEqual([]);
   });
 
-  it('a sample network on an empty canvas is loaded without asking, and brings no area', async () => {
+  it('a sample network on an empty canvas is loaded without asking, and brings its areas', async () => {
     const answers = answerConfirms(true);
     render(<DevicePanel />);
-    fireEvent.click(screen.getByRole('button', { name: 'Topologie' }));
-    for (const name of [/Azienda:/, /Ufficio:/, /Sede:/, /Due sedi:/]) {
+    fireEvent.click(screen.getByRole('button', { name: 'Esempi' }));
+    for (const [name, areas] of [
+      [/Azienda:/, ['Internet', 'Edge', 'Core', 'Uffici', 'Server']],
+      [/Ufficio:/, []],
+      [/Sede:/, ['Internet', 'DMZ', 'Rete interna']],
+      [/Due sedi:/, ['Sede', 'Filiale']],
+    ] as const) {
       act(() => store().clearAllDevices());
       answers.asked.length = 0;
       fireEvent.click(screen.getByRole('button', { name }));
       await settled();
       expect(answers.asked).toEqual([]);
       expect(store().devices.length).toBeGreaterThan(0);
-      // (the samples are as they were: none of them draws an area)
-      expect(store().areas).toEqual([]);
+      // (each with its own areas, ids given by the canvas)
+      expect(store().areas.map((area) => area.label)).toEqual(areas);
+      expect(store().areas.map((area) => area.id)).toEqual(areas.map((_, index) => `area-${index + 1}`));
     }
   });
 });

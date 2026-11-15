@@ -5,6 +5,7 @@ import DhcpPoolFields from '@/components/ui/DhcpPoolFields';
 import { generateMacAddress } from '@/utils/ipHelpers';
 import { nicSuggestedPool } from '@/utils/dhcpLabels';
 import { nicProblems } from '@/utils/interfaceProblems';
+import { useT } from '@/i18n';
 import type { NetworkInterfaceCard } from '@/types/network';
 
 /**
@@ -39,6 +40,9 @@ interface NicAddressFieldsProps {
  * the panel of each card.
  */
 export const NicAddressFields: React.FC<NicAddressFieldsProps> = ({ nic, onChange, lease }) => {
+  const t = useT();
+  const say = t.interfaces.card.address;
+  const fields = t.interfaces.fields;
   const automatic = nic.dhcp === true;
   const problems = nicProblems(nic);
 
@@ -63,12 +67,12 @@ export const NicAddressFields: React.FC<NicAddressFieldsProps> = ({ nic, onChang
   const mode = (
     <SelectField
       id="nic-address-mode"
-      label="Indirizzo"
+      label={say.source}
       value={automatic ? 'dhcp' : 'manual'}
       onChange={(e) => changeMode(e.target.value === 'dhcp')}
     >
-      <option value="manual">Manuale</option>
-      <option value="dhcp">Automatico (DHCP)</option>
+      <option value="manual">{say.manual}</option>
+      <option value="dhcp">{say.automatic}</option>
     </SelectField>
   );
 
@@ -78,7 +82,7 @@ export const NicAddressFields: React.FC<NicAddressFieldsProps> = ({ nic, onChang
       <FieldRow>
         {mode}
         <div className="col-span-3 flex flex-col gap-0.5">
-          <span className={labelClass}>Indirizzo assegnato</span>
+          <span className={labelClass}>{say.leased}</span>
           <div
             className="text-sm pl-2 py-1 min-h-[30px]"
             style={{
@@ -92,63 +96,56 @@ export const NicAddressFields: React.FC<NicAddressFieldsProps> = ({ nic, onChang
                 {lease.text}
                 {lease.given && (
                   <span className="block text-xs text-[var(--text-color-light)]">
-                    Subnet mask {lease.given.subnet} · gateway {lease.given.gateway || 'nessuno'}
-                    {' · '}server DNS {lease.given.dns || 'nessuno'}
+                    {say.leaseDetails(lease.given.subnet, lease.given.gateway, lease.given.dns)}
                   </span>
                 )}
               </>
             ) : (
-              'L\'indirizzo arriva dal server DHCP della rete a cui la scheda è collegata.'
+              say.fromDhcpServer
             )}
           </div>
         </div>
-        <span className={`col-span-4 ${hintClass}`}>
-          Indirizzo, subnet mask e gateway li assegna un server DHCP della stessa rete: una porta
-          di router o firewall, o un server, con «Server DHCP Abilitato». Si calcolano dal disegno,
-          sempre allo stesso modo. Il server DNS arriva con l&apos;indirizzo, se quel server ne
-          consegna uno.
-        </span>
+        <span className={`col-span-4 ${hintClass}`}>{say.automaticHint}</span>
       </FieldRow>
     );
   }
 
+  // (an address is its own example: with «es.» before it, it would not fit
+  // the field of the window that adds a device, a quarter of a row wide)
   return (
     <FieldRow>
       {mode}
       <TextField
-        label="Indirizzo IP"
+        label={fields.ipAddress}
         mono
-        placeholder="es. 192.168.1.10"
+        placeholder="192.168.1.10"
         value={nic.ip ?? ''}
         onChange={(e) => onChange({ ip: e.target.value })}
       />
       <TextField
-        label="Subnet Mask"
+        label={fields.subnetMask}
         mono
-        placeholder="es. 255.255.255.0"
+        placeholder="255.255.255.0"
         value={nic.subnet ?? ''}
         onChange={(e) => onChange({ subnet: e.target.value })}
       />
       <TextField
-        label="Gateway"
+        label={fields.gateway}
         mono
-        placeholder="es. 192.168.1.1"
+        placeholder="192.168.1.1"
         value={nic.gateway ?? ''}
         onChange={(e) => onChange({ gateway: e.target.value })}
       />
       <TextField
         id="nic-dns"
-        label="Server DNS"
+        label={fields.dnsServer}
         mono
-        placeholder="es. 192.168.1.53"
+        placeholder="192.168.1.53"
         value={nic.dns ?? ''}
         error={problems.dns}
         onChange={(e) => onChange({ dns: e.target.value })}
       />
-      <span className={`col-span-3 pt-[18px] ${hintClass}`}>
-        L&apos;indirizzo del server a cui la scheda chiede a quale indirizzo corrisponde un nome.
-        Vuoto: nessuno, e un nome usato al posto di un indirizzo non trova risposta.
-      </span>
+      <span className={`col-span-3 pt-[18px] ${hintClass}`}>{say.dnsHint}</span>
     </FieldRow>
   );
 };
@@ -174,6 +171,9 @@ interface NicEditorProps {
  * said under the field as it is typed.
  */
 const NicEditor: React.FC<NicEditorProps> = ({ nic, onChange, lease, canServe = false, poolStatus }) => {
+  const t = useT();
+  const say = t.interfaces.card;
+  const fields = t.interfaces.fields;
   const problems = nicProblems(nic);
   const automatic = nic.dhcp === true;
 
@@ -182,20 +182,20 @@ const NicEditor: React.FC<NicEditorProps> = ({ nic, onChange, lease, canServe = 
       <FieldRow>
         <CheckField
           id="nic-enabled"
-          label="Scheda Abilitata"
+          label={say.enabled}
           inRow
           checked={nic.enabled !== false}
           onChange={(enabled) => onChange({ enabled })}
         />
         <TextField
-          label="Nome Interfaccia"
-          placeholder="es. eth0, eth1, ens192..."
+          label={say.name}
+          placeholder={say.namePlaceholder}
           value={nic.name}
           error={problems.name}
           onChange={(e) => onChange({ name: e.target.value })}
         />
         <SelectField
-          label="Velocità Link"
+          label={fields.linkSpeed}
           value={nic.speed || 'auto'}
           onChange={(e) => onChange({ speed: e.target.value as Speed })}
         >
@@ -207,14 +207,14 @@ const NicEditor: React.FC<NicEditorProps> = ({ nic, onChange, lease, canServe = 
           <option value="10G">10 Gbps</option>
         </SelectField>
         <TextField
-          label="Indirizzo MAC"
+          label={say.mac}
           mono
-          placeholder="es. 02:A1:B2:C3:D4:E5"
+          placeholder={t.interfaces.example('02:A1:B2:C3:D4:E5')}
           value={nic.mac ?? ''}
           onChange={(e) => onChange({ mac: e.target.value })}
           hint={
             <button type="button" className={linkClass} onClick={() => onChange({ mac: generateMacAddress() })}>
-              Genera un MAC
+              {say.generateMac}
             </button>
           }
         />
@@ -229,7 +229,7 @@ const NicEditor: React.FC<NicEditorProps> = ({ nic, onChange, lease, canServe = 
           pool={nic.dhcpServer}
           onChange={(dhcpServer) => onChange({ dhcpServer })}
           suggestion={nicSuggestedPool(nic)}
-          gatewayHint="Vuoto: nessun gateway. Di solito è l'indirizzo del router."
+          gatewayHint={say.dhcpGatewayHint}
           error={problems.pool}
           status={poolStatus}
         />
@@ -237,13 +237,13 @@ const NicEditor: React.FC<NicEditorProps> = ({ nic, onChange, lease, canServe = 
 
       <div className="flex flex-col gap-0.5">
         <label htmlFor="nic-description" className={labelClass}>
-          Note / Descrizione
+          {fields.notes}
         </label>
         <textarea
           id="nic-description"
           className={cellClass}
           rows={2}
-          placeholder="es. Connessione primaria, Backup link..."
+          placeholder={say.notesPlaceholder}
           value={nic.description ?? ''}
           onChange={(e) => onChange({ description: e.target.value })}
         />

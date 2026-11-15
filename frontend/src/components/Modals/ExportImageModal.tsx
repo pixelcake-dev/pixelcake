@@ -23,7 +23,7 @@ import { assessImpact, hasFailures, planAndEvaluateFlow, withFailures } from '@/
 import type { Failures, Topology } from '@/engine';
 import { captionOf } from '@/utils/presentation';
 import { useDhcp } from '@/utils/useDhcp';
-import { NO_LEASE_LABEL, shownAddress } from '@/utils/dhcpLabels';
+import { noLeaseLabel, shownAddress } from '@/utils/dhcpLabels';
 import {
   pixelSize,
   renderDrawingImage,
@@ -46,17 +46,7 @@ import {
   type ImageFormat,
   type PngScale,
 } from '@/utils/imageExport';
-
-const SCALE_NAMES: Record<PngScale, string> = {
-  1: 'Normale',
-  2: 'Grande',
-  3: 'Molto grande',
-};
-
-const FORMAT_HINTS: Record<ImageFormat, string> = {
-  png: 'Per documenti, presentazioni e messaggi.',
-  svg: 'Vettoriale: si ingrandisce senza sgranare e si può ritoccare con un programma di disegno.',
-};
+import { useLanguage, useT } from '@/i18n';
 
 const ExportImageModal = () => {
   const isOpen = useUIStore((state) => state.modals.exportImage);
@@ -70,6 +60,8 @@ const ExportImageModal = () => {
 };
 
 const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
+  const t = useT();
+  const language = useLanguage();
   const devices = useNetworkStore((state) => state.devices);
   const connections = useNetworkStore((state) => state.connections);
   const areas = useNetworkStore((state) => state.areas);
@@ -106,19 +98,20 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
   // Under each device the image says what the drawing says: for a device on
   // DHCP, the address it is leased
   const dhcp = useDhcp();
-  const drawnDevices = useMemo(
-    () =>
-      devices.map((device) => {
-        const address = shownAddress(device, dhcp);
-        return address === device.ip ? device : { ...device, ip: address };
-      }),
-    [devices, dhcp]
-  );
+  const drawnDevices = useMemo(() => {
+    // (a device that was leased no address says so in words: said again
+    // when the language changes)
+    void language;
+    return devices.map((device) => {
+      const address = shownAddress(device, dhcp);
+      return address === device.ip ? device : { ...device, ip: address };
+    });
+  }, [devices, dhcp, language]);
 
   // What the lamps of the devices say outside a presentation, as on the
   // canvas: who waits for an address, and the answer the last question left
   const waiting = useMemo(
-    () => drawnDevices.filter((device) => device.ip === NO_LEASE_LABEL).map((device) => device.id),
+    () => drawnDevices.filter((device) => device.ip === noLeaseLabel()).map((device) => device.id),
     [drawnDevices]
   );
   const answer = useSimulationStore((state) => state.answer);
@@ -155,7 +148,9 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
         ...failedDevices.map(labelOf),
         ...failedConnections.map((id) => {
           const cable = connections.find((entry) => entry.id === id);
-          return cable ? `cavo ${labelOf(cable.source)} – ${labelOf(cable.target)}` : `cavo ${id}`;
+          return t.exportImage.picture.cable(
+            cable ? `${labelOf(cable.source)} – ${labelOf(cable.target)}` : id
+          );
         }),
       ],
       impact: isBroken ? assessImpact(intact, failures, { flow, emailMode }) : null,
@@ -171,11 +166,16 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
     failedDevices,
     failedConnections,
     emailMode,
+    // (the caption is made of sentences: it is written again when the language changes)
+    t,
   ]);
 
   const image = useMemo(
-    () =>
-      renderDrawingImage(
+    () => {
+      // The picture has words of its own (the two ends of a question, the
+      // name it goes by): it is drawn again when the language changes
+      void language;
+      return renderDrawingImage(
         {
           devices: drawnDevices,
           connections,
@@ -193,7 +193,8 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
           title: withTitle ? { name: projectName, detail: canvasName ?? undefined } : undefined,
           caption: withCaption && caption ? caption : undefined,
         }
-      ),
+      );
+    },
     [
       drawnDevices,
       connections,
@@ -211,6 +212,7 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
       canvasName,
       withCaption,
       caption,
+      language,
     ]
   );
   const previewUrl = useMemo(() => svgDataUrl(image.svg), [image]);
@@ -268,6 +270,11 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
   };
 
   const formatName = format.toUpperCase();
+  const scaleNames: Record<PngScale, string> = {
+    1: t.exportImage.size.normal,
+    2: t.exportImage.size.large,
+    3: t.exportImage.size.veryLarge,
+  };
 
   return (
     <Modal
@@ -283,12 +290,12 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
       fixedContent={
         <div className="modal-header flex items-center justify-between mx-6 pt-5 pb-3 flex-shrink-0">
           <h3 className="text-base font-semibold tracking-tight" style={{ color: 'var(--text-color)' }}>
-            Esporta immagine
+            {t.exportImage.title}
           </h3>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Chiudi"
+            aria-label={t.common.actions.close}
             className="p-1 text-[var(--text-color-light)] hover:text-[var(--text-color)] hover:bg-[var(--bg-hover)] rounded transition-colors"
             style={{ color: 'var(--text-color-light)' }}
           >
@@ -303,10 +310,10 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
               variant="secondary"
               onClick={() => void handleCopy()}
               disabled={!pngBlob}
-              title="Copia l'immagine (PNG) per incollarla in un documento o in un messaggio"
+              title={t.exportImage.copyHint}
             >
               {copied ? <Check size={14} /> : <Copy size={14} />}
-              {copied ? 'Copiata' : 'Copia negli appunti'}
+              {copied ? t.exportImage.copied : t.exportImage.copy}
             </Button>
           )}
           <Button
@@ -316,22 +323,22 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
           >
             <Download size={14} />
             {preparing
-              ? 'Preparo il PNG…'
+              ? t.exportImage.preparing
               : canChooseWhereToSave()
-                ? `Salva ${formatName}…`
-                : `Scarica ${formatName}`}
+                ? t.exportImage.save(formatName)
+                : t.exportImage.download(formatName)}
           </Button>
         </div>
       }
     >
       <div className="export-image">
         <div className={transparent ? 'export-image-preview transparent' : 'export-image-preview'}>
-          <img src={previewUrl} alt="Anteprima dell'immagine" />
+          <img src={previewUrl} alt={t.exportImage.previewAlt} />
         </div>
 
         <div className="export-image-options">
           <fieldset>
-            <legend>Formato</legend>
+            <legend>{t.exportImage.format.legend}</legend>
             <div className="segmented compact">
               {(['png', 'svg'] as const).map((entry) => (
                 <button
@@ -345,12 +352,12 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
                 </button>
               ))}
             </div>
-            <p className="export-image-hint">{FORMAT_HINTS[format]}</p>
+            <p className="export-image-hint">{t.exportImage.format.hints[format]}</p>
           </fieldset>
 
           {format === 'png' && (
             <fieldset>
-              <legend>Dimensione</legend>
+              <legend>{t.exportImage.size.legend}</legend>
               <div className="segmented compact">
                 {PNG_SCALES.map((entry) => (
                   <button
@@ -360,19 +367,18 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
                     aria-pressed={scale === entry}
                     onClick={() => setScale(entry)}
                   >
-                    {SCALE_NAMES[entry]}
+                    {scaleNames[entry]}
                   </button>
                 ))}
               </div>
               <p className="export-image-hint" data-testid="export-image-pixels">
-                {pixels.width} × {pixels.height} pixel
-                {pngScale < scale && ' (ridotta: è il massimo che il browser riesce a creare)'}
+                {t.exportImage.size.pixels(pixels.width, pixels.height, pngScale < scale)}
               </p>
             </fieldset>
           )}
 
           <fieldset>
-            <legend>Tema</legend>
+            <legend>{t.exportImage.theme.legend}</legend>
             <div className="segmented compact">
               <button
                 type="button"
@@ -380,7 +386,7 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
                 aria-pressed={theme === 'light'}
                 onClick={() => setTheme('light')}
               >
-                Chiaro
+                {t.exportImage.theme.light}
               </button>
               <button
                 type="button"
@@ -388,20 +394,20 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
                 aria-pressed={theme === 'dark'}
                 onClick={() => setTheme('dark')}
               >
-                Scuro
+                {t.exportImage.theme.dark}
               </button>
             </div>
           </fieldset>
 
           <fieldset>
-            <legend>Contenuto</legend>
+            <legend>{t.exportImage.content.legend}</legend>
             <label className="export-image-check">
               <input
                 type="checkbox"
                 checked={withTitle}
                 onChange={(event) => setWithTitle(event.target.checked)}
               />
-              Nome del progetto in alto
+              {t.exportImage.content.projectName}
             </label>
             {caption && (
               <label className="export-image-check">
@@ -411,8 +417,8 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
                   onChange={(event) => setWithCaption(event.target.checked)}
                 />
                 {caption.tone
-                  ? 'Domanda e risposta sotto il disegno'
-                  : 'Guasti simulati sotto il disegno'}
+                  ? t.exportImage.content.questionAndAnswer
+                  : t.exportImage.content.failures}
               </label>
             )}
             <label className="export-image-check">
@@ -421,22 +427,18 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
                 checked={transparent}
                 onChange={(event) => setTransparent(event.target.checked)}
               />
-              Sfondo trasparente
+              {t.exportImage.content.transparent}
             </label>
           </fieldset>
 
           {/* Only when the presentation has put something on the drawing */}
           {presenting && caption && (
-            <p className="export-image-hint">
-              L&apos;immagine mostra il disegno com&apos;è ora nella presentazione, con i segni
-              della domanda e dei guasti simulati.
-            </p>
+            <p className="export-image-hint">{t.exportImage.presentationNote}</p>
           )}
 
           {failed && format === 'png' && (
             <div className="modal-error-box" role="alert">
-              Il browser non è riuscito a creare l&apos;immagine PNG. Prova una dimensione più
-              piccola, oppure il formato SVG.
+              {t.exportImage.pngFailed}
             </div>
           )}
         </div>

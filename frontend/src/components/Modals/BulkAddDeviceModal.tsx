@@ -12,6 +12,7 @@ import { useNetworkStore } from '@/store/networkStore';
 import { bulkAddDevices } from '@/utils/bulkDeviceHelpers';
 import { allOnScreen, newDevicePlace } from '@/utils/viewPlace';
 import { withLeases } from '@/engine';
+import { useT } from '@/i18n';
 
 /**
  * Configurable Device Row
@@ -25,19 +26,20 @@ interface ConfigurableDeviceRow {
 }
 
 const BulkAddDeviceModal = () => {
+  const t = useT();
   const isOpen = useUIStore((state) => state.modals.bulkAddDevice);
   const closeModal = useUIStore((state) => state.closeModal);
 
   const templates = useTemplateStore((state) => state.templates);
-  const genericTemplates = templates.filter((t) => !t.isCustom);
+  const genericTemplates = templates.filter((tpl) => !tpl.isCustom);
 
   const devices = useNetworkStore((state) => state.devices);
   const globalSettings = useNetworkStore((state) => state.globalNetworkSettings);
   const addDevice = useNetworkStore((state) => state.addDevice);
 
   // Separate configurable and standard templates
-  const configurableTemplates = genericTemplates.filter(t => t.supportsPorts);
-  const standardTemplates = genericTemplates.filter(t => t.supportsNICs && !t.supportsPorts);
+  const configurableTemplates = genericTemplates.filter(tpl => tpl.supportsPorts);
+  const standardTemplates = genericTemplates.filter(tpl => tpl.supportsNICs && !tpl.supportsPorts);
 
   // State for configurable devices (Switch/Router/Firewall with dynamic port counts)
   const [configurableRows, setConfigurableRows] = useState<ConfigurableDeviceRow[]>([]);
@@ -82,29 +84,30 @@ const BulkAddDeviceModal = () => {
 
     const query = searchQuery.toLowerCase();
     return configurableRows.filter(row => {
-      const template = configurableTemplates.find(t => t.id === row.templateId);
+      const template = configurableTemplates.find(tpl => tpl.id === row.templateId);
+      // (the configuration is looked for as the list shows it, in the language of the interface)
       return (
         template?.name.toLowerCase().includes(query) ||
-        `${row.portCount} porte`.includes(query) ||
+        t.addDevice.ports(row.portCount).toLowerCase().includes(query) ||
         `${row.portCount}`.includes(query)
       );
     });
-  }, [configurableRows, searchQuery, configurableTemplates]);
+  }, [configurableRows, searchQuery, configurableTemplates, t]);
 
   // Filter standard templates by search query
   const filteredStandardTemplates = useMemo(() => {
     if (!searchQuery.trim()) return standardTemplates;
 
     const query = searchQuery.toLowerCase();
-    return standardTemplates.filter(t =>
-      t.name.toLowerCase().includes(query) ||
-      t.type.toLowerCase().includes(query)
+    return standardTemplates.filter(tpl =>
+      tpl.name.toLowerCase().includes(query) ||
+      tpl.type.toLowerCase().includes(query)
     );
   }, [standardTemplates, searchQuery]);
 
   // Add configurable device row
   const handleAddConfigurableRow = (templateId: string) => {
-    const template = configurableTemplates.find(t => t.id === templateId);
+    const template = configurableTemplates.find(tpl => tpl.id === templateId);
     if (!template) return;
 
     const newRow: ConfigurableDeviceRow = {
@@ -161,7 +164,7 @@ const BulkAddDeviceModal = () => {
 
   const handleAddDevices = () => {
     if (totalCount === 0) {
-      toast.info('Seleziona almeno un dispositivo da aggiungere.');
+      toast.info(t.addDevice.bulk.selectAtLeastOne);
       return;
     }
 
@@ -193,7 +196,7 @@ const BulkAddDeviceModal = () => {
     const places = network.devices.filter((device) => made.includes(device.id)).map((device) => device.position);
     if (!allOnScreen(places)) network.triggerFitView(made);
 
-    toast.success(added === 1 ? '1 dispositivo aggiunto' : `${added} dispositivi aggiunti`);
+    toast.success(t.addDevice.bulk.added(added));
   };
 
   const handleClose = () => {
@@ -209,7 +212,7 @@ const BulkAddDeviceModal = () => {
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Aggiungi Dispositivi in Blocco"
+      title={t.addDevice.bulk.title}
       size="lg"
       noScroll={true}
     >
@@ -219,7 +222,7 @@ const BulkAddDeviceModal = () => {
           <SearchInput
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Cerca per tipo o configurazione..."
+            placeholder={t.addDevice.bulk.searchPlaceholder}
             autoFocus={false}
             inputWidth="100%"
             size="md"
@@ -273,22 +276,22 @@ const BulkAddDeviceModal = () => {
               {/* CONFIGURABLE DEVICES SECTION */}
               <div className="configurable-section">
                 <h3 className="section-title">
-                  DISPOSITIVI CONFIGURABILI
+                  {t.addDevice.bulk.configurableHeading}
                 </h3>
 
                 {filteredConfigurableRows.length > 0 ? (
                   <table className="bulk-add-table">
                     <thead>
                       <tr>
-                        <th style={{ width: '35%' }}>Tipo</th>
-                        <th style={{ width: '30%' }}>Configurazione</th>
-                        <th style={{ width: '20%' }}>Quantità</th>
-                        <th style={{ width: '15%' }}>Azioni</th>
+                        <th style={{ width: '35%' }}>{t.addDevice.type}</th>
+                        <th style={{ width: '30%' }}>{t.addDevice.bulk.columns.configuration}</th>
+                        <th style={{ width: '20%' }}>{t.addDevice.bulk.columns.quantity}</th>
+                        <th style={{ width: '15%' }}>{t.addDevice.bulk.columns.actions}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredConfigurableRows.map(row => {
-                        const template = configurableTemplates.find(t => t.id === row.templateId);
+                        const template = configurableTemplates.find(tpl => tpl.id === row.templateId);
                         if (!template) return null;
 
                         return (
@@ -310,7 +313,7 @@ const BulkAddDeviceModal = () => {
                               >
                                 {template.portOptions?.map(portCount => (
                                   <option key={portCount} value={portCount}>
-                                    {portCount} porte
+                                    {t.addDevice.ports(portCount)}
                                   </option>
                                 ))}
                               </select>
@@ -331,7 +334,7 @@ const BulkAddDeviceModal = () => {
                               <button
                                 onClick={() => handleRemoveConfigurableRow(row.id)}
                                 className="remove-btn"
-                                title="Rimuovi riga"
+                                title={t.addDevice.bulk.removeRow}
                               >
                                 <X size={16} />
                               </button>
@@ -343,7 +346,7 @@ const BulkAddDeviceModal = () => {
                   </table>
                 ) : configurableRows.length > 0 ? (
                   <div className="text-center text-[var(--text-color-light)] py-4 text-sm">
-                    Nessun dispositivo trovato per "{searchQuery}"
+                    {t.addDevice.bulk.noDevicesFor(searchQuery)}
                   </div>
                 ) : null}
 
@@ -354,7 +357,7 @@ const BulkAddDeviceModal = () => {
                     className="add-row-btn"
                   >
                     <Plus size={16} />
-                    Aggiungi Switch/Router/Firewall
+                    {t.addDevice.bulk.addRow}
                   </button>
 
                   {showAddMenu && (
@@ -378,15 +381,15 @@ const BulkAddDeviceModal = () => {
               {filteredStandardTemplates.length > 0 && (
                 <div className="standard-section">
                   <h3 className="section-title">
-                    DISPOSITIVI STANDARD (1 NIC di default)
+                    {t.addDevice.bulk.standardHeading}
                   </h3>
 
                   <table className="bulk-add-table">
                     <thead>
                       <tr>
-                        <th style={{ width: '50%' }}>Tipo</th>
-                        <th style={{ width: '25%' }}>Quantità</th>
-                        <th style={{ width: '25%' }}>Controlli</th>
+                        <th style={{ width: '50%' }}>{t.addDevice.type}</th>
+                        <th style={{ width: '25%' }}>{t.addDevice.bulk.columns.quantity}</th>
+                        <th style={{ width: '25%' }}>{t.addDevice.bulk.columns.controls}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -415,14 +418,14 @@ const BulkAddDeviceModal = () => {
                                 onClick={() => handleUpdateStandardQuantity(template.id, -1)}
                                 disabled={(standardQuantities[template.id] || 0) === 0}
                                 className="quantity-btn"
-                                title="Diminuisci"
+                                title={t.addDevice.bulk.decrease}
                               >
                                 <Minus size={14} />
                               </button>
                               <button
                                 onClick={() => handleUpdateStandardQuantity(template.id, 1)}
                                 className="quantity-btn"
-                                title="Aumenta"
+                                title={t.addDevice.bulk.increase}
                               >
                                 <Plus size={14} />
                               </button>
@@ -441,7 +444,7 @@ const BulkAddDeviceModal = () => {
         {/* Total Count */}
         <div className="pt-3 border-t border-[var(--border-color)] flex-shrink-0">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-[var(--text-color)]">Totale Dispositivi:</span>
+            <span className="font-medium text-[var(--text-color)]">{t.addDevice.bulk.total}</span>
             <span className="text-lg font-bold text-[var(--text-color)]">
               {totalCount}
             </span>
@@ -455,7 +458,7 @@ const BulkAddDeviceModal = () => {
             onClick={handleClose}
             className="flex-1 px-4 py-1.5 text-sm font-semibold rounded-md border border-[var(--border-color)] bg-transparent text-[var(--text-color)] hover:border-[var(--text-color)] transition-colors"
           >
-            Annulla
+            {t.common.actions.cancel}
           </button>
           <button
             type="button"
@@ -463,7 +466,7 @@ const BulkAddDeviceModal = () => {
             disabled={totalCount === 0}
             className="flex-1 px-4 py-1.5 text-sm font-semibold rounded-md border border-[var(--text-color)] bg-[var(--text-color)] text-[var(--bg-canvas)] enabled:hover:bg-[var(--accent-color)] enabled:hover:border-[var(--accent-color)] enabled:hover:text-[var(--on-accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            Aggiungi ({totalCount})
+            {t.common.actions.add} ({totalCount})
           </button>
         </div>
       </div>
