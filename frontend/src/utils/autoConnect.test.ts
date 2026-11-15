@@ -9,7 +9,7 @@
  * said, with the reason.
  */
 import { describe, it, expect } from 'vitest';
-import type { NetworkConnection, NetworkDevice, Port } from '@/types';
+import type { CanvasArea, NetworkConnection, NetworkDevice, Port } from '@/types';
 import { device, host, nic, port, switchWith } from '@/test/networkFixtures';
 import { normalizeBindings, requiresExplicitBinding } from '@/engine';
 import { createSampleTopology } from './sampleTopology';
@@ -390,6 +390,17 @@ describe('the port it takes', () => {
     expect(portsTaken(connectLooseDevices(devices, taken, 1))).toEqual({ 'PC-1': 1 });
   });
 
+  it('a device goes to a switch of its own area first: a PC on DHCP of one site, drawn nearer to the switch of another', () => {
+    const area = (id: string, x: number): CanvasArea => ({ id, label: id, color: 'slate', position: { x, y: 0 }, size: { width: 500, height: 500 } });
+    const areas = [area('Torino', 0), area('Firenze', 600)];
+    const leased = pc('PC-FI-1', '', 420, 300, { nics: [nic({ ip: '', dhcp: true })] });
+    const devices = [sw('SW-TO', '10.101.1.2', 300, 100), sw('SW-FI', '10.103.1.2', 950, 100), { ...leased, position: { x: 620, y: 300 } }];
+    // nearer to SW-TO than to SW-FI, but in Firenze's area
+    expect(made(connectLooseDevices(devices, [], 1, areas))).toEqual(['SW-FI>PC-FI-1']);
+    // (without areas, by distance alone)
+    expect(made(connectLooseDevices(devices, [], 1))).toEqual(['SW-TO>PC-FI-1']);
+  });
+
   it('a device on DHCP takes a port in a VLAN that hands out addresses, rather than one with nothing set', () => {
     // port 1 in VLAN 10 on the router's port that hands out addresses; port 2 in VLAN 10, free; port 3 nothing set
     const r1 = router('R-1', 0, 0, ['10.6.10.1']);
@@ -541,6 +552,27 @@ describe('a group with no way up', () => {
     const devices = [sw('SW-1', '10.0.0.2', 0, 0), lb, web('WWW-1', 0), web('WWW-2', 200), dns];
     const result = connectLooseDevices(devices, [wire('c0', 'SW-1', 'LB-1'), wire('c1', 'LB-1', 'WWW-2')], 1);
     expect(made(result).sort()).toEqual(['LB-1>WWW-1', 'SW-1>DNS-1']);
+  });
+
+  it('a load balancer with no address is on the network of its servers: a web server of another network does not go to it', () => {
+    // a pass-through load balancer, its cards without addresses, a web server of the DMZ behind it
+    const lb = device({ id: 'LB-1', type: 'LoadBalancer', ip: '', ...at(0, 200), nics: [nic(), nic({ id: 'nic-2', name: 'eth1' }), nic({ id: 'nic-3', name: 'eth2' })] });
+    const www = pc('WWW-1', '172.16.10.11', 0, 400, { type: 'Server', templateId: 'tpl-webserver' });
+    const other = pc('ERP-DR', '10.30.100.20', 200, 300, { type: 'Server', templateId: 'tpl-webserver' });
+    const devices = [sw('SW-DMZ', '172.16.10.2', 0, 0), sw('SW-DR', '10.30.100.2', 900, 0), lb, www, other];
+    const result = connectLooseDevices(devices, [wire('c0', 'SW-DMZ', 'LB-1'), wire('c1', 'LB-1', 'WWW-1')], 1);
+    expect(made(result)).toEqual(['SW-DR>ERP-DR']);
+  });
+
+  it('a load balancer of another area comes after a switch of the device\'s own area', () => {
+    const area = (id: string, x: number): CanvasArea => ({ id, label: id, color: 'slate', position: { x, y: 0 }, size: { width: 500, height: 600 } });
+    const lb = device({ id: 'LB-1', type: 'LoadBalancer', ip: '', ...at(380, 200), nics: [nic(), nic({ id: 'nic-2', name: 'eth1' }), nic({ id: 'nic-3', name: 'eth2' })] });
+    const www = pc('WWW-1', '172.16.10.11', 380, 400, { type: 'Server', templateId: 'tpl-webserver' });
+    // a web server of the same network, in the other area, nearer to the load balancer than to its switch
+    const away = pc('WWW-9', '172.16.10.19', 620, 300, { type: 'Server', templateId: 'tpl-webserver' });
+    const devices = [sw('SW-DMZ', '172.16.10.2', 100, 0), sw('SW-B', '172.16.10.3', 1000, 0), lb, www, away];
+    const result = connectLooseDevices(devices, [wire('c0', 'SW-DMZ', 'LB-1'), wire('c1', 'LB-1', 'WWW-1')], 1, [area('DMZ', 0), area('B', 600)]);
+    expect(made(result)).toEqual(['SW-B>WWW-9']);
   });
 
   it('a load balancer with only its servers goes up to the nearest switch of its network', () => {

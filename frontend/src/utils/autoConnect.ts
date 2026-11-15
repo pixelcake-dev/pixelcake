@@ -53,7 +53,7 @@
  * the devices left alone are handed back, nothing is changed.
  */
 
-import type { ConnectionType, NetworkConnection, NetworkDevice, Port } from '@/types';
+import type { CanvasArea, ConnectionType, NetworkConnection, NetworkDevice, Port } from '@/types';
 import {
   type ConnectionEnd,
   type DeviceInterface,
@@ -216,7 +216,11 @@ interface Choice {
   upperEnd: Room;
   lowerEnd: Room;
   distance: number;
-  /** 0 when the two are known to share a network, 1 when they only may */
+  /**
+   * How far the place is from being meant for it (a group going up): 0 to 2
+   * when the two are known to share a network, 3 to 5 when they only may;
+   * within each, as near the device's own area as it is (see areasOf)
+   */
   tier: number;
 }
 
@@ -355,7 +359,14 @@ class Board {
   /** The networks a device is on (see the top of this file) */
   networksOf(device: NetworkDevice): Networks {
     const own = ownAddresses(device);
-    if (!isSwitch(device)) return { known: own, open: own.length === 0 };
+    if (!isSwitch(device)) {
+      // (a load balancer with no address of its own passes its servers' traffic: it is on their network)
+      if (own.length === 0 && device.type === 'LoadBalancer') {
+        const behind = this.peersOf(device).filter(isEndDevice).flatMap(ownAddresses);
+        if (behind.length > 0) return { known: behind, open: false };
+      }
+      return { known: own, open: own.length === 0 };
+    }
     const reached = this.cablesOf(device).flatMap((one) => this.addressesBeyond(one, device));
     // (VLAN 1 is where every port starts: not one set apart)
     const vlans = [...new Set((device.ports ?? []).flatMap(vlansOf))].filter((vlan) => vlan !== 1);
@@ -465,7 +476,31 @@ class Board {
   }
 }
 
-/** A place sharing a network the two are known to be on first; then nearest first; on a tie, the one drawn first */
+/**
+ * How far a place is from the area of a device: 0 in the same smallest area
+ * (or, for a device in none, a place in none), 1 in the same outermost area,
+ * 2 elsewhere. A device is in an area its middle is in.
+ */
+function areasOf(devices: NetworkDevice[], areas: CanvasArea[]): (device: NetworkDevice, place: NetworkDevice) => number {
+  const holding = (device: NetworkDevice) => {
+    const x = device.position.x + 52;
+    const y = device.position.y + 40;
+    return areas
+      .filter((area) => x >= area.position.x && x <= area.position.x + area.size.width && y >= area.position.y && y <= area.position.y + area.size.height)
+      .sort((a, b) => a.size.width * a.size.height - b.size.width * b.size.height)
+      .map((area) => area.id);
+  };
+  const inner = new Map(devices.map((device) => [device.id, holding(device)] as const));
+  return (device, place) => {
+    const own = inner.get(device.id) ?? holding(device);
+    const theirs = inner.get(place.id) ?? holding(place);
+    if (own.length === 0) return theirs.length === 0 ? 0 : 2;
+    if (own[0] === theirs[0]) return 0;
+    return own[own.length - 1] === theirs[theirs.length - 1] ? 1 : 2;
+  };
+}
+
+/** The place better meant for it first (see Choice.tier); then nearest first; on a tie, the one drawn first */
 const nearestFirst = (board: Board) => (a: Choice, b: Choice) =>
   a.tier - b.tier ||
   a.distance - b.distance ||
@@ -514,7 +549,8 @@ function climb(
   members: (group: NetworkDevice[]) => NetworkDevice[],
   placesFor: (device: NetworkDevice, group: Set<string>) => NetworkDevice[],
   typeFor: (upper: NetworkDevice) => ConnectionType,
-  nextId: () => string
+  nextId: () => string,
+  inArea: (device: NetworkDevice, place: NetworkDevice) => number
 ): Map<string, 'none' | 'noFreePort'> {
   for (;;) {
     let best: Choice | undefined;
@@ -529,7 +565,7 @@ function climb(
           upper,
           lower: member,
           distance: distance(upper, member),
-          tier: overlap(board.networksOf(member).known, board.networksOf(upper).known) ? 0 : 1,
+          tier: (overlap(board.networksOf(member).known, board.networksOf(upper).known) ? 0 : 3) + inArea(member, upper),
         }))
       );
       if (pairs.length === 0) {
@@ -569,9 +605,11 @@ function climb(
 export function connectLooseDevices(
   devices: NetworkDevice[],
   existing: NetworkConnection[],
-  startingCounter: number
+  startingCounter: number,
+  areas: CanvasArea[] = []
 ): LooseDevicesConnected {
   const board = new Board(devices, existing);
+  const inArea = areasOf(devices, areas);
   const taken = new Set(existing.map((one) => one.id));
   let counter = startingCounter;
   const nextId = () => {
@@ -583,8 +621,9 @@ export function connectLooseDevices(
 
   const loose = devices.filter((device) => board.cablesOf(device).length === 0);
   const left = new Map<string, LeftAloneReason>();
+  // (a place in the device's own area first: on a drawing of sites, its site)
   const nearestTo = (device: NetworkDevice) => (a: NetworkDevice, b: NetworkDevice) =>
-    distance(device, a) - distance(device, b) || board.rank(a) - board.rank(b);
+    inArea(device, a) - inArea(device, b) || distance(device, a) - distance(device, b) || board.rank(a) - board.rank(b);
   const switches = devices.filter(isSwitch);
   const ofItsNetwork = (device: NetworkDevice, places: NetworkDevice[]) => {
     const networks = board.networksOf(device);
@@ -597,10 +636,14 @@ export function connectLooseDevices(
   const balancers = devices.filter((device) => device.type === 'LoadBalancer');
   const behind = (balancer: NetworkDevice, device: NetworkDevice) =>
     board.peersOf(balancer).some((peer) => isEndDevice(peer) && kindOf(peer) === kindOf(device));
-  const wiredFor = (device: NetworkDevice) => [
-    ...ofItsNetwork(device, balancers.filter((balancer) => behind(balancer, device))),
-    ...ofItsNetwork(device, switches),
-  ];
+  /** `first` before `then` in each area tier: its own area before all, then nearest first */
+  const preferring = (device: NetworkDevice, first: NetworkDevice[], then: NetworkDevice[]) => {
+    const ahead = new Set(ofItsNetwork(device, first).map((one) => one.id));
+    return [...ofItsNetwork(device, first), ...ofItsNetwork(device, then)].sort(
+      (a, b) => inArea(device, a) - inArea(device, b) || Number(!ahead.has(a.id)) - Number(!ahead.has(b.id)) || nearestTo(device)(a, b)
+    );
+  };
+  const wiredFor = (device: NetworkDevice) => preferring(device, balancers.filter((balancer) => behind(balancer, device)), switches);
   const wired = loose.filter((device) => isEndDevice(device) && !isWireless(device));
   for (const [id, reason] of settle(board, wired, wiredFor, nextId)) {
     left.set(id, reason === 'none' ? 'noSwitch' : reason);
@@ -609,7 +652,7 @@ export function connectLooseDevices(
   // 2. Laptops, smartphones and tablets to an access point, else to a switch
   const accessPoints = devices.filter(isAccessPoint);
   const wireless = loose.filter(isWireless);
-  const radiosFor = (device: NetworkDevice) => [...ofItsNetwork(device, accessPoints), ...ofItsNetwork(device, switches)];
+  const radiosFor = (device: NetworkDevice) => preferring(device, accessPoints, switches);
   for (const [id, reason] of settle(board, wireless, radiosFor, nextId)) {
     left.set(id, reason === 'none' ? 'noSwitch' : reason);
   }
@@ -621,7 +664,8 @@ export function connectLooseDevices(
     (group) => (group.some(isSwitch) ? [] : group.filter((device) => isAccessPoint(device) || device.type === 'LoadBalancer')),
     (device, group) => ofItsNetwork(device, switches.filter((one) => !group.has(one.id))),
     () => 'access',
-    nextId
+    nextId,
+    inArea
   );
   for (const [id, reason] of apGroups) {
     // (one with no switch to go to is as it was drawn; one with none at all was said above)
@@ -635,7 +679,8 @@ export function connectLooseDevices(
     (group) => group.filter(isSwitch),
     (device, group) => ofItsNetwork(device, ups.filter((one) => !group.has(one.id) && (UPLINK.has(one.type) || board.isCore(one)))),
     (upper) => (isSwitch(upper) ? 'trunk' : 'uplink'),
-    nextId
+    nextId,
+    inArea
   );
   for (const [id, reason] of switchGroups) {
     const device = devices.find((one) => one.id === id);

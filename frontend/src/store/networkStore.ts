@@ -532,9 +532,10 @@ export const useNetworkStore = create<NetworkStore>()(
       },
 
       autoConnectDevices: () => {
-        const { devices, connections, connectionCounter } = get();
-        // (the new cables come bound to the interfaces they take)
-        const result = connectLooseDevices(devices, connections, connectionCounter);
+        const { devices, connections, connectionCounter, areas } = get();
+        // (the new cables come bound to the interfaces they take; the areas
+        // say which site a device is in)
+        const result = connectLooseDevices(devices, connections, connectionCounter, areas);
         if (result.connections.length > 0) {
           set({
             connections: [...connections, ...result.connections],
