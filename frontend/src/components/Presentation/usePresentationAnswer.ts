@@ -11,15 +11,10 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useNetworkStore } from '@/store/networkStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
-import {
-  assessImpact,
-  evaluateAllFlows,
-  hasFailures,
-  planAndEvaluateFlow,
-  withFailures,
-} from '@/engine';
+import { hasFailures, planAndEvaluateFlow, withFailures } from '@/engine';
 import type { Failures, FlowResult, ImpactReport, Topology } from '@/engine';
 import { routeOf } from '@/utils/presentation';
+import { impactOf } from '@/utils/impactMemo';
 
 export interface PresentationAnswer {
   /** The answer to the question, with the failures applied; null with no question */
@@ -80,14 +75,11 @@ export function usePresentationAnswer(): PresentationAnswer {
   );
 
   // The exchanges of the intact drawing are evaluated once per drawing and
-  // kind of exchange, not at every failure
-  const baseline = useMemo(
-    () => (isBroken ? evaluateAllFlows(intact, { flow, emailMode }) : null),
-    [isBroken, intact, flow, emailMode]
-  );
+  // kind of exchange, not at every failure; the report is kept for the
+  // export window, which says the same under the picture (utils/impactMemo)
   const impact = useMemo(
-    () => (baseline ? assessImpact(intact, failures, { flow, emailMode }, baseline) : null),
-    [baseline, intact, failures, flow, emailMode]
+    () => (isBroken ? impactOf(intact, failures, { flow, emailMode }) : null),
+    [isBroken, intact, failures, flow, emailMode]
   );
 
   // Another canvas came on screen: question and failures belonged to the old one

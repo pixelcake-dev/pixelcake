@@ -19,9 +19,10 @@ import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { assessImpact, hasFailures, planAndEvaluateFlow, withFailures } from '@/engine';
+import { hasFailures, planAndEvaluateFlow, withFailures } from '@/engine';
 import type { Failures, Topology } from '@/engine';
 import { captionOf } from '@/utils/presentation';
+import { impactOf } from '@/utils/impactMemo';
 import { useDhcp } from '@/utils/useDhcp';
 import { noLeaseLabel, shownAddress } from '@/utils/dhcpLabels';
 import {
@@ -156,7 +157,8 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
           );
         }),
       ],
-      impact: isBroken ? assessImpact(intact, failures, { flow, emailMode }) : null,
+      // (worked out once: the panel of the presentation has it already)
+      impact: isBroken ? impactOf(intact, failures, { flow, emailMode }) : null,
       labelOf,
     });
   }, [
