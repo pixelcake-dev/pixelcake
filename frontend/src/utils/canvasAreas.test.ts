@@ -14,7 +14,10 @@ import {
   AREA_COLOUR_NAMES,
   AREA_DEFAULT_SIZE,
   AREA_LABEL_MAX_LENGTH,
+  AREA_GAP,
+  AREA_LABEL_ROOM,
   AREA_MARGIN,
+  AREA_MIN_MARGIN,
   AREA_MIN_SIZE,
   AREA_PALETTE,
   AREA_TINT,
@@ -26,6 +29,8 @@ import {
   readAreas,
   tidyAreaLabel,
 } from './canvasAreas';
+import type { AreaBox } from './canvasAreas';
+import { DEVICE_METRICS, ROLE_TAG } from './drawingImage';
 import { MINI_MAP_AREA_ALPHA, MINI_MAP_COLOURS, miniMapAreaColour } from './miniMapColour';
 
 const area = (overrides: Partial<CanvasArea> = {}): CanvasArea => ({
@@ -76,6 +81,183 @@ describe('the colour of a new area', () => {
   });
 });
 
+describe('an area around devices, among what is near', () => {
+  const M = AREA_MARGIN;
+  const least = AREA_MIN_MARGIN;
+  const GAP = AREA_GAP;
+  /** A device on the canvas: its frame, 104 by 94 */
+  const at = (x: number, y: number): AreaBox => ({ x, y, width: 104, height: 94 });
+  /** The edges of a placed area */
+  const edges = (placed: ReturnType<typeof areaAround>) => {
+    if (!placed) throw new Error('no area');
+    return {
+      left: placed.position.x,
+      top: placed.position.y,
+      right: placed.position.x + placed.size.width,
+      bottom: placed.position.y + placed.size.height,
+    };
+  };
+  const boxOf = (placed: ReturnType<typeof areaAround>): AreaBox => {
+    if (!placed) throw new Error('no area');
+    return { ...placed.position, ...placed.size };
+  };
+  /** A row of three devices, 200 apart, from (0, y): its frames go from 0 to 504 across */
+  const row = (y: number) => [at(0, y), at(200, y), at(400, y)];
+  /** The area the same devices get with nothing near */
+  const alone = (boxes: AreaBox[]) => edges(areaAround(boxes));
+  const today = (boxes: AreaBox[]) => ({ ...areaAround(boxes), overlaps: true });
+
+  it('the room follows the frame of a device: its label above, and the tag of a presentation under it', () => {
+    // the label of an area takes 24 at its top (its border, 4, a line of 18)
+    expect(AREA_LABEL_ROOM).toBeGreaterThanOrEqual(1.5 + 4 + 18);
+    expect(least.top).toBeGreaterThanOrEqual(AREA_LABEL_ROOM);
+    // a tag hangs above the top of a device: with the whole room it is under the label
+    expect(M.top + ROLE_TAG.top).toBeGreaterThanOrEqual(AREA_LABEL_ROOM);
+    // the frame of a device has room of its own around the drawing: the sides need less than it
+    expect(M.side).toBeLessThan((DEVICE_METRICS.width - DEVICE_METRICS.icon) / 2);
+    for (const side of ['side', 'top', 'bottom'] as const) {
+      expect(least[side]).toBeGreaterThan(0);
+      expect(least[side]).toBeLessThan(M[side]);
+    }
+  });
+
+  it('with nothing near it, it has its whole room, and overlaps nothing', () => {
+    const placed = areaAround(row(0), { areas: [], devices: [] });
+    expect(placed).toEqual({ ...areaAround(row(0)), overlaps: false });
+    expect(edges(placed)).toEqual({ left: -M.side, top: -M.top, right: 504 + M.side, bottom: 94 + M.bottom });
+  });
+
+  it('two rows close to each other: the area of the lower one gives way above, and leaves a gap', () => {
+    const upper = areaAround(row(0));
+    const y = 94 + M.bottom + GAP + least.top + 2;
+    // with its whole room the area of the lower row would cover the edge of the other
+    expect(alone(row(y)).top).toBeLessThan(edges(upper).bottom);
+
+    const placed = areaAround(row(y), { areas: [boxOf(upper)] });
+
+    expect(placed?.overlaps).toBe(false);
+    expect(edges(placed).top).toBe(edges(upper).bottom + GAP);
+    // only that side gives way, and its label still fits
+    expect({ ...edges(placed), top: 0 }).toEqual({ ...alone(row(y)), top: 0 });
+    expect(y - edges(placed).top).toBeGreaterThanOrEqual(least.top);
+  });
+
+  it('the other way round: the area of the upper row gives way under it', () => {
+    const y = 94 + least.bottom + GAP + M.top + 2;
+    const lower = areaAround(row(y));
+    expect(alone(row(0)).bottom).toBeGreaterThan(edges(lower).top);
+
+    const placed = areaAround(row(0), { areas: [boxOf(lower)] });
+
+    expect(placed?.overlaps).toBe(false);
+    expect(edges(placed).bottom).toBe(edges(lower).top - GAP);
+    expect({ ...edges(placed), bottom: 0 }).toEqual({ ...alone(row(0)), bottom: 0 });
+  });
+
+  it('a device that is not to be in it: the side towards it gives way, and the area does not cover it', () => {
+    const outside = at(504 + least.side + GAP + 2, 0);
+    expect(alone(row(0)).right).toBeGreaterThan(outside.x);
+
+    const placed = areaAround(row(0), { devices: [outside] });
+
+    expect(placed?.overlaps).toBe(false);
+    expect(edges(placed).right).toBe(outside.x - GAP);
+    expect({ ...edges(placed), right: 0 }).toEqual({ ...alone(row(0)), right: 0 });
+  });
+
+  it('what is near at a corner: one side gives way, the one that gives up less', () => {
+    // above and to the right: giving way on the right would cost 8, above 2
+    const corner = { x: 504 + GAP + M.side - 8, y: -400, width: 104, height: 400 - (M.top + GAP - 2) };
+    const cornerBottom = corner.y + corner.height;
+    const placed = areaAround(row(0), { devices: [corner] });
+
+    expect(placed?.overlaps).toBe(false);
+    expect(edges(placed).top).toBe(cornerBottom + GAP);
+    expect(-edges(placed).top).toBe(M.top - 2);
+    expect(edges(placed).right).toBe(alone(row(0)).right);
+
+    // the same, with no room to give above: it gives way on the right
+    const lower = { ...corner, height: corner.height + 20 };
+    const sideways = areaAround(row(0), { devices: [lower] });
+    expect(sideways?.overlaps).toBe(false);
+    expect(edges(sideways).right).toBe(corner.x - GAP);
+    expect(edges(sideways).top).toBe(alone(row(0)).top);
+  });
+
+  it('what is far enough changes nothing', () => {
+    const far = at(504 + M.side + GAP, 0);
+    const under = { x: 0, y: 94 + M.bottom + GAP, width: 500, height: 100 };
+    expect(areaAround(row(0), { devices: [far], areas: [under] })).toEqual({
+      ...areaAround(row(0)),
+      overlaps: false,
+    });
+  });
+
+  it('inside another area: it stays inside it, clear of its sides and under its label', () => {
+    const big = { x: -12, y: -58, width: 504 + 24, height: 58 + 94 + 12 };
+    const placed = areaAround(row(0), { areas: [big] });
+
+    expect(placed?.overlaps).toBe(false);
+    expect(edges(placed)).toEqual({
+      left: -12 + GAP,
+      top: -58 + AREA_LABEL_ROOM + GAP,
+      right: 516 - GAP,
+      bottom: 106 - GAP,
+    });
+  });
+
+  it('inside another area, beside its label: above it needs only the gap', () => {
+    const big = { x: -12, y: -58, width: 528, height: 164 };
+    // the last device of the row alone: its area starts at 384, where the label of the big one is not
+    const beside = areaAround([at(400, 0)], { areas: [{ ...big, labelReach: 60 }] });
+    expect(beside?.overlaps).toBe(false);
+    expect(edges(beside).top).toBe(-M.top);
+    expect(edges(beside).left).toBe(400 - M.side);
+    // where the label reaches as far, it goes under it
+    const under = areaAround([at(400, 0)], { areas: [{ ...big, labelReach: 400 }] });
+    expect(edges(under).top).toBe(-58 + AREA_LABEL_ROOM + GAP);
+    // and a label of which nothing is known is taken to reach across the whole area
+    expect(areaAround([at(400, 0)], { areas: [big] })).toEqual(under);
+  });
+
+  it('around another area: that is nesting, and it keeps its whole room', () => {
+    const small = { x: 190, y: -20, width: 124, height: 128 };
+    expect(areaAround(row(0), { areas: [small] })).toEqual({ ...areaAround(row(0)), overlaps: false });
+    // (a device inside the small one is in it, not near the new one)
+    expect(areaAround(row(0), { areas: [small], devices: [at(200, 0)] })?.overlaps).toBe(false);
+  });
+
+  it('where even the least room cannot keep it clear, it is made with its whole room, and says so', () => {
+    // a device not to be in it, among the ones that are
+    expect(areaAround(row(0), { devices: [at(300, 0)] })).toEqual(today(row(0)));
+    // another area across the devices
+    expect(areaAround(row(0), { areas: [{ x: 150, y: -50, width: 200, height: 300 }] })).toEqual(today(row(0)));
+    // something closer than the least room and the gap
+    expect(areaAround(row(0), { devices: [at(504 + GAP, 0)] })).toEqual(today(row(0)));
+    // an area whose bottom is too close above for the label
+    expect(areaAround(row(0), { areas: [{ x: 0, y: -60, width: 504, height: 40 }] })).toEqual(today(row(0)));
+    // inside another area, too close under its label
+    const tight = { x: -12, y: -(AREA_LABEL_ROOM + GAP + least.top - 4), width: 528, height: 200 };
+    expect(areaAround(row(0), { areas: [tight] })).toEqual(today(row(0)));
+  });
+
+  it('around another area, it does not give way across it', () => {
+    const small = { x: 400, y: -30, width: 116, height: 120 };
+    // a device far below changes nothing
+    expect(areaAround(row(0), { areas: [small], devices: [at(516, 200)] })?.overlaps).toBe(false);
+    // one on the right would make it give way across the small one: it does not
+    expect(areaAround(row(0), { areas: [small], devices: [at(516, 0)] })).toEqual(today(row(0)));
+  });
+
+  it('what cannot be read is left out', () => {
+    const bad = { x: Number.NaN, y: 0, width: 10, height: 10 };
+    expect(areaAround(row(0), { areas: [bad], devices: [bad] })).toEqual({
+      ...areaAround(row(0)),
+      overlaps: false,
+    });
+  });
+});
+
 describe('where an area goes', () => {
   it('added by itself: its default size, its middle where it is asked', () => {
     expect(areaAt({ x: 500, y: 400 })).toEqual({
@@ -97,6 +279,7 @@ describe('where an area goes', () => {
         width: 540 - 100 + 2 * AREA_MARGIN.side,
         height: 300 - 150 + AREA_MARGIN.top + AREA_MARGIN.bottom,
       },
+      overlaps: false,
     });
     expect(AREA_MARGIN.top).toBeGreaterThan(AREA_MARGIN.bottom);
   });

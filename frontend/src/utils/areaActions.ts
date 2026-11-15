@@ -7,7 +7,8 @@
 
 import { useNetworkStore } from '@/store/networkStore';
 import { DEFAULT_AREA_LABEL, areaAround, areaAt, nextAreaColour } from '@/utils/canvasAreas';
-import { measureDeviceSizes } from '@/utils/drawingMeasure';
+import { createTextMeasure, measureDeviceSizes } from '@/utils/drawingMeasure';
+import { areaLabelReach } from '@/utils/drawingImage';
 import { DEVICE_METRICS, deviceHeight } from '@/utils/deviceGeometry';
 
 /** The size a device is taken to have when the screen cannot say: its frame, with an address */
@@ -44,15 +45,30 @@ export function addAreaInView(): string {
 /**
  * Add an area around these devices of the canvas, with room for its label;
  * gives its id, or null when none of them is on the canvas. The devices are
- * not touched: the area is drawn behind them.
+ * not touched: the area is drawn behind them. Where its room would cross
+ * another area, or cover another device, it gives way (areaAround).
  */
 export function encloseDevices(deviceIds: readonly string[]): string | null {
-  const { devices } = useNetworkStore.getState();
+  const { devices, areas } = useNetworkStore.getState();
   const sizes = measureDeviceSizes();
-  const place = areaAround(
-    devices
-      .filter((device) => deviceIds.includes(device.id))
-      .map((device) => ({ ...device.position, ...(sizes.get(device.id) ?? ASSUMED_DEVICE_SIZE) }))
+  const measureText = createTextMeasure();
+  const boxOf = (device: (typeof devices)[number]) => ({
+    ...device.position,
+    ...(sizes.get(device.id) ?? ASSUMED_DEVICE_SIZE),
+  });
+  const placed = areaAround(
+    devices.filter((device) => deviceIds.includes(device.id)).map(boxOf),
+    {
+      // (an area inside another may go up beside its label, not over it)
+      areas: areas.map((area) => ({
+        ...area.position,
+        ...area.size,
+        labelReach: areaLabelReach(area, measureText),
+      })),
+      devices: devices.filter((device) => !deviceIds.includes(device.id)).map(boxOf),
+    }
   );
-  return place ? addAndName(place) : null;
+  if (!placed) return null;
+  const { position, size } = placed;
+  return addAndName({ position, size });
 }

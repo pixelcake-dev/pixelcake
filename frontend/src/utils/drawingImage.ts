@@ -542,6 +542,19 @@ function areaLabelWidth(text: string, measure: TextMeasure): number {
   );
 }
 
+/**
+ * How far the label of an area reaches from its left side, as it is drawn:
+ * the border, the room before the text, the text as it fits. 0 for none.
+ */
+export function areaLabelReach(
+  area: Pick<CanvasArea, 'label' | 'size'>,
+  measure: TextMeasure
+): number {
+  const text = fitAreaLabel(area.label, area.size.width, measure);
+  if (text === '') return 0;
+  return AREA_METRICS.border + AREA_METRICS.labelLeft + areaLabelWidth(text, measure);
+}
+
 /** The label of an area as it fits in it: in capitals, ending in dots when it is cut */
 function fitAreaLabel(label: string, areaWidth: number, measure: TextMeasure): string {
   const text = label.trim().toLocaleUpperCase('it');

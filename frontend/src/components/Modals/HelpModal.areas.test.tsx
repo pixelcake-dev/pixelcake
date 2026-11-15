@@ -11,6 +11,7 @@ import { useNetworkStore } from '@/store/networkStore';
 import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
 import { renderDrawingImage } from '@/utils/drawingImage';
+import { DEVICE_METRICS, deviceHeight } from '@/utils/deviceGeometry';
 import { serializeProject } from '@/utils/projectFile';
 import { useProjectStore } from '@/store/projectStore';
 import NetworkCanvas from '@/components/Canvas/NetworkCanvas';
@@ -138,12 +139,12 @@ describe('the guide — the areas of the canvas', () => {
     const modifica = screen.getByText('Modifica', { selector: '.menu-item > span' }).parentElement!;
     fireEvent.click(Array.from(modifica.querySelectorAll('li')).find((li) => li.textContent === 'Racchiudi in un riquadro')!);
     const [area] = store().areas;
-    // both devices are inside it (a device is 120 by 100 where nothing measures it)
+    // both devices are inside it (where nothing measures it, a device is its frame)
     for (const device of store().devices) {
       expect(device.position.x).toBeGreaterThan(area.position.x);
       expect(device.position.y).toBeGreaterThan(area.position.y);
-      expect(device.position.x + 120).toBeLessThan(area.position.x + area.size.width);
-      expect(device.position.y + 100).toBeLessThan(area.position.y + area.size.height);
+      expect(device.position.x + DEVICE_METRICS.width).toBeLessThan(area.position.x + area.size.width);
+      expect(device.position.y + deviceHeight(true)).toBeLessThan(area.position.y + area.size.height);
     }
 
     act(() => ui().setContextMenuDevice(store().devices[0], 40, 60));

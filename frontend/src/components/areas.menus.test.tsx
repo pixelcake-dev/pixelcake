@@ -11,7 +11,7 @@ import type { CanvasArea } from '@/types';
 import { useNetworkStore } from '@/store/networkStore';
 import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
-import { AREA_MARGIN, AREA_PALETTE } from '@/utils/canvasAreas';
+import { AREA_GAP, AREA_MARGIN, AREA_MIN_MARGIN, AREA_PALETTE } from '@/utils/canvasAreas';
 import { answerConfirms, settled } from '@/test/confirm';
 import DevicePanel from '@/components/Sidebar/DevicePanel';
 import TopMenuBar from '@/components/Toolbar/TopMenuBar';
@@ -181,6 +181,52 @@ describe('«Racchiudi in un riquadro»', () => {
     expect(store().areas).toEqual([{ id: 'area-1', label: 'Riquadro', color: 'slate', ...AROUND_TWO }]);
     // (the area is now the selected thing: with no device selected the entry is off again)
     expect(entry().className).toContain('disabled');
+  });
+
+  it('two rows close to each other: the second area gives way, and the two do not overlap', () => {
+    // (jsdom measures nothing: a device is taken to be its frame, 104 by 94)
+    const lowerY = 94 + AREA_MARGIN.bottom + AREA_GAP + AREA_MIN_MARGIN.top + 4;
+    const upper = [addPc('PC-1', { x: 0, y: 0 }), addPc('PC-2', { x: 200, y: 0 })];
+    const lower = [addPc('PC-3', { x: 0, y: lowerY }), addPc('PC-4', { x: 200, y: lowerY })];
+    render(<TopMenuBar />);
+    const enclose = (ids: string[]) => {
+      act(() => store().selectMultipleDevices(ids));
+      fireEvent.click(screen.getByText('Racchiudi in un riquadro'));
+    };
+
+    enclose(upper);
+    enclose(lower);
+
+    const [first, second] = store().areas;
+    const bottomOfFirst = first.position.y + first.size.height;
+    expect(first.position.y).toBe(-AREA_MARGIN.top);
+    expect(bottomOfFirst).toBe(94 + AREA_MARGIN.bottom);
+    // a clear gap between the two, and room for the label of the second
+    expect(second.position.y).toBe(bottomOfFirst + AREA_GAP);
+    expect(lowerY - second.position.y).toBeGreaterThanOrEqual(AREA_MIN_MARGIN.top);
+    // with its whole room it would have covered the edge of the first
+    expect(lowerY - AREA_MARGIN.top).toBeLessThan(bottomOfFirst);
+    // the rest of its room is whole, and it holds its devices
+    expect(second.position.x).toBe(-AREA_MARGIN.side);
+    expect(second.position.y + second.size.height).toBe(lowerY + 94 + AREA_MARGIN.bottom);
+  });
+
+  it('around one device of an area: the new area is inside it, under its label', () => {
+    const devices = [addPc('PC-1', { x: 0, y: 0 }), addPc('PC-2', { x: 200, y: 0 })];
+    render(<TopMenuBar />);
+    act(() => store().selectMultipleDevices(devices));
+    fireEvent.click(screen.getByText('Racchiudi in un riquadro'));
+    act(() => store().selectMultipleDevices([devices[1]]));
+    fireEvent.click(screen.getByText('Racchiudi in un riquadro'));
+
+    const [outer, inner] = store().areas;
+    const right = (area: typeof outer) => area.position.x + area.size.width;
+    const bottom = (area: typeof outer) => area.position.y + area.size.height;
+    // wholly inside: nesting, as it may be
+    expect(inner.position.x).toBeGreaterThan(outer.position.x);
+    expect(inner.position.y).toBeGreaterThan(outer.position.y);
+    expect(right(inner)).toBeLessThanOrEqual(right(outer) - AREA_GAP);
+    expect(bottom(inner)).toBeLessThanOrEqual(bottom(outer) - AREA_GAP);
   });
 });
 

@@ -25,8 +25,26 @@ export const AREA_DEFAULT_SIZE = { width: 360, height: 240 } as const;
 export const AREA_LABEL_MAX_LENGTH = 40;
 /** What a new area is called until it is given its name */
 export const DEFAULT_AREA_LABEL = 'Riquadro';
-/** The room left around the devices an area is drawn around: more above, where its label is */
-export const AREA_MARGIN = { side: 28, top: 44, bottom: 28 } as const;
+/**
+ * The room left around the devices an area is drawn around: more above,
+ * where its label is. It is counted from the frame of a device, which has
+ * room of its own around the drawing (utils/deviceGeometry): above, the
+ * label of the area, and under it the tag a presentation hangs on the top
+ * of a device, fit without touching.
+ */
+export const AREA_MARGIN = { side: 16, top: 40, bottom: 16 } as const;
+/** The least of that room an area keeps when it has to give way: above, its label still fits */
+export const AREA_MIN_MARGIN = { side: 4, top: 24, bottom: 4 } as const;
+/** How far an area drawn around devices stays from another area, and from a device it does not hold */
+export const AREA_GAP = 6;
+/** The room the label of an area takes at its top: an area inside it starts under it */
+export const AREA_LABEL_ROOM = 24;
+
+/** An area already on the canvas, near where a new one goes */
+export interface NearArea extends AreaBox {
+  /** How far its label reaches from its left side; unknown, it is taken to reach across the whole area */
+  labelReach?: number;
+}
 
 /**
  * The palette, in the light theme and in the dark: the colour of the border
@@ -112,29 +130,147 @@ export function areaAt(centre: { x: number; y: number }): Pick<CanvasArea, 'posi
   };
 }
 
+/** What is near the devices an area is drawn around */
+export interface AreaNeighbours {
+  /** The areas already on the canvas */
+  areas?: readonly NearArea[];
+  /** The devices that are not to be in the area */
+  devices?: readonly AreaBox[];
+}
+
+export interface PlacedArea extends Pick<CanvasArea, 'position' | 'size'> {
+  /**
+   * The room could not be made small enough to keep the area clear of what
+   * is near (another area across the devices, a device among them, one too
+   * close): it is made with its whole room, and overlaps
+   */
+  overlaps: boolean;
+}
+
+type Side = 'left' | 'right' | 'top' | 'bottom';
+type Edges = Record<Side, number>;
+
+const edgesOf = (box: AreaBox): Edges => ({
+  left: box.x,
+  top: box.y,
+  right: box.x + box.width,
+  bottom: box.y + box.height,
+});
+
+/** True when the two share some room (touching is not sharing) */
+const meet = (a: Edges, b: Edges) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+/** True when `outer` holds `inner` whole */
+const holds = (outer: Edges, inner: Edges) =>
+  outer.left <= inner.left && outer.top <= inner.top && outer.right >= inner.right && outer.bottom >= inner.bottom;
+
+const grown = (edges: Edges, by: number): Edges => ({
+  left: edges.left - by,
+  top: edges.top - by,
+  right: edges.right + by,
+  bottom: edges.bottom + by,
+});
+
 /**
  * The area that holds these boxes (the devices it is drawn around), with
  * room around them and for its label above. Null when there is no box.
+ *
+ * The room is AREA_MARGIN, but where it would cross another area, or cover
+ * a device that is not to be in it, it is made smaller on that side, down
+ * to AREA_MIN_MARGIN, so that AREA_GAP is left clear. An area is never
+ * drawn across another: it can be inside another one (it then stays inside
+ * it, under its label) or around another one, which is nesting. Where even
+ * the least room cannot keep it clear, it is made with its whole room, and
+ * says so (`overlaps`).
  */
-export function areaAround(boxes: readonly AreaBox[]): Pick<CanvasArea, 'position' | 'size'> | null {
-  const usable = boxes.filter((box) =>
-    [box.x, box.y, box.width, box.height].every((value) => Number.isFinite(value))
-  );
+export function areaAround(boxes: readonly AreaBox[], near: AreaNeighbours = {}): PlacedArea | null {
+  const usable = boxes.filter(isUsable);
   if (usable.length === 0) return null;
-  const left = Math.min(...usable.map((box) => box.x));
-  const top = Math.min(...usable.map((box) => box.y));
-  const right = Math.max(...usable.map((box) => box.x + box.width));
-  const bottom = Math.max(...usable.map((box) => box.y + box.height));
-  return {
-    position: { x: Math.round(left - AREA_MARGIN.side), y: Math.round(top - AREA_MARGIN.top) },
-    size: {
-      width: Math.max(AREA_MIN_SIZE.width, Math.round(right - left + 2 * AREA_MARGIN.side)),
-      height: Math.max(
-        AREA_MIN_SIZE.height,
-        Math.round(bottom - top + AREA_MARGIN.top + AREA_MARGIN.bottom)
-      ),
-    },
+  const held: Edges = {
+    left: Math.min(...usable.map((box) => box.x)),
+    top: Math.min(...usable.map((box) => box.y)),
+    right: Math.max(...usable.map((box) => box.x + box.width)),
+    bottom: Math.max(...usable.map((box) => box.y + box.height)),
   };
+  const full: Edges = { left: AREA_MARGIN.side, right: AREA_MARGIN.side, top: AREA_MARGIN.top, bottom: AREA_MARGIN.bottom };
+  const least: Edges = {
+    left: AREA_MIN_MARGIN.side,
+    right: AREA_MIN_MARGIN.side,
+    top: AREA_MIN_MARGIN.top,
+    bottom: AREA_MIN_MARGIN.bottom,
+  };
+  const around = (room: Edges): Edges => ({
+    left: held.left - room.left,
+    top: held.top - room.top,
+    right: held.right + room.right,
+    bottom: held.bottom + room.bottom,
+  });
+  const place = (room: Edges, overlaps: boolean): PlacedArea => {
+    const edges = around(room);
+    return {
+      position: { x: Math.round(edges.left), y: Math.round(edges.top) },
+      size: {
+        width: Math.max(AREA_MIN_SIZE.width, Math.round(edges.right - edges.left)),
+        height: Math.max(AREA_MIN_SIZE.height, Math.round(edges.bottom - edges.top)),
+      },
+      overlaps,
+    };
+  };
+
+  const whole = around(full);
+  const nearAreas = (near.areas ?? []).filter(isUsable);
+  const areas = nearAreas.map(edgesOf);
+  /** How far the label of each reaches across, from its left side */
+  const labelEnd = new Map(areas.map((area, index) => [area, area.left + (nearAreas[index].labelReach ?? Infinity)]));
+  /** Areas the new one is inside of: it stays inside them */
+  const outer = areas.filter((area) => holds(area, held));
+  /** Areas the new one is around: they stay inside it */
+  const inner = areas.filter((area) => !holds(area, held) && holds(whole, area));
+  /** What it keeps clear of, from outside */
+  const beside = areas.filter((area) => !outer.includes(area) && !inner.includes(area));
+  for (const device of (near.devices ?? []).filter(isUsable).map(edgesOf)) {
+    // (a device inside an area the new one is around is in that area)
+    if (!inner.some((area) => holds(area, device))) beside.push(device);
+  }
+
+  const room = { ...full };
+  // Inside another area: clear of its sides, and under its label where it is under it
+  for (const area of outer) {
+    room.left = Math.min(room.left, held.left - area.left - AREA_GAP);
+    room.right = Math.min(room.right, area.right - held.right - AREA_GAP);
+    room.bottom = Math.min(room.bottom, area.bottom - held.bottom - AREA_GAP);
+    const underLabel = held.left - room.left < (labelEnd.get(area) ?? Infinity) + AREA_GAP;
+    room.top = Math.min(room.top, held.top - area.top - AREA_GAP - (underLabel ? AREA_LABEL_ROOM : 0));
+  }
+  // Clear of what is beside it: on the side it is on (of two, the one that gives up less)
+  let clear = (Object.keys(room) as Side[]).every((side) => room[side] >= least[side]);
+  for (const other of beside) {
+    if (!clear) break;
+    if (!meet(grown(other, AREA_GAP), around(room))) continue;
+    const ways: Array<[Side, number]> = [];
+    if (other.right <= held.left) ways.push(['left', held.left - other.right - AREA_GAP]);
+    if (other.left >= held.right) ways.push(['right', other.left - held.right - AREA_GAP]);
+    if (other.bottom <= held.top) ways.push(['top', held.top - other.bottom - AREA_GAP]);
+    if (other.top >= held.bottom) ways.push(['bottom', other.top - held.bottom - AREA_GAP]);
+    const possible = ways.filter(([side, value]) => value >= least[side]);
+    if (possible.length === 0) {
+      clear = false;
+      break;
+    }
+    const [side, value] = possible.reduce((best, way) =>
+      room[way[0]] - way[1] < room[best[0]] - best[1] ? way : best
+    );
+    room[side] = Math.min(room[side], value);
+  }
+  // (and what it was to be around is still inside it)
+  if (clear) clear = inner.every((area) => holds(around(room), area));
+
+  return clear ? place(room, false) : place(full, true);
+}
+
+/** A box whose four numbers are numbers */
+function isUsable(box: AreaBox): boolean {
+  return [box.x, box.y, box.width, box.height].every((value) => Number.isFinite(value));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
