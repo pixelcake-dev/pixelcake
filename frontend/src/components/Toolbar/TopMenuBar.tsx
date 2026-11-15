@@ -1,6 +1,7 @@
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
+import { askConfirm } from '@/store/confirmStore';
 import type { LayoutDirection } from '@/utils/autoLayout';
 import { usePresentationStore } from '@/store/presentationStore';
 import {
@@ -69,12 +70,16 @@ const TopMenuBar = () => {
   const handleSave = () => void saveProject();
   const handleSaveAs = () => void saveProjectAs();
 
-  const handleAutoLayout = (direction: LayoutDirection) => {
+  // Every device is moved, and nothing can be undone yet: asked first
+  const handleAutoLayout = async (direction: LayoutDirection) => {
     const deviceCount = useNetworkStore.getState().devices.length;
     if (deviceCount === 0) {
       toast.info(t.menu.notices.nothingToArrange);
       return;
     }
+    const words = t.menu.layoutQuestion;
+    const yes = await askConfirm({ title: words.title, detail: words.detail, confirmLabel: words.confirm });
+    if (!yes) return;
     applyAutoLayout(direction, useTemplateStore.getState().templates);
   };
 

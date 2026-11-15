@@ -57,6 +57,15 @@ export const menu = {
   darkTheme: 'Passa al tema scuro',
 
   /** What an entry says when it has nothing to act on */
+  /** Asked before the automatic layout: it moves every device, and cannot be undone */
+  layoutQuestion: {
+    title: 'Disporre di nuovo il disegno?',
+    detail:
+      'Ogni dispositivo sarà spostato e i riquadri saranno ridisegnati intorno ai loro dispositivi. ' +
+      'Non si può annullare.',
+    confirm: 'Disponi',
+  },
+
   notices: {
     nothingToArrange: "Nessun dispositivo sul canvas: non c'è nulla da disporre",
     needTwoToConnect: 'Servono almeno due dispositivi per collegarli automaticamente',

@@ -522,6 +522,8 @@ export const useNetworkStore = create<NetworkStore>()(
           areas: laid.areas,
         });
         get().markChanged();
+        // (and the view shows the whole drawing, as it now is)
+        get().triggerFitView();
       },
 
       autoConnectDevices: () => {

@@ -59,6 +59,13 @@ export const menu: Dictionary['menu'] = {
   darkTheme: 'Switch to dark theme',
 
   /** What an entry says when it has nothing to act on */
+  /** Asked before the automatic layout: it moves every device, and cannot be undone */
+  layoutQuestion: {
+    title: 'Lay the drawing out again?',
+    detail: 'Every device will be moved, and the areas drawn again around their devices. This cannot be undone.',
+    confirm: 'Lay out',
+  },
+
   notices: {
     nothingToArrange: 'No devices on the board: there is nothing to arrange',
     needTwoToConnect: 'Auto-connect needs at least two devices',
