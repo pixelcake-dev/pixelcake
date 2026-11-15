@@ -64,7 +64,10 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
   const language = useLanguage();
   const devices = useNetworkStore((state) => state.devices);
   const connections = useNetworkStore((state) => state.connections);
-  const areas = useNetworkStore((state) => state.areas);
+  // (the image shows what the board shows: no area while they are hidden)
+  const allAreas = useNetworkStore((state) => state.areas);
+  const areasShown = useUIStore((state) => state.areasShown);
+  const areas = useMemo(() => (areasShown ? allAreas : []), [allAreas, areasShown]);
   const emailMode = useNetworkStore((state) => state.globalNetworkSettings.emailMode ?? 'auto');
   const deviceTemplates = useTemplateStore((state) => state.templates);
   const connectionTemplates = useTemplateStore((state) => state.connectionTemplates);

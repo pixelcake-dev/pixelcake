@@ -24,5 +24,7 @@ export const canvas = {
     namePlaceholder: 'Nome',
     unnamed: 'Senza nome',
     labelHint: 'Trascina per spostare il riquadro, doppio clic per rinominarlo',
+    /** Said when a new area is made while they were hidden from the View menu */
+    shownAgain: 'I riquadri erano nascosti: ora si vedono di nuovo',
   },
 };

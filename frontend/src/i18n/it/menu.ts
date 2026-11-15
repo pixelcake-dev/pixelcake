@@ -33,6 +33,8 @@ export const menu = {
     magnifyConnections: 'Connessioni',
     resetMagnify: 'Ripristina ingrandimento',
     animation: 'Animazione rete',
+    /** The areas drawn behind the devices, shown or hidden: a preference of this browser */
+    areas: 'Mostra i riquadri',
   },
 
   help: {

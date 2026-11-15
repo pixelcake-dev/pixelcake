@@ -88,6 +88,8 @@ const NetworkCanvas = () => {
   const devices = useNetworkStore((state) => state.devices);
   const connections = useNetworkStore((state) => state.connections);
   const areas = useNetworkStore((state) => state.areas);
+  // (hidden from the View menu, the areas are not on the board at all)
+  const areasShown = useUIStore((state) => state.areasShown);
   const selectedAreaId = useNetworkStore((state) => state.selectedAreaId);
   const viewport = useNetworkStore((state) => state.viewport);
   const fitViewRequest = useNetworkStore((state) => state.fitViewRequest);
@@ -272,7 +274,7 @@ const NetworkCanvas = () => {
   // (see AreaNode for how it is taken and moved)
   const areaNodes: Node[] = useMemo(
     () =>
-      areas.map((area) => ({
+      (areasShown ? areas : []).map((area) => ({
         id: area.id,
         type: AREA_NODE,
         position: area.position,
@@ -288,8 +290,16 @@ const NetworkCanvas = () => {
         focusable: false,
         deletable: false,
       })),
-    [areas]
+    [areas, areasShown]
   );
+
+  // Hidden, an area cannot be selected nor renamed: the one that was is let go
+  useEffect(() => {
+    if (areasShown) return;
+    const network = useNetworkStore.getState();
+    if (network.selectedAreaId !== null) network.selectArea(null);
+    if (network.editingAreaId !== null) network.setEditingArea(null);
+  }, [areasShown]);
 
   // Sync Zustand devices to React Flow nodes (memoized to prevent unnecessary re-renders)
   const deviceNodes: Node[] = useMemo(() => {
@@ -494,6 +504,8 @@ const NetworkCanvas = () => {
         target instanceof HTMLElement &&
         (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
       if (isTyping) return;
+      // (hidden areas are out of its reach)
+      if (!useUIStore.getState().areasShown) return;
       const network = useNetworkStore.getState();
       if (network.selectedAreaId !== null) network.removeArea(network.selectedAreaId);
     };

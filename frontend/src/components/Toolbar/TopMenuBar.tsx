@@ -17,6 +17,7 @@ import {
   Building2,
   Presentation,
   Sparkles,
+  SquareDashed,
   Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -42,6 +43,8 @@ const TopMenuBar = () => {
   const resetMagnification = useUIStore((state) => state.resetMagnification);
   const particleAnimationEnabled = useUIStore((state) => state.particleAnimationEnabled);
   const toggleParticleAnimation = useUIStore((state) => state.toggleParticleAnimation);
+  const areasShown = useUIStore((state) => state.areasShown);
+  const setAreasShown = useUIStore((state) => state.setAreasShown);
   const applyAutoLayout = useNetworkStore((state) => state.applyAutoLayout);
   const autoConnectDevices = useNetworkStore((state) => state.autoConnectDevices);
   const triggerFitView = useNetworkStore((state) => state.triggerFitView);
@@ -344,6 +347,18 @@ const TopMenuBar = () => {
               {!particleAnimationEnabled && <span style={{ display: 'inline-block', width: '14px', marginRight: '6px' }}></span>}
               <Sparkles size={14} style={{ display: 'inline', marginRight: '6px' }} />
               {t.menu.view.animation}
+            </li>
+            {/* The areas behind the devices, shown or hidden: a preference of this browser */}
+            <li
+              onClick={() => setAreasShown(!areasShown)}
+              className="magnify-item"
+              role="menuitemcheckbox"
+              aria-checked={areasShown}
+            >
+              {areasShown && <Check size={14} style={{ display: 'inline', marginRight: '6px' }} />}
+              {!areasShown && <span style={{ display: 'inline-block', width: '14px', marginRight: '6px' }}></span>}
+              <SquareDashed size={14} style={{ display: 'inline', marginRight: '6px' }} />
+              {t.menu.view.areas}
             </li>
           </ul>
         </div>

@@ -139,7 +139,8 @@ describe('what an older version stored about a second colour theme', () => {
     store.getState().toggleDarkMode();
 
     const stored = JSON.parse(localStorage.getItem(UI_KEY) ?? '{}');
-    expect(stored.state).toEqual({ darkMode: true });
+    // (light or dark, and whether the areas are shown: nothing of the old theme)
+    expect(stored.state).toEqual({ darkMode: true, areasShown: true });
   });
 
   it('a stored value that is not a choice between light and dark leaves the system preference', async () => {
@@ -150,5 +151,27 @@ describe('what an older version stored about a second colour theme', () => {
 
     expect(store.getState().darkMode).toBe(true);
     expect(pageIsDark()).toBe(true);
+  });
+});
+
+describe('whether the areas are shown (Vista → «Mostra i riquadri»)', () => {
+  it('they are, the first time; the choice is kept from one page load to the next, with the theme', async () => {
+    systemPrefersDark(false);
+    expect((await loadStore()).getState().areasShown).toBe(true);
+
+    (await loadStore()).getState().setAreasShown(false);
+    const store = await loadStore();
+    expect(store.getState().areasShown).toBe(false);
+    expect(store.getState().darkMode).toBe(false);
+  });
+
+  it('a stored value that is not a yes or a no shows them', async () => {
+    systemPrefersDark(false);
+    localStorage.setItem(UI_KEY, JSON.stringify({ state: { darkMode: true, areasShown: 'no' }, version: 0 }));
+
+    const store = await loadStore();
+
+    expect(store.getState().areasShown).toBe(true);
+    expect(store.getState().darkMode).toBe(true);
   });
 });

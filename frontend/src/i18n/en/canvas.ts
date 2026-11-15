@@ -26,5 +26,7 @@ export const canvas: Dictionary['canvas'] = {
     namePlaceholder: 'Name',
     unnamed: 'Unnamed',
     labelHint: 'Drag to move the area, double-click to rename it',
+    /** Said when a new area is made while they were hidden from the View menu */
+    shownAgain: 'The areas were hidden: they are shown again',
   },
 };

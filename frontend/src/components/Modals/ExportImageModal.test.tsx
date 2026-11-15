@@ -198,6 +198,24 @@ describe('ExportImageModal — the dialog', () => {
   });
 });
 
+describe('ExportImageModal — the areas', () => {
+  afterEach(() => {
+    act(() => ui().setAreasShown(true));
+  });
+
+  it('are in the image as on the board: there when shown, not while they are hidden', async () => {
+    network().addArea({ label: 'Sede', color: 'teal', position: { x: 0, y: 0 }, size: { width: 400, height: 300 } });
+    render(<ExportImageModal />);
+    await openDialog();
+    expect(pictureTexts()).toContain('SEDE');
+    act(() => closeEveryModal());
+
+    act(() => ui().setAreasShown(false));
+    await openDialog();
+    expect(pictureTexts()).not.toContain('SEDE');
+  });
+});
+
 describe('ExportImageModal — the choices', () => {
   it('theme: the picture is light or dark as chosen, whatever the screen', async () => {
     render(<ExportImageModal />);

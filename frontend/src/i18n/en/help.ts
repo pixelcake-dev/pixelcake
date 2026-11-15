@@ -66,7 +66,10 @@ export const help: Dictionary['help'] = {
         'with “Rename”, the colours and “Delete”, and the Delete key deletes the selected area. ' +
         'The inside of an area does not get in the way: devices inside it are selected, ' +
         'connected and moved as usual. Areas also show in a presentation and in the exported ' +
-        'image, and are saved with the project.',
+        'image, and are saved with the project. View → “Show areas” hides them and shows them ' +
+        'again: a choice of this browser, which does not change the drawing. Hidden, they show ' +
+        'neither in a presentation nor in the image, and cannot be taken; a new area shows them ' +
+        'again.',
     },
     configure: {
       title: 'Configure them',

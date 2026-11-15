@@ -53,6 +53,14 @@ interface UIStore {
   // Particle Animation State (not persisted)
   particleAnimationEnabled: boolean;
 
+  /**
+   * Whether the areas of the canvas are shown (Vista → «Mostra i riquadri»).
+   * A preference of this browser, kept with the theme: not part of the
+   * drawing, not in the project file. Hidden, the areas are not drawn, not
+   * in the small map and not in the exported image, and cannot be taken
+   */
+  areasShown: boolean;
+
   // Welcome Screen State (not persisted - controlled by separate localStorage flag)
   showWelcomeScreen: boolean;
   /**
@@ -87,6 +95,8 @@ interface UIStore {
   // Particle Animation Actions
   toggleParticleAnimation: () => void;
   setParticleAnimation: (enabled: boolean) => void;
+
+  setAreasShown: (shown: boolean) => void;
 
   // Welcome Screen Actions
   setShowWelcomeScreen: (show: boolean) => void;
@@ -140,6 +150,9 @@ export const useUIStore = create<UIStore>()(
 
       // Particle Animation State (not persisted - default OFF)
       particleAnimationEnabled: false,
+
+      // The areas are shown until the user hides them (kept)
+      areasShown: true,
 
       // Welcome Screen State (not persisted - default ON)
       showWelcomeScreen: true,
@@ -318,6 +331,10 @@ export const useUIStore = create<UIStore>()(
         set({ particleAnimationEnabled: enabled });
       },
 
+      setAreasShown: (shown) => {
+        set({ areasShown: shown });
+      },
+
       // Welcome Screen Actions
       setShowWelcomeScreen: (show) => {
         // (put away, it is no longer asked for)
@@ -339,14 +356,18 @@ export const useUIStore = create<UIStore>()(
       name: 'pixelcake-ui-v1', // LocalStorage key
       partialize: (state) => ({
         darkMode: state.darkMode, // Persist darkMode preference
+        areasShown: state.areasShown,
       }),
-      // Light or dark is all that is kept. (A second colour theme existed
-      // once: what an older version stored about it is not read back.)
+      // Light or dark, and whether the areas are shown, is all that is kept.
+      // (A second colour theme existed once: what an older version stored
+      // about it is not read back.) What is not a yes or a no is left out
       merge: (persisted, current) => {
-        const saved = (persisted ?? {}) as { darkMode?: unknown };
-        return typeof saved.darkMode === 'boolean'
-          ? { ...current, darkMode: saved.darkMode }
-          : current;
+        const saved = (persisted ?? {}) as { darkMode?: unknown; areasShown?: unknown };
+        return {
+          ...current,
+          ...(typeof saved.darkMode === 'boolean' ? { darkMode: saved.darkMode } : {}),
+          ...(typeof saved.areasShown === 'boolean' ? { areasShown: saved.areasShown } : {}),
+        };
       },
       onRehydrateStorage: () => (state, error) => {
         if (error) {

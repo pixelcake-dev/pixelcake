@@ -5,7 +5,10 @@
  * the store; where an area goes is worked out in utils/canvasAreas.
  */
 
+import { toast } from 'sonner';
 import { useNetworkStore } from '@/store/networkStore';
+import { useUIStore } from '@/store/uiStore';
+import { getT } from '@/i18n';
 import { areaAround, areaAt, defaultAreaLabel, nextAreaColour } from '@/utils/canvasAreas';
 import { createTextMeasure, measureDeviceSizes } from '@/utils/drawingMeasure';
 import { areaLabelReach } from '@/utils/drawingImage';
@@ -24,8 +27,21 @@ function viewCentre(): { x: number; y: number } {
   return { x: (width / 2 - viewport.x) / zoom, y: (height / 2 - viewport.y) / zoom };
 }
 
+/**
+ * A new area is to be seen: when the areas are hidden (Vista → «Mostra i
+ * riquadri»), they are shown again, and a notice says so, rather than an
+ * area being made that nobody sees
+ */
+function showAreas(): void {
+  const ui = useUIStore.getState();
+  if (ui.areasShown) return;
+  ui.setAreasShown(true);
+  toast.info(getT().canvas.area.shownAgain);
+}
+
 /** A new area is the selected one, with its label ready to be typed */
 function addAndName(place: ReturnType<typeof areaAt>): string {
+  showAreas();
   const network = useNetworkStore.getState();
   const id = network.addArea({
     label: defaultAreaLabel(),

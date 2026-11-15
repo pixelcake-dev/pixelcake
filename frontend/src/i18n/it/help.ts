@@ -67,7 +67,10 @@ export const help = {
         "ed «Elimina», e il tasto Canc elimina il riquadro selezionato. L'interno di un riquadro " +
         'non intralcia: lì dentro i dispositivi si selezionano, si collegano e si spostano come ' +
         "sempre. I riquadri si vedono anche in presentazione e nell'immagine esportata, e " +
-        'vengono salvati con il progetto.',
+        'vengono salvati con il progetto. Vista → «Mostra i riquadri» li nasconde e li mostra ' +
+        'di nuovo: è una scelta di questo browser, che non cambia il disegno. Nascosti, non si ' +
+        "vedono né in presentazione né nell'immagine, e non si possono prendere; un riquadro " +
+        'nuovo li fa vedere di nuovo.',
     },
     configure: {
       title: 'Configurali',
