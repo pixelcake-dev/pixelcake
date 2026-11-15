@@ -69,6 +69,10 @@ export const devicePanel: Dictionary['devicePanel'] = {
       title: 'Two sites: main line and backup line',
       description: 'For trying out failures: nearly every cable has an alternative path',
     },
+    multinational: {
+      title: 'Multinational: ten sites in Italy',
+      description: (devices: number) => `A large network of ${devices} devices: MPLS, VLANs, firewalls, a backup line`,
+    },
     /** Asked before a sample takes the place of a drawing */
     replaceQuestion: {
       title: 'Load the sample network?',

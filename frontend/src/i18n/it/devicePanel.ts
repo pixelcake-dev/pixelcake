@@ -71,6 +71,11 @@ export const devicePanel = {
       title: 'Due sedi: linea principale e di riserva',
       description: "Per provare i guasti: quasi ogni cavo ha un'altra strada",
     },
+    multinational: {
+      title: 'Multinazionale: dieci sedi in Italia',
+      /** Said with the number of its devices, counted on the sample */
+      description: (devices: number) => `Una rete grande, di ${devices} dispositivi: MPLS, VLAN, firewall, una linea di riserva`,
+    },
     /** Asked before a sample takes the place of a drawing */
     replaceQuestion: {
       title: 'Caricare la rete di esempio?',
