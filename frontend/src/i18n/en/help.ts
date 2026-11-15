@@ -79,7 +79,8 @@ export const help: Dictionary['help'] = {
         'tab: choose a port and its settings appear below; the “Number of ports” is changed there ' +
         'too. The other devices have “Network cards”, with the name, speed and MAC of each card. ' +
         'In “General” every device also has its “Notes”: free text, of several lines, for what ' +
-        'does not fit in a field. On the drawing, hover over the device to read them. Problems ' +
+        'does not fit in a field. On the drawing a small square after the name says the device ' +
+        'has a note; hover over the device to read it. Problems ' +
         'are shown under the field as you type; changes take effect only when you press “Save”.',
     },
     route: {

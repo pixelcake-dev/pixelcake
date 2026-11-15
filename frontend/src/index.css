@@ -755,11 +755,27 @@ button.area-label:focus-visible {
 }
 
 .device-name {
+  position: relative;
   margin-top: 3px;
   font-size: 12.5px;
   line-height: 16px;
   font-weight: 600;
   color: var(--text-color);
+}
+
+/* A device with a note: a small square just after its name, in the colour of
+   the address. The note itself shows in a panel when the pointer rests on
+   the device, and is said to a screen reader; the mark is for the eye alone.
+   It hangs outside the name, which stays in the middle under the drawing */
+.device-note-mark {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin-top: -2.5px;
+  background-color: var(--text-color-light);
+  pointer-events: none;
 }
 
 .device-ip {

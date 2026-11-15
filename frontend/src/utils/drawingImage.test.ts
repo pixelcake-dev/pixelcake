@@ -16,6 +16,7 @@ import {
   FAILED_TEXT_OPACITY,
   FAILURE_BADGE,
   MARK_COLORS,
+  NOTE_MARK,
   PALETTES,
   ROLE_TAG,
   approximateTextWidth,
@@ -182,6 +183,48 @@ describe('layoutDrawing — devices', () => {
       // and a plain machine for a type the app does not know
       'server',
     ]);
+  });
+});
+
+describe('the mark of a device with a note', () => {
+  const withNotes = () =>
+    pair({
+      devices: [
+        device({ id: 'a', label: 'AB', ip: '10.0.0.1', position: { x: 0, y: 0 }, notes: 'Al secondo piano' }),
+        device({ id: 'b', label: 'B', ip: '10.0.0.2', position: { x: 0, y: 300 }, notes: '   ' }),
+      ],
+    });
+  const marksIn = (group: Element) =>
+    [...group.querySelectorAll('rect')].filter(
+      (rect) => rect.getAttribute('width') === String(NOTE_MARK.size) && rect.getAttribute('height') === String(NOTE_MARK.size)
+    );
+
+  it('is in the image as on the canvas: a small square just after the name, in the colour of the address', () => {
+    expect(layoutDrawing(withNotes()).devices.map((one) => one.note)).toEqual([true, false]);
+    const doc = parse(renderDrawingImage(withNotes(), LIGHT).svg);
+    const [first, second] = deviceGroups(doc);
+    const [mark] = marksIn(first);
+    // 'AB' is 12.5 wide at the half of 12.5 a letter: 52 + 6.25 and the 4 of room around a name
+    expect(mark.getAttribute('x')).toBe('62.25');
+    // in the middle of the line of the name: 8 + 48 + 3 under the top, 16 high
+    expect(mark.getAttribute('y')).toBe(String(59 + 8 - NOTE_MARK.size / 2));
+    expect(mark.getAttribute('fill')).toBe(PALETTES.light.address);
+    // (a note of spaces is no note)
+    expect(marksIn(second)).toHaveLength(0);
+  });
+
+  it('is as large as on the canvas, and the drawing is as wide as the mark needs', () => {
+    const sheet = styleSheet.replace(/\r\n/g, '\n');
+    const rule = sheet.slice(sheet.indexOf('\n.device-note-mark {'), sheet.indexOf('\n}', sheet.indexOf('\n.device-note-mark {')));
+    expect(rule).toContain(`width: ${NOTE_MARK.size}px;`);
+    expect(rule).toContain(`height: ${NOTE_MARK.size}px;`);
+    expect(rule).toContain('background-color: var(--text-color-light);');
+    // a long name with a note reaches further right than the same name without
+    const long = (notes: string) =>
+      layoutDrawing(input({ devices: [device({ id: 'a', label: 'Un nome lungo, più del riquadro', ip: '', notes })] })).bounds;
+    const without = long('');
+    const withMark = long('nota');
+    expect(withMark.x + withMark.width).toBeCloseTo(without.x + without.width + NOTE_MARK.size, 5);
   });
 });
 

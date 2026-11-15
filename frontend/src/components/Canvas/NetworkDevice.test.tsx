@@ -149,7 +149,25 @@ describe('a device on the canvas', () => {
     expect(drawingOf('Sconosciuto').dataset.drawing).toBe('server');
   });
 
-  it('carries no mark for its note: the app shows it in a panel (DeviceNote), a screen reader has it here', async () => {
+  it('a device with a note has a small square after its name, for the eye alone; one without has none', async () => {
+    add('PC-1', 'PC', { notes: 'In sala riunioni' });
+    add('PC-2', 'PC', { notes: '   ' });
+    await renderCanvas();
+    const mark = (label: string) => frameOf(label).querySelector('.device-name .device-note-mark');
+    expect(mark('PC-1')).not.toBeNull();
+    expect(mark('PC-1')?.getAttribute('aria-hidden')).toBe('true');
+    // (a note of spaces is no note)
+    expect(mark('PC-2')).toBeNull();
+    // the name reads as it did: the mark adds no text
+    expect(frameOf('PC-1').querySelector('.device-name')?.textContent).toBe('PC-1');
+
+    // and while presenting it is there too
+    act(() => presentation().enter());
+    await settle();
+    expect(mark('PC-1')).not.toBeNull();
+  });
+
+  it('says its note to a screen reader: the app shows it in a panel (DeviceNote), the mark is only for the eye', async () => {
     add('PC-1', 'PC', { notes: 'In sala riunioni' });
     add('PC-2');
     await renderCanvas();
@@ -164,9 +182,7 @@ describe('a device on the canvas', () => {
     } finally {
       act(() => setLanguage('it'));
     }
-    // what is drawn is the same, and the browser has no tooltip of its own to show
-    const drawn = (label: string) => frameOf(label).querySelector('.device-content')?.children.length;
-    expect(drawn('PC-1')).toBe(drawn('PC-2'));
+    // (and the browser has no tooltip of its own to show)
     expect(frameOf('PC-1').hasAttribute('title')).toBe(false);
   });
 });

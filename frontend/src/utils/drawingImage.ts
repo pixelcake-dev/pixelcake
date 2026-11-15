@@ -177,6 +177,8 @@ const FALLBACK_CABLE_WIDTH = 2.5;
 export const ROLE_TAG = { left: 4, top: -7, height: 16 } as const;
 export const FAILURE_BADGE = { right: 8, top: -6, radius: 12 } as const;
 export const FAILED_TEXT_OPACITY = 0.55;
+/** The mark of a device with a note: a square this large, just after the name (index.css, .device-note-mark) */
+export const NOTE_MARK = { size: 5 } as const;
 
 /** The colour of the upper layer of a drawing for each state: the same on both themes */
 export const DEVICE_STATE_COLORS: Record<Exclude<DeviceState, 'rest'>, string> = {
@@ -281,6 +283,8 @@ export interface SceneDevice {
   failed: boolean;
   /** The packet of the answer stops here */
   drop: boolean;
+  /** It has a note: a small square after its name, as on the canvas */
+  note: boolean;
 }
 
 export interface SceneArea {
@@ -445,6 +449,7 @@ export function layoutDrawing(input: DrawingInput): Scene {
         marks?.sourceId === device.id ? 'source' : marks?.targetId === device.id ? 'target' : null,
       failed,
       drop,
+      note: Boolean(device.notes?.trim()),
     };
 
     bounds.addBox(scene.box);
@@ -459,6 +464,9 @@ export function layoutDrawing(input: DrawingInput): Scene {
       const half = measureText(text, font) / 2 + m.textPad;
       bounds.add(centre - half, scene.box.y);
       bounds.add(centre + half, scene.box.y);
+    }
+    if (scene.note) {
+      bounds.add(centre + measureText(scene.label, NAME_FONT) / 2 + m.textPad + NOTE_MARK.size, scene.box.y);
     }
     if (scene.role) bounds.add(scene.box.x + ROLE_TAG.left, scene.box.y + ROLE_TAG.top);
     if (scene.failed) {
@@ -677,6 +685,14 @@ function deviceSvg(device: SceneDevice, look: DeviceLook): string {
   const texts: string[] = [];
   const nameTop = y + place.y + m.icon + m.iconGap;
   texts.push(deviceLine(device.label, centre, nameTop, m.nameLine, NAME_FONT, palette.text, look));
+  // (a device with a note: the small square just after its name, in the colour of the address)
+  if (device.note) {
+    const left = centre + measureText(device.label, NAME_FONT) / 2 + m.textPad;
+    const top = nameTop + m.nameLine / 2 - NOTE_MARK.size / 2;
+    texts.push(
+      `<rect x="${num(left)}" y="${num(top)}" width="${NOTE_MARK.size}" height="${NOTE_MARK.size}" fill="${palette.address}"/>`
+    );
+  }
   if (device.ip) {
     texts.push(
       deviceLine(device.ip, centre, nameTop + m.nameLine, m.ipLine, IP_FONT, palette.address, look)

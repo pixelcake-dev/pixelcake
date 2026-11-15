@@ -259,7 +259,7 @@ const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>
 
       {/* The note of the device: the app shows it to the eye in a panel of its
           own when the pointer rests here (DeviceNote); a screen reader has it
-          here. The drawing carries no mark for it */}
+          here. The eye sees that there is one by the small square after the name */}
       {data.notes?.trim() && <span className="sr-only">{t.canvas.device.note(data.notes.trim())}</span>}
 
       {/* (what the lamp says of the answer on screen, for who cannot see its colour) */}
@@ -269,7 +269,10 @@ const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>
       {/* Device Content */}
       <div className="device-content pointer-events-none">
         <DeviceDrawing drawing={drawing} state={state} className="device-icon" />
-        <span className="device-name">{data.label}</span>
+        <span className="device-name">
+          {data.label}
+          {data.notes?.trim() && <span className="device-note-mark" aria-hidden="true" />}
+        </span>
         {/* (a device with no address to show is its drawing and its name: no empty line) */}
         {address && <span className="device-ip">{address}</span>}
       </div>
