@@ -352,6 +352,17 @@ describe('the note panel (style sheet)', () => {
     expect(note.overflow).toBeUndefined();
   });
 
+  it('is never taller than its six lines: the room of the text is the clamp times the height of a line', () => {
+    const note = rule('.device-note');
+    const lines = rule('.device-note-text');
+    // (the text has the line of the panel: it sets none of its own)
+    expect(lines['line-height']).toBeUndefined();
+    expect(lines['max-height']).toBe(`calc(${lines['-webkit-line-clamp']} * ${note['line-height']})`);
+    // and the panel adds no room of its own under the text that a line could show in
+    expect(note['max-height']).toBeUndefined();
+    expect(note.height).toBeUndefined();
+  });
+
   it('has the look of the menus: the colours of the theme, its corners, the shadow of what floats', () => {
     const note = rule('.device-note');
     expect(note['background-color']).toBe('var(--bg-menu)');

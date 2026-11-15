@@ -953,13 +953,16 @@ body.react-flow-connecting .connect-point:hover::before {
   pointer-events: none;
 }
 
-/* (the lines are cut inside the room of the panel: none shows under the last) */
+/* (the lines are cut inside the room of the panel: none shows under the last.
+   The text is never taller than six lines of the panel, whatever a browser
+   makes of the clamp, so that at any zoom the panel ends on a whole line) */
 .device-note-text {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 6;
   line-clamp: 6;
   overflow: hidden;
+  max-height: calc(6 * 18px);
 }
 
 /* (with no room under the device it is above it, its bottom where the device starts) */
