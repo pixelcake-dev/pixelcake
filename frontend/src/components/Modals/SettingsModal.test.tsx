@@ -144,6 +144,12 @@ describe('SettingsModal', () => {
 
       // the line that explains the last field stays with it
       const select = screen.getByLabelText('Modalità email (SMTP)');
+      // (the three ways, each from the dictionary: the third was written in the window)
+      expect(within(select).getAllByRole('option').map(option => option.textContent)).toEqual([
+        'Auto (rileva automaticamente)',
+        'Server di posta interno',
+        'Cloud (M365, Gmail…)',
+      ]);
       const hint = screen.getByText(/Determina come viaggiano le email/);
       expect(select.closest('.grid')).toBe(hint.parentElement);
       expect(screen.getByRole('group', { name: 'Simulazione' })).toContainElement(select);

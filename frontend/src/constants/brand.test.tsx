@@ -15,7 +15,7 @@ import TopMenuBar from '@/components/Toolbar/TopMenuBar';
 import SettingsModal from '@/components/Modals/SettingsModal';
 import HelpModal from '@/components/Modals/HelpModal';
 import Logo from '@/components/ui/Logo';
-import { APP_DESCRIPTOR, APP_NAME, APP_TITLE } from './brand';
+import { APP_DESCRIPTOR, APP_NAME, APP_TITLE, APP_VERSION } from './brand';
 import { dictionaryOf } from '@/i18n';
 
 /** The motto of the Italian interface, the language these tests run in */
@@ -37,6 +37,16 @@ describe('the name, the descriptor and the motto', () => {
     expect(APP_DESCRIPTOR).toBe('Visual Network Designer');
     expect(APP_MOTTO).toBe('Una rete, un pezzo alla volta');
     expect(APP_TITLE).toBe('PixelCake - Visual Network Designer');
+  });
+});
+
+describe('the version', () => {
+  it('is the one of package.json', () => {
+    const [written] = Object.values(
+      import.meta.glob<string>('/package.json', { eager: true, import: 'version' })
+    );
+    expect(APP_VERSION).toMatch(/^\d+\.\d+\.\d+/);
+    expect(APP_VERSION).toBe(written);
   });
 });
 
