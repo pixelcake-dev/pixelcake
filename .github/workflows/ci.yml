@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   frontend:
     runs-on: ubuntu-latest
@@ -38,3 +41,32 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      # The build that passed the checks above is the one put online. Only
+      # from main, and only once the repository is public (GitHub Pages is
+      # not available to a private repository on this plan)
+      - name: Keep the build for GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !github.event.repository.private
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  # Online at the address set in Settings → Pages (app.pixelcake.dev), whose
+  # source must be "GitHub Actions"
+  pages:
+    needs: frontend
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !github.event.repository.private
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - name: Put the build online
+        id: deployment
+        uses: actions/deploy-pages@v4
