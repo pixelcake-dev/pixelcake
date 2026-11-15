@@ -1,13 +1,12 @@
 import type {
   NetworkDevice,
-  DeviceType,
   GlobalNetworkSettings,
   DeviceTemplate,
-  Port,
   NetworkInterfaceCard,
 } from '@/types/network';
 import { findNextAvailableIP, generateMacAddress } from './ipHelpers';
 import { isEndDeviceKind } from './defaultDns';
+import { newDeviceName, newDevicePorts } from './newDevice';
 import { isL3Type } from '@/engine';
 
 /**
@@ -21,19 +20,6 @@ interface ConfigurableDeviceRow {
   portCount: number;
   quantity: number;
 }
-
-/**
- * The name of a new device of a template: the name of the template, and how
- * many devices of its type are there already (those just added count too).
- * It is the name the window that adds one device proposes (AddDeviceModal)
- */
-export const generateDeviceName = (
-  template: DeviceTemplate,
-  existingDevices: NetworkDevice[]
-): string => {
-  const typeCount = existingDevices.filter((d) => d.type === template.type).length;
-  return `${template.name.replace(/\s+/g, '-')}-${typeCount}`;
-};
 
 /**
  * Generates grid-based positions to spread devices evenly
@@ -58,50 +44,6 @@ export const generateGridPositions = (
   }
 
   return positions;
-};
-
-/**
- * Generate default port configuration for network devices
- * @param portCount Number of ports to generate
- * @param deviceType Type of device (Switch, Router, Firewall)
- * @returns Array of Port configurations
- */
-const generateDefaultPorts = (portCount: number, deviceType: DeviceType): Port[] => {
-  const ports: Port[] = [];
-
-  for (let i = 1; i <= portCount; i++) {
-    const port: Port = {
-      id: i,
-      enabled: true,
-      speed: 'auto',
-    };
-
-    // Device-specific defaults
-    if (deviceType === 'Switch') {
-      port.portType = i === 1 ? 'trunk' : 'access'; // First port is trunk (uplink), rest are access
-      port.poe = i > 1; // PoE enabled for access ports
-      port.vlan = i === 1 ? [1, 10, 20] : 1; // Trunk has multiple VLANs, access has VLAN 1
-    } else if (deviceType === 'Router') {
-      port.portType = i === 1 ? 'wan' : 'lan';
-      port.nat = i === 1; // NAT enabled on WAN port
-    } else if (deviceType === 'Firewall') {
-      if (i === 1) {
-        port.portType = 'wan';
-        port.securityZone = 'untrust';
-        port.ips = true; // IPS enabled on WAN
-      } else if (i === 2) {
-        port.portType = 'dmz';
-        port.securityZone = 'dmz';
-      } else {
-        port.portType = 'lan';
-        port.securityZone = 'trust';
-      }
-    }
-
-    ports.push(port);
-  }
-
-  return ports;
 };
 
 /**
@@ -135,8 +77,8 @@ const generateDefaultNIC = (
 /**
  * Bulk adds multiple devices with configurable port counts and standard devices with NICs.
  * Each is made from the template of its row, which is found by its id: its
- * name, its address and its card are those the window that adds one device
- * gives a device of that template
+ * name, its address, its card and its ports are those the window that adds
+ * one device gives a device of that template
  *
  * @param configurableRows Array of configurable device rows (Switch/Router/Firewall with portCount)
  * @param standardQuantities How many standard devices (PC/Server/Database/etc.) of each template, by template id
@@ -174,12 +116,13 @@ export const bulkAddDevices = (
     const type = template.type;
 
     for (let i = 0; i < row.quantity; i++) {
-      const deviceName = generateDeviceName(template, currentDevices);
+      // (the devices just made are in the list: their names are taken)
+      const deviceName = newDeviceName(template.name, currentDevices);
       const ip = findNextAvailableIP(currentDevices, globalSettings);
       const position = allPositions[positionIndex++];
 
-      // Generate ports based on portCount
-      const ports = generateDefaultPorts(row.portCount, type);
+      // As many ports as the row says, plain: those the window that adds one gives
+      const ports = newDevicePorts(row.portCount, type);
 
       const newDevice: Omit<NetworkDevice, 'id'> = {
         type,
@@ -212,7 +155,7 @@ export const bulkAddDevices = (
     const type = template.type;
 
     for (let i = 0; i < quantity; i++) {
-      const deviceName = generateDeviceName(template, currentDevices);
+      const deviceName = newDeviceName(template.name, currentDevices);
       const ip = findNextAvailableIP(currentDevices, globalSettings);
       const position = allPositions[positionIndex++];
 

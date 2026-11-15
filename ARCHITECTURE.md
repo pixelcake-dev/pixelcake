@@ -110,7 +110,7 @@ An area is a rectangle with a label, drawn behind a group of devices to say what
   - Two sections: Configurable Devices (Switch/Router/Firewall with portCount dropdown) + Standard Devices (PC/Server/Database with fixed 1 NIC)
   - A row is a template, told by its id. Several templates are of one type (seven are servers): the quantity of a row, its key and the devices it adds are of its template alone. Only the templates the app comes with are listed, not the user's own
   - ConfigurableDeviceRow: Dynamic rows with id, templateType, portCount, quantity
-  - Auto-generation: Ports and NICs with realistic defaults (VLAN, PoE, NAT, MAC)
+  - Auto-generation: the ports and the card the window that adds one gives (plain ports; a card with a MAC of its own)
   - Search filtering + custom scrollbar (react-custom-scrollbars-2, autoHeightMax: 500px)
 
 ### Project Modal
@@ -365,15 +365,20 @@ light or dark whatever the theme, a vector file, and a sharp PNG of any size.
 - Configurable per connection: particleCount, particleSpeed, particleSize, color
 - Edge type switching via `particleAnimationEnabled`
 
+### A new device (`frontend/src/utils/newDevice.ts`)
+- What a new device starts with, whichever window makes it. Pure. AddDeviceModal and `bulkAddDevices` both ask here, so that a device made alone and one made in bulk cannot drift apart
+- `newDeviceName(templateName, devices)` - The name of the template, with a dash for each space, and a number: the lowest, from 1, for which no device of the canvas has that name (`PC-1`, `Web-Server-2`). The number is not a count: after a deletion the name that was freed is given again, and never one that is taken. A name is taken whatever the template of the device that has it and whatever its case, compared as the terminal compares names (`resolveEndpoint`: trimmed, case-insensitive), since the terminal finds a device by its name. In AddDeviceModal it is a proposal, shown in a field. Nothing that is on the canvas is ever renamed: a drawing made before keeps its `PC-0`
+- `newDevicePorts(portCount, deviceType)` - The ports of a new switch, router or firewall: numbered from 1, each on and at `speed: 'auto'`, `portType` `lan` on a router or a firewall and `access` on a switch (or any other device with ports). Nothing else: no VLAN, PoE, NAT, zone or IPS, because the engine applies them for real and they are for whoever configures the device to choose. So a switch made in either window is not VLAN-aware, a router does no NAT, and a cable goes on any free port of a firewall
+
 ### Bulk Device Helpers (`frontend/src/utils/bulkDeviceHelpers.ts`)
 - `bulkAddDevices(rows, quantities, …)` - every device is made from the template of its row, found by its id, and says so (`templateId`: the canvas takes its icon, and the windows its capabilities, from there)
-- `generateDefaultPorts(portCount, deviceType)` - Switch: trunk+access+PoE, Router: WAN+LAN+NAT, Firewall: security zones
+- Ports: `newDevicePorts` of `utils/newDevice.ts`, as many as the row says
 - A new router or firewall gets no gateway (on a router the gateway is its default route); switches and end devices get the one of the project
 - `generateDefaultNIC(ip, subnet, gateway, dns?)` - Auto MAC, eth0, auto speed; the DNS server of the project when it has one. It is the card AddDeviceModal starts from
-- Naming: `generateDeviceName(template, devices)`, the name of the template and how many devices of its type there are, those just made included: the name AddDeviceModal proposes
+- Naming: `newDeviceName` of `utils/newDevice.ts` (see [A new device](#a-new-device-frontendsrcutilsnewdevicets)), asked again for each device with those just made in the list: a row of three takes three free names
 - Grid positioning: `generateGridPositions()` with random offsets (-25/+25px)
 - IP assignment: `findNextAvailableIP()` of `ipHelpers`, the one AddDeviceModal uses: the first free address of the network of the project, from .2
-- A device made here is the one AddDeviceModal makes from the same template (`BulkAddDeviceModal.same.test.tsx` compares the two, template by template), but for three things: the port defaults above (a device made alone starts with plain ports), its place on the grid, and that it is not selected
+- A device made here is the one AddDeviceModal makes from the same template (`BulkAddDeviceModal.same.test.tsx` compares the two, template by template, and the ports for every number of ports offered), but for two things: its place on the grid, and that it is not selected
 
 ## Data Types
 
