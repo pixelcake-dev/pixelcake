@@ -44,6 +44,12 @@
  * cable with its end not bound: the port, and with it the zone, is the
  * user's to choose (engine/interfaces.ts, requiresExplicitBinding).
  *
+ * A port named after a device (its name as written, case and spaces at the
+ * ends aside) says where that device is cabled: of the places of its network,
+ * one with such a port free goes first, and the port is taken before any
+ * other of the place. A port named after another device on the board is kept
+ * for that one: taken last.
+ *
  * Never cabled automatically: routers and firewalls between themselves, the
  * Internet, end devices between themselves. No cable is given a name. Among
  * the devices waiting for a cable, the one nearest to where it can go is
@@ -112,6 +118,8 @@ const isWireless = (device: NetworkDevice) =>
   isEndDevice(device) && device.templateId !== undefined && WIRELESS.has(device.templateId);
 /** What kind of device it is: its template, else its type */
 const kindOf = (device: NetworkDevice) => device.templateId ?? device.type;
+/** A name as a port is named after a device: case and spaces at the ends aside */
+const nameKey = (text: string | undefined) => (text ?? '').trim().toLocaleLowerCase();
 
 interface Address {
   ip: string;
@@ -234,10 +242,13 @@ class Board {
   private switchGroups: Map<string, string> | undefined;
   /** For each group of switches, which network each VLAN is; made again after each cable */
   private vlanMaps = new Map<string, Map<number, VlanNetwork>>();
+  /** The names of the devices on the board, as a port is named after one */
+  private readonly names: Set<string>;
 
   constructor(devices: NetworkDevice[], existing: NetworkConnection[]) {
     this.byId = new Map(devices.map((device) => [device.id, device]));
     this.order = new Map(devices.map((device, index) => [device.id, index]));
+    this.names = new Set(devices.map((device) => nameKey(device.label)).filter((name) => name !== ''));
     // The cables as the board keeps them: each end on its interface
     this.connections = normalizeBindings(
       devices,
@@ -406,6 +417,29 @@ class Board {
     return network && network.known.length > 0 ? fits(network.known, toward) : 1;
   }
 
+  /** A port named after `peer`: where the user says its cable goes */
+  namedAfter = (port: Port, peer: NetworkDevice) => {
+    const name = nameKey(port.name);
+    return name !== '' && name === nameKey(peer.label);
+  };
+
+  /** A port named after another device on the board than `peer`: kept for that one */
+  private keptFromThe = (port: Port, peer: NetworkDevice) => {
+    const name = nameKey(port.name);
+    return name !== '' && name !== nameKey(peer.label) && this.names.has(name);
+  };
+
+  /** Whether `device` has a free port, in service, named after `peer` */
+  private portFreeFor(device: NetworkDevice, peer: NetworkDevice): boolean {
+    const used = usedInterfaceKeys(device, this.connections);
+    return listInterfaces(device).some(
+      (iface) => iface.kind === 'port' && iface.enabled && !used.has(iface.key) && this.namedAfter(iface.port, peer)
+    );
+  }
+
+  /** Whether one of the two has a free port named after the other: the two are meant to be cabled */
+  meantFor = (place: NetworkDevice, device: NetworkDevice) => this.portFreeFor(place, device) || this.portFreeFor(device, place);
+
   /** The kinds of device (their templates) cabled to the ports of a switch in one VLAN */
   private kindsIn(device: NetworkDevice, vlan: number): Set<string> {
     const kinds = new Set<string>();
@@ -432,12 +466,20 @@ class Board {
     const used = usedInterfaceKeys(device, this.connections);
     // An uplink of a switch from its last ports, its devices from the first
     const fromTheEnd = isSwitch(device) && (isSwitch(peer) || UPLINK.has(peer.type));
+    // (a port in service named after the peer before all; one named after another device last of its kind)
     const ranked = interfaces
       .filter((iface) => !used.has(iface.key))
-      .map((iface) => ({ iface, score: iface.kind === 'port' ? this.suits(device, iface.port, peer, toward) : 0 }))
-      .filter((one): one is { iface: DeviceInterface; score: number } => one.score !== undefined)
+      .map((iface) => ({
+        iface,
+        score: iface.kind === 'port' ? this.suits(device, iface.port, peer, toward) : 0,
+        named: iface.kind === 'port' && iface.enabled && this.namedAfter(iface.port, peer),
+        kept: iface.kind === 'port' && this.keptFromThe(iface.port, peer),
+      }))
+      .filter((one): one is { iface: DeviceInterface; score: number; named: boolean; kept: boolean } => one.score !== undefined)
       .sort((a, b) => {
+        if (a.named !== b.named) return a.named ? -1 : 1;
         if (a.score !== b.score) return a.score - b.score;
+        if (a.kept !== b.kept) return a.kept ? 1 : -1;
         if (a.iface.enabled !== b.iface.enabled) return a.iface.enabled ? -1 : 1;
         if (a.iface.kind === 'port' && b.iface.kind === 'port') {
           return fromTheEnd ? b.iface.port.id - a.iface.port.id : a.iface.port.id - b.iface.port.id;
@@ -581,13 +623,15 @@ function climb(
     for (const group of board.groups()) {
       if (group.some((device) => BY_HAND.has(device.type))) continue;
       const inGroup = new Set(group.map((device) => device.id));
-      // (a place known to be on a network of the group before one that only may be:
-      // a floor switch cut from its core goes back to its own site)
+      // (two meant for each other by the name of a port first; then a place known
+      // to be on a network of the group before one that only may be: a floor
+      // switch cut from its core goes back to its own site)
       const pairs = members(group).flatMap((member) =>
         placesFor(member, inGroup).map((upper) => ({
           upper,
           lower: member,
           distance: distance(upper, member),
+          meant: board.meantFor(upper, member),
           tier: (overlap(board.networksOf(member).known, board.networksOf(upper).known) ? 0 : 3) + inArea(member, upper),
         }))
       );
@@ -598,6 +642,7 @@ function climb(
       const choices = pairs
         .sort(
           (a, b) =>
+            Number(b.meant) - Number(a.meant) ||
             a.tier - b.tier ||
             a.distance - b.distance ||
             board.rank(a.lower) - board.rank(b.lower) ||
@@ -648,9 +693,15 @@ export function connectLooseDevices(
   const nearestTo = (device: NetworkDevice) => (a: NetworkDevice, b: NetworkDevice) =>
     inArea(device, a) - inArea(device, b) || distance(device, a) - distance(device, b) || board.rank(a) - board.rank(b);
   const switches = devices.filter(isSwitch);
+  /** Of `places`, those meant for the device by the name of a port (see Board.meantFor) */
+  const meantOf = (device: NetworkDevice, places: NetworkDevice[]) =>
+    new Set(places.filter((one) => board.meantFor(one, device)).map((one) => one.id));
+  /** The places of its network: one meant for it by the name of a port first, then as nearestTo */
   const ofItsNetwork = (device: NetworkDevice, places: NetworkDevice[]) => {
     const networks = board.networksOf(device);
-    return places.filter((one) => one.id !== device.id && share(networks, board.networksOf(one))).sort(nearestTo(device));
+    const found = places.filter((one) => one.id !== device.id && share(networks, board.networksOf(one)));
+    const meant = meantOf(device, found);
+    return found.sort((a, b) => Number(!meant.has(a.id)) - Number(!meant.has(b.id)) || nearestTo(device)(a, b));
   };
 
   // 1. End devices on a cable (the access points among them) to a switch; a
@@ -659,11 +710,20 @@ export function connectLooseDevices(
   const balancers = devices.filter((device) => device.type === 'LoadBalancer');
   const behind = (balancer: NetworkDevice, device: NetworkDevice) =>
     board.peersOf(balancer).some((peer) => isEndDevice(peer) && kindOf(peer) === kindOf(device));
-  /** `first` before `then` in each area tier: its own area before all, then nearest first */
+  /**
+   * `first` before `then` in each area tier: one meant for it by the name of a
+   * port before all, then its own area, then nearest first
+   */
   const preferring = (device: NetworkDevice, first: NetworkDevice[], then: NetworkDevice[]) => {
     const ahead = new Set(ofItsNetwork(device, first).map((one) => one.id));
-    return [...ofItsNetwork(device, first), ...ofItsNetwork(device, then)].sort(
-      (a, b) => inArea(device, a) - inArea(device, b) || Number(!ahead.has(a.id)) - Number(!ahead.has(b.id)) || nearestTo(device)(a, b)
+    const all = [...ofItsNetwork(device, first), ...ofItsNetwork(device, then)];
+    const meant = meantOf(device, all);
+    return all.sort(
+      (a, b) =>
+        Number(!meant.has(a.id)) - Number(!meant.has(b.id)) ||
+        inArea(device, a) - inArea(device, b) ||
+        Number(!ahead.has(a.id)) - Number(!ahead.has(b.id)) ||
+        nearestTo(device)(a, b)
     );
   };
   const wiredFor = (device: NetworkDevice) => preferring(device, balancers.filter((balancer) => behind(balancer, device)), switches);
@@ -720,12 +780,13 @@ export function connectLooseDevices(
 
   // 6. The ports a switch gave its devices, in the order the devices stand:
   // from the left in a row, from the top in a column (among ports meant for
-  // them alike)
+  // them alike; a device on the port named after it stays there)
   const given = new Map<string, NetworkConnection[]>();
   for (const one of board.added) {
     const upper = devices.find((device) => device.id === one.source);
+    const lower = devices.find((device) => device.id === one.target);
     const port = upper?.ports?.find((each) => each.id === one.sourcePort);
-    if (!upper || !isSwitch(upper) || !port) continue;
+    if (!upper || !lower || !isSwitch(upper) || !port || board.namedAfter(port, lower)) continue;
     const kind = port.portType === 'trunk' ? 'trunk' : String(accessVlan(port) ?? '');
     const key = `${upper.id}|${kind}|${port.enabled !== false}`;
     given.set(key, [...(given.get(key) ?? []), one]);

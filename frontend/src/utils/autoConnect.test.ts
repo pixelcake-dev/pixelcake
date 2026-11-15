@@ -3,7 +3,8 @@
  * device with no cable gets one, never one that closes a loop. An end device
  * goes to the nearest switch of its own network (a laptop, a smartphone or a
  * tablet to an access point of it first), on a free port; a switch with no
- * uplink to the nearest router, firewall or core switch of its network.
+ * uplink to the nearest router, firewall or core switch of its network. A
+ * port named after a device is that device's place, before any nearer one.
  * Routers, firewalls and the Internet are cabled by hand, end devices are
  * never cabled together, and no cable gets a name. What is left alone is
  * said, with the reason.
@@ -400,6 +401,43 @@ describe('the port it takes', () => {
     expect(portsTaken(connectLooseDevices(devices, taken, 1))).toEqual({ 'PC-1': 1 });
   });
 
+  it('a port named after a device is its place: that switch first, that port first; one named after another device is taken last', () => {
+    // SW-Core port 1 is named after the file server, SW-Floor port 1 after PC-2
+    const core = switchWith('SW-Core', vlanPorts({ 1: { name: ' srv-file' } }), { ip: '192.168.1.2', ...at(0, 0) });
+    const floor = switchWith('SW-Floor', vlanPorts({ 1: { name: 'PC-2' } }), { ip: '192.168.1.3', ...at(600, 0) });
+    const devices = [
+      core,
+      floor,
+      pc('Srv-File', '192.168.1.10', 500, 200),
+      pc('PC-3', '192.168.1.13', 600, 200),
+      pc('PC-2', '192.168.1.12', 700, 200),
+    ];
+    const result = connectLooseDevices(devices, [], 1);
+    // the server, drawn nearer to SW-Floor, goes to its port on SW-Core; PC-3, nearest, passes over
+    // the port of PC-2, which stays there though it stands to the right of PC-3
+    expect(Object.fromEntries(result.connections.map((one) => [one.target, `${one.source}:${one.sourcePort}`]))).toEqual({
+      'Srv-File': 'SW-Core:1',
+      'PC-3': 'SW-Floor:2',
+      'PC-2': 'SW-Floor:1',
+    });
+
+    // a port named after it but turned off is no place for it
+    const off = switchWith('SW-Core', vlanPorts({ 1: { name: 'Srv-File', enabled: false } }), { ip: '192.168.1.2', ...at(0, 0) });
+    expect(made(connectLooseDevices([off, floor, pc('Srv-File', '192.168.1.10', 500, 200)], [], 1))).toEqual(['SW-Floor>Srv-File']);
+  });
+
+  it('a switch with no way up goes to the device one of its ports is named after, on that port', () => {
+    const r1 = router('R-1', 300, 0, ['192.168.1.1', '']);
+    const core1 = sw('SW-Core-1', '192.168.1.2', 0, 200);
+    const core2 = sw('SW-Core-2', '192.168.1.3', 900, 200);
+    // nearer to SW-Core-1; its own uplink would be its last port, 8
+    const floor = switchWith('SW-Floor', vlanPorts({ 5: { name: 'SW-Core-2' } }), { ip: '192.168.1.5', ...at(100, 400) });
+    const result = connectLooseDevices([r1, core1, core2, floor], [bound('c1', 'R-1', 1, 'SW-Core-1', 8), bound('c2', 'R-1', 2, 'SW-Core-2', 8)], 1);
+    expect(result.connections.map((one) => `${one.source}:${one.sourcePort}>${one.target}:${one.targetPort}`)).toEqual([
+      'SW-Core-2:7>SW-Floor:5',
+    ]);
+  });
+
   it('a device goes to a switch of its own area first: a PC on DHCP of one site, drawn nearer to the switch of another', () => {
     const area = (id: string, x: number): CanvasArea => ({ id, label: id, color: 'slate', position: { x, y: 0 }, size: { width: 500, height: 500 } });
     const areas = [area('Torino', 0), area('Firenze', 600)];
@@ -684,5 +722,15 @@ describe('the samples, one cable taken away at a time', () => {
       if (!nearer) unlike.push(`${cable.id}: ${ends(cable)} drawn, ${ends(again)} made`);
     }
     expect(unlike).toEqual([]);
+  });
+
+  it('two sites: three cables cut, the file server moved next to the switch of floor 2, all three back on the ports named for them', () => {
+    const { devices: drawn, connections } = createRedundancySample();
+    const devices = drawn.map((one) => (one.id === 'srv-file' ? { ...one, position: { x: 560, y: 450 } } : one));
+    const cut = new Set(['link-srv-file', 'link-pc-sede-2', 'link-sede-core']);
+    const all = normalizeBindings(devices, connections);
+    const result = connectLooseDevices(devices, all.filter((one) => !cut.has(one.id)), 1000);
+    const ends = endsOn(devices);
+    expect(result.connections.map(ends).sort()).toEqual(all.filter((one) => cut.has(one.id)).map(ends).sort());
   });
 });
