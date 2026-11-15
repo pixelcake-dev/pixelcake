@@ -74,7 +74,8 @@ export const devicePanel = {
     multinational: {
       title: 'Multinazionale: dieci sedi in Italia',
       /** Said with the number of its devices, counted on the sample */
-      description: (devices: number) => `Una rete grande, di ${devices} dispositivi: MPLS, VLAN, firewall, una linea di riserva`,
+      description: (deviceCount: number) =>
+        `Una rete grande, di ${deviceCount} ${deviceCount === 1 ? 'dispositivo' : 'dispositivi'}: MPLS, VLAN, firewall, una linea di riserva`,
     },
     /** Asked before a sample takes the place of a drawing */
     replaceQuestion: {

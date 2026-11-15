@@ -71,7 +71,8 @@ export const devicePanel: Dictionary['devicePanel'] = {
     },
     multinational: {
       title: 'Multinational: ten sites in Italy',
-      description: (devices: number) => `A large network of ${devices} devices: MPLS, VLANs, firewalls, a backup line`,
+      description: (deviceCount: number) =>
+        `A large network of ${deviceCount} ${deviceCount === 1 ? 'device' : 'devices'}: MPLS, VLANs, firewalls, a backup line`,
     },
     /** Asked before a sample takes the place of a drawing */
     replaceQuestion: {

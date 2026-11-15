@@ -190,12 +190,12 @@ describe('the guide — "Chiedi cosa succede se qualcosa si rompe"', () => {
 
 describe('the guide — the samples and the backup route', () => {
   it('counts the samples the panel offers', () => {
-    expect(step('Aggiungi i dispositivi')).toContain('quattro reti di esempio');
+    expect(step('Aggiungi i dispositivi')).toContain('cinque reti di esempio');
 
     render(<DevicePanel />);
     fireEvent.click(screen.getByRole('button', { name: 'Esempi' }));
     const samples = screen.getAllByRole('button').filter(button => button.className.includes('sidebar-panel-item'));
-    expect(samples).toHaveLength(4);
+    expect(samples).toHaveLength(5);
   });
 
   it('says a second route to the same network is a backup', () => {
