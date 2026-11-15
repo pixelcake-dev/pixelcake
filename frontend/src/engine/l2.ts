@@ -32,7 +32,8 @@ import { areSameNetwork, getNetworkAddress, isValidIP } from '@/utils/ipHelpers'
 import type { Topology } from './types';
 import { boundInterface, interfacePhrase, listInterfaces } from './interfaces';
 import type { DeviceInterface } from './interfaces';
-import { buildAdjacency, forwardingRole, isInternetLike, isPublicInternet } from './topology';
+import { buildAdjacency, connectionsOf, devicesById, forwardingRole, isInternetLike, isPublicInternet } from './topology';
+import { memoSlot, rememberedFor } from './memo';
 import { hasInterfaceAddresses, ownedAddresses } from './addressing';
 import { evaluateFirewall } from './firewall';
 import type { Packet } from './firewall';
@@ -383,7 +384,7 @@ function unboundNote(
 /** The cables a frame from `from` may start on (connection ids) */
 function startLinks(request: L2Request): Set<string> {
   const { topo, from, egress } = request;
-  const own = topo.connections.filter(c => c.source === from.id || c.target === from.id);
+  const own = connectionsOf(topo, from.id);
   if (!egress) return new Set(own.map(c => c.id));
 
   const bound = own.filter(c => boundInterface(c, from)?.key === egress.key);
@@ -396,7 +397,7 @@ function startLinks(request: L2Request): Set<string> {
 /** Breadth-first search for the device that answers for `wantIp` */
 function walk(request: L2Request): WalkOutcome {
   const { topo, from, wantIp, packet } = request;
-  const devicesById = new Map(topo.devices.map(d => [d.id, d] as const));
+  const byId = devicesById(topo);
   const adjacency = buildAdjacency(topo);
   const allowedStart = startLinks(request);
   const senderVlans = declaredVlans(from);
@@ -425,7 +426,7 @@ function walk(request: L2Request): WalkOutcome {
     for (const { neighborId, connection } of adjacency.get(device.id) ?? []) {
       if (node.link?.id === connection.id) continue; // never back down the same cable
       if (node === start && !allowedStart.has(connection.id)) continue;
-      const next = devicesById.get(neighborId);
+      const next = byId.get(neighborId);
       if (!next) continue;
 
       const drop = (at: Node, reason: string, unroutable?: Unroutable) =>
@@ -951,6 +952,8 @@ export function forwardAssumed(request: L2Request): L2Result {
   return explain({ ...request, purpose: 'deliver' }, outcome);
 }
 
+const DISTANCES = memoSlot('hop distances');
+
 /**
  * Hop distances from `originId` to every device reachable on the drawing.
  * With `workingOnly`, cables that are cut and devices that are down (see
@@ -961,25 +964,28 @@ function hopDistances(
   originId: string,
   options: { workingOnly?: boolean } = {}
 ): Map<string, number> {
-  const adjacency = buildAdjacency(topo);
-  const distances = new Map<string, number>([[originId, 0]]);
-  const queue = [originId];
-  for (let head = 0; head < queue.length; head++) {
-    const currentId = queue[head];
-    const distance = distances.get(currentId) ?? 0;
-    for (const { neighborId, connection } of adjacency.get(currentId) ?? []) {
-      if (distances.has(neighborId)) continue;
-      if (
-        options.workingOnly &&
-        (isLinkCut(topo, connection.id) || isDeviceDown(topo, neighborId))
-      ) {
-        continue;
+  // (worked out once per topology and origin while a memo is in force: see ./memo)
+  return rememberedFor(DISTANCES, topo, `${originId}|${options.workingOnly ? 'working' : 'all'}`, () => {
+    const adjacency = buildAdjacency(topo);
+    const distances = new Map<string, number>([[originId, 0]]);
+    const queue = [originId];
+    for (let head = 0; head < queue.length; head++) {
+      const currentId = queue[head];
+      const distance = distances.get(currentId) ?? 0;
+      for (const { neighborId, connection } of adjacency.get(currentId) ?? []) {
+        if (distances.has(neighborId)) continue;
+        if (
+          options.workingOnly &&
+          (isLinkCut(topo, connection.id) || isDeviceDown(topo, neighborId))
+        ) {
+          continue;
+        }
+        distances.set(neighborId, distance + 1);
+        queue.push(neighborId);
       }
-      distances.set(neighborId, distance + 1);
-      queue.push(neighborId);
     }
-  }
-  return distances;
+    return distances;
+  });
 }
 
 /** True when the two devices are joined by cables at all */

@@ -17,6 +17,8 @@
 import type { NetworkConnection, NetworkDevice } from '@/types';
 import type { Failures, Topology } from './types';
 import { boundInterface, listInterfaces } from './interfaces';
+import { memoSlot, rememberedFor } from './memo';
+import { devicesById } from './topology';
 
 /** True when the list breaks something */
 export function hasFailures(failures: Failures | undefined): failures is Failures {
@@ -75,11 +77,22 @@ export function linkDownReason(
  *
  * An interface nothing is attached to is not in the map: there is no failure
  * to speak of, and layer 2 reports the missing cable.
+ *
+ * Worked out once per topology and device while a memo is in force (see
+ * ./memo); the map is not to be changed by the caller.
  */
 export function deadInterfaces(device: NetworkDevice, topo: Topology): Map<string, string> {
-  const dead = new Map<string, string>();
-  if (!hasFailures(topo.failures)) return dead;
+  if (!hasFailures(topo.failures)) return new Map();
+  // (kept by its id when the device is the topology's own object; any other
+  // version of it is worked out apart)
+  if (devicesById(topo).get(device.id) !== device) return findDeadInterfaces(device, topo);
+  return rememberedFor(DEAD_INTERFACES, topo, device.id, () => findDeadInterfaces(device, topo));
+}
 
+const DEAD_INTERFACES = memoSlot('dead interfaces');
+
+function findDeadInterfaces(device: NetworkDevice, topo: Topology): Map<string, string> {
+  const dead = new Map<string, string>();
   const devicesById = new Map(topo.devices.map(d => [d.id, d] as const));
   const interfaces = new Set(listInterfaces(device).map(iface => iface.key));
   const working = new Set<string>();

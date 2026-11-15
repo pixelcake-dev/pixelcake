@@ -47,7 +47,7 @@
 import type { NetworkDevice, ServiceName } from '@/types';
 import { isValidIP } from '@/utils/ipHelpers';
 import type { Topology, TraceResult, PingResult, HopResult } from './types';
-import { forwardingRole, isInternetLike } from './topology';
+import { devicesById, forwardingRole, isInternetLike } from './topology';
 import { interfacePhrase } from './interfaces';
 import type { DeviceInterface } from './interfaces';
 import {
@@ -250,9 +250,9 @@ export function traceRoute(
 ): TraceResult {
   // A card on DHCP has the address it is leased (see ./dhcp)
   const topo = withLeases(drawing);
-  const devicesById = new Map(topo.devices.map(d => [d.id, d] as const));
-  const source = devicesById.get(sourceId);
-  const target = devicesById.get(targetId);
+  const byId = devicesById(topo);
+  const source = byId.get(sourceId);
+  const target = byId.get(targetId);
   const notes: string[] = [];
 
   // 1. Endpoint validation

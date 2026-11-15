@@ -128,11 +128,15 @@ export {
 export {
   flowKey,
   impactEndpoints,
+  flowPairs,
+  evaluateFlowInto,
   evaluateAllFlows,
   compareFlows,
   assessImpact,
   sameWay,
 } from './impact';
+export { createMemo, withMemo } from './memo';
+export type { EngineMemo } from './memo';
 export type {
   ImpactOptions,
   ImpactReport,

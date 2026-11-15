@@ -10,6 +10,7 @@
 import type { NetworkDevice, NetworkConnection } from '@/types';
 import type { Topology, ResolvedEndpoint } from './types';
 import { listInterfaces } from './interfaces';
+import { memoSlot, remembered, rememberedFor } from './memo';
 
 /** One neighbor reachable from a device, with the connection that links them */
 export interface AdjacencyEntry {
@@ -17,25 +18,60 @@ export interface AdjacencyEntry {
   connection: NetworkConnection;
 }
 
+const ADJACENCY = memoSlot('adjacency');
+const DEVICES_BY_ID = memoSlot('devices by id');
+const CONNECTIONS_BY_DEVICE = memoSlot('cables of each device');
+const ROLE = memoSlot('forwarding role');
+const INTERNET_LIKE = memoSlot('internet-like');
+
 /**
  * Build a bidirectional adjacency map from the topology.
  * Every device gets an entry (possibly empty). Connections referencing
- * unknown devices and self-loops are skipped.
+ * unknown devices and self-loops are skipped. Worked out once per topology
+ * while a memo is in force (see ./memo); not to be changed by the caller.
  */
 export function buildAdjacency(topo: Topology): Map<string, AdjacencyEntry[]> {
-  const adjacency = new Map<string, AdjacencyEntry[]>();
-  for (const device of topo.devices) {
-    adjacency.set(device.id, []);
-  }
-  for (const connection of topo.connections) {
-    const sourceList = adjacency.get(connection.source);
-    const targetList = adjacency.get(connection.target);
-    if (!sourceList || !targetList) continue;
-    if (connection.source === connection.target) continue;
-    sourceList.push({ neighborId: connection.target, connection });
-    targetList.push({ neighborId: connection.source, connection });
-  }
-  return adjacency;
+  return rememberedFor(ADJACENCY, topo, '', () => {
+    const adjacency = new Map<string, AdjacencyEntry[]>();
+    for (const device of topo.devices) {
+      adjacency.set(device.id, []);
+    }
+    for (const connection of topo.connections) {
+      const sourceList = adjacency.get(connection.source);
+      const targetList = adjacency.get(connection.target);
+      if (!sourceList || !targetList) continue;
+      if (connection.source === connection.target) continue;
+      sourceList.push({ neighborId: connection.target, connection });
+      targetList.push({ neighborId: connection.source, connection });
+    }
+    return adjacency;
+  });
+}
+
+/** The devices of the topology by id (worked out once per topology while a memo is in force) */
+export function devicesById(topo: Topology): Map<string, NetworkDevice> {
+  return rememberedFor(DEVICES_BY_ID, topo, '', () => new Map(topo.devices.map(d => [d.id, d] as const)));
+}
+
+/**
+ * The cables that end on a device, in the order of the drawing; a cable from
+ * the device to itself counts once. Not to be changed by the caller.
+ */
+export function connectionsOf(topo: Topology, deviceId: string): NetworkConnection[] {
+  const byDevice = rememberedFor(CONNECTIONS_BY_DEVICE, topo, '', () => {
+    const lists = new Map<string, NetworkConnection[]>();
+    const add = (id: string, connection: NetworkConnection) => {
+      const list = lists.get(id);
+      if (list) list.push(connection);
+      else lists.set(id, [connection]);
+    };
+    for (const connection of topo.connections) {
+      add(connection.source, connection);
+      if (connection.target !== connection.source) add(connection.target, connection);
+    }
+    return lists;
+  });
+  return byDevice.get(deviceId) ?? [];
 }
 
 /** Collapse whitespace runs and trim, for tolerant label comparison */
@@ -232,8 +268,10 @@ function kindText(device: NetworkDevice): string {
 
 /** True when the device stands for the outside world (an Internet or Cloud symbol) */
 export function isInternetLike(device: NetworkDevice): boolean {
-  const text = kindText(device);
-  return text.includes('cloud') || text.includes('internet');
+  return remembered(INTERNET_LIKE, device, () => {
+    const text = kindText(device);
+    return text.includes('cloud') || text.includes('internet');
+  });
 }
 
 /**
@@ -259,10 +297,12 @@ export function isPublicInternet(device: NetworkDevice): boolean {
 export type ForwardingRole = 'router' | 'bridge' | 'passthrough' | 'host';
 
 export function forwardingRole(device: NetworkDevice): ForwardingRole {
-  if (isL3Capable(device)) return 'router';
-  const text = kindText(device);
-  if (isSwitchLike(device) || /access\s?point|bridge|hub/.test(text)) return 'bridge';
-  if (isInternetLike(device) || /load\s?balancer/.test(text)) return 'passthrough';
-  if ((device.ports ?? []).length > 0) return 'bridge';
-  return 'host';
+  return remembered(ROLE, device, (): ForwardingRole => {
+    if (isL3Capable(device)) return 'router';
+    const text = kindText(device);
+    if (isSwitchLike(device) || /access\s?point|bridge|hub/.test(text)) return 'bridge';
+    if (isInternetLike(device) || /load\s?balancer/.test(text)) return 'passthrough';
+    if ((device.ports ?? []).length > 0) return 'bridge';
+    return 'host';
+  });
 }
