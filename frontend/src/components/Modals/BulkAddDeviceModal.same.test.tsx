@@ -135,6 +135,10 @@ const WITH_A_CARD = [
   'IoT Gateway',
   'IP Camera',
   'Printer',
+  'Laptop',
+  'Smartphone',
+  'Tablet',
+  'IP Phone',
 ];
 const WITH_PORTS = ['Switch', 'Router', 'Firewall'];
 const EVERY_TEMPLATE = [...WITH_PORTS, ...WITH_A_CARD];
