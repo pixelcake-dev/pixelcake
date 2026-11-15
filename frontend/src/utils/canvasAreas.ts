@@ -171,6 +171,40 @@ const grown = (edges: Edges, by: number): Edges => ({
   bottom: edges.bottom + by,
 });
 
+/** The band that takes an area by a side of its border, at its widest: across the line, 5 outside and 4 inside */
+export const AREA_EDGE_BAND = { width: 9, outside: 5 } as const;
+/** The narrowest that band gets, however close its devices are */
+export const AREA_EDGE_MIN = 3;
+
+/**
+ * How wide the band that takes an area by each side of its border is: no
+ * more than a third of the room between that side and the devices inside
+ * the area, so that most of that room is left to what is under it (a
+ * selection box can start there), and no less than AREA_EDGE_MIN. A side
+ * with no device inside along it keeps the whole band. A device counts
+ * when it is inside the area whole.
+ */
+export function areaEdgeBands(area: AreaBox, devices: readonly AreaBox[]): Record<Side, number> {
+  const box = edgesOf(area);
+  const inside = devices.filter(isUsable).map(edgesOf).filter((device) => holds(box, device));
+  const room: Edges = {
+    left: Math.min(...inside.map((device) => device.left - box.left)),
+    top: Math.min(...inside.map((device) => device.top - box.top)),
+    right: Math.min(...inside.map((device) => box.right - device.right)),
+    bottom: Math.min(...inside.map((device) => box.bottom - device.bottom)),
+  };
+  const band = (side: Side) =>
+    Number.isFinite(room[side])
+      ? Math.round(Math.min(AREA_EDGE_BAND.width, Math.max(AREA_EDGE_MIN, room[side] / 3)) * 10) / 10
+      : AREA_EDGE_BAND.width;
+  return { left: band('left'), top: band('top'), right: band('right'), bottom: band('bottom') };
+}
+
+/** How far a band of that width lies outside the line: as much of it as the whole band has, in proportion */
+export function areaEdgeOutside(width: number): number {
+  return Math.round(((width * AREA_EDGE_BAND.outside) / AREA_EDGE_BAND.width) * 10) / 10;
+}
+
 /**
  * The area that holds these boxes (the devices it is drawn around), with
  * room around them and for its label above. Null when there is no box.

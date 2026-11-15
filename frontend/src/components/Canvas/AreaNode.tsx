@@ -1,16 +1,28 @@
 import { memo, useCallback, useEffect, useRef } from 'react';
-import { NodeResizeControl, useStoreApi } from 'reactflow';
-import type { NodeProps, ResizeParams } from 'reactflow';
+import { NodeResizeControl, useStore, useStoreApi } from 'reactflow';
+import type { NodeProps, ReactFlowState, ResizeParams } from 'reactflow';
 import type { CanvasArea } from '@/types/network';
 import { InlineEdit } from '@/components/ui/InlineEdit';
 import { useNetworkStore } from '@/store/networkStore';
 import { useUIStore } from '@/store/uiStore';
 import { usePresentationStore } from '@/store/presentationStore';
-import { AREA_LABEL_MAX_LENGTH, AREA_MIN_SIZE } from '@/utils/canvasAreas';
+import {
+  AREA_LABEL_MAX_LENGTH,
+  AREA_MIN_SIZE,
+  areaEdgeBands,
+  areaEdgeOutside,
+  type AreaBox,
+} from '@/utils/canvasAreas';
 import { useT } from '@/i18n';
 
 /** A press that moved less than this far is a click, not a move */
 const MOVE_THRESHOLD = 3;
+
+/** The four sides of the border, and the CSS that places the band that takes each */
+const SIDES = ['top', 'right', 'bottom', 'left'] as const;
+
+/** The four widths as one string: what the band of each side is, compared from one move to the next */
+const bandKey = (bands: Record<(typeof SIDES)[number], number>) => SIDES.map((side) => bands[side]).join(' ');
 
 /** Where a selected area can be pulled to resize it: its corners and the middle of its sides */
 const RESIZE_HANDLES = [
@@ -49,6 +61,29 @@ const AreaNode = memo(({ id, data }: NodeProps<CanvasArea>) => {
   // While presenting an area is shown and nothing else
   const presenting = usePresentationStore((state) => state.active);
   const flow = useStoreApi();
+
+  // The band that takes each side of the border: narrower where the devices
+  // inside are close to that side, so that the room between them is left to
+  // what is under it (a selection box can start there). Worked out from the
+  // devices React Flow has measured; compared as text, so that a move that
+  // changes no band draws nothing again
+  const { x, y } = data.position;
+  const { width, height } = data.size;
+  const bandsSeen = useStore(
+    useCallback(
+      (state: ReactFlowState) => {
+        const devices: AreaBox[] = [];
+        state.nodeInternals.forEach((node) => {
+          if (node.type === 'area' || !node.width || !node.height) return;
+          const at = node.positionAbsolute ?? node.position;
+          devices.push({ x: at.x, y: at.y, width: node.width, height: node.height });
+        });
+        return bandKey(areaEdgeBands({ x, y, width, height }, devices));
+      },
+      [x, y, width, height]
+    )
+  );
+  const bands = bandsSeen.split(' ').map(Number);
 
   // The move in progress: what puts an end to it (see handlePointerDown)
   const endMove = useRef<(() => void) | null>(null);
@@ -140,9 +175,19 @@ const AreaNode = memo(({ id, data }: NodeProps<CanvasArea>) => {
   return (
     <div className={classes} data-testid={`area-${id}`}>
       {!presenting &&
-        (['top', 'right', 'bottom', 'left'] as const).map((side) => (
-          <div key={side} className={`area-edge area-edge-${side} nopan`} aria-hidden="true" {...grip} />
-        ))}
+        SIDES.map((side, index) => {
+          const band = bands[index];
+          const across = side === 'top' || side === 'bottom' ? 'height' : 'width';
+          return (
+            <div
+              key={side}
+              className={`area-edge area-edge-${side} nopan`}
+              style={{ [across]: band, [side]: -areaEdgeOutside(band) }}
+              aria-hidden="true"
+              {...grip}
+            />
+          );
+        })}
 
       {/* (after the sides of the border, so that a handle is over them) */}
       {selected &&

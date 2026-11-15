@@ -577,6 +577,41 @@ describe('the keyboard and the mouse, with an area on the canvas', () => {
     expect(store().areas).toEqual([]);
   });
 
+  it('the band that takes a side of its border leaves to the selection box most of the room before its devices', () => {
+    // an area that gave way: 10 on the left of its device, 4 under it, its usual room elsewhere
+    addPc('PC-1', { x: 110, y: 90 });
+    store().addArea({ ...CORE, size: { width: 300, height: 138 } });
+    let flow: ReturnType<typeof useStoreApi> | undefined;
+    const Grab = () => {
+      flow = useStoreApi();
+      return null;
+    };
+    render(
+      <ReactFlowProvider>
+        <NetworkCanvas />
+        <Grab />
+      </ReactFlowProvider>
+    );
+    const edge = (side: string) => document.querySelector<HTMLElement>(`.area-edge-${side}`)!;
+    // (jsdom lays nothing out: React Flow is told the size of the device, as it measures it on screen)
+    expect(edge('left').style.width).toBe('9px');
+    act(() => {
+      const state = flow!.getState();
+      const id = store().devices[0].id;
+      const internals = new Map(state.nodeInternals);
+      const node = internals.get(id)!;
+      internals.set(id, { ...node, width: 104, height: 94 });
+      flow!.setState({ nodeInternals: internals });
+    });
+
+    expect(parseFloat(edge('left').style.width)).toBeLessThanOrEqual(10 / 3 + 0.05);
+    expect(parseFloat(edge('left').style.left)).toBeGreaterThan(-5);
+    expect(edge('bottom').style.height).toBe('3px');
+    // above it has its room, and keeps the whole band
+    expect(edge('top').style.height).toBe('9px');
+    expect(edge('top').style.top).toBe('-5px');
+  });
+
   it('a device clicked is selected as before, and the area that was is let go', async () => {
     addPc('PC-1');
     const id = store().addArea(CORE);

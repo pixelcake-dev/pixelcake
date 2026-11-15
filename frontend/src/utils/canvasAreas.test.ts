@@ -23,6 +23,10 @@ import {
   AREA_TINT,
   areaAround,
   areaAt,
+  areaEdgeBands,
+  areaEdgeOutside,
+  AREA_EDGE_BAND,
+  AREA_EDGE_MIN,
   isAreaColour,
   nextAreaColour,
   nextAreaId,
@@ -255,6 +259,41 @@ describe('an area around devices, among what is near', () => {
       ...areaAround(row(0)),
       overlaps: false,
     });
+  });
+});
+
+describe('the band that takes an area by its border', () => {
+  const device = (x: number, y: number) => ({ x, y, width: 104, height: 94 });
+  const AREA = { x: 0, y: 0, width: 400, height: 300 };
+
+  it('is never wider than a third of the room between that side and its devices, nor narrower than the least', () => {
+    // the devices 16 from the sides, 40 from the top: the room of an area drawn around them
+    const bands = areaEdgeBands(AREA, [device(16, 40), device(280, 190)]);
+    expect(bands).toEqual({ left: 5.3, top: 9, right: 5.3, bottom: 5.3 });
+    // an area that gave way to 10 on the left, to its least (4) under
+    const tight = areaEdgeBands(AREA, [device(10, 40), device(200, 202)]);
+    expect(tight.left).toBeCloseTo(10 / 3, 1);
+    expect(tight.bottom).toBe(AREA_EDGE_MIN);
+    for (const [side, room] of [['left', 10], ['top', 40], ['right', 96], ['bottom', 4]] as const) {
+      expect(tight[side], side).toBeLessThanOrEqual(Math.max(room / 3, AREA_EDGE_MIN));
+      expect(tight[side], side).toBeGreaterThanOrEqual(AREA_EDGE_MIN);
+      expect(tight[side], side).toBeLessThanOrEqual(AREA_EDGE_BAND.width);
+    }
+  });
+
+  it('without a device inside, or with one that is only partly in, a side keeps the whole band', () => {
+    expect(areaEdgeBands(AREA, [])).toEqual({ left: 9, top: 9, right: 9, bottom: 9 });
+    // (one across the left side is no device of the area)
+    expect(areaEdgeBands(AREA, [device(-50, 100)])).toEqual({ left: 9, top: 9, right: 9, bottom: 9 });
+    expect(areaEdgeBands(AREA, [{ x: Number.NaN, y: 0, width: 10, height: 10 }]).left).toBe(9);
+  });
+
+  it('lies across the line as the whole band does: more of it outside than inside', () => {
+    expect(areaEdgeOutside(AREA_EDGE_BAND.width)).toBe(AREA_EDGE_BAND.outside);
+    expect(areaEdgeOutside(3)).toBeCloseTo(1.7, 5);
+    // the whole band is the one of the style sheet
+    expect(styleSheet).toMatch(/\.area-edge-top,\s*\.area-edge-bottom \{[^}]*height: 9px;/);
+    expect(styleSheet).toMatch(/\.area-edge-top \{\s*top: -5px;/);
   });
 });
 
