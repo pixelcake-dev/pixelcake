@@ -3,9 +3,9 @@
  * correct end to end and uses everything the engine evaluates, so each
  * question asked of it has an answer worth reading:
  *
- *      Remote-PC ── Internet ─────────┐ 203.0.113.0/24 (untrust)
+ *      PC-Remoto ── Internet ─────────┐ 203.0.113.0/24 (untrust)
  *                                 port 3
- *                               FW-Edge ── port 2 ── SW-DMZ ── Web-Public
+ *                               FW-Edge ── port 2 ── SW-DMZ ── Web-Pubblico
  *                                 port 1          172.16.0.0/24 (dmz)
  *                                   │ 10.0.0.0/30 (trust)
  *                                 port 3
@@ -22,11 +22,11 @@
  *    server in VLAN 20; Router-Core has a port in each and routes between them
  *  - Router-Core's default route is the firewall; the firewall has a static
  *    route back to the inside networks
- *  - FW-Edge has a port per zone and ONE rule: web from outside to Web-Public.
+ *  - FW-Edge has a port per zone and ONE rule: web from outside to Web-Pubblico.
  *    Everything else follows the zone policy (inside can go out, outside
  *    cannot come in, the DMZ cannot reach the inside)
  *  - FW-Edge does NAT on the port that faces the Internet, and one port
- *    forward publishes Web-Public (web) at its public address, 203.0.113.1
+ *    forward publishes Web-Pubblico (web) at its public address, 203.0.113.1
  *
  * Devices have the shape AddDeviceModal produces. Positions are hand-placed
  * around the firewall: the outside above it, the DMZ on its right, the
@@ -35,8 +35,8 @@
  * on it.
  *
  * The names above are the Italian ones. Whatever is called differently in
- * another language (the two PCs and the server of the inside, places, ports,
- * notes) is read from the dictionary, `samples.site`, at the moment the
+ * another language (the PC outside, the public web server, the two PCs and
+ * the server of the inside, places, ports, notes) is read from the dictionary, `samples.site`, at the moment the
  * sample is created; what is called the same everywhere (FW-Edge, SW-Core,
  * Internet, VLAN 10…) is written here. Ids and addresses never change.
  */
@@ -113,7 +113,7 @@ export function createPerimeterSample(): SampleNetwork {
         { id: 'nic-2', name: 'eth1', enabled: true, speed: 'auto', ip: '', subnet: MASK, gateway: '', mac: '02:00:CB:00:71:02' },
       ],
     },
-    endDevice('remote-pc', 'PC', 'tpl-pc', 'Remote-PC', '203.0.113.50', '203.0.113.1', '02:00:CB:00:71:32', {
+    endDevice('remote-pc', 'PC', 'tpl-pc', names.devices.remotePc, '203.0.113.50', '203.0.113.1', '02:00:CB:00:71:32', {
       x: 640,
       y: 0,
     }),
@@ -175,9 +175,9 @@ export function createPerimeterSample(): SampleNetwork {
       location: serverRoom,
       position: { x: 660, y: 176 },
       portCount: 8,
-      ports: ports(8, 'access', { 1: { name: 'Web-Public' }, 8: { name: 'Uplink' } }),
+      ports: ports(8, 'access', { 1: { name: names.devices.publicWebServer }, 8: { name: 'Uplink' } }),
     },
-    endDevice('web-public', 'Server', 'tpl-webserver', 'Web-Public', '172.16.0.10', '172.16.0.1', '02:00:AC:10:00:0A', {
+    endDevice('web-public', 'Server', 'tpl-webserver', names.devices.publicWebServer, '172.16.0.10', '172.16.0.1', '02:00:AC:10:00:0A', {
       x: 660,
       y: 362,
     }),

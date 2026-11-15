@@ -81,6 +81,9 @@ export const samples: Dictionary['samples'] = {
     devices: {
       officePc: (index: number) => `PC-Office-${index}`,
       internalServer: 'Srv-Internal',
+      /** The PC outside, on the Internet, and the web server the firewall publishes */
+      remotePc: 'Remote-PC',
+      publicWebServer: 'Web-Public',
     },
     places: {
       offices,

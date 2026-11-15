@@ -6,6 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { createPerimeterSample } from './samplePerimeter';
+import { setLanguage } from '@/i18n';
 import { isValidIP, isValidMAC } from './ipHelpers';
 import {
   boundInterface,
@@ -42,6 +43,22 @@ const table = (label: string) =>
   routingTable(device(label)).map(e => [formatNetwork(e.network), e.kind, e.nextHop ?? '-', e.out?.iface?.label]);
 
 describe('createPerimeterSample — structure', () => {
+  it('names the PC outside and the public web server in the language of the moment', () => {
+    const named = () => {
+      const made = createPerimeterSample();
+      const label = (id: string) => made.devices.find((device) => device.id === id)?.label;
+      const dmzPort = made.devices.find((device) => device.id === 'sw-dmz')?.ports?.find((port) => port.id === 1);
+      return [label('remote-pc'), label('web-public'), dmzPort?.name];
+    };
+    try {
+      setLanguage('en');
+      expect(named()).toEqual(['Remote-PC', 'Web-Public', 'Web-Public']);
+    } finally {
+      setLanguage('it');
+    }
+    expect(named()).toEqual(['PC-Remoto', 'Web-Pubblico', 'Web-Pubblico']);
+  });
+
   it('is deterministic and its ids are unique', () => {
     expect(createPerimeterSample()).toEqual(createPerimeterSample());
     expect(new Set(sample.devices.map(d => d.id)).size).toBe(sample.devices.length);
@@ -121,7 +138,7 @@ describe('createPerimeterSample — the questions it answers', () => {
   });
 
   it('the inside browses the public server: the zone policy lets it, the answer comes back', () => {
-    const result = ask('web', 'PC-Uffici-1', 'Web-Public');
+    const result = ask('web', 'PC-Uffici-1', 'Web-Pubblico');
     expect(result.verdict).toBe('success');
     expect(requestPath(result)).toEqual([
       'PC-Uffici-1',
@@ -129,7 +146,7 @@ describe('createPerimeterSample — the questions it answers', () => {
       'Router-Core (routed: default route via 10.0.0.2 (port 3))',
       'FW-Edge (routed: 172.16.0.0/24 is on port 2; firewall FW-Edge: no rule matches, zone policy trust → dmz allowed)',
       'SW-DMZ',
-      'Web-Public',
+      'Web-Pubblico',
     ]);
     expect(result.notes).toEqual([
       'HTTP request: firewall FW-Edge: no rule matches, zone policy trust → dmz allowed',
@@ -138,7 +155,7 @@ describe('createPerimeterSample — the questions it answers', () => {
   });
 
   it('the inside reaches the outside, across the Internet symbol, which says it is assumed', () => {
-    const result = ask('ping', 'PC-Uffici-1', 'Remote-PC');
+    const result = ask('ping', 'PC-Uffici-1', 'PC-Remoto');
     expect(result.verdict).toBe('success');
     expect(result.legs[0].trace.hops.map(h => h.label)).toEqual([
       'PC-Uffici-1',
@@ -146,13 +163,13 @@ describe('createPerimeterSample — the questions it answers', () => {
       'Router-Core',
       'FW-Edge',
       'Internet',
-      'Remote-PC',
+      'PC-Remoto',
     ]);
     expect(result.notes).toContain('request: Internet is not simulated: traffic assumed to pass');
   });
 
   it('the outside opens the public site: the one rule of the firewall', () => {
-    const result = ask('web', 'Remote-PC', 'Web-Public');
+    const result = ask('web', 'PC-Remoto', 'Web-Pubblico');
     expect(result.verdict).toBe('success');
     expect(result.notes).toContain(
       'HTTP request: firewall FW-Edge: allowed by rule 1 (allow web from untrust to 172.16.0.10)'
@@ -160,30 +177,30 @@ describe('createPerimeterSample — the questions it answers', () => {
   });
 
   it('the outside reaches the public site at the public address of the firewall', () => {
-    const result = ask('web', 'Remote-PC', 'Web-Public');
+    const result = ask('web', 'PC-Remoto', 'Web-Pubblico');
     expect(result.legs[0].trace.targetIp).toBe('203.0.113.1');
     expect(requestPath(result)).toEqual([
-      'Remote-PC',
+      'PC-Remoto',
       'Internet (Internet is not simulated: traffic assumed to pass)',
       'FW-Edge (NAT: destination 203.0.113.1 → 172.16.0.10 (port forward 1); ' +
         'routed: 172.16.0.0/24 is on port 2; ' +
         'firewall FW-Edge: allowed by rule 1 (allow web from untrust to 172.16.0.10))',
       'SW-DMZ',
-      'Web-Public',
+      'Web-Pubblico',
     ]);
     expect(result.notes[0]).toBe(
-      'HTTP request: Web-Public is behind NAT: reached at 203.0.113.1, where FW-Edge publishes it (port forward 1)'
+      'HTTP request: Web-Pubblico is behind NAT: reached at 203.0.113.1, where FW-Edge publishes it (port forward 1)'
     );
   });
 
   it('the inside goes out with that same address', () => {
-    const result = ask('ping', 'PC-Uffici-1', 'Remote-PC');
+    const result = ask('ping', 'PC-Uffici-1', 'PC-Remoto');
     expect(result.legs[0].trace.seenSourceIp).toBe('203.0.113.1');
     expect(result.legs[1].trace.reachedIp).toBe('192.168.10.11');
   });
 
   it('the outside cannot ping the public server: only web is published', () => {
-    const result = ask('ping', 'Remote-PC', 'Web-Public');
+    const result = ask('ping', 'PC-Remoto', 'Web-Pubblico');
     expect(result.verdict).toBe('blocked');
     expect(result.failureReason).toBe(
       'request: Internet does not carry private addresses: 172.16.0.10 is not reachable from ' +
@@ -193,7 +210,7 @@ describe('createPerimeterSample — the questions it answers', () => {
 
   it('the outside cannot reach the inside at all', () => {
     for (const model of ['ping', 'web'] as const) {
-      const result = ask(model, 'Remote-PC', 'Srv-Interno');
+      const result = ask(model, 'PC-Remoto', 'Srv-Interno');
       expect(result.verdict).toBe('blocked');
       expect(result.failureReason).toContain(
         `192.168.20.10 is not reachable from outside: no port forward publishes it for ${model}`
@@ -202,7 +219,7 @@ describe('createPerimeterSample — the questions it answers', () => {
   });
 
   it('the DMZ cannot open a flow towards the inside', () => {
-    const result = ask('ping', 'Web-Public', 'Srv-Interno');
+    const result = ask('ping', 'Web-Pubblico', 'Srv-Interno');
     expect(result.verdict).toBe('blocked');
     expect(result.failureReason).toBe(
       'request: firewall FW-Edge: no rule matches, zone policy dmz → trust denied'

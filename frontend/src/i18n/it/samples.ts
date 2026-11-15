@@ -81,6 +81,9 @@ export const samples = {
     devices: {
       officePc: (index: number) => `PC-Uffici-${index}`,
       internalServer: 'Srv-Interno',
+      /** The PC outside, on the Internet, and the web server the firewall publishes */
+      remotePc: 'PC-Remoto',
+      publicWebServer: 'Web-Pubblico',
     },
     places: {
       offices,
