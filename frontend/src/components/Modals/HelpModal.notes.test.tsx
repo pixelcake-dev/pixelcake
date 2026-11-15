@@ -113,8 +113,10 @@ describe('the guide — the window of a device and its note', () => {
     }
   );
 
-  it('on the drawing the note is read by resting the pointer on the device, as it says', () => {
-    expect(step(TITLE)).toContain('Sul disegno le leggi fermando il puntatore sul dispositivo.');
+  it('on the drawing a small square says there is a note, read by resting the pointer on the device, as it says', () => {
+    expect(step(TITLE)).toContain(
+      'Sul disegno un piccolo quadrato dopo il nome dice che il dispositivo ha una nota, e la leggi fermando il puntatore sul dispositivo.'
+    );
     vi.stubGlobal(
       'matchMedia',
       vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
@@ -136,6 +138,8 @@ describe('the guide — the window of a device and its note', () => {
     // (the app shows it in a panel of its own, after a short rest of the pointer)
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const drawn = screen.getByText('PC-1', { selector: '.device-name' }).closest('.network-device')!;
+    // the square after the name
+    expect(drawn.querySelector('.device-name .device-note-mark')).not.toBeNull();
     fireEvent.mouseEnter(drawn);
     act(() => {
       vi.advanceTimersByTime(NOTE_REST_MS);

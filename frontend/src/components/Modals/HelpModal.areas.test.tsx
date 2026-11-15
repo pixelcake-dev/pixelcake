@@ -105,7 +105,25 @@ describe('the guide — the areas of the canvas', () => {
       'Racchiudi in un riquadro',
       'Rinomina',
       'Elimina',
+      'Mostra i riquadri',
     ]);
+  });
+
+  it('Vista has the entry it names, which hides the areas and shows them again', () => {
+    expect(step(TITLE)).toContain('Vista → «Mostra i riquadri» li nasconde e li mostra di nuovo');
+    useNetworkStore.getState().addArea({ label: 'Core', color: 'violet', position: { x: 0, y: 0 }, size: { width: 300, height: 200 } });
+    render(
+      <ReactFlowProvider>
+        <TopMenuBar />
+        <NetworkCanvas />
+      </ReactFlowProvider>
+    );
+    const entry = screen.getByRole('menuitemcheckbox', { name: /Mostra i riquadri/ });
+    expect(document.querySelectorAll('.react-flow__node-area')).toHaveLength(1);
+    fireEvent.click(entry);
+    expect(document.querySelectorAll('.react-flow__node-area')).toHaveLength(0);
+    fireEvent.click(entry);
+    expect(useUIStore.getState().areasShown).toBe(true);
   });
 
   it('the panel it names has the entry it names, which adds an area in the middle of the view', () => {
