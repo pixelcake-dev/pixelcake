@@ -26,7 +26,8 @@ export const menu = {
       vertical: 'Verticale',
       horizontal: 'Orizzontale',
     },
-    autoConnect: 'Connessione automatica',
+    /** A cable for each device that has none, and nothing else */
+    autoConnect: 'Collega i dispositivi senza cavo',
     magnify: 'Ingrandisci',
     magnifyDevices: 'Dispositivi',
     magnifyConnections: 'Connessioni',
@@ -56,7 +57,6 @@ export const menu = {
   lightTheme: 'Passa al tema chiaro',
   darkTheme: 'Passa al tema scuro',
 
-  /** What an entry says when it has nothing to act on */
   /** Asked before the automatic layout: it moves every device, and cannot be undone */
   layoutQuestion: {
     title: 'Disporre di nuovo il disegno?',
@@ -66,6 +66,24 @@ export const menu = {
     confirm: 'Disponi',
   },
 
+  /** Said after Vista → Collega i dispositivi senza cavo */
+  connectNotice: {
+    added: (count: number) => (count === 1 ? 'Aggiunto 1 cavo' : `Aggiunti ${count} cavi`),
+    noneAdded: 'Nessun cavo aggiunto',
+    allCabled: 'Ogni dispositivo ha già il suo cavo',
+    /** Why a device was left with no cable: after its name, «PC-7: …» */
+    reasons: {
+      noSwitch: 'nessuno switch nella stessa rete',
+      noUplink: 'nessun router, firewall o core switch nella stessa rete',
+      noFreePort: 'nessuna porta libera',
+      loop: 'un altro cavo chiuderebbe un anello',
+      byHand: 'router, firewall e Internet si collegano a mano',
+    },
+    /** After the first three names of a list of five or more */
+    more: (count: number) => `e altri ${count}`,
+  },
+
+  /** What an entry says when it has nothing to act on */
   notices: {
     nothingToArrange: "Nessun dispositivo sul canvas: non c'è nulla da disporre",
     needTwoToConnect: 'Servono almeno due dispositivi per collegarli automaticamente',

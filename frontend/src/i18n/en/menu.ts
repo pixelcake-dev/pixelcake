@@ -28,7 +28,8 @@ export const menu: Dictionary['menu'] = {
       vertical: 'Vertical',
       horizontal: 'Horizontal',
     },
-    autoConnect: 'Auto-connect',
+    /** A cable for each device that has none, and nothing else */
+    autoConnect: 'Connect devices with no cable',
     magnify: 'Magnify',
     magnifyDevices: 'Devices',
     magnifyConnections: 'Links',
@@ -58,7 +59,6 @@ export const menu: Dictionary['menu'] = {
   lightTheme: 'Switch to light theme',
   darkTheme: 'Switch to dark theme',
 
-  /** What an entry says when it has nothing to act on */
   /** Asked before the automatic layout: it moves every device, and cannot be undone */
   layoutQuestion: {
     title: 'Lay the drawing out again?',
@@ -66,9 +66,27 @@ export const menu: Dictionary['menu'] = {
     confirm: 'Lay out',
   },
 
+  /** Said after View → Connect devices with no cable */
+  connectNotice: {
+    added: (count: number) => (count === 1 ? '1 cable added' : `${count} cables added`),
+    noneAdded: 'No cable added',
+    allCabled: 'Every device already has its cable',
+    /** Why a device was left with no cable: after its name, “PC-7: …” */
+    reasons: {
+      noSwitch: 'no switch on the same network',
+      noUplink: 'no router, firewall or core switch on the same network',
+      noFreePort: 'no free port',
+      loop: 'another cable would close a loop',
+      byHand: 'routers, firewalls and the Internet are cabled by hand',
+    },
+    /** After the first three names of a list of five or more */
+    more: (count: number) => `and ${count} more`,
+  },
+
+  /** What an entry says when it has nothing to act on */
   notices: {
     nothingToArrange: 'No devices on the board: there is nothing to arrange',
-    needTwoToConnect: 'Auto-connect needs at least two devices',
+    needTwoToConnect: 'At least two devices are needed to connect them',
     welcomeNeedsEmptyCanvas:
       'The welcome screen only shows on an empty board. The drawing has not been changed. To see ' +
       'it again, switch to an empty board or create a new one.',

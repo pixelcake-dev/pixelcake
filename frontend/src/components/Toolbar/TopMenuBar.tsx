@@ -3,6 +3,8 @@ import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { askConfirm } from '@/store/confirmStore';
 import type { LayoutDirection } from '@/utils/autoLayout';
+import type { ConnectionSummary, LeftAloneReason } from '@/utils/autoConnect';
+import type { NetworkDevice } from '@/types';
 import { usePresentationStore } from '@/store/presentationStore';
 import {
   openProject,
@@ -29,6 +31,28 @@ import { useProjectStore } from '@/store/projectStore';
 import { useT } from '@/i18n';
 import LanguageSwitch from '@/components/ui/LanguageSwitch';
 import { encloseDevices } from '@/utils/areaActions';
+
+type ConnectWords = ReturnType<typeof useT>['menu']['connectNotice'];
+
+/** Names written out for one reason: of a longer list, the first three and «e altri N» */
+const NAMES_SHOWN = 4;
+
+/** «PC-7, PC-8: nessuno switch nella stessa rete. Router-2: …»; undefined when no one was left alone */
+function leftAloneText(summary: ConnectionSummary, devices: NetworkDevice[], words: ConnectWords): string | undefined {
+  const names = new Map(devices.map((device) => [device.id, device.label]));
+  const byReason = new Map<LeftAloneReason, string[]>();
+  for (const { deviceId, reason } of summary.left) {
+    byReason.set(reason, [...(byReason.get(reason) ?? []), names.get(deviceId) ?? deviceId]);
+  }
+  const parts = [...byReason].map(([reason, list]) => {
+    const who =
+      list.length > NAMES_SHOWN
+        ? `${list.slice(0, NAMES_SHOWN - 1).join(', ')} ${words.more(list.length - (NAMES_SHOWN - 1))}`
+        : list.join(', ');
+    return `${who}: ${words.reasons[reason]}.`;
+  });
+  return parts.length > 0 ? parts.join(' ') : undefined;
+}
 
 const TopMenuBar = () => {
   const t = useT();
@@ -83,13 +107,20 @@ const TopMenuBar = () => {
     applyAutoLayout(direction, useTemplateStore.getState().templates);
   };
 
+  // A cable for each device that has none; then how many, and who was left alone and why
   const handleAutoConnect = () => {
-    const deviceCount = useNetworkStore.getState().devices.length;
-    if (deviceCount < 2) {
+    const { devices } = useNetworkStore.getState();
+    if (devices.length < 2) {
       toast.info(t.menu.notices.needTwoToConnect);
       return;
     }
-    autoConnectDevices();
+    const summary = autoConnectDevices();
+    const words = t.menu.connectNotice;
+    const description = leftAloneText(summary, devices, words);
+    const shown = description ? { description, duration: 8000 } : undefined;
+    if (summary.added > 0) toast.success(words.added(summary.added), shown);
+    else if (description) toast.warning(words.noneAdded, shown);
+    else toast.info(words.allCabled);
   };
 
   // Aiuto → Mostra la schermata di benvenuto. It only exists on an empty

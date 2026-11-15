@@ -150,6 +150,8 @@ const FROM_TWO = new Set([
   'presentation.impact.scope|endpoints',
   // "N DHCP servers on the same network": a warning about two or more
   'dhcp.panel.warnings.rivals|servers',
+  // "and N more": after the first three names of a list of five or more
+  'menu.connectNotice.more|count',
 ]);
 
 /** Lists that are only written out, «A», «A e B»: no word goes with how many they are */
