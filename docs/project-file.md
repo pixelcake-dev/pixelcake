@@ -297,8 +297,10 @@ defined in the application that saved the file (built-in templates are not
 written). They let a project that uses a custom device or connection type be
 opened on another installation.
 
-Device template, in this order: `id`, `name`, `type`, `icon` (an Iconify icon
-name), `color`, `terraformFields` (object, optional), `isCustom`,
+Device template, in this order: `id`, `name`, `type`, `icon` (the drawing the
+device is shown with: `pc`, `laptop`, `server-web`… the name of one of the
+files of `frontend/src/assets/device-drawings`), `color` (kept, not shown),
+`terraformFields` (object, optional), `isCustom`,
 `supportsVLAN`, `supportsSTP`, `supportsPorts`, `supportsNICs` (booleans),
 `portOptions` (integer[], optional), `defaultPortCount` (integer, optional).
 
@@ -309,6 +311,10 @@ Connection template, in this order: `id`, `name`, `type`, `description`
 
 `isCustom` is written as `true` and read as `true` whatever the file says: a
 template that arrives in a project file is a custom template.
+
+A file written before the drawings has the name of an Iconify icon in `icon`
+(`mdi:server`). It is read as it is, and the template is shown with the
+drawing of its base type until it is given one.
 
 When a file is opened, a template is added only if none with the same `id`
 exists (for connection templates: nor one with the same `type`). Existing

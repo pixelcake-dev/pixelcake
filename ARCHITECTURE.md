@@ -27,7 +27,8 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 
 ### simulationStore (`frontend/src/store/simulationStore.ts`)
 - The packet travelling on the canvas. Not persisted
-- `startSimulation(path, flowModel, links?)` starts a run and returns its `runId`; a new start replaces the run in progress. `path` is the devices to go through, `links` the cable of each stretch as the engine took it (two devices can be joined by more than one cable)
+- `startSimulation(path, flowModel, links?, outcome?)` starts a run and returns its `runId`; a new start replaces the run in progress. `path` is the devices to go through, `links` the cable of each stretch as the engine took it (two devices can be joined by more than one cable), `outcome` how the question ends: the device that answers, or the one that drops it (`flowOutcome`, `traceOutcome` in `utils/answerOutcome.ts`)
+- The answer left on the canvas: when the packet gets to the end of its way (`finishSimulation`, called by PacketAnimation) the outcome becomes `answer`, and that device says it with its lamp (see [The look](#the-look-frontendsrcindexcss-frontendtailwindconfigjs)). A question that does not even leave its device is left at once, with no run (`leaveAnswer`). The answer goes at the next start, at a stop, on a click on the empty canvas, and at any change to the devices or the cables (`clearAnswer`): it was about the drawing as it was. The simulation panel and the terminal (`ping`, `trace`, `browse`, `mail`, `download`) tell it; presentation mode has its own (the route of presentationStore)
 - While it runs: `currentHop`, `activeDeviceId` (the device the packet is stopping on), `currentConnectionId` with its duration and direction
 - `speed` (0.5, 1, 2): set from the presentation bar
 
@@ -43,25 +44,27 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 
 ### templateStore (`frontend/src/store/templateStore.ts`)
 - Device and connection templates with auto-update
-- Custom device types with their icon and colour; they are placed from the device panel like the built-in ones
+- 24 device templates come with the app, one for each drawing of `assets/device-drawings` (a test holds the two lists to each other)
+- Custom device types with the drawing they are shown with, one of the 24; they are placed from the device panel like the built-in ones
 - Connection types with line styles and colors
 - Template capabilities: supportsVLAN, supportsSTP, supportsPorts, supportsNICs
 - Custom templates travel inside the project file; opening a project adds the ones that are missing (`addMissingTemplates`)
-- LocalStorage key: `pixelcake-templates-v8`
+- LocalStorage key: `pixelcake-templates-v8`, version 1 (`TEMPLATE_STORAGE_VERSION`). What a browser kept before versions were counted is read as it was, the templates made or changed by the user included, and the templates the app has come with since are added after it (`migrateTemplateStorage`)
 
 ## Core Components
 
 ### Canvas
 - **NetworkCanvas** (`frontend/src/components/Canvas/NetworkCanvas.tsx`) - React Flow wrapper with real-time viewport sync. Delete removes the selected devices and links from the network; Ctrl+C / Ctrl+V act on the drawing only while the user is not typing and has no text selected
 - **AreaNode** (`frontend/src/components/Canvas/AreaNode.tsx`) - An area of the canvas: see [Areas](#areas-riquadri)
-- **NetworkDevice** (`frontend/src/components/Canvas/NetworkDevice.tsx`) - Custom node component. A device that has a note carries it as its `title`: it is read by resting the pointer on the device, and nothing is drawn for it
+- **NetworkDevice** (`frontend/src/components/Canvas/NetworkDevice.tsx`) - A device: its drawing (`ui/DeviceDrawing`), its name under it, then its address (none, and no empty line, when there is no address to show). No box: the frame (`.network-device`, 104 wide for every device whatever its name, a line lower without an address) is seen only under the pointer, with the focus of the keyboard, selected or dragged, and on every device while a cable is pulled. Its numbers are in `utils/deviceGeometry.ts` (`DEVICE_METRICS`, `deviceHeight`, `cableEnd`), held to the style sheet by a test. The upper layer of the drawing says the state of the device (`deviceState`, see [The look](#the-look-frontendsrcindexcss-frontendtailwindconfigjs)). The note of a device is part of what the device says to a screen reader («Nota: …»); the eye reads it in DeviceNote. Nothing is drawn for it
+- **DeviceNote** (`frontend/src/components/Canvas/DeviceNote.tsx`) - The note of the device the pointer rests on (450 ms), or the keyboard brought its focus to with Tab: one panel for the canvas, placed on the page under the device (above it without room below), in the look of the menus, that never takes the pointer. The lines of the note, 280 wide at most, six lines at most. Not while a device is dragged, a cable pulled or a menu open; gone when the pointer leaves, at a press of a button, the wheel, a menu asked for, or Esc. There while presenting too
 - **CustomEdge** (`frontend/src/components/Canvas/CustomEdge.tsx`) - Custom edge with connection type styling
 - **ParticleEdge** (`frontend/src/components/Canvas/ParticleEdge.tsx`) - Particle flow animation wrapper with CSS offset-path
 - **PacketAnimation** (`frontend/src/components/Canvas/PacketAnimation.tsx`) - Moves the packet of a simulation cable by cable and keeps simulationStore up to date; CustomEdge draws it. One run at a time: a new start, a stop or an unmount cancels the run in progress. Timing and the choice of the cable are in `utils/packetTiming.ts`
 
 The panels React Flow draws by itself (zoom buttons, small map, credit) take the colours of the theme from `index.css`. React Flow's own style sheet is loaded after it, so those rules start with `.react-flow` to outrank it. The credit is never hidden.
 
-The connection points of a device (`.connect-point`) are hidden at rest: they show on the device under the pointer, on a selected one, and on every device while a cable is being dragged. Their hit area is always there.
+A cable ends next to what is drawn. The four connection points of a device (`.connect-point`, React Flow handles, all of type source with `connectionMode` loose) are placed by the device 3 off the box of its drawing above it and at its two sides, and on the bottom of the frame under the address (`cableEnd`, which the exported picture uses too); each drawing has its own shape, so a server is reached further in than a switch. The points are not seen. A cable is started from the frame: the band along each side (the `::before` of the point of that side, 12 deep, placed back on the frame from where the device put the point: `--at-x`, `--at-y`, `--frame-height`) takes the press, and that side of the frame turns orange while the pointer is on it (the `::after`). A press anywhere else on the device selects it and drags it. While a cable is pulled the four bands grow to cover the device between them, so that it can be let go anywhere on a device, and it ends on the side it is let go on. While presenting the bands are not there; the points stay, for the cables that hang on them.
 
 The selection of the devices is React Flow's: every change it tells of (`onSelectionChange`) is written to networkStore, whatever was done on the canvas before it. The handler keeps its identity and reads the store when it is called, because React Flow calls a new handler at once with the selection it has at that moment. It keeps nothing back: React Flow has changed its selection already, and a change that does not reach the store leaves the app with another selection than the one on screen.
 
@@ -80,7 +83,7 @@ An area is a rectangle with a label, drawn behind a group of devices to say what
 - **Data**: `CanvasArea` (`id`, `label`, `color`, `position`, `size`) in `types/network.ts`; a canvas keeps a list of them next to its devices (`CanvasData.areas`, left out when empty, so that a canvas without areas is stored and written as before). `utils/canvasAreas.ts` (pure) names, numbers, colours and places them, and reads a list from outside (`readAreas`: a file, the browser's storage)
 - **On the canvas** they are React Flow nodes of their own kind, first in the list and at depth -1: under the cables, which React Flow draws at depth 0, and under the devices. They are **not** React Flow's to select, drag, join or delete (`selectable`, `draggable`, `connectable`, `focusable`, `deletable` all false): a selection box leaves out what is not selectable, so the selection of the devices, copy and paste and Delete never see an area, and `onSelectionChange` is as it was. Which area is selected is kept in networkStore; NetworkCanvas lets go of React Flow's own selection when one is (`unselectNodesAndEdges`), deletes it on the Delete key, and lets go of it on a click or a selection box on the empty canvas
 - **AreaNode** lets the pointer through its inside (`pointer-events: none` on the node; the label and four strips over the border take it back). A press there selects the area and moves it: the pointer is followed on the window, not by React Flow's drag (which would carry the selected devices along) and not with pointer capture (which does not hold inside the canvas). Selected, it shows eight `NodeResizeControl` handles, React Flow's own: `onResize` writes position and size to the store. A double click on the label renames it in place (`ui/InlineEdit`); the right button opens `ui/AreaContextMenu` (rename, the six colours, delete after a question)
-- **Added** from the panel «Aggiungi» («Riquadro», in the middle of the view) or around the selected devices («Racchiudi in un riquadro», in Modifica and in the menu of a device): `utils/areaActions.ts`, which reads the view and the size of the devices from the screen. A new area is selected, with its name ready to be typed, in the first colour of the palette the canvas does not use
+- **Added** from the panel «Aggiungi» («Riquadro», in the middle of the view) or around the selected devices («Racchiudi in un riquadro», in Modifica and in the menu of a device): `utils/areaActions.ts`, which reads the view and the size of the devices from the screen. Around devices an area has room on every side (`AREA_MARGIN`: 16, and 40 above for its label and, under it, the tag a presentation hangs on a device). Where that room would cross another area, or cover a device it does not hold, it gives way on that side down to `AREA_MIN_MARGIN` (above, the label still fits) to leave `AREA_GAP` clear; at a corner the side that gives up less. An area wholly inside another stays inside it, clear of its sides and under its label where the label reaches (`areaLabelReach`); one wholly around another is nesting too. Where even the least room cannot keep it clear (another area across the devices, a device among them it does not hold, something closer than the least room, an area inside another too close under its label) it is made with its whole room, and overlaps (`areaAround`, `overlaps`). A new area is selected, with its name ready to be typed, in the first colour of the palette the canvas does not use
 - **Colours**: six, by name (`slate`, `green`, `amber`, `red`, `violet`, `teal`), each a variable of the theme (`--area-<name>`) with a value in light and in dark, dark or light enough for the label to be read on the tint. The border and the label take the colour, the inside a tenth of it. `AREA_PALETTE` in `utils/canvasAreas.ts` repeats the values for the exported picture and the small map; tests hold it to the style sheet
 - **While presenting** an area is shown and nothing else: no handle, no side to take it by, no menu. **The small map** shows it as a faint rectangle of its colour, under the devices. **The exported picture** draws the areas first, in the colours of the theme it is made in (`AREA_METRICS` repeats the numbers of the style sheet)
 - The four sample networks have none
@@ -125,7 +128,8 @@ An area is a rectangle with a label, drawn behind a group of devices to say what
 - **TabContainer** - Reusable tab system for modals. It keeps the open tab by itself, or shows the one it is given (`activeTab` with `onTabChange`) when the window has to send to one of its tabs
 - **VLANInput** - Multi-value input with tag chips (range 1-4094)
 - **The name of a VLAN** - A VLAN is a number in the data and for the engine; the project may give it a name (`GlobalNetworkSettings.vlans`). `utils/vlanNames.ts` writes a VLAN with its name (`vlanLabel`: `VLAN 10 «Uffici»`; `vlanShort`: `10 «Uffici»` in a list of numbers), and `utils/useVlanNames.ts` hands the names to the components that show a number: the summary of a switch (`PortsOverview`), the VLAN field of a port (`PortEditor`, the names under the field: the field holds numbers), what a port says under the pointer (`PortGrid`, `portVlanText`), the tags of `VLANInput`. The terminal, the reasons of the engine and the labels typed on cables keep the numbers
-- **DeviceTypeDisplay** - Read-only device type preview with icon
+- **DeviceDrawing** - The drawing of a kind of device, at the size it is asked for (48 on the canvas, 24 to 40 in lists and windows), with the state its upper layer says
+- **DrawingPicker** - The 24 drawings, to choose the one a custom template is shown with: a group of buttons, each named after the device the app shows with it
 - **PortGrid** / **PortConfigPanel** - Port display grid + configuration panel
 - **NICList** / **NICConfigPanel** - NIC list with custom scrollbar + configuration panel
 - **Input/Select** - Compact form controls (`py-1.5`, 14 px text, a ring of the accent on focus)
@@ -152,14 +156,16 @@ An area is a rectangle with a label, drawn behind a group of devices to say what
 The interface follows the site: flat surfaces, thin lines, one accent.
 
 - **Every colour is a variable of the theme**, set for light in `:root` and for dark in `.dark` (the class is on `<html>`). No component names a colour of a fixed palette (`text-gray-500`, `dark:bg-…`) and none styles the dark theme apart: the variables change, the classes do not.
-- **Each colour has one job.** `--text-color` on `--bg-canvas` is the page, and the button that goes on is a block of the first with the second written on it (`Button` `primary`, `.presentation-primary`, `.welcome-button.primary`, `.explorer-button-accent`). `--accent-color`, the orange of the logo in both themes, marks a state: selected, in focus, open, where the packet is; what is written on a fill of it takes `--on-accent`, never white. `--accent-text` (the slate, dark on white and light on black) is for links and for the icons of a list. `--secondary-color` is the slate itself: the icon of a device, the end of a question. `--ok-color`, `--trunk-color` and `--danger-color` say that something works, is a trunk, is wrong.
+- **Each colour has one job.** `--text-color` on `--bg-canvas` is the page, and the button that goes on is a block of the first with the second written on it (`Button` `primary`, `.presentation-primary`, `.welcome-button.primary`, `.explorer-button-accent`). `--accent-color`, the orange of the logo in both themes, marks a state: selected, in focus, open, where the packet is; what is written on a fill of it takes `--on-accent`, never white. `--accent-text` (the slate, dark on white and light on black) is for links and for the icons of a list. `--secondary-color` is the slate itself: the end of a question. `--ok-color`, `--trunk-color` and `--danger-color` say that something works, is a trunk, is wrong.
 - **Under the pointer** a row, a menu entry or an icon takes `--bg-hover`, a flat grey, and an outline takes the colour of the text. Nothing glows, slides or grows.
-- **Corners** come from two sizes, `--radius` (4 px) and `--radius-small` (2 px); Tailwind's `rounded-*` are mapped to the same few values in `tailwind.config.js`. A device on the canvas keeps 3 px, the number the exported picture repeats. **Shadows** are for what floats over the page: menus, windows, a device while it is dragged.
+- **Corners** come from two sizes, `--radius` (4 px) and `--radius-small` (2 px); Tailwind's `rounded-*` are mapped to the same few values in `tailwind.config.js`. The frame of a device on the canvas keeps 3 px, the number the exported picture repeats. **Shadows** are for what floats over the page: menus, windows, the note of a device.
 - **Labels** (the title of a panel, a `legend`, the heading of a section) are small capitals with space between the letters, as on the site.
 - **Typefaces**: Inter for the interface, JetBrains Mono for addresses and for the terminal, both bundled (`@fontsource-variable/inter`, `@fontsource/jetbrains-mono`, imported in `main.tsx`). The exported picture uses the typefaces of the computer instead: an SVG shown as an image cannot use the fonts of the page.
+- **Devices are drawn, not boxed.** Each kind has a drawing of its own, made for the app (`assets/device-drawings`, 24 of them, data in `data/deviceDrawings.ts`): a flat silhouette in two layers with a cut between them, 48 px on the canvas, and the same drawing in every list, window and menu that names a kind of device. The lower layer is `--device-lower`, the upper one at rest `--device-upper`; the symbol on the layers and the cut take the colour of what is behind the drawing (`--device-ground`: the canvas, a menu, a window, the row under the pointer), so that they read as holes. One set of drawings serves both themes, and a drawing names nothing (no id): any number of them can be on a page (`ui/DeviceDrawing`).
+- **The upper layer is the lamp of the device.** Its colour is the state, the same in light and in dark (`--state-*`): grey (`off`) for a device taken as broken in a presentation, red (`error`) for the device where the answer on screen stops, green (`ok`) for the one where it arrives, orange (`selected`) for a selected one, yellow (`warning`) for one whose first card waits for an address nobody gave it (the line under its name says «DHCP: nessun indirizzo»). When more than one is true, the first of that list is told (`deviceState` in `utils/deviceDrawing.ts`). Colour is never alone: a broken device has its mark and its faded texts, a selected one its frame in the accent, one waiting for an address says so under its name, and where an answer ends the frame shows in the colour of the lamp, with words for a screen reader («Qui arriva», «Qui si ferma»).
 - **The terminal** keeps a dark pane in both themes, in the colours of the terminal shown on the site (`TerminalModal.tsx`).
 
-Three test files keep it in one piece: `styleSheet.colours.test.ts` (no fixed palette, no variable without a value in both themes, one accent, nothing white on it), `utils/drawingImage.test.ts` (the picture repeats the colours and the numbers of the style sheet) and `components/Canvas/NetworkCanvas.theme.test.tsx` (the panels React Flow draws follow the theme).
+Four test files keep it in one piece: `styleSheet.colours.test.ts` (no fixed palette, no variable without a value in both themes, one accent, nothing white on it), `utils/deviceGeometry.test.ts` (the numbers of a device are those of the style sheet), `utils/drawingImage.test.ts` (the picture repeats the colours and the numbers of the style sheet, the colours of the states included) and `components/Canvas/NetworkCanvas.theme.test.tsx` (the panels React Flow draws follow the theme).
 
 ## Reusable CSS Classes (`frontend/src/index.css`)
 
@@ -305,25 +311,35 @@ light or dark whatever the theme, a vector file, and a sharp PNG of any size.
 - `drawingImage.ts` — pure (no React, no stores, no DOM). `layoutDrawing()`
   places areas, devices and cables in canvas coordinates; `renderDrawingImage()`
   writes the document, with an optional title above and caption below. The
-  caller gives the size each device has on screen, the shapes of the icons and
-  a way to measure text.
-- A cable is the path the screen draws (`getSmoothStepPath` between the same
-  two points, 12 px outside the boxes) carried on to the two boxes: a picture
-  has no connection points for it to stop at.
-- The numbers of a device (padding, border, line heights) and the colours of
-  the two themes are repeated from `index.css`. A test reads the style sheet
+  caller gives a way to measure text: every device has the frame it has on the
+  canvas (`deviceSize`), and nothing is read from the screen.
+- A device is drawn as on the canvas: its drawing (`drawingMarkup` of
+  `utils/deviceDrawing.ts`: the shapes three times, whole, through the window
+  of the upper layer, through the one of the cut, with the colours of the
+  theme asked for written in), its name and its address with the canvas
+  behind them, no box. Its upper layer is the lamp of its state, as on the
+  canvas: those of the presentation while presenting, and outside it the
+  answer left on the canvas and the devices waiting for an address; where an
+  answer ends the frame is drawn in the colour of the lamp. The two windows of
+  each drawing (`<clipPath>`, `drawingWindows`) are kept once in the `<defs>`
+  of the document, named after the drawing.
+- A cable is the path the screen draws: `getSmoothStepPath` between the same
+  two points, where it ends on each device (`cableEnd`).
+- The numbers of a device are those of the canvas (`utils/deviceGeometry.ts`);
+  those of a cable, a label and an area, and the colours of the two themes
+  (the layers of a drawing and the states included), are repeated from
+  `index.css`. A test reads the style sheet
   and fails when they drift apart. The colours of presentation mode
   (`MARK_COLORS`) are shared with `CustomEdge`; the two colours of a question
   and of what is written on them (`ACCENTS`) are the `--accent-color`,
   `--secondary-color`, `--on-accent` and `--on-secondary` of the theme.
-- Everything the user typed is written as text (`escapeXml`). An icon fetched
-  by name for a custom template goes in only if it is a plain drawing
-  (`isPlainDrawing`): no script, no style, no reference outside the document.
-  Ids inside icons are prefixed per icon. The document refers to nothing
-  outside itself.
-- `drawingMeasure.ts` — what is asked of the browser: the size of each device
-  (`.react-flow__node[data-id]`, less the thicker border of a selected one),
-  the icon shapes Iconify has loaded, text widths from a canvas.
+- Everything the user typed is written as text (`escapeXml`); nothing a
+  template says (its icon, its colour) is copied in. The only ids are those
+  of the windows of the drawings. The document refers to nothing outside
+  itself.
+- `drawingMeasure.ts` — what is asked of the browser: text widths from a
+  canvas, and the size of each device on screen (`.react-flow__node[data-id]`),
+  which an area drawn around devices needs.
 - `imageExport.ts` — the ways out. `rasterizeSvg()` paints the document on a
   canvas of the pixels it declares (`scaledSvg`); `fitScale()` keeps a PNG
   within what browsers can paint. Saving asks where with the File System
@@ -371,14 +387,14 @@ light or dark whatever the theme, a vector file, and a sharp PNG of any size.
 - `newDevicePorts(portCount, deviceType)` - The ports of a new switch, router or firewall: numbered from 1, each on and at `speed: 'auto'`, `portType` `lan` on a router or a firewall and `access` on a switch (or any other device with ports). Nothing else: no VLAN, PoE, NAT, zone or IPS, because the engine applies them for real and they are for whoever configures the device to choose. So a switch made in either window is not VLAN-aware, a router does no NAT, and a cable goes on any free port of a firewall
 
 ### Bulk Device Helpers (`frontend/src/utils/bulkDeviceHelpers.ts`)
-- `bulkAddDevices(rows, quantities, …)` - every device is made from the template of its row, found by its id, and says so (`templateId`: the canvas takes its icon, and the windows its capabilities, from there)
+- `bulkAddDevices(rows, quantities, …)` - every device is made from the template of its row, found by its id, and says so (`templateId`: the canvas takes its drawing, and the windows its capabilities, from there)
 - Ports: `newDevicePorts` of `utils/newDevice.ts`, as many as the row says
 - A new router or firewall gets no gateway (on a router the gateway is its default route); switches and end devices get the one of the project
 - `generateDefaultNIC(ip, subnet, gateway, dns?)` - Auto MAC, eth0, auto speed; the DNS server of the project when it has one. It is the card AddDeviceModal starts from
 - Naming: `newDeviceName` of `utils/newDevice.ts` (see [A new device](#a-new-device-frontendsrcutilsnewdevicets)), asked again for each device with those just made in the list: a row of three takes three free names
-- Grid positioning: `generateGridPositions()` with random offsets (-25/+25px)
+- Places: `gridPlaces` of `utils/placeDevice.ts`, from the place it is given: rows with as many columns as rows or one more, 160 across and 130 down (`NEW_DEVICE_STEP`: the frame of a device and a name that runs out of it), nothing at random, a cell a device is already on skipped. BulkAddDeviceModal gives the place the window that adds one device starts from (`newDevicePlace` of `utils/viewPlace.ts`: the middle of what is on screen), then selects the new devices and, when they do not all fit in what is on screen, asks the canvas to show them (`triggerFitView(ids)`: those devices, without zooming in)
 - IP assignment: `findNextAvailableIP()` of `ipHelpers`, the one AddDeviceModal uses: the first free address of the network of the project, from .2
-- A device made here is the one AddDeviceModal makes from the same template (`BulkAddDeviceModal.same.test.tsx` compares the two, template by template, and the ports for every number of ports offered), but for two things: its place on the grid, and that it is not selected
+- A device made here is the one AddDeviceModal makes from the same template (`BulkAddDeviceModal.same.test.tsx` compares the two, template by template, and the ports for every number of ports offered), but for its place, on the grid
 
 ## Data Types
 
@@ -445,38 +461,47 @@ dhcpServer?: { start, end, gateway?, dns? }   // DHCP pool, on a card of a serve
 
 ### DeviceTemplate
 - Basic: `id, name, type, icon, color, terraformFields, isCustom`
+- `icon` names the drawing the device is shown with, one of the 24 of `data/deviceDrawings.ts`. A template made before the drawings has the name of an Iconify icon there: it is shown with its own drawing when the app comes with it, else with the one of its base type (`drawingOf`), and keeps what it has until it is edited. `color` is kept, and no longer shown
 - Capabilities: `supportsVLAN, supportsSTP, supportsPorts, supportsNICs`
 - `defaultPortCount?, portOptions?`
 
-## Device Templates (20 total)
+## Device Templates (24 total)
+
+Each is shown with its own drawing (`DRAWING_OF_TEMPLATE` in `utils/deviceDrawing.ts`; the file of the drawing in `assets/device-drawings` is named after it).
 
 ### Base Types (9)
-| Template | ID | Icon | Features |
-|----------|----|------|----------|
-| Switch | tpl-switch | mdi:switch | Ports |
-| Router | tpl-router | mdi:router | Ports |
-| Firewall | tpl-firewall | mdi:security | Ports |
-| Server | tpl-server | mdi:server | NICs |
-| Database | tpl-database | mdi:database | NICs |
-| PC | tpl-pc | mdi:desktop-classic | NICs |
-| Cloud | tpl-cloud | mdi:cloud | NICs |
-| AccessPoint | tpl-accesspoint | mdi:access-point | NICs |
-| LoadBalancer | tpl-loadbalancer | mdi:scale-balance | NICs |
+| Template | ID | Drawing | Features |
+|----------|----|---------|----------|
+| PC | tpl-pc | pc | NICs |
+| Switch | tpl-switch | switch | Ports |
+| Router | tpl-router | router | Ports |
+| Server | tpl-server | server | NICs |
+| Firewall | tpl-firewall | firewall | Ports |
+| AccessPoint | tpl-accesspoint | access-point | NICs |
+| LoadBalancer | tpl-loadbalancer | load-balancer | NICs |
+| Database | tpl-database | database | NICs |
+| Cloud | tpl-cloud | cloud | NICs |
 
-### Specialized Templates (11)
-| Template | ID | Base | Icon |
-|----------|----|------|------|
-| Mail Server | tpl-mailserver | Server | mdi:email-fast |
-| VPS | tpl-vps | Server | mdi:cloud-outline |
-| Web Server | tpl-webserver | Server | mdi:web |
-| Proxy Server | tpl-proxy | Server | mdi:shield-half-full |
-| DNS Server | tpl-dnsserver | Server | mdi:dns |
-| DHCP Server | tpl-dhcpserver | Server | mdi:ip-network |
-| Storage S3 | tpl-storage-s3 | Database | mdi:bucket |
-| NAS | tpl-nas | Database | mdi:nas |
-| IoT Gateway | tpl-iotgateway | AccessPoint | mdi:router-wireless-settings |
-| IP Camera | tpl-ipcamera | PC | mdi:cctv |
-| Printer | tpl-printer | PC | mdi:printer-wireless |
+### Specialized Templates (15)
+| Template | ID | Base | Drawing |
+|----------|----|------|---------|
+| Mail Server | tpl-mailserver | Server | server-mail |
+| VPS | tpl-vps | Server | server-vps |
+| Web Server | tpl-webserver | Server | server-web |
+| Proxy Server | tpl-proxy | Server | server-proxy |
+| DNS Server | tpl-dnsserver | Server | server-dns |
+| DHCP Server | tpl-dhcpserver | Server | server-dhcp |
+| Storage S3 | tpl-storage-s3 | Database | storage-s3 |
+| NAS | tpl-nas | Database | nas |
+| IoT Gateway | tpl-iotgateway | AccessPoint | iot |
+| IP Camera | tpl-ipcamera | PC | telecamera-ip |
+| Printer | tpl-printer | PC | stampante |
+| Laptop | tpl-laptop | PC | laptop |
+| Smartphone | tpl-smartphone | PC | smartphone |
+| Tablet | tpl-tablet | PC | tablet |
+| IP Phone | tpl-ipphone | PC | telefono-ip |
+
+The last four are end devices with one network card, as the printer is.
 
 ### Connection Templates (5)
 | Type | Style | Use |
@@ -513,10 +538,11 @@ Save           -> projectStore.buildProjectFile() -> serializeProject() -> file,
 Open           -> file -> parseProjectFile() -> projectStore.loadProject() -> networkStore.replaceCanvas()
 ```
 
-### Icons
-- The icons used in the code are shipped with the app: `scripts/bundle-icons.mjs` (`pnpm icons:bundle`) collects them into `src/data/bundledIcons.ts`, registered at start-up by `utils/bundledIcons.ts`
-- A test fails when an icon used in the source is missing from the bundle
-- An icon name typed by hand in a custom template, if it is not in the bundle, is fetched from the Iconify API
+### Icons and what travels with them
+- The devices are not drawn with icons: see [The look](#the-look-frontendsrcindexcss-frontendtailwindconfigjs)
+- The icons of the interface are shipped with the app: `scripts/bundle-icons.mjs` (`pnpm icons:bundle`, which needs the network) collects them into `src/data/bundledIcons.ts` (two sets, Material Design Icons and Lucide, with what each says of itself: `BUNDLED_ICON_SET_INFO`), registered at start-up by `utils/bundledIcons.ts`, and writes the text of the licence of each set to `public/licenses/`
+- The licences of the two typefaces are written to `public/licenses/` from the packages they come from, their first line reduced to the one copyright notice (`pnpm licenses:fonts`, `scripts/font-licenses.mjs`; `constants/thirdParty.ts`). The build copies the folder as it is; the «Informazioni» tab of the guide links to each file
+- Tests fail when an icon used in the source is missing from the bundle or one in the bundle is not used, when a bundled set or a typeface has no licence text or a text is not the one of its package, and when the README names other sets than those bundled (`utils/licenses.test.ts`). Nothing is fetched from the Iconify API
 
 ## Known Issues & Solutions (Historical)
 

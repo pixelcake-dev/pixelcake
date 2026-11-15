@@ -124,7 +124,7 @@ describe(`the guide — "${TITLE}"`, () => {
   });
 
   it('says the picture has no selection: a selected device is drawn like the others', async () => {
-    expect(step(TITLE)).toContain('senza selezioni né punti di connessione');
+    expect(step(TITLE)).toContain('senza selezioni.');
     act(() => network().selectMultipleDevices([id('R-Sede')]));
     render(<ExportImageModal />);
     act(() => ui().openModal('exportImage'));

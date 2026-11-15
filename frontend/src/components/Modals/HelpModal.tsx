@@ -72,9 +72,9 @@ const GuideTab = () => (
       </Step>
 
       <Step title="Collegali">
-        Ogni dispositivo ha quattro punti di connessione, uno per lato: compaiono quando ci passi
-        sopra con il mouse o lo selezioni. Trascina da un punto fino a un punto di un altro
-        dispositivo: a ciascun capo il collegamento viene assegnato a una porta
+        Passa con il mouse sul bordo di un dispositivo: il lato sotto il puntatore diventa
+        arancione. Trascina da lì fino a un altro dispositivo e lascialo andare sopra: il cavo
+        arriva sul lato dove lo lasci. A ciascun capo il collegamento viene assegnato a una porta
         o a una scheda di rete libera. Su un firewall con zone di sicurezza la porta va scelta a
         mano. Con un clic destro sul collegamento, «Modifica Connessione» permette di cambiare le
         interfacce, il tipo, la banda, l&apos;etichetta e il colore.
@@ -162,7 +162,8 @@ const GuideTab = () => (
         compaiono e ciascuno prende il primo indirizzo libero, saltando quelli scritti a mano. La
         scheda «DHCP» elenca anche chi ha preso quale indirizzo, e sul disegno un indirizzo
         assegnato è seguito da «DHCP». Una scheda che non trova un server resta senza indirizzo,
-        e la sua finestra dice perché. Un router non passa la richiesta a un&apos;altra rete: il
+        e la sua finestra dice perché; quando è la prima scheda del dispositivo, sul canvas la
+        parte alta del suo disegno diventa gialla. Un router non passa la richiesta a un&apos;altra rete: il
         relay non è simulato, e nemmeno le prenotazioni e le scadenze. Nella rete di esempio della
         schermata iniziale i due portatili prendono l&apos;indirizzo così, da Router-Core.
       </Step>
@@ -194,7 +195,11 @@ const GuideTab = () => (
         «Modello di Flusso» (ping, email, pagina web o download), poi premi «Avvia Simulazione». Il
         pacchetto percorre la rete sul disegno. Se non arriva, l&apos;animazione si ferma dove il
         traffico viene bloccato e un messaggio ne spiega il motivo: quale apparato, quale porta,
-        quale rotta o quale regola.
+        quale rotta o quale regola. Quando il pacchetto è arrivato in fondo, la parte alta del
+        disegno del dispositivo che risponde diventa verde, o quella del dispositivo dove la
+        domanda si ferma diventa rossa, con il bordo dello stesso colore; restano così fino alla
+        domanda successiva, a una modifica del disegno o a un clic su un punto vuoto del canvas.
+        Vale anche per le domande fatte dal terminale.
       </Step>
 
       <Step title="Usa il terminale">
@@ -233,8 +238,8 @@ const GuideTab = () => (
       </Step>
 
       <Step title="Esporta il disegno come immagine">
-        File → Esporta immagine… mostra l&apos;anteprima del disegno intero, senza selezioni né
-        punti di connessione. Scegli il formato: PNG, per documenti, presentazioni e messaggi, in
+        File → Esporta immagine… mostra l&apos;anteprima del disegno intero, senza selezioni.
+        Scegli il formato: PNG, per documenti, presentazioni e messaggi, in
         tre dimensioni, oppure SVG, vettoriale. Scegli il tema, chiaro o scuro qualunque sia quello
         dello schermo, e con «Nome del progetto in alto» e «Sfondo trasparente» cosa c&apos;è
         intorno al disegno. «Salva PNG…» chiede dove salvare il file; nei browser che non possono

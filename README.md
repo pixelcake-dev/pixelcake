@@ -15,7 +15,7 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 
 ## What it does
 
-- **Draw.** Devices, links, ports and network cards on an interactive canvas. 20 device types and 5 link types are built in and can be customised. Labelled areas behind groups of devices (Core, Edge, Offices), auto-layout, multi-selection, copy and paste, and several boards per project.
+- **Draw.** Devices, links, ports and network cards on an interactive canvas. 24 device types and 5 link types are built in and can be customised, each device type with a drawing of its own: PC, laptop, smartphone, tablet, IP phone, printer and IP camera; switch, router, firewall, access point, IoT gateway, load balancer and the Internet; a server and six kinds of it (mail, web, DNS, DHCP, proxy, VPS); database, NAS and S3 storage. The upper part of a drawing says the state of the device by its colour: selected, where an answer arrives or stops, waiting for an address, taken as broken. Labelled areas behind groups of devices (Core, Edge, Offices), auto-layout, multi-selection, copy and paste, and several boards per project.
 - **Configure.** Addresses on every router port and network card, static routes, VLANs port by port (access and trunk), each with a name given once for the whole project, firewall zones and ordered rules, NAT towards the Internet and port forwards for what is reached from it, DHCP for the devices that take their address by themselves, DNS records on a server so that a device can be called by name, and a DNS server of the project that new devices start with. A free note on any device, read by resting the pointer on it.
 - **Test.** Ping, web, download and email flows are followed hop by hop and animated on the drawing. When a flow fails, the packet stops at the device that drops it and the reason names the port, the route or the rule.
 - **Type.** A built-in terminal with a small vendor-neutral command language: `ping`, `trace`, `browse`, `resolve`, `show routes`, `add route`, `add rule`, `interface 3 access 10` and more. Commands that change the network edit the same drawing you see.
@@ -179,7 +179,7 @@ The app's icons are bundled with it: nothing is fetched from the Iconify API.
 
 ```bash
 cd frontend
-pnpm test:run      # 2198 tests: engine, terminal, project files, import/export, pictures, screens
+pnpm test:run      # 3114 tests: engine, terminal, project files, import/export, pictures, screens
 pnpm type-check
 pnpm lint
 pnpm build
