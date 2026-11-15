@@ -16,7 +16,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
-import { applySubnetGroupedLayout, getConnectionType } from '@/utils/autoLayout';
+import { arrangeDrawing } from '@/utils/autoLayout';
+import { getConnectionType } from '@/utils/autoConnect';
 import { resolveDhcp } from '@/engine';
 import type { NetworkDevice } from '@/types';
 import AddDeviceModal from './AddDeviceModal';
@@ -86,24 +87,12 @@ describe('the address proposed for a new device', () => {
 });
 
 describe('the layout and a device on DHCP', () => {
-  it('groups it with the network of the address it is leased', () => {
-    // a second building, so that there are two groups to tell apart
-    store().addDevice({
-      type: 'PC',
-      label: 'PC-Altrove',
-      ip: '10.20.0.5',
-      subnet: '255.255.255.0',
-      gateway: '10.20.0.1',
-      position: { x: 0, y: 0 },
-    });
-    const { devices, connections } = store();
-    const laid = applySubnetGroupedLayout(devices, connections).devices;
-    const x = (label: string) => laid.find(d => d.label === label)?.position.x ?? Number.NaN;
-    // PC-1 is drawn among the devices of 192.168.x.x: not further right than
-    // the last of them (in a group of its own it would come after them all)
-    const building = ['Router-1', 'SW-Office', 'SW-Servers', 'PC-2', 'Web-01', 'Mail-01'].map(x);
-    expect(x('PC-1')).toBeLessThanOrEqual(Math.max(...building));
-    expect(x('PC-1')).toBeLessThan(x('PC-Altrove'));
+  it('lays it out by its cables, as any other: under the switch it is cabled to', () => {
+    const { devices, connections, areas } = store();
+    const laid = arrangeDrawing({ devices, connections, areas }).devices;
+    const y = (label: string) => laid.find(d => d.label === label)?.position.y ?? Number.NaN;
+    expect(y('PC-1')).toBeGreaterThan(y('SW-Office'));
+    expect(y('PC-1')).toBe(y('PC-2'));
     // what the layout hands back is the drawing as it is kept
     expect(laid.find(d => d.label === 'PC-1')).toMatchObject({ ip: '', nics: [{ dhcp: true, ip: '' }] });
   });

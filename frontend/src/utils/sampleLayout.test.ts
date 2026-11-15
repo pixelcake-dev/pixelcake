@@ -12,22 +12,13 @@
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { setLanguage, type Language } from '@/i18n';
-import { useTemplateStore } from '@/store/templateStore';
-import type { NetworkDevice } from '@/types';
+import { crowding, deviceBox, sceneOf, touch } from '@/test/drawingChecks';
 import { createCompanySample } from './sampleCompany';
 import { createPerimeterSample } from './samplePerimeter';
 import { createRedundancySample } from './sampleRedundancy';
 import { createSampleTopology } from './sampleTopology';
 import type { SampleNetwork } from './sampleNetwork';
-import {
-  AREA_METRICS,
-  DEVICE_METRICS,
-  approximateTextWidth,
-  areaLabelReach,
-  layoutDrawing,
-  type Box,
-  type Scene,
-} from './drawingImage';
+import { type Box, type Scene } from './drawingImage';
 
 const SAMPLES: Array<[string, () => SampleNetwork]> = [
   ['the company', createCompanySample],
@@ -43,25 +34,8 @@ const BOARD = { width: 1520, height: 735 } as const;
 const FIT_PADDING = 0.2;
 /** The least zoom a sample is fitted at: a drawing 38 px wide, names of 10 px */
 const LEAST_ZOOM = 0.8;
-/** The room asked for around a label of a cable */
-const ROOM = 4;
 
 afterEach(() => setLanguage('it'));
-
-/** A sample as the board draws it: a device on DHCP shows the address it is leased */
-function sceneOf(sample: SampleNetwork): Scene {
-  const shown = (device: NetworkDevice) =>
-    device.ip || (device.nics ?? []).some((nic) => nic.dhcp === true) ? { ...device, ip: device.ip || '192.168.1.100 · DHCP' } : device;
-  const { templates, connectionTemplates } = useTemplateStore.getState();
-  return layoutDrawing({
-    devices: sample.devices.map(shown),
-    connections: sample.connections,
-    areas: sample.areas.map((area, index) => ({ ...area, id: `area-${index + 1}` })),
-    deviceTemplates: templates,
-    connectionTemplates,
-    measureText: approximateTextWidth,
-  });
-}
 
 /**
  * The zoom React Flow fits the drawing at (fitView): the box of its devices
@@ -92,68 +66,6 @@ function onBoard(scene: Scene, box: Box): Box {
   return { x: x + box.x * zoom, y: y + box.y * zoom, width: box.width * zoom, height: box.height * zoom };
 }
 
-const grown = (box: Box, by: number): Box => ({
-  x: box.x - by,
-  y: box.y - by,
-  width: box.width + 2 * by,
-  height: box.height + 2 * by,
-});
-const touch = (a: Box, b: Box) =>
-  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
-const holds = (outer: Box, inner: Box) =>
-  outer.x <= inner.x &&
-  outer.y <= inner.y &&
-  outer.x + outer.width >= inner.x + inner.width &&
-  outer.y + outer.height >= inner.y + inner.height;
-
-/** What a device takes on the board: its frame, and its name or address where wider */
-function deviceBox(device: Scene['devices'][number]): Box {
-  const wide = Math.max(
-    approximateTextWidth(device.label, { size: DEVICE_METRICS.nameSize, weight: 600 }),
-    approximateTextWidth(device.ip, { size: DEVICE_METRICS.ipSize, weight: 400, mono: true })
-  );
-  const half = Math.max(device.box.width / 2, wide / 2 + DEVICE_METRICS.textPad);
-  const centre = device.box.x + device.box.width / 2;
-  return { x: centre - half, y: device.box.y, width: 2 * half, height: device.box.height };
-}
-
-/** Where the name of an area is written, in its top left corner */
-function areaNameBox(area: Scene['areas'][number], sample: SampleNetwork): Box {
-  const source = sample.areas.find((one) => one.position.x === area.box.x && one.position.y === area.box.y)!;
-  return {
-    x: area.box.x,
-    y: area.box.y,
-    width: areaLabelReach(source, approximateTextWidth),
-    height: AREA_METRICS.labelTop + AREA_METRICS.labelLine,
-  };
-}
-
-/** Every label of a cable written over something else, in words */
-function crowding(sample: SampleNetwork): string[] {
-  const scene = sceneOf(sample);
-  const name = (id: string) => sample.devices.find((device) => device.id === id)?.label ?? id;
-  const cableName = (id: string) => {
-    const connection = sample.connections.find((one) => one.id === id)!;
-    return `the label of ${name(connection.source)}–${name(connection.target)}`;
-  };
-  const labels = scene.cables.flatMap((cable) => (cable.label ? [{ id: cable.id, box: cable.label.box }] : []));
-  const found: string[] = [];
-  for (const [index, label] of labels.entries()) {
-    const room = grown(label.box, ROOM);
-    for (const area of scene.areas) {
-      const inside = holds(grown(area.box, -ROOM), label.box);
-      if (touch(room, area.box) && !inside) found.push(`${cableName(label.id)} is on the border of ${area.label}`);
-      if (touch(room, areaNameBox(area, sample))) found.push(`${cableName(label.id)} is on the name of ${area.label}`);
-    }
-    for (const device of scene.devices) {
-      if (touch(room, deviceBox(device))) found.push(`${cableName(label.id)} is on ${device.label}`);
-    }
-    for (const other of labels.slice(index + 1)) {
-      if (touch(grown(label.box, ROOM / 2), other.box)) found.push(`${cableName(label.id)} touches ${cableName(other.id)}`);
-    }
-  }
-  return found;
-}
 
 describe.each(SAMPLES)('%s, as a visitor first sees it', (_, create) => {
   it.each(LANGUAGES)('%s: fit to the window, its drawings are large enough to read', (language) => {

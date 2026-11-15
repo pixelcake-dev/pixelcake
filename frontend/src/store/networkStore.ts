@@ -7,13 +7,15 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
   CanvasArea,
+  DeviceTemplate,
   CanvasData,
   NetworkDevice,
   NetworkConnection,
   GlobalNetworkSettings,
 } from '@/types';
 import { AREA_MIN_SIZE, nextAreaId, readAreas, tidyAreaLabel } from '@/utils/canvasAreas';
-import { applyHierarchicalLayout, applySubnetGroupedLayout, autoConnectDevices } from '@/utils/autoLayout';
+import { arrangeDrawing, type LayoutDirection } from '@/utils/autoLayout';
+import { autoConnectDevices } from '@/utils/autoConnect';
 import { cleanupConnections } from '@/utils/cleanupConnections';
 import { safeJSONStorage } from '@/utils/safeStorage';
 import type { SampleNetwork } from '@/utils/sampleNetwork';
@@ -115,7 +117,12 @@ interface NetworkStore {
   triggerFitView: (nodeIds?: string[]) => void;
 
   // Actions - Layout
-  applyAutoLayout: (algorithm?: 'hierarchical' | 'subnet-grouped', direction?: 'TB' | 'LR') => void;
+  /**
+   * Lay the drawing out again (utils/autoLayout.ts): vertically or
+   * horizontally, the areas following their devices. The templates say how
+   * each device is drawn, and so where its cables end
+   */
+  applyAutoLayout: (direction?: LayoutDirection, deviceTemplates?: DeviceTemplate[]) => void;
   autoConnectDevices: () => void;
 
   // Actions - Utility
@@ -506,20 +513,13 @@ export const useNetworkStore = create<NetworkStore>()(
       },
 
       // Layout Actions
-      applyAutoLayout: (algorithm = 'hierarchical', direction = 'TB') => {
-        const { devices, connections } = get();
-
-        let layoutResult: { devices: NetworkDevice[]; connections: NetworkConnection[] };
-
-        if (algorithm === 'subnet-grouped') {
-          layoutResult = applySubnetGroupedLayout(devices, connections, direction);
-        } else {
-          layoutResult = applyHierarchicalLayout(devices, connections, direction);
-        }
-
+      applyAutoLayout: (direction = 'TB', deviceTemplates = []) => {
+        const { devices, connections, areas } = get();
+        const laid = arrangeDrawing({ devices, connections, areas }, direction, deviceTemplates);
         set({
-          devices: layoutResult.devices,
-          connections: layoutResult.connections,
+          devices: laid.devices,
+          connections: laid.connections,
+          areas: laid.areas,
         });
         get().markChanged();
       },

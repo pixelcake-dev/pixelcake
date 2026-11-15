@@ -1,6 +1,7 @@
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
+import type { LayoutDirection } from '@/utils/autoLayout';
 import { usePresentationStore } from '@/store/presentationStore';
 import {
   openProject,
@@ -69,13 +70,13 @@ const TopMenuBar = () => {
   const handleSave = () => void saveProject();
   const handleSaveAs = () => void saveProjectAs();
 
-  const handleAutoLayout = (algorithm: 'hierarchical' | 'subnet-grouped', direction: 'TB' | 'LR') => {
+  const handleAutoLayout = (_grouping: 'hierarchical' | 'subnet-grouped', direction: LayoutDirection) => {
     const deviceCount = useNetworkStore.getState().devices.length;
     if (deviceCount === 0) {
       toast.info(t.menu.notices.nothingToArrange);
       return;
     }
-    applyAutoLayout(algorithm, direction);
+    applyAutoLayout(direction, useTemplateStore.getState().templates);
   };
 
   const handleAutoConnect = () => {
