@@ -93,7 +93,7 @@ An area is a rectangle with a label, drawn behind a group of devices to say what
 
 ### Presentation (`frontend/src/components/Presentation/`)
 - **PresentationBar** - Takes the place of the menu bar: project and canvases, pace of the packet, terminal, the image of what is on screen, full screen, the language, the theme, exit (also Esc). In a narrow window what matters less gives way first, so that the tools and the way out stay inside it down to 600 px: the name of the project is cut short, the canvases scroll, below 800 px the badge keeps its symbol alone (its word stays for a screen reader), below 640 px the name of the project goes
-- **PresentationPanel** - Question, answer, simulated failures with their effect on the rest of the network, and the way hop by hop. `usePresentationAnswer` works all of it out from the drawing, the question and the failures, marks the way on the canvas and sets the packet off at every change. The effect of the failures is asked of `utils/impactMemo.ts`, which keeps, for the drawing on screen, the exchanges of the intact drawing and the last reports: the export window, whose caption says the same, takes the report the panel has (on the multinational, every pair of its 132 end devices: about ten seconds of work, once)
+- **PresentationPanel** - Question, answer, simulated failures with their effect on the rest of the network, and the way hop by hop. `usePresentationAnswer` works all of it out from the drawing, the question and the failures, marks the way on the canvas and sets the packet off at every change. The answer is worked out at once; the effect of the failures is asked of `utils/impactMemo.ts` through `utils/useImpact.ts` and comes after it, while a line says it is being worked out. `workOutImpact` evaluates the pairs a slice of about 8 ms at a time and gives the page back between slices, so a frame is never held up: on the multinational (132 end devices, 17,292 ordered pairs) the first cut answers in about 0.1 s and its effect follows in under 3 s. It keeps, for the drawing on screen, the exchanges of the intact drawing (shared by every set of failures, and carried on where it was left when the failures change) and the last reports, keyed by the kind of exchange and the failures. A newer set of failures, or another kind of exchange, stops the work for the old one at the next slice, and a report that is no longer wanted is never shown (`wanted`). The export window, whose caption says the same, takes the very report the panel shows, or waits for it with «Salva» and «Copia» disabled. Slices rather than a Worker: the engine reads the drawing as objects, and a Worker would have it copied over at every change, and the panel would still have to wait for the whole of it
 - **PresentationMenu** - The menu a click on a device or a cable opens: start here, arrive here, break, repair
 - `utils/presentation.ts` - The engine's answer turned into what is shown (sentences in the language of the interface, rows tied to the animation, exchanges grouped by device, the caption of an exported image). It touches no store but the language; the reasons and notes of the engine are shown as the engine wrote them, in English in both languages
 
@@ -161,6 +161,7 @@ Every text a person can read or a screen reader can say is in two dictionaries, 
 
 - `it/<namespace>.ts` is the source dictionary, one file for each part of the interface (`menu`, `inspector`, `dhcp`, `help`…), put together in `it/index.ts`. `en/<namespace>.ts` holds the same entries: each namespace is typed `Dictionary['<namespace>']` (`dictionary.ts`: `typeof it`), so a missing English entry, or one of another kind, does not compile.
 - An entry is a text, or a function when the text carries values: `devices: (count: number) => …`. Plurals, gender and the order of the words are plain TypeScript, written apart in each language. A sentence is always one entry: it is never glued together in a component out of translated pieces.
+- `numbers.ts`: a number of things is written as the language writes it, through `formatCount` (`Intl.NumberFormat`): «14.891» in Italian, "14,891" in English. A dictionary writes its counts through it, and a component that shows a count alone uses `t.common.count(n)`. Italian groups the digits from five on («4422», «14.891»), English from four ("4,422"). A number that names one thing (port 24, rule 3, VLAN 10, a row of a file) is not a count and is written as it is, and so are the terminal and the reasons of the engine, which are English and the same in both languages.
 - `index.ts`: `useT()` gives a component the dictionary and draws it again when the language changes; `getT()` gives it to code outside React (a store, a utility, a notice) at the moment of the call. `useLanguage()`, `getLanguage()`, `setLanguage()`.
 - `language.ts`: which language. At start-up, in this order: `?lang=it|en` in the address (taken, remembered, and removed from the address); the choice kept in `localStorage` under `pixelcake-language`; the languages of the browser in the order the user prefers them, the first one the interface speaks, English when it speaks none. Only a choice is remembered. `<html lang>` follows.
 - `Rich.tsx`: a sentence with something inside it that the screen draws itself. Words between backticks are code; `<name>…</name>` and `<name/>` are pieces handed to the caller (a button in the middle of a sentence, a number in bold). What a person typed is handed over as a piece, never pasted into the text.
@@ -177,7 +178,7 @@ Every text a person can read or a screen reader can say is in two dictionaries, 
 **Tests.** They run in Italian (`test/setup.ts` makes the browser of the tests an Italian one, since jsdom presents itself as English), so the tests that look for Italian words did not change. On top of them:
 - `i18n/language.test.ts`: first visit, the address, the remembered choice, `<html lang>`.
 - `i18n/dictionaries.test.ts`: no English entry that is the Italian one again, no Italian in the English dictionary, the same pieces in a sentence in both languages, the glossary (a canvas is a board, «immagine» is an image, the way through a network is a path, a port is connected to its neighbour), and a guide that quotes only labels that controls really have.
-- `i18n/plurals.test.ts`: every entry that takes a number of things, or a list of them, is called with none, one and two, in both languages, and must not say of one what it says of two («1 dispositivi») or of none what it says of one. Which entries take a number is read from the names of their values: a new name must be listed there as a number, a list or neither.
+- `i18n/plurals.test.ts`: every entry that takes a number of things, or a list of them, is called with none, one and two, in both languages, and must not say of one what it says of two («1 dispositivi») or of none what it says of one. Which entries take a number is read from the names of their values: a new name must be listed there as a number, a list or neither. The same entries are called with 14,891 things and must write «14.891» / "14,891", never 14891 (`i18n/numbers.test.ts` holds the helper itself).
 - `i18n/hardcodedText.test.ts`: reads every source file and fails on Italian in a string, a template or JSX text outside `i18n/it/`. It knows Italian by its words (`test/italian.ts`): a list written by hand, and every word the Italian dictionary uses and the English one does not.
 - `i18n/english.test.tsx`: the main screens drawn in Italian and switched to English while on screen; nothing Italian may be left in text, `title`, `placeholder`, `aria-label`, `alt`.
 - `components/ui/LanguageSwitch.test.tsx`: the switch, what is on screen following it without being drawn from scratch, notices and questions made outside React.
@@ -324,6 +325,22 @@ Modules:
 - `impact.ts` — every exchange between two end devices evaluated with and
   without the failures, and compared: broken, rerouted (other cables),
   unchanged. Exchanges that did not work to begin with are not counted.
+  `flowPairs` and `evaluateFlowInto` let a caller evaluate the pairs a few at
+  a time (`utils/impactMemo.ts`).
+- `memo.ts` — what does not change from one pair to the next (the cables of
+  each device, the devices by id, the routing table of a device, the hop
+  distances from a device, the dead interfaces under a set of failures) is
+  worked out once for a whole set of questions, inside `withMemo(memo, work)`.
+  A table is keyed by the very objects it was made from: the list of devices,
+  the list of connections, the failures, the device. The stores never change
+  those in place, so a drawing that changed, or another set of failures, finds
+  nothing it could take for its own. Outside `withMemo` nothing is kept: a
+  single question always reads the drawing as it is. `memo.test.ts` holds a
+  test for each way a table could go stale (an address edited, a cable added
+  or cut, a port disabled, a rule added, a failure added and taken away), and
+  `everyAnswer.test.ts` pins a digest of every answer of the samples (every
+  ordered pair of end devices, every kind of exchange, with and without
+  failures), which the memo did not change.
 - `interfaces.ts` — every link end is attached to one interface of its device
   (a port or a NIC). Owns the binding rules: first free interface on creation,
   migration of old unbound data on load (`normalizeBindings`), cleanup when a
