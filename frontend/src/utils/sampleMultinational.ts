@@ -399,7 +399,8 @@ export function createMultinationalSample(): SampleNetwork {
   const t = getT().samples.multinational;
   const d = new Drawing();
   routeCount = 0;
-  const vlanPort = t.ports.ofVlan;
+  /** A port of a router or a firewall named after the VLAN it serves (the same in every language) */
+  const vlanPort = (name: string, vlan: number) => `${name} (VLAN ${vlan})`;
 
   // ── Where things are: Italy, north on top ───────────────────────────────
   /** The column of Milano's firewall and routers, the middle of its corridor */
@@ -626,9 +627,9 @@ export function createMultinationalSample(): SampleNetwork {
       ['10.102.0.0/16', '10.255.0.102', t.places.venice],
       ['10.103.0.0/16', '10.255.0.103', t.places.florence],
       ['10.104.0.0/16', '10.255.0.104', t.places.naples],
-      ['10.105.0.0/16', '10.255.0.105', t.places.bari],
-      ['10.106.0.0/16', '10.255.0.106', t.places.palermo],
-      ['10.107.0.0/16', '10.255.0.107', t.places.cagliari],
+      ['10.105.0.0/16', '10.255.0.105', 'Bari'],
+      ['10.106.0.0/16', '10.255.0.106', 'Palermo'],
+      ['10.107.0.0/16', '10.255.0.107', 'Cagliari'],
     ] as const
   ).map(([network, nextHop, place]) => route(network, nextHop, t.notes.branch(place)));
   router(d, {
@@ -793,7 +794,7 @@ export function createMultinationalSample(): SampleNetwork {
       id: r, label: `R-${code.toUpperCase()}`, kind: 'Router', location: place, at, ip: `${net}.1`,
       gateway: MILANO_MPLS, count: 4,
       ports: {
-        1: served(t.ports.lan, net),
+        1: served('LAN', net),
         2: { ...addressed('MPLS', `10.255.0.${site}`), portType: 'wan' },
       },
     });
@@ -828,7 +829,7 @@ export function createMultinationalSample(): SampleNetwork {
   });
   // Cagliari, the island on the left, its line across to the foot of the MPLS network
   const cagliari = smallBranch({
-    code: 'ca', site: 107, place: t.places.cagliari, at: { x: cx - 2600, y: SOUTH + 380 }, desks: 'left', mpls: ['right', 'bottom', '100 Mbps'],
+    code: 'ca', site: 107, place: 'Cagliari', at: { x: cx - 2600, y: SOUTH + 380 }, desks: 'left', mpls: ['right', 'bottom', '100 Mbps'],
     devices: [['tpl-pc', 'pc', false], ['tpl-pc', 'pc', false], ['tpl-ipphone', 'tel', false], ['tpl-printer', 'prn', true]],
   });
 
@@ -890,7 +891,7 @@ export function createMultinationalSample(): SampleNetwork {
   // Bari: a warehouse behind a firewall. Cameras with their recorder on a
   // network of their own, sensors behind an IoT gateway, offices and tablets
   const bari = (() => {
-    const place = t.places.bari;
+    const place = 'Bari';
     const BA = { x: cx + 1745, y: SOUTH + 140 };
     const vlans = [10, 60, 70];
     router(d, {
@@ -985,7 +986,7 @@ export function createMultinationalSample(): SampleNetwork {
   // tills reach their server in Milano and nothing else; the guests' Wi-Fi
   // goes out to the Internet, never inside
   const palermo = (() => {
-    const place = t.places.palermo;
+    const place = 'Palermo';
     const PA = { x: cx - 52, y: SOUTH + 500 };
     const vlans = [10, 40, 80];
     router(d, {
@@ -1054,15 +1055,15 @@ export function createMultinationalSample(): SampleNetwork {
   // ── The areas: one for each site; Milano's holds its floors, its server
   //    room and its DMZ ───────────────────────────────────────────────────
   const groups: SampleGroup[] = [
-    { label: t.areas.internet, color: 'slate', devices: ['customer', 'inet-a', 'inet-b', 'remote-worker'] },
-    { label: t.areas.dmz, color: 'green', devices: ['sw-mi-dmz', 'lb-mi', 'dns-pub', 'vpn-gw', 'proxy', 'www-1', 'www-2'] },
+    { label: 'Internet', color: 'slate', devices: ['customer', 'inet-a', 'inet-b', 'remote-worker'] },
+    { label: 'DMZ', color: 'green', devices: ['sw-mi-dmz', 'lb-mi', 'dns-pub', 'vpn-gw', 'proxy', 'www-1', 'www-2'] },
     { label: t.areas.serverRoom, color: 'violet', devices: ['sw-mi-dc', ...servers.map(([id]) => id)] },
     ...floors.map((ids, i) => ({ label: t.areas.floor(i + 1), color: 'teal' as const, devices: ids })),
     {
       label: t.sites.milan,
       color: 'amber',
       devices: ['fw-mi', 'r-mi', 'sw-mi-c1', 'sw-mi-c2', 'r-mi-wan'],
-      areas: [t.areas.dmz, t.areas.serverRoom, ...floors.map((_, i) => t.areas.floor(i + 1))],
+      areas: ['DMZ', t.areas.serverRoom, ...floors.map((_, i) => t.areas.floor(i + 1))],
     },
     { label: t.sites.rome, color: 'amber', devices: ['r-rm', 'sw-rm-c', 'dhcp-rm', 'file-rm', ...romeFloors.flat()] },
     { label: t.sites.disasterRecovery, color: 'violet', devices: ['r-dr', 'sw-dr', ...drServers.map(([id]) => id)] },

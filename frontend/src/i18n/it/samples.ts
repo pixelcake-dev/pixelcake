@@ -165,8 +165,6 @@ export const samples = {
     },
     /** The areas inside the head office */
     areas: {
-      internet: 'Internet',
-      dmz: 'DMZ',
       serverRoom,
       floor: (n: number) => `Piano ${n}`,
     },
@@ -190,10 +188,7 @@ export const samples = {
     ports: {
       inside: 'Interno',
       servers: 'Server',
-      lan: 'LAN',
       shop: 'Negozio',
-      /** A port of a router or a firewall named after the VLAN it serves */
-      ofVlan: (name: string, vlan: number) => `${name} (VLAN ${vlan})`,
       lineTo: (place: string) => `Linea ${place}`,
     },
     /** Places named in the ports and in the notes of the routes */
@@ -205,9 +200,6 @@ export const samples = {
       venice: 'Venezia',
       florence: 'Firenze',
       naples: 'Napoli',
-      bari: 'Bari',
-      palermo: 'Palermo',
-      cagliari: 'Cagliari',
     },
     cables: {
       mainLine: 'Linea principale',

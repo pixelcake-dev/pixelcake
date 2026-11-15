@@ -156,8 +156,6 @@ export const samples: Dictionary['samples'] = {
       cagliari: 'Cagliari · Branch',
     },
     areas: {
-      internet: 'Internet',
-      dmz: 'DMZ',
       serverRoom,
       floor: (n: number) => `Floor ${n}`,
     },
@@ -178,9 +176,7 @@ export const samples: Dictionary['samples'] = {
     ports: {
       inside: 'Internal',
       servers: 'Servers',
-      lan: 'LAN',
       shop: 'Shop',
-      ofVlan: (name: string, vlan: number) => `${name} (VLAN ${vlan})`,
       lineTo: (place: string) => `Line to ${place}`,
     },
     places: {
@@ -191,9 +187,6 @@ export const samples: Dictionary['samples'] = {
       venice: 'Venice',
       florence: 'Florence',
       naples: 'Naples',
-      bari: 'Bari',
-      palermo: 'Palermo',
-      cagliari: 'Cagliari',
     },
     cables: {
       mainLine: 'Main line',
