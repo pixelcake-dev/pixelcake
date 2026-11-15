@@ -28,9 +28,10 @@ export const help = {
         'e si può cambiare, o lasciare al DHCP. Il dispositivo compare al centro della parte di ' +
         'canvas che stai guardando (o nel primo posto libero lì accanto) ed è già selezionato. ' +
         '«Aggiungi in blocco» ne crea molti in una volta. Nella scheda «Esempi» dello stesso ' +
-        'pannello ci sono quattro reti di esempio già pronte: quella di una piccola azienda (la ' +
-        'stessa della schermata di benvenuto), una semplice, una con VLAN, DMZ e firewall, e una ' +
-        'con due sedi e una linea di riserva. Caricarne una prende il posto di quanto è sul ' +
+        'pannello ci sono cinque reti di esempio già pronte: quella di una piccola azienda (la ' +
+        'stessa della schermata di benvenuto), una semplice, una con VLAN, DMZ e firewall, una ' +
+        'con due sedi e una linea di riserva, e la rete grande di una multinazionale, con dieci ' +
+        'sedi in Italia. Caricarne una prende il posto di quanto è sul ' +
         'canvas. Ogni rete di esempio arriva con le sue impostazioni di rete (Impostazioni → ' +
         'Rete): la rete da cui partono i nuovi dispositivi, il server DNS, i nomi delle VLAN.',
     },

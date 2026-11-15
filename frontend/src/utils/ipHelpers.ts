@@ -9,17 +9,27 @@
  * @returns true if valid, false otherwise
  */
 export function isValidIP(ip: string): boolean {
-  const ipRegex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
-  const match = ip.match(ipRegex);
-
-  if (!match) {
-    return false;
+  // Four groups of one to three digits joined by dots, each no more than 255:
+  // read in one pass (the engine asks this many times for every question)
+  let groups = 0;
+  let digits = 0;
+  let value = 0;
+  for (let index = 0; index < ip.length; index++) {
+    const code = ip.charCodeAt(index);
+    if (code === 46) {
+      if (digits === 0 || value > 255) return false;
+      groups += 1;
+      digits = 0;
+      value = 0;
+    } else if (code >= 48 && code <= 57) {
+      digits += 1;
+      if (digits > 3) return false;
+      value = value * 10 + (code - 48);
+    } else {
+      return false;
+    }
   }
-
-  return match.slice(1).every(octet => {
-    const num = parseInt(octet, 10);
-    return num >= 0 && num <= 255;
-  });
+  return groups === 3 && digits > 0 && value <= 255;
 }
 
 /**

@@ -1,12 +1,17 @@
 /** Settings, network tab: what a new device starts from */
 
+import { formatCount } from '../numbers';
+
+/** A number of things as Italian writes it («14.891») */
+const amount = (value: number) => formatCount('it', value);
+
 const example = (value: string) => `es. ${value}`;
 
 /** `PC-1, PC-2 e Srv-1`; after the first four, how many more */
 const listOf = (names: string[]) => {
   const shown = names.slice(0, 4);
   const more = names.length - shown.length;
-  if (more > 0) return `${shown.join(', ')} e ${more === 1 ? 'un altro' : `altri ${more}`}`;
+  if (more > 0) return `${shown.join(', ')} e ${more === 1 ? 'un altro' : `altri ${amount(more)}`}`;
   if (shown.length === 1) return shown[0];
   return `${shown.slice(0, -1).join(', ')} e ${shown[shown.length - 1]}`;
 };
@@ -41,13 +46,13 @@ export const networkSettings = {
     missing: (names: string[]) =>
       names.length === 1
         ? `Su questo canvas ${names[0]} non ha un server DNS.`
-        : `Su questo canvas ${names.length} dispositivi non hanno un server DNS.`,
+        : `Su questo canvas ${amount(names.length)} dispositivi non hanno un server DNS.`,
     button: (server: string) => `Assegna ${server}`,
     question: {
       title: (server: string, names: string[]) =>
         names.length === 1
           ? `Assegnare il server DNS ${server} a ${names[0]}?`
-          : `Assegnare il server DNS ${server} a ${names.length} dispositivi?`,
+          : `Assegnare il server DNS ${server} a ${amount(names.length)} dispositivi?`,
       detail: (names: string[]) =>
         (names.length === 1
           ? 'Viene scritto sulla sua scheda di rete.'
@@ -60,7 +65,7 @@ export const networkSettings = {
     done: (names: string[]) =>
       names.length === 1
         ? `Server DNS assegnato a ${names[0]}`
-        : `Server DNS assegnato a ${names.length} dispositivi`,
+        : `Server DNS assegnato a ${amount(names.length)} dispositivi`,
   },
 
   /** Over the table of the VLANs of the project */

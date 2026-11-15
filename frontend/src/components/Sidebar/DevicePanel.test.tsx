@@ -9,6 +9,7 @@ import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { useUIStore } from '@/store/uiStore';
 import { answerConfirms, settled } from '@/test/confirm';
+import { createMultinationalSample } from '@/utils/sampleMultinational';
 import DevicePanel from './DevicePanel';
 
 const labels = () => useNetworkStore.getState().devices.map(d => d.label);
@@ -28,13 +29,13 @@ afterEach(() => {
 });
 
 describe('DevicePanel — sample networks', () => {
-  it('offers the company first, then the simple office, the site with VLANs, DMZ and firewall, and the two sites with a backup line', () => {
+  it('offers the company first, then the simple office, the site with VLANs, DMZ and firewall, the two sites with a backup line, and last the multinational', () => {
     openSamples();
     const offered = screen
       .getAllByRole('button')
       .map(button => button.textContent ?? '')
-      .filter(text => /^(Azienda|Ufficio|Sede|Due sedi):/.test(text));
-    expect(offered.map(text => text.split(':')[0])).toEqual(['Azienda', 'Ufficio', 'Sede', 'Due sedi']);
+      .filter(text => /^(Azienda|Ufficio|Sede|Due sedi|Multinazionale):/.test(text));
+    expect(offered.map(text => text.split(':')[0])).toEqual(['Azienda', 'Ufficio', 'Sede', 'Due sedi', 'Multinazionale']);
     expect(screen.getByRole('button', { name: /Azienda: uffici, Wi-Fi, server e DMZ/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Ufficio: due reti e un router/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Sede: VLAN, DMZ e firewall/ })).toBeInTheDocument();
@@ -62,10 +63,25 @@ describe('DevicePanel — sample networks', () => {
     expect(useNetworkStore.getState().fitViewRequest).toBe(fitsAsked + 1);
   });
 
+  it('says how large the multinational is, counted on the sample, and loads all of it', async () => {
+    openSamples();
+    const sample = createMultinationalSample();
+    const entry = screen.getByRole('button', { name: /Multinazionale: dieci sedi in Italia/ });
+    expect(entry.textContent).toContain(`Una rete grande, di ${sample.devices.length} dispositivi`);
+
+    fireEvent.click(entry);
+    await settled();
+
+    expect(labels()).toHaveLength(sample.devices.length);
+    expect(labels()).toContain('R-MI-WAN');
+    expect(useNetworkStore.getState().connections).toHaveLength(sample.connections.length);
+    expect(useNetworkStore.getState().areas).toHaveLength(sample.areas.length);
+  });
+
   it('every sample is asked into view when it is loaded', async () => {
     openSamples();
     answerConfirms(true);
-    for (const name of [/Ufficio: due reti/, /Sede: VLAN/, /Due sedi:/]) {
+    for (const name of [/Ufficio: due reti/, /Sede: VLAN/, /Due sedi:/, /Multinazionale:/]) {
       const fitsAsked = useNetworkStore.getState().fitViewRequest;
       fireEvent.click(screen.getByRole('button', { name }));
       await settled();

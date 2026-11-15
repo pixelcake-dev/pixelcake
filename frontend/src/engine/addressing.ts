@@ -20,6 +20,7 @@ import { isValidIP } from '@/utils/ipHelpers';
 import { listInterfaces } from './interfaces';
 import type { DeviceInterface } from './interfaces';
 import { primaryGateway, primaryMask } from './topology';
+import { memoSlot, remembered } from './memo';
 
 /** Mask assumed for an address that carries no (valid) mask */
 export const DEFAULT_MASK = '255.255.255.0';
@@ -32,6 +33,33 @@ export interface Network {
 
 /** Dotted IPv4 → unsigned 32-bit number. The caller checks validity first. */
 export function ipToNumber(ip: string): number {
+  // Four groups of one to three digits, each up to 255, read in one pass:
+  // the same number the split below gives, without making five strings
+  let value = 0;
+  let octet = 0;
+  let digits = 0;
+  let dots = 0;
+  for (let index = 0; index < ip.length; index++) {
+    const code = ip.charCodeAt(index);
+    if (code === 46) {
+      if (digits === 0 || octet > 255) return ipToNumberBySplit(ip);
+      value = value * 256 + octet;
+      octet = 0;
+      digits = 0;
+      dots += 1;
+    } else if (code >= 48 && code <= 57 && digits < 3) {
+      octet = octet * 10 + (code - 48);
+      digits += 1;
+    } else {
+      return ipToNumberBySplit(ip);
+    }
+  }
+  if (dots !== 3 || digits === 0 || octet > 255) return ipToNumberBySplit(ip);
+  return value * 256 + octet;
+}
+
+/** The same, for whatever is not four groups of digits (what it always did) */
+function ipToNumberBySplit(ip: string): number {
   const [a, b, c, d] = ip.split('.').map(Number);
   return ((a << 24) | (b << 16) | (c << 8) | d) >>> 0;
 }
@@ -228,8 +256,17 @@ function interfaceFor(interfaces: L3Interface[], ip: string): L3Interface | unde
  * whose destination or next hop is not valid are left out, as a real device
  * would refuse them, and so is a route (or a gateway) that points at one of
  * the device's own addresses.
+ *
+ * Worked out once per device while a memo is in force (see ./memo); the
+ * table is not to be changed by the caller.
  */
 export function routingTable(device: NetworkDevice): RouteEntry[] {
+  return remembered(ROUTING_TABLE, device, () => buildRoutingTable(device));
+}
+
+const ROUTING_TABLE = memoSlot('routing table');
+
+function buildRoutingTable(device: NetworkDevice): RouteEntry[] {
   const interfaces = l3Interfaces(device);
   const usable = interfaces.filter(entry => isValidIP(entry.ip));
   const entries: RouteEntry[] = [];

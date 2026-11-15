@@ -1,4 +1,7 @@
 import type { Dictionary } from '../dictionary';
+import { formatCount } from '../numbers';
+
+const amount = (value: number) => formatCount('en', value);
 
 /** The menu bar */
 export const menu: Dictionary['menu'] = {
@@ -68,7 +71,7 @@ export const menu: Dictionary['menu'] = {
 
   /** Said after View → Connect devices with no cable */
   connectNotice: {
-    added: (count: number) => (count === 1 ? '1 cable added' : `${count} cables added`),
+    added: (count: number) => (count === 1 ? '1 cable added' : `${amount(count)} cables added`),
     noneAdded: 'No cable added',
     allCabled: 'Every device already has its cable',
     /** Why a device was left with no cable: after its name, “PC-7: …” */
@@ -80,7 +83,7 @@ export const menu: Dictionary['menu'] = {
       byHand: 'routers, firewalls and the Internet are cabled by hand',
     },
     /** After the first three names of a list of five or more */
-    more: (count: number) => `and ${count} more`,
+    more: (count: number) => `and ${amount(count)} more`,
   },
 
   /** What an entry says when it has nothing to act on */

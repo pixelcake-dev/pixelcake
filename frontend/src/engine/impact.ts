@@ -25,6 +25,7 @@ import { planAndEvaluateFlow } from './flows';
 import type { FlowResult } from './flows';
 import { forwardingRole, isInternetLike } from './topology';
 import { withLeases } from './dhcp';
+import { createMemo, withMemo } from './memo';
 
 export interface ImpactOptions {
   /** The kind of exchange evaluated between every two end devices */
@@ -80,23 +81,45 @@ export function impactEndpoints(topo: Topology): NetworkDevice[] {
   });
 }
 
-/** Evaluate the exchange between every two end devices of `topo` */
-export function evaluateAllFlows(topo: Topology, options: ImpactOptions): FlowTable {
+/** Every ordered pair of end devices of `topo`, as source and target ids, in the order they are evaluated */
+export function flowPairs(topo: Topology): Array<[string, string]> {
   const endpoints = impactEndpoints(topo);
-  const table: FlowTable = new Map();
+  const pairs: Array<[string, string]> = [];
   for (const source of endpoints) {
     for (const target of endpoints) {
-      if (source.id === target.id) continue;
-      table.set(flowKey(source.id, target.id), {
-        sourceId: source.id,
-        targetId: target.id,
-        result: planAndEvaluateFlow(options.flow, source.id, target.id, topo, {
-          emailMode: options.emailMode,
-        }),
-      });
+      if (source.id !== target.id) pairs.push([source.id, target.id]);
     }
   }
-  return table;
+  return pairs;
+}
+
+/** Evaluate the exchange of one pair and put it in `table` */
+export function evaluateFlowInto(
+  table: FlowTable,
+  topo: Topology,
+  options: ImpactOptions,
+  [sourceId, targetId]: [string, string]
+): void {
+  table.set(flowKey(sourceId, targetId), {
+    sourceId,
+    targetId,
+    result: planAndEvaluateFlow(options.flow, sourceId, targetId, topo, {
+      emailMode: options.emailMode,
+    }),
+  });
+}
+
+/**
+ * Evaluate the exchange between every two end devices of `topo`. What every
+ * pair shares (cables, routing tables, distances) is worked out once for all
+ * of them (see ./memo): the answers are those of each pair asked alone.
+ */
+export function evaluateAllFlows(topo: Topology, options: ImpactOptions): FlowTable {
+  return withMemo(createMemo(), () => {
+    const table: FlowTable = new Map();
+    for (const pair of flowPairs(topo)) evaluateFlowInto(table, topo, options, pair);
+    return table;
+  });
 }
 
 /** True when the two outcomes travel on the same cables through the same devices */

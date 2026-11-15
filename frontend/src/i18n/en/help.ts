@@ -29,10 +29,11 @@ export const help: Dictionary['help'] = {
         'list: check the name and confirm; the IP address is suggested automatically and can be ' +
         'changed, or left to DHCP. The device appears at the centre of the part of the board you ' +
         'are looking at (or in the first free place next to it) and is already selected. “Bulk ' +
-        'add” creates many at once. In the “Samples” tab of the same panel there are four sample ' +
+        'add” creates many at once. In the “Samples” tab of the same panel there are five sample ' +
         'networks ready to use: that of a small company (the same as on the welcome screen), a ' +
-        'simple one, one with VLANs, a DMZ and a firewall, and one with two sites and a backup ' +
-        'line. Loading one replaces what is on the board. Each sample comes with its own network ' +
+        'simple one, one with VLANs, a DMZ and a firewall, one with two sites and a backup ' +
+        'line, and the large network of a multinational, with ten sites in Italy. Loading one ' +
+        'replaces what is on the board. Each sample comes with its own network ' +
         'settings (Settings → Network): the network new devices start from, the DNS server, the ' +
         'names of the VLANs.',
     },

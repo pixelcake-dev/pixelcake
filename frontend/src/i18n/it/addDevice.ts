@@ -1,8 +1,13 @@
+import { formatCount } from '../numbers';
+
+/** A number of things as Italian writes it («14.891») */
+const amount = (value: number) => formatCount('it', value);
+
 /** The window that adds a device, and the one that adds many */
 export const addDevice = {
   /** In both windows: the type of a device, and a number of ports to choose from a list */
   type: 'Tipo',
-  ports: (count: number) => (count === 1 ? '1 porta' : `${count} porte`),
+  ports: (count: number) => (count === 1 ? '1 porta' : `${amount(count)} porte`),
 
   /** The window that adds one device, of the type picked in the panel */
   title: (typeName: string) => `Aggiungi nuovo ${typeName}`,
@@ -60,6 +65,6 @@ export const addDevice = {
 
     selectAtLeastOne: 'Seleziona almeno un dispositivo da aggiungere',
     added: (count: number) =>
-      count === 1 ? '1 dispositivo aggiunto' : `${count} dispositivi aggiunti`,
+      count === 1 ? '1 dispositivo aggiunto' : `${amount(count)} dispositivi aggiunti`,
   },
 };

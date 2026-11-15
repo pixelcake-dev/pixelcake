@@ -471,7 +471,7 @@ const InspectorModal = () => {
   const portsTab = t.interfaces.portsTab;
   const tabNames = t.common.deviceTabs;
   /** The name of a tab, with how many things it holds when it holds any */
-  const tabLabel = (name: string, count: number) => (count > 0 ? `${name} (${count})` : name);
+  const tabLabel = (name: string, count: number) => (count > 0 ? `${name} (${t.common.count(count)})` : name);
 
   // Define tabs
   const tabs: Tab[] = [

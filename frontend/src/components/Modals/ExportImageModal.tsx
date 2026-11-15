@@ -19,9 +19,10 @@ import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { assessImpact, hasFailures, planAndEvaluateFlow, withFailures } from '@/engine';
+import { hasFailures, planAndEvaluateFlow, withFailures } from '@/engine';
 import type { Failures, Topology } from '@/engine';
 import { captionOf } from '@/utils/presentation';
+import { useImpact } from '@/utils/useImpact';
 import { useDhcp } from '@/utils/useDhcp';
 import { noLeaseLabel, shownAddress } from '@/utils/dhcpLabels';
 import {
@@ -129,13 +130,24 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
     [presenting, sourceId, targetId, failedDevices, failedConnections, route]
   );
 
+  // The effect of the failures is the panel's, worked out once (utils/impactMemo):
+  // when the window opens before it is, the picture waits for it
+  const intact: Topology = useMemo(() => ({ devices, connections }), [devices, connections]);
+  const failures: Failures = useMemo(
+    () => ({ devices: failedDevices, connections: failedConnections }),
+    [failedDevices, failedConnections]
+  );
+  const isBroken = hasFailures(failures);
+  const impactOptions = useMemo(
+    () => (presenting && isBroken ? { flow, emailMode } : null),
+    [presenting, isBroken, flow, emailMode]
+  );
+  const { report: impact, computing: impactComputing } = useImpact(intact, failures, impactOptions);
+
   const caption = useMemo(() => {
     if (!presenting) return null;
     const labels = new Map(devices.map((device) => [device.id, device.label] as const));
     const labelOf = (id: string) => labels.get(id) ?? id;
-    const intact: Topology = { devices, connections };
-    const failures: Failures = { devices: failedDevices, connections: failedConnections };
-    const isBroken = hasFailures(failures);
     const asked = sourceId !== null && targetId !== null && sourceId !== targetId;
     const options = { emailMode };
 
@@ -156,13 +168,17 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
           );
         }),
       ],
-      impact: isBroken ? assessImpact(intact, failures, { flow, emailMode }) : null,
+      impact,
       labelOf,
     });
   }, [
     presenting,
     devices,
     connections,
+    intact,
+    failures,
+    isBroken,
+    impact,
     sourceId,
     targetId,
     flow,
@@ -252,6 +268,8 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
   const failed = pngFailed !== null && pngFailed.svg === image.svg && pngFailed.scale === pngScale;
   /** A large PNG takes a moment: the button says so instead of just not answering */
   const preparing = format === 'png' && !pngBlob && !failed;
+  /** The words under the picture wait for the effect of the failures: nothing leaves without it */
+  const waitingForEffect = withCaption && impactComputing;
 
   // "Copiata" goes back to "Copia" after a moment
   useEffect(() => {
@@ -261,6 +279,7 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
   }, [copied]);
 
   const handleSave = async () => {
+    if (waitingForEffect) return;
     const content = format === 'svg' ? svgBlob(image.svg) : pngBlob;
     if (!content) return;
     const outcome = await saveImage(content, imageFileName(projectName, canvasName, format), format);
@@ -268,7 +287,7 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
   };
 
   const handleCopy = async () => {
-    if (!pngBlob) return;
+    if (!pngBlob || waitingForEffect) return;
     if (await copyImage(pngBlob)) setCopied(true);
   };
 
@@ -312,7 +331,7 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
             <Button
               variant="secondary"
               onClick={() => void handleCopy()}
-              disabled={!pngBlob}
+              disabled={!pngBlob || waitingForEffect}
               title={t.exportImage.copyHint}
             >
               {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -322,12 +341,14 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
           <Button
             variant="primary"
             onClick={() => void handleSave()}
-            disabled={format === 'png' && !pngBlob}
+            disabled={(format === 'png' && !pngBlob) || waitingForEffect}
           >
             <Download size={14} />
-            {preparing
-              ? t.exportImage.preparing
-              : canChooseWhereToSave()
+            {waitingForEffect
+              ? t.exportImage.waitingForEffect
+              : preparing
+                ? t.exportImage.preparing
+                : canChooseWhereToSave()
                 ? t.exportImage.save(formatName)
                 : t.exportImage.download(formatName)}
           </Button>

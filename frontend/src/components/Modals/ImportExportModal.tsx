@@ -615,7 +615,7 @@ const ImportTab = ({
             <div className="modal-error-box" style={{ fontSize: '0.82em' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', fontWeight: 600 }}>
                 <AlertTriangle size={14} />
-                {t.importExport.importTab.warnings} ({importResult.warnings.length})
+                {t.importExport.importTab.warnings} ({t.common.count(importResult.warnings.length)})
               </div>
               <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 {importResult.warnings.map((w, i) => (

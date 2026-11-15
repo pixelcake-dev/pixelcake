@@ -11,23 +11,23 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useNetworkStore } from '@/store/networkStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
-import {
-  assessImpact,
-  evaluateAllFlows,
-  hasFailures,
-  planAndEvaluateFlow,
-  withFailures,
-} from '@/engine';
+import { hasFailures, planAndEvaluateFlow, withFailures } from '@/engine';
 import type { Failures, FlowResult, ImpactReport, Topology } from '@/engine';
 import { routeOf } from '@/utils/presentation';
+import { useImpact } from '@/utils/useImpact';
 
 export interface PresentationAnswer {
   /** The answer to the question, with the failures applied; null with no question */
   answer: FlowResult | null;
   /** The answer the same question gets with nothing broken; null with no failures */
   intactAnswer: FlowResult | null;
-  /** What the failures do to every exchange of the drawing; null with no failures */
+  /**
+   * What the failures do to every exchange of the drawing; null with no
+   * failures, and while it is being worked out
+   */
   impact: ImpactReport | null;
+  /** True while the effect of the failures is being worked out (the answer is there already) */
+  impactComputing: boolean;
   /**
    * How far the packet of this answer has got, as a position in its
    * animation; null when it is not travelling (the whole answer is shown)
@@ -79,16 +79,13 @@ export function usePresentationAnswer(): PresentationAnswer {
     [question, isBroken, flow, intact, emailMode]
   );
 
-  // The exchanges of the intact drawing are evaluated once per drawing and
-  // kind of exchange, not at every failure
-  const baseline = useMemo(
-    () => (isBroken ? evaluateAllFlows(intact, { flow, emailMode }) : null),
-    [isBroken, intact, flow, emailMode]
-  );
-  const impact = useMemo(
-    () => (baseline ? assessImpact(intact, failures, { flow, emailMode }, baseline) : null),
-    [baseline, intact, failures, flow, emailMode]
-  );
+  // The effect on the rest of the network is worked out a slice at a time,
+  // the page going on meanwhile; the exchanges of the intact drawing once per
+  // drawing and kind of exchange, not at every failure; the report is kept
+  // for the export window, which says the same under the picture
+  // (utils/impactMemo)
+  const impactOptions = useMemo(() => (isBroken ? { flow, emailMode } : null), [isBroken, flow, emailMode]);
+  const { report: impact, computing: impactComputing } = useImpact(intact, failures, impactOptions);
 
   // Another canvas came on screen: question and failures belonged to the old one
   const seenRevision = useRef(canvasRevision);
@@ -141,5 +138,5 @@ export function usePresentationAnswer(): PresentationAnswer {
     return state.activeDeviceId === state.path[next] ? next : state.currentHop;
   });
 
-  return { answer, intactAnswer, impact, reached };
+  return { answer, intactAnswer, impact, impactComputing, reached };
 }

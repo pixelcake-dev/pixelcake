@@ -1,4 +1,8 @@
 import type { Dictionary } from '../dictionary';
+import { formatCount } from '../numbers';
+
+/** A number of things as English writes it ("14,891") */
+const amount = (value: number) => formatCount('en', value);
 
 /** The panel that adds devices and loads the sample networks */
 export const devicePanel: Dictionary['devicePanel'] = {
@@ -68,6 +72,11 @@ export const devicePanel: Dictionary['devicePanel'] = {
     twoSites: {
       title: 'Two sites: main line and backup line',
       description: 'For trying out failures: nearly every cable has an alternative path',
+    },
+    multinational: {
+      title: 'Multinational: ten sites in Italy',
+      description: (deviceCount: number) =>
+        `A large network of ${amount(deviceCount)} ${deviceCount === 1 ? 'device' : 'devices'}: MPLS, VLANs, firewalls, a backup line`,
     },
     /** Asked before a sample takes the place of a drawing */
     replaceQuestion: {

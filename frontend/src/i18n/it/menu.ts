@@ -1,3 +1,7 @@
+import { formatCount } from '../numbers';
+
+const amount = (value: number) => formatCount('it', value);
+
 /** The menu bar */
 export const menu = {
   file: {
@@ -68,7 +72,7 @@ export const menu = {
 
   /** Said after Vista → Collega i dispositivi senza cavo */
   connectNotice: {
-    added: (count: number) => (count === 1 ? 'Aggiunto 1 cavo' : `Aggiunti ${count} cavi`),
+    added: (count: number) => (count === 1 ? 'Aggiunto 1 cavo' : `Aggiunti ${amount(count)} cavi`),
     noneAdded: 'Nessun cavo aggiunto',
     allCabled: 'Ogni dispositivo ha già il suo cavo',
     /** Why a device was left with no cable: after its name, «PC-7: …» */
@@ -80,7 +84,7 @@ export const menu = {
       byHand: 'router, firewall e Internet si collegano a mano',
     },
     /** After the first three names of a list of five or more */
-    more: (count: number) => `e altri ${count}`,
+    more: (count: number) => `e altri ${amount(count)}`,
   },
 
   /** What an entry says when it has nothing to act on */

@@ -1,5 +1,10 @@
 /** Reading a project file: what was repaired, what is wrong */
 
+import { formatCount } from '../numbers';
+
+/** A number of things as Italian writes it («14.891») */
+const amount = (value: number) => formatCount('it', value);
+
 /** What is said of one canvas of the file: its name comes first */
 const inCanvas = (canvasName: string, what: string) => `Canvas «${canvasName}»: ${what}`;
 
@@ -34,11 +39,11 @@ export const projectFile = {
     vlanNamesDropped: (count: number) =>
       count === 1
         ? '1 nome di VLAN non valido o duplicato ignorato.'
-        : `${count} nomi di VLAN non validi o duplicati ignorati.`,
+        : `${amount(count)} nomi di VLAN non validi o duplicati ignorati.`,
     vlanNamesCut: (count: number, maxLength: number) =>
       count === 1
-        ? `1 nome di VLAN troppo lungo accorciato a ${maxLength} caratteri.`
-        : `${count} nomi di VLAN troppo lunghi accorciati a ${maxLength} caratteri.`,
+        ? `1 nome di VLAN troppo lungo accorciato a ${amount(maxLength)} caratteri.`
+        : `${amount(count)} nomi di VLAN troppo lunghi accorciati a ${amount(maxLength)} caratteri.`,
 
     canvasUnnamed: (number: number, givenName: string) =>
       `Canvas n. ${number} senza nome: chiamato «${givenName}».`,
@@ -47,49 +52,49 @@ export const projectFile = {
         canvasName,
         count === 1
           ? '1 dispositivo non valido o duplicato ignorato.'
-          : `${count} dispositivi non validi o duplicati ignorati.`
+          : `${amount(count)} dispositivi non validi o duplicati ignorati.`
       ),
     devicesRepaired: (canvasName: string, count: number) =>
       inCanvas(
         canvasName,
         count === 1
           ? '1 dispositivo incompleto corretto.'
-          : `${count} dispositivi incompleti corretti.`
+          : `${amount(count)} dispositivi incompleti corretti.`
       ),
     connectionsDropped: (canvasName: string, count: number) =>
       inCanvas(
         canvasName,
         count === 1
           ? '1 connessione non valida ignorata.'
-          : `${count} connessioni non valide ignorate.`
+          : `${amount(count)} connessioni non valide ignorate.`
       ),
     connectionsDuplicate: (canvasName: string, count: number) =>
       inCanvas(
         canvasName,
         count === 1
           ? '1 connessione con ID duplicato rimossa.'
-          : `${count} connessioni con ID duplicato rimosse.`
+          : `${amount(count)} connessioni con ID duplicato rimosse.`
       ),
     connectionsDetached: (canvasName: string, count: number) =>
       inCanvas(
         canvasName,
         count === 1
           ? '1 connessione verso un dispositivo inesistente rimossa.'
-          : `${count} connessioni verso dispositivi inesistenti rimosse.`
+          : `${amount(count)} connessioni verso dispositivi inesistenti rimosse.`
       ),
     areasDropped: (canvasName: string, count: number) =>
       inCanvas(
         canvasName,
         count === 1
           ? '1 riquadro non valido ignorato.'
-          : `${count} riquadri non validi ignorati.`
+          : `${amount(count)} riquadri non validi ignorati.`
       ),
     areasRepaired: (canvasName: string, count: number) =>
       inCanvas(
         canvasName,
         count === 1
           ? '1 riquadro incompleto corretto.'
-          : `${count} riquadri incompleti corretti.`
+          : `${amount(count)} riquadri incompleti corretti.`
       ),
     viewReset: (canvasName: string) =>
       inCanvas(canvasName, 'vista mancante o non valida, riportata alla posizione iniziale.'),
@@ -98,13 +103,13 @@ export const projectFile = {
     canvasIdsGiven: (count: number) =>
       count === 1
         ? '1 canvas con ID mancante o duplicato: assegnato un nuovo ID.'
-        : `${count} canvas con ID mancante o duplicato: assegnati nuovi ID.`,
+        : `${amount(count)} canvas con ID mancante o duplicato: assegnati nuovi ID.`,
     activeCanvasNotFound: (openedName: string) => `Canvas attivo non trovato: aperto «${openedName}».`,
 
     noTemplateList: 'Elenco dei template personalizzati mancante: nessun template importato.',
     templatesDropped: (count: number) =>
       count === 1
         ? '1 template personalizzato non valido ignorato.'
-        : `${count} template personalizzati non validi ignorati.`,
+        : `${amount(count)} template personalizzati non validi ignorati.`,
   },
 };

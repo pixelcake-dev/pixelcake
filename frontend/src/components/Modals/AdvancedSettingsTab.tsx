@@ -33,7 +33,8 @@ const SHORTCUTS: Array<keyof Dictionary['advanced']['shortcuts']['rows']> = [
 ];
 
 const AdvancedSettingsTab = () => {
-  const { usage, shortcuts } = useT().advanced;
+  const t = useT();
+  const { usage, shortcuts } = t.advanced;
   const devices = useNetworkStore((state) => state.devices);
   const connections = useNetworkStore((state) => state.connections);
   const templates = useTemplateStore((state) => state.templates);
@@ -56,7 +57,7 @@ const AdvancedSettingsTab = () => {
             <Icon icon="mdi:router-network" className="text-[var(--text-color-light)]" width={24} />
             <p className="font-semibold">{usage.devices.title}</p>
           </div>
-          <p className="text-3xl font-bold tracking-tight text-[var(--text-color)]">{devices.length}</p>
+          <p className="text-3xl font-bold tracking-tight text-[var(--text-color)]">{t.common.count(devices.length)}</p>
           <p className="text-xs text-[var(--text-color-light)] mt-1">{usage.devices.caption}</p>
         </div>
 
@@ -66,7 +67,7 @@ const AdvancedSettingsTab = () => {
             <Icon icon="mdi:connection" className="text-[var(--text-color-light)]" width={24} />
             <p className="font-semibold">{usage.links.title}</p>
           </div>
-          <p className="text-3xl font-bold tracking-tight text-[var(--text-color)]">{connections.length}</p>
+          <p className="text-3xl font-bold tracking-tight text-[var(--text-color)]">{t.common.count(connections.length)}</p>
           <p className="text-xs text-[var(--text-color-light)] mt-1">{usage.links.caption}</p>
         </div>
 
@@ -76,7 +77,7 @@ const AdvancedSettingsTab = () => {
             <Icon icon="mdi:shape" className="text-[var(--text-color-light)]" width={24} />
             <p className="font-semibold">{usage.deviceTemplates.title}</p>
           </div>
-          <p className="text-3xl font-bold tracking-tight text-[var(--text-color)]">{customDeviceTemplates}</p>
+          <p className="text-3xl font-bold tracking-tight text-[var(--text-color)]">{t.common.count(customDeviceTemplates)}</p>
           <p className="text-xs text-[var(--text-color-light)] mt-1">{usage.deviceTemplates.caption}</p>
         </div>
 
@@ -87,7 +88,7 @@ const AdvancedSettingsTab = () => {
             <p className="font-semibold">{usage.linkTemplates.title}</p>
           </div>
           <p className="text-3xl font-bold tracking-tight text-[var(--text-color)]">
-            {customConnectionTemplates}
+            {t.common.count(customConnectionTemplates)}
           </p>
           <p className="text-xs text-[var(--text-color-light)] mt-1">{usage.linkTemplates.caption}</p>
         </div>

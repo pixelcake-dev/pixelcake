@@ -37,6 +37,12 @@ export interface SampleGroup {
   label: string;
   color: AreaColour;
   devices: readonly string[];
+  /**
+   * The areas it holds, by their labels: groups listed before it, whose
+   * rectangles it is drawn around as it is around its devices (a site, and
+   * the floors and the server room inside it)
+   */
+  areas?: readonly string[];
 }
 
 /** The size the canvas gives a device */
@@ -63,16 +69,25 @@ export function areasAround(
   devices: readonly NetworkDevice[],
   sizeOf: DeviceSize = drawnSize
 ): SampleArea[] {
-  return groups.map((group) => {
+  const byId = new Map(devices.map((device) => [device.id, device]));
+  const made: SampleArea[] = [];
+  for (const group of groups) {
     const members = group.devices.map((id) => {
-      const device = devices.find((candidate) => candidate.id === id);
+      const device = byId.get(id);
       if (!device) throw new Error(`the area "${group.label}" names a device the sample does not have: ${id}`);
       return device;
     });
-    const place = areaAround(members.map((device) => ({ ...device.position, ...sizeOf(device) })));
+    // (an area it holds is one made before it: the last of that name)
+    const held = (group.areas ?? []).map((label) => {
+      const area = [...made].reverse().find((candidate) => candidate.label === label);
+      if (!area) throw new Error(`the area "${group.label}" holds an area made after it, or none: ${label}`);
+      return { ...area.position, ...area.size };
+    });
+    const place = areaAround([...members.map((device) => ({ ...device.position, ...sizeOf(device) })), ...held]);
     if (!place) throw new Error(`the area "${group.label}" holds no device`);
-    return { label: group.label, color: group.color, position: place.position, size: place.size };
-  });
+    made.push({ label: group.label, color: group.color, position: place.position, size: place.size });
+  }
+  return made;
 }
 
 /** A network of 254 addresses: every network of the samples is one */

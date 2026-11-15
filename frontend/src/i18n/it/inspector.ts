@@ -1,6 +1,10 @@
 /** The window of a device: its frame, the first tab, saving */
 
 import { common } from './common';
+import { formatCount } from '../numbers';
+
+/** A number of things as Italian writes it («14.891») */
+const amount = (value: number) => formatCount('it', value);
 
 // The tabs a sentence sends to, named as the window names them
 const portsTab = common.quote(common.deviceTabs.ports);
@@ -37,7 +41,7 @@ export const inspector = {
         noCable: 'Nessun cavo collegato.',
         onlyCard: `Nome, velocità e MAC della scheda sono nella <tab>scheda ${cardsTab}</tab>.`,
         firstOfSeveral: (count: number) =>
-          `È la prima di ${count} schede, quella con cui il dispositivo viene nominato: le altre, e nome, velocità e MAC di ciascuna, sono nella <tab>scheda ${cardsTab}</tab>.`,
+          `È la prima di ${amount(count)} schede, quella con cui il dispositivo viene nominato: le altre, e nome, velocità e MAC di ciascuna, sono nella <tab>scheda ${cardsTab}</tab>.`,
       },
     },
 

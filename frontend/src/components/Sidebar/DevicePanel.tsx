@@ -9,6 +9,7 @@ import { createSampleTopology } from '@/utils/sampleTopology';
 import { createCompanySample } from '@/utils/sampleCompany';
 import { createPerimeterSample } from '@/utils/samplePerimeter';
 import { createRedundancySample } from '@/utils/sampleRedundancy';
+import { createMultinationalSample } from '@/utils/sampleMultinational';
 import { Plug, Package, SquareDashed } from 'lucide-react';
 import { addAreaInView } from '@/utils/areaActions';
 import type { DeviceType } from '@/types/network';
@@ -28,6 +29,8 @@ const DevicePanel = () => {
   const devices = useNetworkStore((state) => state.devices);
   const areaCount = useNetworkStore((state) => state.areas.length);
   const loadSample = useNetworkStore((state) => state.loadSample);
+  // (the size of the largest sample is said with its entry, counted on the sample itself)
+  const multinationalDevices = useMemo(() => createMultinationalSample().devices.length, []);
   const clearAllDevices = useNetworkStore((state) => state.clearAllDevices);
   const triggerFitView = useNetworkStore((state) => state.triggerFitView);
 
@@ -223,6 +226,18 @@ const DevicePanel = () => {
                 {t.devicePanel.samples.twoSites.title}
                 <span className="block text-xs text-[var(--text-color-light)]">
                   {t.devicePanel.samples.twoSites.description}
+                </span>
+              </span>
+            </button>
+            <button
+              className="sidebar-panel-item"
+              onClick={() => handleLoadSample(createMultinationalSample)}
+            >
+              <Plug size={18} strokeWidth={1.75} style={{ color: 'var(--text-color-light)', flexShrink: 0 }} />
+              <span>
+                {t.devicePanel.samples.multinational.title}
+                <span className="block text-xs text-[var(--text-color-light)]">
+                  {t.devicePanel.samples.multinational.description(multinationalDevices)}
                 </span>
               </span>
             </button>

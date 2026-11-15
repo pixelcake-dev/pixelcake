@@ -1,6 +1,10 @@
 /** Ports and network cards: their editors, lists, summaries and what is wrong with one */
 
 import { common } from './common';
+import { formatCount } from '../numbers';
+
+/** A number of things as Italian writes it («14.891») */
+const amount = (value: number) => formatCount('it', value);
 
 // The tabs a sentence sends to, named as the window names them
 const portsTab = common.quote(common.deviceTabs.ports);
@@ -34,10 +38,10 @@ export const interfaces = {
   portsTab: {
     summary: (linked: number, total: number) => {
       const linkedPorts = linked === 1 ? 'porta collegata' : 'porte collegate';
-      return `${linked} ${linkedPorts} su ${total}. Scegli una porta per vederne e cambiarne le impostazioni.`;
+      return `${amount(linked)} ${linkedPorts} su ${amount(total)}. Scegli una porta per vederne e cambiarne le impostazioni.`;
     },
     count: 'Numero di porte',
-    countOption: (count: number) => (count === 1 ? '1 porta' : `${count} porte`),
+    countOption: (count: number) => (count === 1 ? '1 porta' : `${amount(count)} porte`),
     nonePicked: 'Scegli una porta per vederne e cambiarne le impostazioni.',
     none: 'Nessuna porta configurata per questo dispositivo.',
   },
@@ -117,7 +121,7 @@ export const interfaces = {
     noneInUse: (portCount: number) => {
       const notAttached = 'il dispositivo non è ancora collegato a nessuna rete.';
       if (portCount === 1) return `La porta non ha né un indirizzo né un cavo: ${notAttached}`;
-      return `Nessuna delle ${portCount} porte ha un indirizzo o un cavo: ${notAttached}`;
+      return `Nessuna delle ${amount(portCount)} porte ha un indirizzo o un cavo: ${notAttached}`;
     },
     columns: {
       port: 'Porta',
@@ -134,14 +138,14 @@ export const interfaces = {
     spare: (count: number) =>
       count === 1
         ? "Un'altra porta è libera: senza indirizzo e senza cavo."
-        : `Altre ${count} porte sono libere: senza indirizzo e senza cavo.`,
+        : `Altre ${amount(count)} porte sono libere: senza indirizzo e senza cavo.`,
 
     /** A switch: how many ports, and how they are split among the VLANs */
     switchCounts: (total: number, linked: number, disabled: number) =>
       [
-        total === 1 ? '1 porta' : `${total} porte`,
-        linked === 1 ? `${linked} collegata` : `${linked} collegate`,
-        ...(disabled === 0 ? [] : [disabled === 1 ? `${disabled} disabilitata` : `${disabled} disabilitate`]),
+        total === 1 ? '1 porta' : `${amount(total)} porte`,
+        linked === 1 ? `${amount(linked)} collegata` : `${amount(linked)} collegate`,
+        ...(disabled === 0 ? [] : [disabled === 1 ? `${amount(disabled)} disabilitata` : `${amount(disabled)} disabilitate`]),
       ].join(' · ') + '.',
     /** `<vlan/>` is the VLAN with its name, `<ports/>` the numbers of the ports in it */
     vlanPorts: (portCount: number): string =>

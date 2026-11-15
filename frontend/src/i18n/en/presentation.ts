@@ -1,5 +1,9 @@
 import type { Dictionary } from '../dictionary';
 import type { ImpactCounts } from '../it/presentation';
+import { formatCount } from '../numbers';
+
+/** A number of things as English writes it ("14,891") */
+const amount = (value: number) => formatCount('en', value);
 
 /** Presentation mode: bar, panel, menu, and the sentences of an answer */
 
@@ -7,11 +11,11 @@ import type { ImpactCounts } from '../it/presentation';
 const list = (items: string[]) =>
   items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
 
-const exchanges = (count: number) => (count === 1 ? '1 exchange' : `${count} exchanges`);
+const exchanges = (count: number) => (count === 1 ? '1 exchange' : `${amount(count)} exchanges`);
 
-const takeAnotherWay = (count: number) => `${count} ${count === 1 ? 'takes' : 'take'} another path`;
+const takeAnotherWay = (count: number) => `${amount(count)} ${count === 1 ? 'takes' : 'take'} another path`;
 
-const doNotChange = (count: number) => `${count} ${count === 1 ? 'does not change' : 'do not change'}`;
+const doNotChange = (count: number) => `${amount(count)} ${count === 1 ? 'does not change' : 'do not change'}`;
 
 /** The answer in a word or two, by its colour: it arrives, it does not, it cannot be tried */
 const headlines = {
@@ -138,13 +142,14 @@ export const presentation: Dictionary['presentation'] = {
   /** What the failures do to the exchanges between end devices */
   impact: {
     heading: 'On the rest of the network',
+    computing: 'Working out the effect on the rest of the network…',
     tooFewEndDevices: 'Measuring the effect takes at least two end devices (PCs, servers…) with an address.',
     nothingWorked: (flowName: string) =>
       `With ${flowName}, no exchange between the end devices worked even before the failures.`,
     scope: (flowName: string, endpoints: number, working: number) =>
-      `${flowName} between the ${endpoints} end devices: ${exchanges(working)} that ${working === 1 ? 'works' : 'work'} without the failures.`,
+      `${flowName} between the ${amount(endpoints)} end devices: ${exchanges(working)} that ${working === 1 ? 'works' : 'work'} without the failures.`,
     stop: (count: number) =>
-      count === 0 ? 'None of them stop' : `${count} ${count === 1 ? 'stops' : 'stop'}`,
+      count === 0 ? 'None of them stop' : `${amount(count)} ${count === 1 ? 'stops' : 'stop'}`,
     takeAnotherWay,
     doNotChange,
     shortestWay:
@@ -152,8 +157,8 @@ export const presentation: Dictionary['presentation'] = {
       'simulated.',
 
     show: (source: string, target: string) => `Show from ${source} to ${target}`,
-    andMore: (count: number) => `and ${count} more`,
-    andMoreDevices: (count: number) => `and ${count} more ${count === 1 ? 'device' : 'devices'}`,
+    andMore: (count: number) => `and ${amount(count)} more`,
+    andMoreDevices: (count: number) => `and ${amount(count)} more ${count === 1 ? 'device' : 'devices'}`,
     showAll: 'Show all',
     showLess: 'Show less',
 
@@ -163,14 +168,14 @@ export const presentation: Dictionary['presentation'] = {
         broken === 0
           ? working === 1
             ? 'the only exchange does not stop'
-            : `none of the ${working} exchanges stop`
+            : `none of the ${amount(working)} exchanges stop`
           : working === 1
             ? 'the only exchange stops'
-            : `${broken} of ${working} exchanges ${broken === 1 ? 'stops' : 'stop'}`,
+            : `${amount(broken)} of ${amount(working)} exchanges ${broken === 1 ? 'stops' : 'stop'}`,
       ];
       if (rerouted > 0) parts.push(takeAnotherWay(rerouted));
       if (unchanged > 0 && working > 1) parts.push(doNotChange(unchanged));
-      return `On the rest of the network (${flowName} between the ${endpoints} end devices): ${parts.join(', ')}.`;
+      return `On the rest of the network (${flowName} between the ${amount(endpoints)} end devices): ${parts.join(', ')}.`;
     },
   },
 

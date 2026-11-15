@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { act, render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { act, render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { useNetworkStore } from '@/store/networkStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
@@ -161,7 +161,7 @@ describe('the guide — "Chiedi cosa succede se qualcosa si rompe"', () => {
     expect(presentation().failedConnections).toEqual([]);
   });
 
-  it('says the panel counts what stops, what takes another way and what does not change: it shows the three', () => {
+  it('says the panel counts what stops, what takes another way and what does not change: it shows the three', async () => {
     const text = step('Chiedi cosa succede se qualcosa si rompe');
     expect(text).toContain('quante comunicazioni tra i dispositivi finali si interrompono');
 
@@ -182,7 +182,8 @@ describe('the guide — "Chiedi cosa succede se qualcosa si rompe"', () => {
     });
 
     const failures = screen.getByRole('region', { name: 'Guasti simulati' });
-    expect(failures).toHaveTextContent(/\d+ si interrompono/);
+    // (the effect comes a moment after the answer)
+    await waitFor(() => expect(failures).toHaveTextContent(/\d+ si interrompono/));
     expect(failures).toHaveTextContent(/\d+ passano da un'altra strada/);
     expect(failures).toHaveTextContent(/\d+ non cambiano/);
   });
@@ -190,12 +191,12 @@ describe('the guide — "Chiedi cosa succede se qualcosa si rompe"', () => {
 
 describe('the guide — the samples and the backup route', () => {
   it('counts the samples the panel offers', () => {
-    expect(step('Aggiungi i dispositivi')).toContain('quattro reti di esempio');
+    expect(step('Aggiungi i dispositivi')).toContain('cinque reti di esempio');
 
     render(<DevicePanel />);
     fireEvent.click(screen.getByRole('button', { name: 'Esempi' }));
     const samples = screen.getAllByRole('button').filter(button => button.className.includes('sidebar-panel-item'));
-    expect(samples).toHaveLength(4);
+    expect(samples).toHaveLength(5);
   });
 
   it('says a second route to the same network is a backup', () => {

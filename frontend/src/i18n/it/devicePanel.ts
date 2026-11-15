@@ -1,3 +1,8 @@
+import { formatCount } from '../numbers';
+
+/** A number of things as Italian writes it («14.891») */
+const amount = (value: number) => formatCount('it', value);
+
 /** The panel that adds devices and loads the sample networks */
 export const devicePanel = {
   tabs: {
@@ -70,6 +75,12 @@ export const devicePanel = {
     twoSites: {
       title: 'Due sedi: linea principale e di riserva',
       description: "Per provare i guasti: quasi ogni cavo ha un'altra strada",
+    },
+    multinational: {
+      title: 'Multinazionale: dieci sedi in Italia',
+      /** Said with the number of its devices, counted on the sample */
+      description: (deviceCount: number) =>
+        `Una rete grande, di ${amount(deviceCount)} ${deviceCount === 1 ? 'dispositivo' : 'dispositivi'}: MPLS, VLAN, firewall, una linea di riserva`,
     },
     /** Asked before a sample takes the place of a drawing */
     replaceQuestion: {

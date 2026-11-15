@@ -91,6 +91,7 @@ const NEITHER: Record<string, unknown> = {
       'number',
       'openedName',
       'peer',
+      'place',
       'port',
       'portId',
       'problem',
@@ -102,6 +103,7 @@ const NEITHER: Record<string, unknown> = {
       'row',
       'server',
       'side',
+      'site',
       'source',
       'state',
       'subnet',
@@ -301,6 +303,26 @@ describe('the entries that say a number of things', () => {
       }
     }
     expect(findings).toEqual([]);
+  });
+
+  it.each([
+    ['it', '14.891'],
+    ['en', '14,891'],
+  ] as const)('%s: a large number of things is written %s, never 14891', (language, written) => {
+    const plain: string[] = [];
+    let saidWritten = 0;
+    for (const entry of entriesOf(dictionaryOf(language))) {
+      for (const call of callsOf(entry)) {
+        // (a list of numbers, ports or VLANs, is written out: those numbers name things)
+        if (LISTS[call.varies] === 'numbers') continue;
+        const sentence = String(entry.say(...call.with(14891)));
+        if (/\d{5,}/.test(sentence)) plain.push(`${entry.path}|${call.varies}: ${sentence.slice(0, 120)}`);
+        if (sentence.includes(written)) saidWritten += 1;
+      }
+    }
+    expect(plain).toEqual([]);
+    // (most of them write the number itself; a few only choose their words by it)
+    expect(saidWritten).toBeGreaterThan(50);
   });
 
   it('a plural after 1 is found', () => {

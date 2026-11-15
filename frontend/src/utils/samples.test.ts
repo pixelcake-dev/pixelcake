@@ -1,5 +1,5 @@
 /**
- * The four sample networks, as a whole: what each brings with its drawing
+ * The sample networks, as a whole: what each brings with its drawing
  * (the network settings of the project, its areas), and that bringing it
  * changed nothing of what the engine answers.
  */
@@ -14,6 +14,7 @@ import { createCompanySample } from './sampleCompany';
 import { createPerimeterSample } from './samplePerimeter';
 import { createRedundancySample } from './sampleRedundancy';
 import { createSampleTopology } from './sampleTopology';
+import { createMultinationalSample } from './sampleMultinational';
 import { areasAround, drawnSize } from './sampleNetwork';
 import type { SampleArea, SampleGroup, SampleNetwork } from './sampleNetwork';
 import { AREA_MARGIN, areaAround, tidyAreaLabel } from './canvasAreas';
@@ -28,6 +29,21 @@ const SAMPLES: Array<[string, () => SampleNetwork]> = [
   ['the site', createPerimeterSample],
   ['the two sites', createRedundancySample],
 ];
+/**
+ * Every sample, the large one too. What the engine answers on every pair, and
+ * the areas, are measured on the four small ones only: the multinational has
+ * its own tests (sampleMultinational.test.ts), its areas held one in another
+ * and more of them than there are colours
+ */
+const ALL_SAMPLES: Array<[string, () => SampleNetwork]> = [...SAMPLES, ['the multinational', createMultinationalSample]];
+
+/** A VLAN name of each sample that has VLANs, in Italian and in English */
+const A_VLAN: Record<string, [string, string]> = {
+  'the company': ['Uffici', 'Offices'],
+  'the site': ['Uffici', 'Offices'],
+  'the two sites': ['Uffici', 'Offices'],
+  'the multinational': ['Utenti', 'Users'],
+};
 
 const LANGUAGES: Language[] = ['it', 'en'];
 
@@ -53,7 +69,7 @@ function addressesOf(sample: SampleNetwork): string[] {
     .filter((address): address is string => typeof address === 'string' && address !== '');
 }
 
-describe.each(SAMPLES)('the settings %s brings', (_, create) => {
+describe.each(ALL_SAMPLES)('the settings %s brings', (name, create) => {
   it.each(LANGUAGES)('%s: the network new devices start from is one of the drawing, with its gateway', (language) => {
     setLanguage(language);
     const sample = create();
@@ -107,9 +123,10 @@ describe.each(SAMPLES)('the settings %s brings', (_, create) => {
     const [italian, english] = [names('it'), names('en')];
     expect(english).toHaveLength(italian.length);
     if (italian.length > 0) {
-      expect(italian).toContain('Uffici');
-      expect(english).toContain('Offices');
-      expect(english).not.toContain('Uffici');
+      const [inItalian, inEnglish] = A_VLAN[name];
+      expect(italian).toContain(inItalian);
+      expect(english).toContain(inEnglish);
+      expect(english).not.toContain(inItalian);
     }
   });
 
@@ -118,7 +135,7 @@ describe.each(SAMPLES)('the settings %s brings', (_, create) => {
   });
 });
 
-describe.each(SAMPLES)('loading %s', (_, create) => {
+describe.each(ALL_SAMPLES)('loading %s', (_, create) => {
   beforeEach(() => {
     const store = useNetworkStore.getState();
     store.clearAllDevices();
@@ -401,6 +418,31 @@ describe('the areas of a sample are worked out, not typed', () => {
     const [after] = areasAround(groups, moved);
     expect(after.size.width).toBe(usual.size.width + 200);
     expect(after.size.height).toBe(usual.size.height + 60);
+  });
+
+  it('an area can hold the areas of groups listed before it, with the room of its margins around them', () => {
+    const [inner, outer] = areasAround(
+      [
+        { label: 'Piano', color: 'teal', devices: ['a', 'b'] },
+        { label: 'Sede', color: 'amber', devices: ['c'], areas: ['Piano'] },
+      ],
+      devices
+    );
+    const around = areaAround([{ ...inner.position, ...inner.size }, { ...devices[2].position, ...drawnSize(devices[2]) }])!;
+    expect(outer).toEqual({ label: 'Sede', color: 'amber', position: around.position, size: around.size });
+    // (held whole, with room on every side)
+    expect(outer.position.x).toBe(inner.position.x - AREA_MARGIN.side);
+    expect(outer.position.y).toBe(inner.position.y - AREA_MARGIN.top);
+    // one that is not made yet, or made after it, is a mistake
+    expect(() =>
+      areasAround(
+        [
+          { label: 'Sede', color: 'amber', devices: ['c'], areas: ['Piano'] },
+          { label: 'Piano', color: 'teal', devices: ['a', 'b'] },
+        ],
+        devices
+      )
+    ).toThrow(/Piano/);
   });
 
   it('a group that names a device the sample does not have is a mistake, said at once', () => {

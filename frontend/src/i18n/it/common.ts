@@ -1,3 +1,5 @@
+import { formatCount } from '../numbers';
+
 /** Words shared by many screens: the motto, the usual buttons, how an interface is named */
 export const common = {
   brand: {
@@ -6,6 +8,9 @@ export const common = {
 
   /** A name, or the words of a control, quoted inside a sentence */
   quote: (text: string) => `«${text}»`,
+
+  /** A number of things written on its own, as Italian writes it («14.891») */
+  count: (value: number) => formatCount('it', value),
 
   /** The switch between the languages of the interface */
   language: {
