@@ -41,7 +41,11 @@ export const help: Dictionary['help'] = {
       text:
         'Drag a device to move it. With Ctrl + click you select more than one; dragging on empty ' +
         'space draws a selection box. Dragging with the right button on empty space moves the ' +
-        'view, and the wheel zooms. All the shortcuts are in Settings → Advanced.',
+        'view, and the wheel zooms. All the shortcuts are in Settings → Advanced. View → ' +
+        '“Auto-layout” → “Vertical” or “Horizontal” lays them out again: on top what the traffic ' +
+        'leaves the network through (the Internet, else the firewall, else the router), below it ' +
+        'one level for each cable; the areas go with their devices. It asks first: every device ' +
+        'is moved, and this cannot be undone.',
     },
     connect: {
       title: 'Connect them',
@@ -50,7 +54,13 @@ export const help: Dictionary['help'] = {
         'Drag from there to another device and let go over it: the cable reaches the side where ' +
         'you let it go. At each end the link is assigned to a free port or network card. On a firewall with security ' +
         'zones the port has to be chosen by hand. Right-click the link and choose “Edit link” to ' +
-        'change the interfaces, the type, the bandwidth, the label and the colour.',
+        'change the interfaces, the type, the bandwidth, the label and the colour. View → ' +
+        '“Connect devices with no cable” gives a cable to each device that has none: to the ' +
+        'nearest switch of its network, on a free port meant for it (laptops, smartphones and ' +
+        'tablets first to an access point); a group of devices with no router or firewall goes to ' +
+        'the nearest router, firewall or core switch of its network. Routers, firewalls and the ' +
+        'Internet are cabled by hand. A notice then says how many cables were added, and which ' +
+        'devices were left without one, and why.',
     },
     areas: {
       title: 'Group them with areas',

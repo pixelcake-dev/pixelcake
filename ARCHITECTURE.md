@@ -14,7 +14,7 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 - Project-wide network settings (`globalNetworkSettings`, see [GlobalNetworkSettings](#globalnetworksettings))
 - **Multi-selection state** (selectedDeviceIds, clipboard) - NOT persisted, resets on reload
 - **Copy/Paste functions** (copySelection, paste) - ID remapping + position offset (+50px)
-- Auto-layout triggers
+- `applyAutoLayout(direction, templates)` lays the drawing out again, its areas with it, and asks the canvas to fit the view; `autoConnectDevices()` adds the cables of the automatic connection and hands back what it did (how many, who was left alone and why). Both are edits: they set `hasUnsavedChanges`, the second only when it added a cable
 - `canvasId`: which canvas of the project this data is. Persisted next to the data, so the two stores cannot be paired wrongly after a reload
 - `hasUnsavedChanges`: true when the project changed since it was last saved to, or opened from, a file. Every edit sets it through `markChanged()`; moving the viewport does not. `getChangeToken()` / `markSaved(token)` keep it set when an edit lands while a file is being written
 - `getCanvasSnapshot()` / `replaceCanvas()`: used by projectStore to take the canvas off the screen and put another one on
@@ -413,18 +413,24 @@ light or dark whatever the theme, a vector file, and a sharp PNG of any size.
   (`DrawingMarks`) and asks the engine the questions of the panel again for
   the caption (`captionOf` in `utils/presentation.ts`).
 
-### Auto-Layout (`frontend/src/utils/autoLayout.ts`)
-- **Hierarchical layout** using dagre (top-down hierarchy)
-- **Subnet-grouped layout** - Groups by network class (first 2 IP octets)
-- Direction: Vertical (TB) or Horizontal (LR)
-- Spacing: 100px horizontal, 250px vertical, 150px gap between buildings
-- Duplicate prevention: processedConnectionIds Set for inter-building links
+### Automatic layout (`frontend/src/utils/autoLayout.ts`, `layoutRoom.ts`)
+Vista → «Disposizione automatica» → «Verticale» / «Orizzontale» (`arrangeDrawing(input, 'TB' | 'LR', templates)`). The menu asks first (`askConfirm`): every device is moved and it cannot be undone; afterwards the view is fitted to the drawing.
+- **Levels from the network** (`networkLevels`). In each group of devices cabled together the top is where its traffic leaves: its clouds; without one, its firewalls; then its routers; then the switch with the most cables (or, with no switch, the device with the most). When some routers or firewalls are cabled only to routers, firewalls and clouds (the backup router between two sites), those alone are the top. A device is one level lower for each cable from the nearest top; a device with no cable has no level.
+- **Every cable from its upper end down**, whichever end it was drawn from (dagre's `minlen` is the difference of the levels). A cable between two devices of one level keeps them side by side; the kind breaks the tie of which goes first (cloud, firewall, router, switch, the others).
+- **Areas are groups of the layout** (dagre compound graph). A device belongs to the smallest area that holds it, an area to the smallest area around it. Each area is drawn again around what it holds, with the margins of «Racchiudi in un riquadro» (`areaAround`), the inner ones first, whether areas are shown or hidden. Devices with no cable (and in no area) are put in rows under the rest, and areas with no device under them, as large as they were.
+- **Room for what is written.** A device takes the width of its name and address where wider than its frame, so that names count in a horizontal layout. The sides a cable ends on face each other across the levels, or side by side, as the bands and `cableRun` expect; a second and a third cable between the same two devices go round on the left and on the right (on top and below, horizontally). `layoutRoom.makeRoom()` then measures the drawing as the board draws it (`layoutDrawing`) and opens a gap wherever a cable label lies on an area's border or name, on a device or on another label, two devices touch or two areas cross.
+- Tested on the four samples as drawn and with their devices placed anywhere, vertically and horizontally, in both languages (`utils/autoLayout.test.ts`, with the measures of `test/drawingChecks.ts`, shared with `sampleLayout.test.ts`).
+- There is no layout by subnet: routers and firewalls are on several networks, and the areas already group what belongs together.
 
-### Auto-Connect (`frontend/src/utils/autoLayout.ts`)
-- Device tiers: Edge (Router) → Security (Firewall) → Core (Switch) → Distribution → Access
-- Connection type inference: hybrid approach (tier + IP subnet)
-- Special cases: Database replication links, inter-building WAN backbone
-- Proximity-based: connects to closest parent device within same building
+### Automatic connection (`frontend/src/utils/autoConnect.ts`)
+Vista → «Collega i dispositivi senza cavo» (`connectLooseDevices(devices, connections, counter)`): the cables to add, bound to their interfaces, and the devices left alone with the reason. Pure; the store adds the cables, the menu says what happened.
+- **Only what has no cable gets one.** An end device goes to the nearest switch of its network; an access point is one of them, and is cabled before the devices on its Wi-Fi. A laptop, a smartphone or a tablet goes first to the nearest access point of its network with a radio card free.
+- **A group with no way up gets one cable up.** A group of devices cabled together with no router, firewall or Internet: an access point with only its Wi-Fi devices goes to a switch; a group with switches, from its switch nearest to a router, a firewall or a core switch (one cabled to a router or a firewall) of its network. Every cable added joins two groups, so none closes a loop.
+- **The network of a device** is that of its addresses. A switch is on the networks of what is cabled to it (end devices, router ports) and of the VLANs set on its ports, known by the cables of the drawing that join a port in a VLAN to an address; while one of its VLANs is unknown it may be on others too. A switch with VLANs and nothing else to go by may be on any (its own address is the one it is managed at); one without VLANs is on the network of its own address. A device on DHCP goes by distance alone.
+- **A port meant for it.** On a switch, a port in the VLAN of the device's network, or one with nothing set on it, never one in another network's VLAN: the first such port for an end device, the trunk or the last free port for an uplink. On a router or a firewall, a port with an address on the switch's network or one with none, never another network's gateway. A firewall whose ports carry zones gets its cable with its end not bound (`requiresExplicitBinding`).
+- **Never automatic**: routers and firewalls between themselves, the Internet, end devices between themselves; no cable gets a name. Cables are `access` (to an end device), `uplink` (to a router or a firewall), `trunk` (between switches).
+- **Reasons** (`LeftAloneReason`): `noSwitch` (no switch, nor access point, of its network), `noUplink` (a switch with no cable and nowhere to go up to), `noFreePort`, `byHand` (a router, a firewall or the Internet with no cable). A switch with its devices and nowhere to go up to is as it was drawn, and is not said.
+- Tested rule by rule, and on the four samples with one cable taken away at a time: each comes back where it was drawn, or to a nearer switch of its network, unless it is one never drawn automatically or its two ends are still reached another way (`utils/autoConnect.test.ts`).
 
 ### Connection Cleanup (`frontend/src/utils/cleanupConnections.ts`)
 - Duplicate detection on localStorage load
@@ -615,8 +621,6 @@ Open           -> file -> parseProjectFile() -> projectStore.loadProject() -> ne
 | Canvas position reset | Real-time Zustand sync in viewport instead of drag-end only |
 | Packet animation paths | Geometric handle calculation based on device centers and dx/dy |
 | Duplicate connection IDs | Auto-cleanup on localStorage load + validation in addConnection |
-| Subnet-grouped duplicates | processedConnectionIds Set prevents inter-building duplication |
-| Auto-connect all to Router | Use tier immediately precedente instead of first available |
 | Modal jumps on tab change | `verticalAlign="start"` keeps modal anchored |
 | VLAN/STP fields not visible | templateStore v4 with supportsVLAN/supportsSTP |
 | Loop infinito onSelectionChange | `isUpdatingSelection` ref + `queueMicrotask` |

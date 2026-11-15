@@ -40,7 +40,10 @@ export const help = {
         'Trascina un dispositivo per spostarlo. Con Ctrl + clic ne selezioni più di uno, trascinando ' +
         "su un'area vuota disegni un riquadro di selezione. Trascinando con il tasto destro su " +
         "un'area vuota sposti la vista, con la rotellina fai lo zoom. Tutte le scorciatoie sono in " +
-        'Impostazioni → Avanzate.',
+        'Impostazioni → Avanzate. Vista → «Disposizione automatica» → «Verticale» o «Orizzontale» ' +
+        'li dispone di nuovo: in cima ciò da cui il traffico esce dalla rete (Internet, se no il ' +
+        'firewall, se no il router), sotto un livello per ogni cavo; i riquadri vanno con i loro ' +
+        'dispositivi. Prima chiede conferma: sposta ogni dispositivo e non si può annullare.',
     },
     connect: {
       title: 'Collegali',
@@ -50,7 +53,12 @@ export const help = {
         'arriva sul lato dove lo lasci. A ciascun capo la connessione viene assegnata a una ' +
         'porta o a una scheda di rete libera. Su un firewall con zone di sicurezza la porta va scelta a mano. ' +
         'Con un clic destro sulla connessione, «Modifica connessione» permette di cambiare le ' +
-        "interfacce, il tipo, la banda, l'etichetta e il colore.",
+        "interfacce, il tipo, la banda, l'etichetta e il colore. Vista → «Collega i dispositivi " +
+        'senza cavo» dà un cavo a ogni dispositivo che non ne ha: allo switch più vicino della sua ' +
+        'rete, su una porta libera adatta (portatili, smartphone e tablet prima a un access point); ' +
+        'un gruppo di dispositivi senza router né firewall va al router, al firewall o al core ' +
+        'switch più vicino della sua rete. Router, firewall e Internet si collegano a mano. Alla ' +
+        'fine un avviso dice quanti cavi ha aggiunto e chi è rimasto senza, e perché.',
     },
     areas: {
       title: 'Raggruppa con i riquadri',
