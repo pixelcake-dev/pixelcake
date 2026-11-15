@@ -20,11 +20,11 @@ import { Modal } from '@/components/ui/Modal';
 import Logo from '@/components/ui/Logo';
 import { useUIStore, type HelpTab } from '@/store/uiStore';
 import { COMMAND_REFERENCE } from '@/terminal/executor';
-import { GITHUB_REPO } from '@/constants/links';
+import { GITHUB_REPO, siteUrl } from '@/constants/links';
 import { APP_NAME, APP_VERSION } from '@/constants/brand';
 import { BUNDLED_FONTS } from '@/constants/thirdParty';
 import { BUNDLED_ICON_SET_INFO } from '@/data/bundledIcons';
-import { useT } from '@/i18n';
+import { useLanguage, useT } from '@/i18n';
 import { Rich } from '@/i18n/Rich';
 
 const TABS: HelpTab[] = ['guide', 'commands', 'about'];
@@ -143,6 +143,7 @@ const LicenceLinks = ({ items }: { items: ReadonlyArray<{ name: string; license:
 
 const AboutTab = () => {
   const t = useT();
+  const language = useLanguage();
   return (
     <div className="settings-panel">
       <div className="space-y-3">
@@ -156,6 +157,17 @@ const AboutTab = () => {
 
         <AboutRow icon="mdi:license" title={t.help.about.licence}>
           {t.help.about.licenceText}
+        </AboutRow>
+
+        <AboutRow icon="mdi:link-variant" title={t.help.about.site}>
+          <a
+            href={siteUrl(language)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[var(--accent-text)] underline"
+          >
+            {siteUrl(language).replace('https://', '').replace(/\/$/, '')}
+          </a>
         </AboutRow>
 
         <AboutRow icon="mdi:github" title={t.help.about.repository}>

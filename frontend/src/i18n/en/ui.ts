@@ -11,6 +11,8 @@ export const ui: Dictionary['ui'] = {
   logo: {
     withName: (appName: string) => `${appName} logo`,
     symbol: (appName: string) => `${appName} symbol`,
+    /** The logo of the bar is a link to the site */
+    toSite: (appName: string) => `The ${appName} website`,
   },
 
   /** The list one searches in to choose an entry */

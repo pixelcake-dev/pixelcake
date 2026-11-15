@@ -9,6 +9,8 @@ export const ui = {
   logo: {
     withName: (appName: string) => `Logo di ${appName}`,
     symbol: (appName: string) => `Simbolo di ${appName}`,
+    /** The logo of the bar is a link to the site */
+    toSite: (appName: string) => `Il sito di ${appName}`,
   },
 
   /** The list one searches in to choose an entry */

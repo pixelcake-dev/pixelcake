@@ -10,13 +10,14 @@ import { useNetworkStore } from '@/store/networkStore';
 import { createCompanySample } from '@/utils/sampleCompany';
 import { openProject, requestNewProject } from '@/utils/projectFileAccess';
 import Logo from '@/components/ui/Logo';
-import { GITHUB_REPO, GITHUB_ISSUES } from '@/constants/links';
+import { GITHUB_REPO, GITHUB_ISSUES, siteUrl } from '@/constants/links';
 import { APP_DESCRIPTOR, APP_NAME } from '@/constants/brand';
-import { useT } from '@/i18n';
+import { useLanguage, useT } from '@/i18n';
 import LanguageSwitch from '@/components/ui/LanguageSwitch';
 
 const WelcomeScreen = () => {
   const t = useT();
+  const language = useLanguage();
   const dismissWelcomeScreen = useUIStore((state) => state.dismissWelcomeScreen);
   const openHelp = useUIStore((state) => state.openHelp);
   const [neverShowAgain, setNeverShowAgain] = useState(false);
@@ -111,6 +112,9 @@ const WelcomeScreen = () => {
 
       {/* Links */}
       <div className="welcome-links">
+        <a href={siteUrl(language)} target="_blank" rel="noopener noreferrer">
+          {t.welcome.site}
+        </a>
         <a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer">
           {t.welcome.codeOnGitHub}
         </a>

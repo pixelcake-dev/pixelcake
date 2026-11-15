@@ -301,6 +301,7 @@ export const help = {
     version: 'Versione',
     licence: 'Licenza',
     licenceText: 'AGPL-3.0, open source',
+    site: 'Sito',
     repository: 'Repository',
     technologies: 'Tecnologie',
     /** What the app bundles from others, each name a link to the text of its licence */

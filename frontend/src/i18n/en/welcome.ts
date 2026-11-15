@@ -10,6 +10,7 @@ export const welcome: Dictionary['welcome'] = {
   newProject: 'New project',
   openProject: 'Open project',
   loadSample: 'Load the sample network',
+  site: 'Website',
   codeOnGitHub: 'Code on GitHub',
   guide: 'Guide',
   reportProblem: 'Report a problem',

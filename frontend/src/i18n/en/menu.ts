@@ -48,6 +48,7 @@ export const menu: Dictionary['menu'] = {
     commands: 'Terminal commands',
     welcome: 'Show the welcome screen',
     about: 'About',
+    site: 'The PixelCake website',
   },
 
   /** The name of the open project, in the middle of the bar */

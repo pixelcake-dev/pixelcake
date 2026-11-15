@@ -28,9 +28,10 @@ import SymbolColour from '@/assets/pixelcake-simbolo-colore.svg';
 import SymbolNegative from '@/assets/pixelcake-simbolo-negativo.svg';
 import { APP_NAME } from '@/constants/brand';
 import { useProjectStore } from '@/store/projectStore';
-import { useT } from '@/i18n';
+import { useLanguage, useT } from '@/i18n';
 import LanguageSwitch from '@/components/ui/LanguageSwitch';
 import { encloseDevices } from '@/utils/areaActions';
+import { siteUrl } from '@/constants/links';
 
 type ConnectWords = ReturnType<typeof useT>['menu']['connectNotice'];
 
@@ -56,6 +57,7 @@ function leftAloneText(summary: ConnectionSummary, devices: NetworkDevice[], wor
 
 const TopMenuBar = () => {
   const t = useT();
+  const language = useLanguage();
   const darkMode = useUIStore((state) => state.darkMode);
   const toggleDarkMode = useUIStore((state) => state.toggleDarkMode);
   const openHelp = useUIStore((state) => state.openHelp);
@@ -189,16 +191,25 @@ const TopMenuBar = () => {
 
   return (
     <header className="top-menubar">
-      {/* Logo */}
-      <img
-        src={darkMode ? SymbolNegative : SymbolColour}
-        alt={t.ui.logo.symbol(APP_NAME)}
-        className="h-8 mr-4"
-        onError={(e) => {
-          // Hide image if not found
-          e.currentTarget.style.display = 'none';
-        }}
-      />
+      {/* The logo: the way back to the site, in a new tab (the drawing stays) */}
+      <a
+        href={siteUrl(language)}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={t.ui.logo.toSite(APP_NAME)}
+        aria-label={t.ui.logo.toSite(APP_NAME)}
+        className="mr-4 flex-shrink-0"
+      >
+        <img
+          src={darkMode ? SymbolNegative : SymbolColour}
+          alt=""
+          className="h-8"
+          onError={(e) => {
+            // Hide image if not found
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+      </a>
 
       {/* File Menu */}
       <div className="menu-item">
@@ -400,6 +411,9 @@ const TopMenuBar = () => {
             <li onClick={() => openHelp('commands')}>{t.menu.help.commands}</li>
             <li onClick={handleShowWelcome}>{t.menu.help.welcome}</li>
             <li onClick={() => openHelp('about')}>{t.menu.help.about}</li>
+            <li onClick={() => window.open(siteUrl(language), '_blank', 'noopener,noreferrer')}>
+              {t.menu.help.site}
+            </li>
           </ul>
         </div>
       </div>

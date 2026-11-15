@@ -47,6 +47,7 @@ export const menu = {
     commands: 'Comandi del terminale',
     welcome: 'Mostra la schermata di benvenuto',
     about: 'Informazioni',
+    site: 'Il sito di PixelCake',
   },
 
   /** The name of the open project, in the middle of the bar */

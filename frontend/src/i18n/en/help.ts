@@ -298,6 +298,7 @@ export const help: Dictionary['help'] = {
     version: 'Version',
     licence: 'Licence',
     licenceText: 'AGPL-3.0, open source',
+    site: 'Website',
     repository: 'Repository',
     technologies: 'Technologies',
     /** What the app bundles from others, each name a link to the text of its licence */

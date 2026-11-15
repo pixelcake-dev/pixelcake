@@ -169,6 +169,7 @@ describe('TopMenuBar', () => {
         'Comandi del terminale',
         'Mostra la schermata di benvenuto',
         'Informazioni',
+        'Il sito di PixelCake',
       ]);
     });
 

@@ -8,6 +8,7 @@ export const welcome = {
   newProject: 'Nuovo progetto',
   openProject: 'Apri progetto',
   loadSample: 'Carica la rete di esempio',
+  site: 'Il sito',
   codeOnGitHub: 'Codice su GitHub',
   guide: 'Guida',
   reportProblem: 'Segnala un problema',
