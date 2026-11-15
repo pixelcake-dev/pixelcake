@@ -287,3 +287,51 @@ describe('what is open inside a window goes first', () => {
     expect(list).toHaveFocus();
   });
 });
+
+describe('a window whose content grows with what it holds', () => {
+  /** The box the content is held in: the root of the scrolling area, around its view */
+  const holder = () => document.querySelector('.modal-content-inner')?.parentElement?.parentElement as HTMLElement;
+
+  it('lets the content take the height of the window less its header and its footer, and no more', () => {
+    // (jsdom lays nothing out: the header and the footer are given their heights)
+    const heights: Record<string, number> = { 'modal-header': 66, 'modal-footer': 74 };
+    const spy = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return Object.entries(heights).find(([name]) => this.classList.contains(name))?.[1] ?? 0;
+    });
+    try {
+      render(
+        <BaseModal isOpen onClose={vi.fn()} title="Finestra" autoHeight footer={<button type="button">OK</button>}>
+          <p>Contenuto</p>
+        </BaseModal>
+      );
+      // past that it scrolls, instead of going on under the footer, where the window would cut it
+      expect(holder().style.maxHeight).toBe('calc(85vh - 140px)');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('without a footer, only the header is taken off; a height given to it is kept as it is', () => {
+    const spy = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains('modal-header') ? 66 : 0;
+    });
+    try {
+      const { unmount } = render(
+        <BaseModal isOpen onClose={vi.fn()} title="Finestra" autoHeight>
+          <p>Contenuto</p>
+        </BaseModal>
+      );
+      expect(holder().style.maxHeight).toBe('calc(85vh - 66px)');
+      unmount();
+
+      render(
+        <BaseModal isOpen onClose={vi.fn()} title="Finestra" autoHeight autoHeightMax="300px">
+          <p>Contenuto</p>
+        </BaseModal>
+      );
+      expect(holder().style.maxHeight).toBe('300px');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});

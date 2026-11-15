@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { Scrollbars } from 'react-custom-scrollbars-2';
 import { useEscapeToClose } from './useEscapeToClose';
@@ -130,6 +130,26 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   // Esc closes the window as its X does; with more windows open, the one on top
   useEscapeToClose(isOpen, onClose);
 
+  // What the header and the footer take of the height of the window. A
+  // content that grows with what it holds (autoHeight) may take the rest and
+  // no more: past that it scrolls, instead of going on under the footer,
+  // where the window cuts it and nothing can bring it back into view
+  const headerRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
+  const [chrome, setChrome] = useState(0);
+  const hasHeader = Boolean(header);
+  const hasFooter = Boolean(footer);
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const measure = () =>
+      setChrome((headerRef.current?.offsetHeight ?? 0) + (footerRef.current?.offsetHeight ?? 0));
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    for (const part of [headerRef.current, footerRef.current]) if (part) observer.observe(part);
+    return () => observer.disconnect();
+  }, [isOpen, hasHeader, hasFooter]);
+
   if (!isOpen) return null;
 
   const sizeClass = sizeClasses[size];
@@ -138,7 +158,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
   const finalMinHeight = minHeight || heights.min;
   const finalMaxHeight = maxHeight || heights.max;
-  const finalAutoHeightMax = autoHeightMax || heights.max;
+  const finalAutoHeightMax = autoHeightMax || `calc(${finalMaxHeight} - ${chrome}px)`;
 
   // Determine vertical alignment class
   const alignClass = verticalAlign === 'start' || verticalAlign === 'top' ? 'items-start pt-20' : 'items-center';
@@ -272,7 +292,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
       >
         {/* Header - Fixed */}
         {!header && (
-          <div className="modal-header flex items-center justify-between mx-6 pt-5 pb-3 flex-shrink-0">
+          <div ref={headerRef} className="modal-header flex items-center justify-between mx-6 pt-5 pb-3 flex-shrink-0">
             <h3 className="text-base font-semibold tracking-tight">{title}</h3>
             {showCloseButton && (
               <button
@@ -288,7 +308,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
         {/* Custom Header Content */}
         {header && (
-          <div className="modal-header-custom flex-shrink-0">
+          <div ref={headerRef} className="modal-header-custom flex-shrink-0">
             {header}
           </div>
         )}
@@ -310,7 +330,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
         {/* Footer (optional) */}
         {footer && (
-          <div className="modal-footer flex-shrink-0 border-t border-[var(--border-color)]">
+          <div ref={footerRef} className="modal-footer flex-shrink-0 border-t border-[var(--border-color)]">
             {footer}
           </div>
         )}
