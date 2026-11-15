@@ -3,7 +3,6 @@ import { toast } from 'sonner';
 import { Modal } from '@/components/ui/Modal';
 import DeviceDrawing from '@/components/ui/DeviceDrawing';
 import { drawingOf } from '@/utils/deviceDrawing';
-import { DEVICE_METRICS, deviceHeight } from '@/utils/deviceGeometry';
 import { Button } from '@/components/ui/Button';
 import { FormFieldset } from '@/components/ui/FormContainer';
 import { FieldRow, ReadOnlyField, SelectField, TextField } from '@/components/ui/compact';
@@ -14,6 +13,7 @@ import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { findNextAvailableIP, generateMacAddress } from '@/utils/ipHelpers';
 import { firstFreePlace } from '@/utils/placeDevice';
+import { newDevicePlace } from '@/utils/viewPlace';
 import { newDeviceName, newDevicePorts } from '@/utils/newDevice';
 import { nicProblems, tidyNic } from '@/utils/interfaceProblems';
 import { isEndDeviceKind } from '@/utils/defaultDns';
@@ -115,17 +115,10 @@ const AddDeviceModal = () => {
     // The new device appears where the user is looking: at the centre of the
     // visible part of the canvas, or in the nearest free place when another
     // device is already there. Never at random: it is where one expects it
-    const { viewport, devices: placed } = useNetworkStore.getState();
-    const zoom = viewport.zoom || 1;
-    const canvas = document.querySelector('.react-flow')?.getBoundingClientRect();
-    const viewWidth = canvas?.width || window.innerWidth;
-    const viewHeight = canvas?.height || window.innerHeight;
-    // (half of the frame of a device puts its middle on the centre)
+    // (a batch added in bulk starts there too)
+    const { devices: placed } = useNetworkStore.getState();
     const place = firstFreePlace(
-      {
-        x: Math.round((viewWidth / 2 - viewport.x) / zoom) - DEVICE_METRICS.width / 2,
-        y: Math.round((viewHeight / 2 - viewport.y) / zoom) - deviceHeight(true) / 2,
-      },
+      newDevicePlace(),
       placed.map((device) => device.position)
     );
 

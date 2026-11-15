@@ -10,6 +10,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { bulkAddDevices } from '@/utils/bulkDeviceHelpers';
+import { allOnScreen, newDevicePlace } from '@/utils/viewPlace';
 import { withLeases } from '@/engine';
 
 /**
@@ -167,16 +168,30 @@ const BulkAddDeviceModal = () => {
     // (the addresses proposed skip those a device has, written by hand or
     // leased by DHCP)
     const { connections } = useNetworkStore.getState();
+    const made: string[] = [];
     const added = bulkAddDevices(
       configurableRows,
       standardQuantities,
       withLeases({ devices, connections }).devices,
       globalSettings,
       templates,
-      addDevice
+      (device) => {
+        made.push(addDevice(device));
+      },
+      // In a grid where the user is looking, from where the window that adds
+      // one device puts a new one, past the places that are taken
+      newDevicePlace()
     );
 
     closeModal('bulkAddDevice');
+
+    // The new devices are the selection, as pasted ones are: the group can
+    // be dragged to its place at once. When they do not all fit in what is on
+    // screen, the view is brought to show them
+    const network = useNetworkStore.getState();
+    network.selectMultipleDevices(made);
+    const places = network.devices.filter((device) => made.includes(device.id)).map((device) => device.position);
+    if (!allOnScreen(places)) network.triggerFitView(made);
 
     toast.success(added === 1 ? '1 dispositivo aggiunto' : `${added} dispositivi aggiunti`);
   };

@@ -7,6 +7,7 @@ import type {
 import { findNextAvailableIP, generateMacAddress } from './ipHelpers';
 import { isEndDeviceKind } from './defaultDns';
 import { newDeviceName, newDevicePorts } from './newDevice';
+import { gridPlaces, type Place } from './placeDevice';
 import { isL3Type } from '@/engine';
 
 /**
@@ -24,28 +25,6 @@ interface ConfigurableDeviceRow {
 /**
  * Generates grid-based positions to spread devices evenly
  */
-export const generateGridPositions = (
-  count: number,
-  startX: number = 100,
-  startY: number = 100,
-  spacing: number = 200
-): Array<{ x: number; y: number }> => {
-  const positions: Array<{ x: number; y: number }> = [];
-  const cols = Math.ceil(Math.sqrt(count));
-
-  for (let i = 0; i < count; i++) {
-    const row = Math.floor(i / cols);
-    const col = i % cols;
-
-    positions.push({
-      x: startX + col * spacing + (Math.random() * 50 - 25), // Add small random offset
-      y: startY + row * spacing + (Math.random() * 50 - 25),
-    });
-  }
-
-  return positions;
-};
-
 /**
  * Generate default NIC configuration for end devices: the card the window
  * that adds one device starts from (AddDeviceModal)
@@ -86,6 +65,8 @@ const generateDefaultNIC = (
  * @param globalSettings Global network settings
  * @param templates All device templates
  * @param addDeviceCallback Callback function to add each device
+ * @param start Where the first goes: the others follow in a grid of rows
+ *   from there, past the places the devices already there are on (gridPlaces)
  * @returns Total number of devices added
  */
 export const bulkAddDevices = (
@@ -94,7 +75,8 @@ export const bulkAddDevices = (
   existingDevices: NetworkDevice[],
   globalSettings: GlobalNetworkSettings,
   templates: DeviceTemplate[],
-  addDeviceCallback: (device: Omit<NetworkDevice, 'id'>) => void
+  addDeviceCallback: (device: Omit<NetworkDevice, 'id'>) => void,
+  start: Place = { x: 100, y: 100 }
 ): number => {
   let totalAdded = 0;
 
@@ -103,7 +85,11 @@ export const bulkAddDevices = (
   const standardTotal = Object.values(standardQuantities).reduce((sum, qty) => sum + qty, 0);
   const totalCount = configurableTotal + standardTotal;
 
-  const allPositions = generateGridPositions(totalCount);
+  const allPositions = gridPlaces(
+    totalCount,
+    start,
+    existingDevices.map((device) => device.position)
+  );
   let positionIndex = 0;
   const currentDevices = [...existingDevices];
 

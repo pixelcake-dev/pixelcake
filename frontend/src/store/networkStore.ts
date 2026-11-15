@@ -50,6 +50,8 @@ interface NetworkStore {
   // Canvas view actions (non-persisted, triggers only)
   /** Goes up by one each time the whole drawing is to be brought into view */
   fitViewRequest: number;
+  /** The devices the last request asked to be shown; null for the whole drawing */
+  fitViewNodes: string[] | null;
 
   // Counters (persistiti per evitare ID duplicati)
   deviceCounter: number;
@@ -108,7 +110,8 @@ interface NetworkStore {
 
   // Actions - Viewport
   setViewport: (viewport: { x: number; y: number; zoom: number }) => void;
-  triggerFitView: () => void;
+  /** Ask the canvas to show the whole drawing, or only these devices (without zooming in) */
+  triggerFitView: (nodeIds?: string[]) => void;
 
   // Actions - Layout
   applyAutoLayout: (algorithm?: 'hierarchical' | 'subnet-grouped', direction?: 'TB' | 'LR') => void;
@@ -179,6 +182,7 @@ export const useNetworkStore = create<NetworkStore>()(
       clipboard: null,
       viewport: { x: 0, y: 0, zoom: 1 },
       fitViewRequest: 0,
+      fitViewNodes: null,
       deviceCounter: 0,
       connectionCounter: 0,
       canvasId: null,
@@ -484,11 +488,14 @@ export const useNetworkStore = create<NetworkStore>()(
         set({ viewport });
       },
 
-      triggerFitView: () => {
+      triggerFitView: (nodeIds) => {
         // A request, not a state: the canvas answers each one once, when it
         // can (a drawing that has just been loaded is fitted once its
         // devices have a size)
-        set((state) => ({ fitViewRequest: state.fitViewRequest + 1 }));
+        set((state) => ({
+          fitViewRequest: state.fitViewRequest + 1,
+          fitViewNodes: nodeIds && nodeIds.length > 0 ? nodeIds : null,
+        }));
       },
 
       // Layout Actions

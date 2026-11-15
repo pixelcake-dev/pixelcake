@@ -122,6 +122,28 @@ describe('the view the app moves', () => {
     expect(store().viewport).not.toEqual(START);
   });
 
+  it('some devices asked to be shown (a batch just added): those are brought into view, without zooming in', async () => {
+    addPc('PC-1', { x: 0, y: 0 });
+    const far = [addPc('PC-2', { x: 3000, y: 1200 }), addPc('PC-3', { x: 3160, y: 1200 })];
+    await renderCanvas();
+    expect(onScreen()).toEqual(START);
+
+    act(() => store().triggerFitView(far));
+
+    await waitFor(() => expect(onScreen().x).toBeLessThan(-2000), { timeout: 3000 });
+    await waitFor(() => expect(store().viewport).toEqual(onScreen()), { timeout: 3000 });
+    // the two are on screen, at the zoom there was: the rest of the drawing is not
+    const { x, y, zoom } = onScreen();
+    expect(zoom).toBe(1);
+    for (const left of [3000, 3160]) {
+      expect(left * zoom + x).toBeGreaterThanOrEqual(0);
+      expect(left * zoom + x).toBeLessThanOrEqual(1000);
+    }
+    expect(1200 * zoom + y).toBeGreaterThanOrEqual(0);
+    expect(1200 * zoom + y).toBeLessThanOrEqual(600);
+    expect(0 * zoom + x).toBeLessThan(0);
+  });
+
   it('is stored once, when it has come to rest, not at every step on the way', async () => {
     wideDrawing();
     await renderCanvas();

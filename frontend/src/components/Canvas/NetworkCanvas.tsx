@@ -377,9 +377,13 @@ const NetworkCanvas = () => {
     if (fittedRequest.current === fitViewRequest || !nodesMeasured) return;
     const timer = setTimeout(() => {
       fittedRequest.current = fitViewRequest;
+      // (devices asked for alone, as a batch just added, are brought into view
+      // without zooming in on them)
+      const only = useNetworkStore.getState().fitViewNodes;
       reactFlowInstance.fitView({
         padding: 0.2, // 20% padding around edges
         duration: 300, // Smooth animation 300ms
+        ...(only ? { nodes: only.map((id) => ({ id })), maxZoom: reactFlowInstance.getZoom() } : {}),
       });
     }, 80);
     return () => clearTimeout(timer);
