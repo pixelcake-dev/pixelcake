@@ -9,11 +9,12 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { setLanguage } from '@/i18n';
 import { useNetworkStore } from '@/store/networkStore';
 import type { CanvasArea, NetworkConnection, NetworkDevice } from '@/types';
-import { areaProblems, crowding, deviceOverlaps, holds } from '@/test/drawingChecks';
+import { areaProblems, crowding, deviceOverlaps, holds, sceneOf } from '@/test/drawingChecks';
 import { arrangeDrawing, networkLevels, type LayoutDirection } from './autoLayout';
 import { AREA_MARGIN } from './canvasAreas';
 import { deviceHeight, DEVICE_METRICS } from './deviceGeometry';
 import { createCompanySample } from './sampleCompany';
+import { createMultinationalSample } from './sampleMultinational';
 import { createPerimeterSample } from './samplePerimeter';
 import { createRedundancySample } from './sampleRedundancy';
 import { createSampleTopology } from './sampleTopology';
@@ -101,6 +102,18 @@ describe('the levels come from the network', () => {
     const connections = [cable('Srv', 'SW-1'), cable('Srv', 'SW-2'), cable('Srv', 'SW-3'), cable('PC', 'SW-1')];
     const levels = networkLevels(devices, connections);
     expect(['SW-1', 'Srv', 'PC', 'SW-2'].map((label) => levels.get(`d-${label}`))).toEqual([0, 1, 1, 2]);
+  });
+});
+
+describe('three cables between the same two devices', () => {
+  it.each(['TB', 'LR'] as const)('%s: one for each VLAN, their labels are not on one another', (direction) => {
+    // a router and its switch, one cable for each VLAN it routes, each with its speed and its VLAN
+    const devices = [device('R-1', 'Router'), device('SW-1', 'Switch'), device('PC-1', 'PC')];
+    const connections = [10, 20, 30].map((vlan) => cable('R-1', 'SW-1', { bandwidth: '1 Gbps', label: `VLAN ${vlan}` }));
+    connections.push(cable('PC-1', 'SW-1'));
+    const laid = arrangeDrawing({ devices, connections, areas: [] }, direction);
+    expect(crowding(laid)).toEqual([]);
+    expect(deviceOverlaps(laid)).toEqual([]);
   });
 });
 
@@ -272,6 +285,47 @@ describe('laid out again, from what a layout made', () => {
     expect(crowding(store())).toEqual([]);
     expect(deviceOverlaps(store())).toEqual([]);
     expect(areaProblems(store())).toEqual([]);
+  });
+});
+
+describe('a large drawing: the multinational', () => {
+  /** The zoom a window of 1568 × 779 fits the drawing at (fitView, a padding of 0.2), as the samples are measured */
+  const fitZoom = (drawing: Parameters<typeof sceneOf>[0]) => {
+    const scene = sceneOf(drawing);
+    const boxes = [...scene.devices.map((device) => device.box), ...scene.areas.map((area) => area.box)];
+    const width = Math.max(...boxes.map((box) => box.x + box.width)) - Math.min(...boxes.map((box) => box.x));
+    const height = Math.max(...boxes.map((box) => box.y + box.height)) - Math.min(...boxes.map((box) => box.y));
+    return Math.min(1520 / (width * 1.2), 735 / (height * 1.2));
+  };
+
+  it.each(['TB', 'LR'] as const)('%s: it can be seen whole on a laptop, nothing on anything, every area with its devices', (direction) => {
+    setLanguage('it');
+    const sample = createMultinationalSample();
+    const areas = sample.areas.map((area, index) => ({ ...area, id: `area-${index + 1}` }));
+    const laid = arrangeDrawing({ devices: sample.devices, connections: sample.connections, areas }, direction);
+    // the least zoom of the board is 0.1: drawn larger, part of it stays out of the window
+    expect(fitZoom(laid)).toBeGreaterThanOrEqual(0.1);
+    expect(deviceOverlaps(laid)).toEqual([]);
+    expect(areaProblems(laid)).toEqual([]);
+    expect(crowding(laid)).toEqual([]);
+    const frame = (one: NetworkDevice) => ({ ...one.position, width: DEVICE_METRICS.width, height: deviceHeight(Boolean(one.ip) || (one.nics ?? []).some((nic) => nic.dhcp)) });
+    const membersOf = (devices: NetworkDevice[], list: Array<{ position: { x: number; y: number }; size: { width: number; height: number } }>) =>
+      list.map((area) => devices.filter((one) => holds({ ...area.position, ...area.size }, frame(one))).map((one) => one.id).sort());
+    expect(membersOf(laid.devices, laid.areas)).toEqual(membersOf(sample.devices, areas));
+  });
+
+  it('a small sample is laid out as it was: every cable across the levels ends on facing sides', () => {
+    // (the leaves under a device are only stacked beside it when a plain layout could not be seen whole)
+    for (const create of [createCompanySample, createSampleTopology, createPerimeterSample, createRedundancySample]) {
+      const sample = create();
+      const areas = sample.areas.map((area, index) => ({ ...area, id: `area-${index + 1}` }));
+      const laid = arrangeDrawing({ devices: sample.devices, connections: sample.connections, areas }, 'TB');
+      const mixed = laid.connections.filter((one) => {
+        const sides = [one.sourceHandle, one.targetHandle].map((side) => (side === 'top' || side === 'bottom' ? 'v' : 'h'));
+        return sides[0] !== sides[1];
+      });
+      expect(mixed.map((one) => one.id)).toEqual([]);
+    }
   });
 });
 

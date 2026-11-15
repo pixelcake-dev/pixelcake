@@ -72,13 +72,79 @@ function frameOf(device: NetworkDevice): { width: number; height: number } {
   return { width: DEVICE_METRICS.width, height: deviceHeight(shows) };
 }
 
-/** How wide a device is, its name and its address included where they are wider than the frame */
+/**
+ * How wide a device is, its name and its address included where they are
+ * wider than the frame (a device on DHCP shows the address it is leased, and
+ * says so)
+ */
 function widthOf(device: NetworkDevice): number {
+  const leased = !device.ip && (device.nics ?? []).some((nic) => nic.dhcp === true);
   const text = Math.max(
     approximateTextWidth(device.label, { size: DEVICE_METRICS.nameSize, weight: 600 }),
-    approximateTextWidth(device.ip ?? '', { size: DEVICE_METRICS.ipSize, weight: 400, mono: true })
+    approximateTextWidth(leased ? '255.255.255.255 · DHCP' : (device.ip ?? ''), { size: DEVICE_METRICS.ipSize, weight: 400, mono: true })
   );
   return Math.max(DEVICE_METRICS.width, Math.ceil(text + 2 * DEVICE_METRICS.textPad));
+}
+
+/**
+ * The leaves of a device stacked beside it (a comb), when the drawing laid
+ * out plainly could not be seen whole: fitted to a window of 1568 × 779 (a
+ * board of 1520 × 735, with the room fitView leaves around) it would be drawn
+ * at less than a quarter of its size. A device needs a few leaves to have one.
+ */
+const COMB = {
+  least: 3,
+  zoom: 0.25,
+  board: { width: 1520 / 1.2, height: 735 / 1.2 },
+  /** From the line the cables share to the leaves, at the least */
+  gap: 24,
+  /** Between two leaves of a column (or of a row, horizontally) */
+  between: 24,
+  /** Around a label on the line the cables share */
+  labelRoom: 8,
+} as const;
+
+/** A device and its leaves, stacked beside it; `block` is their place in the layout */
+interface Comb {
+  parent: string;
+  block: string;
+  leaves: NetworkDevice[];
+  cables: Set<string>;
+}
+
+/**
+ * How the leaves of a comb are stacked. Vertically (TB) in two columns, one
+ * each side of a line from the middle of the parent, the left one half a row
+ * lower, so that the labels on the line are never side by side; the first row
+ * where the devices of that level are, so that the cables to the parent's
+ * other children turn above the stack. Horizontally (LR) the same, turned: two
+ * rows, one each side of a line from the middle of the parent. `cells` are the
+ * middles of the leaves: across the line, from the middle of the parent; along
+ * it, from the middle of `block`, the room the stack takes in the layout.
+ */
+function combShape(
+  comb: Comb,
+  direction: LayoutDirection,
+  connections: NetworkConnection[]
+): { block: { width: number; height: number }; cells: Array<{ x: number; y: number }> } {
+  const across = Math.max(...comb.leaves.map((leaf) => (direction === 'TB' ? widthOf(leaf) : frameOf(leaf).height)));
+  const along = Math.max(...comb.leaves.map((leaf) => (direction === 'TB' ? frameOf(leaf).height : widthOf(leaf))));
+  const labels = connections.filter((one) => comb.cables.has(one.id)).map(labelSize);
+  const label = Math.max(0, ...labels.map((size) => (direction === 'TB' ? size.width : size.height))) / 2;
+  const gap = Math.max(COMB.gap, label + COMB.labelRoom);
+  const pitch = along + COMB.between;
+  const first = Math.ceil(comb.leaves.length / 2);
+  const second = comb.leaves.length - first;
+  const extent = Math.max(first * pitch, second * pitch + pitch / 2) - COMB.between;
+  const cells = comb.leaves.map((_, index) => {
+    const side = index % 2 === 0 ? 1 : -1;
+    const step = Math.floor(index / 2) * pitch + (side < 0 ? pitch / 2 : 0);
+    const off = side * (gap + across / 2);
+    return direction === 'TB' ? { x: off, y: step } : { x: step, y: off };
+  });
+  const length = 2 * extent - along;
+  const width = 2 * (gap + across);
+  return { block: direction === 'TB' ? { width, height: length } : { width: length, height: width }, cells };
 }
 
 /** The devices each device is cabled to, both ways: a cable is the same whichever end it starts from */
@@ -228,50 +294,216 @@ export function arrangeDrawing(
   const placed = devices.filter((device) => levels.has(device.id) || areaOf.has(device.id));
   const apart = devices.filter((device) => !placed.includes(device));
 
-  const graph = new dagre.graphlib.Graph({ compound: true, multigraph: true });
-  graph.setGraph({ rankdir: direction, ...LAYOUT_SPACING[direction], marginx: 0, marginy: 0 });
-  graph.setDefaultEdgeLabel(() => ({}));
-  for (const area of areas) if (holding.has(area.id)) graph.setNode(area.id, {});
-  for (const area of areas) {
-    const parent = parentOf.get(area.id);
-    if (holding.has(area.id) && parent && holding.has(parent)) graph.setParent(area.id, parent);
-  }
-  for (const device of placed) {
-    graph.setNode(device.id, { width: widthOf(device), height: frameOf(device).height });
-    const area = areaOf.get(device.id);
-    if (area) graph.setParent(device.id, area);
-  }
-
-  // Every cable from its upper end to its lower one. One between two devices
-  // of a level is left out: given to dagre (with a length of 0) it puts one
-  // end a rank under the other, and other rankers fail on it
   const byId = new Map(devices.map((device) => [device.id, device] as const));
-  for (const connection of connections) {
-    const a = byId.get(connection.source);
-    const b = byId.get(connection.target);
-    if (!a || !b || a.id === b.id || !levels.has(a.id) || !levels.has(b.id)) continue;
-    const la = levels.get(a.id)!;
-    const lb = levels.get(b.id)!;
-    if (la === lb) continue;
-    const [upper, lower] = la < lb ? [a, b] : [b, a];
-    const label = labelSize(connection);
-    graph.setEdge(
-      upper.id,
-      lower.id,
-      { minlen: Math.abs(la - lb), width: label.width, height: label.height, labelpos: 'c' },
-      connection.id
+
+  // The leaves of a device (cabled to it alone, a level under it, in its
+  // area), where it has a few: stacked beside it when the drawing is large
+  const combs = (() => {
+    const cablesOf = new Map<string, NetworkConnection[]>();
+    for (const connection of connections) {
+      if (connection.source === connection.target) continue;
+      for (const id of [connection.source, connection.target]) cablesOf.set(id, [...(cablesOf.get(id) ?? []), connection]);
+    }
+    const found = new Map<string, Comb>();
+    for (const device of placed) {
+      const level = levels.get(device.id);
+      const own = cablesOf.get(device.id) ?? [];
+      if (level === undefined || own.length !== 1) continue;
+      const cable = own[0];
+      const parent = cable.source === device.id ? cable.target : cable.source;
+      if (levels.get(parent) !== level - 1 || areaOf.get(parent) !== areaOf.get(device.id)) continue;
+      const comb = found.get(parent) ?? { parent, block: `comb:${parent}`, leaves: [], cables: new Set<string>() };
+      comb.leaves.push(device);
+      comb.cables.add(cable.id);
+      found.set(parent, comb);
+    }
+    return [...found.values()].filter((comb) => comb.leaves.length >= COMB.least);
+  })();
+
+  /**
+   * Where each device goes, its leaves stacked in `stacked`. With `part`, the
+   * devices of `members` alone, and `flip` lays them the other way round (the
+   * top under them, or on their right)
+   */
+  const lay = (stacked: Comb[], part?: { members: Set<string>; flip: boolean }): NetworkDevice[] => {
+    const inPart = (id: string) => !part || part.members.has(id);
+    const flip = part?.flip ? -1 : 1;
+    const ours = stacked.filter((comb) => inPart(comb.parent));
+    const leafOf = new Map(ours.flatMap((comb) => comb.leaves.map((leaf) => [leaf.id, comb] as const)));
+    const shapes = new Map(ours.map((comb) => [comb.block, combShape(comb, direction, connections)] as const));
+    const rankdir = part?.flip ? (direction === 'TB' ? 'BT' : 'RL') : direction;
+    const graph = new dagre.graphlib.Graph({ compound: true, multigraph: true });
+    graph.setGraph({ rankdir, ...LAYOUT_SPACING[direction], marginx: 0, marginy: 0 });
+    graph.setDefaultEdgeLabel(() => ({}));
+    // (the areas that hold something of this part)
+    const held = new Set<string>();
+    for (const device of placed) {
+      if (!inPart(device.id)) continue;
+      for (let id = areaOf.get(device.id); id && !held.has(id); id = parentOf.get(id)) held.add(id);
+    }
+    for (const area of areas) if (held.has(area.id)) graph.setNode(area.id, {});
+    for (const area of areas) {
+      const parent = parentOf.get(area.id);
+      if (held.has(area.id) && parent && held.has(parent)) graph.setParent(area.id, parent);
+    }
+    for (const device of placed) {
+      if (leafOf.has(device.id) || !inPart(device.id)) continue;
+      graph.setNode(device.id, { width: widthOf(device), height: frameOf(device).height });
+      const area = areaOf.get(device.id);
+      if (area) graph.setParent(device.id, area);
+    }
+    for (const comb of ours) {
+      const shape = shapes.get(comb.block)!;
+      graph.setNode(comb.block, { width: shape.block.width, height: shape.block.height });
+      const area = areaOf.get(comb.parent);
+      if (area) graph.setParent(comb.block, area);
+      graph.setEdge(comb.parent, comb.block, { minlen: 1 }, comb.block);
+    }
+
+    // Every cable from its upper end to its lower one. One between two devices
+    // of a level is left out: given to dagre (with a length of 0) it puts one
+    // end a rank under the other, and other rankers fail on it
+    for (const connection of connections) {
+      const a = byId.get(connection.source);
+      const b = byId.get(connection.target);
+      if (!a || !b || a.id === b.id || !levels.has(a.id) || !levels.has(b.id)) continue;
+      if (leafOf.has(a.id) || leafOf.has(b.id) || !inPart(a.id) || !inPart(b.id)) continue;
+      const la = levels.get(a.id)!;
+      const lb = levels.get(b.id)!;
+      if (la === lb) continue;
+      const [upper, lower] = la < lb ? [a, b] : [b, a];
+      const label = labelSize(connection);
+      graph.setEdge(
+        upper.id,
+        lower.id,
+        { minlen: Math.abs(la - lb), width: label.width, height: label.height, labelpos: 'c' },
+        connection.id
+      );
+    }
+
+    dagre.layout(graph);
+
+    // Where each device now is: its frame, in the middle of the room dagre
+    // gave it; a leaf in its place in the stack, from where its parent is
+    const result = devices.map((device) => {
+      if (!placed.includes(device) || !inPart(device.id)) return device;
+      const frame = frameOf(device);
+      const comb = leafOf.get(device.id);
+      if (!comb) {
+        const node = graph.node(device.id);
+        return { ...device, position: { x: Math.round(node.x - frame.width / 2), y: Math.round(node.y - frame.height / 2) } };
+      }
+      const block = graph.node(comb.block);
+      const cell = shapes.get(comb.block)!.cells[comb.leaves.indexOf(device)];
+      // (in the room dagre gave the stack, which the parent's other children
+      // stay out of; the first row where the rank's devices are, the stack
+      // going away from the parent)
+      const x = direction === 'TB' ? block.x + cell.x : block.x + flip * cell.x;
+      const y = direction === 'TB' ? block.y + flip * cell.y : block.y + cell.y;
+      return { ...device, position: { x: Math.round(x - frame.width / 2), y: Math.round(y - frame.height / 2) } };
+    });
+
+    // Three cables or more between the same two devices (a router and its
+    // switch, one for each VLAN): one goes straight, two go round either side,
+    // close to it. In line, the label of the straight one would be on theirs:
+    // the lower device is set aside by the width of a label, so that the
+    // straight one bends, and its label with it
+    const index = new Map(result.map((device, at) => [device.id, at] as const));
+    const parallel = new Map<string, NetworkConnection[]>();
+    for (const connection of connections) {
+      const { source, target } = connection;
+      if (source === target || !index.has(source) || !index.has(target) || !inPart(source) || !inPart(target)) continue;
+      if (leafOf.has(source) || leafOf.has(target) || levels.get(source) === levels.get(target)) continue;
+      const key = [source, target].sort().join(' ');
+      parallel.set(key, [...(parallel.get(key) ?? []), connection]);
+    }
+    for (const cables of parallel.values()) {
+      if (cables.length < 3) continue;
+      const reach = Math.max(...cables.map(labelSize).map((size) => (direction === 'TB' ? size.width : size.height)));
+      const [a, b] = [cables[0].source, cables[0].target];
+      const lower = (levels.get(a) ?? 0) > (levels.get(b) ?? 0) ? a : b;
+      const upper = lower === a ? b : a;
+      const axis = direction === 'TB' ? 'x' : 'y';
+      const offset = result[index.get(lower)!].position[axis] - result[index.get(upper)!].position[axis];
+      if (reach === 0 || Math.abs(offset) >= reach) continue;
+      const position = { ...result[index.get(lower)!].position };
+      position[axis] = result[index.get(upper)!].position[axis] + (offset < 0 ? -reach : reach);
+      result[index.get(lower)!] = { ...result[index.get(lower)!], position };
+    }
+    return result;
+  };
+
+  /**
+   * A large drawing with one top (and that top in no area), laid out around
+   * it: half of what hangs from it under it, the other half over it, laid the
+   * other way round; an area goes whole with most of its devices, and the two
+   * halves hold as many devices as can be. Undefined where it cannot be.
+   */
+  const halves = (() => {
+    const tops = [...levels].filter(([, level]) => level === 0).map(([id]) => id);
+    if (tops.length !== 1 || areaOf.has(tops[0])) return undefined;
+    const top = tops[0];
+    const neighbours = neighboursOf(devices, connections);
+    // each device goes with the child of the top it is first reached through
+    const branch = new Map<string, string>();
+    const queue: string[] = [];
+    for (const child of neighbours.get(top) ?? []) {
+      if (levels.get(child) === 1 && !branch.has(child)) {
+        branch.set(child, child);
+        queue.push(child);
+      }
+    }
+    if (queue.length < 2) return undefined;
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      for (const next of neighbours.get(id) ?? []) {
+        if (next !== top && !branch.has(next)) {
+          branch.set(next, branch.get(id)!);
+          queue.push(next);
+        }
+      }
+    }
+    // what goes together: the devices of an outermost area, or of a branch outside every area
+    const outermost = (id: string) => {
+      let area = areaOf.get(id);
+      while (area && parentOf.get(area)) area = parentOf.get(area);
+      return area;
+    };
+    const units = new Map<string, string[]>();
+    for (const device of placed) {
+      if (device.id === top) continue;
+      const key = outermost(device.id) ?? `branch:${branch.get(device.id) ?? device.id}`;
+      units.set(key, [...(units.get(key) ?? []), device.id]);
+    }
+    if (units.size < 2) return undefined;
+    const under = new Set<string>([top]);
+    const over = new Set<string>([top]);
+    let [underCount, overCount] = [0, 0];
+    for (const members of [...units.values()].sort((a, b) => b.length - a.length)) {
+      const into = underCount <= overCount ? under : over;
+      for (const id of members) into.add(id);
+      if (into === under) underCount += members.length;
+      else overCount += members.length;
+    }
+    return { top, under, over };
+  })();
+
+  /** The drawing laid out around its top (see halves), its leaves stacked in `stacked` */
+  const layAround = (stacked: Comb[]): NetworkDevice[] => {
+    const { top, under, over } = halves!;
+    const below = lay(stacked, { members: under, flip: false });
+    const above = lay(stacked, { members: over, flip: true });
+    const here = below.find((device) => device.id === top)!.position;
+    const there = above.find((device) => device.id === top)!.position;
+    return below.map((device, index) =>
+      over.has(device.id) && device.id !== top
+        ? { ...device, position: { x: above[index].position.x + here.x - there.x, y: above[index].position.y + here.y - there.y } }
+        : device
     );
-  }
+  };
 
-  dagre.layout(graph);
-
-  // Where each device now is: its frame, in the middle of the room dagre gave it
-  const laid = devices.map((device) => {
-    if (!placed.includes(device)) return device;
-    const node = graph.node(device.id);
-    const frame = frameOf(device);
-    return { ...device, position: { x: Math.round(node.x - frame.width / 2), y: Math.round(node.y - frame.height / 2) } };
-  });
+  // The cables of the combs in use (none, until the leaves are stacked)
+  let stackedCables = new Map<string, Comb>();
 
   // The areas around their devices, what is apart under the rest, the sides of
   // the cables: worked out again each time the devices move
@@ -334,6 +566,22 @@ export function arrangeDrawing(
       if (!ends.has(connection.source) || !ends.has(connection.target) || connection.source === connection.target) {
         return connection;
       }
+      // (a cable of a comb leaves its parent on the line it shares with the
+      // others, and comes into the leaf from that line's side)
+      const comb = stackedCables.get(connection.id);
+      if (comb) {
+        const parent = ends.get(comb.parent)!;
+        const leaf = ends.get(connection.source === comb.parent ? connection.target : connection.source)!;
+        const right = leaf.x + leaf.width / 2 > parent.x + parent.width / 2;
+        const below = leaf.y + leaf.height / 2 > parent.y + parent.height / 2;
+        const [parentSide, leafSide] =
+          direction === 'TB'
+            ? [below ? 'bottom' : 'top', right ? 'left' : 'right']
+            : [right ? 'right' : 'left', below ? 'top' : 'bottom'];
+        return connection.source === comb.parent
+          ? { ...connection, sourceHandle: parentSide, targetHandle: leafSide }
+          : { ...connection, sourceHandle: leafSide, targetHandle: parentSide };
+      }
       const pair = [connection.source, connection.target].sort().join(' ');
       const nth = pairs.get(pair) ?? 0;
       pairs.set(pair, nth + 1);
@@ -351,6 +599,37 @@ export function arrangeDrawing(
     return { devices: laidDevices, connections: laidConnections, areas: laidAreas };
   };
 
+  // Laid out plainly; where that could not be seen whole, the other ways it
+  // can be, the leaves stacked, around the top, both: the one seen largest
+  let start = redraw(lay([]));
+  if (seenAt(start) < COMB.zoom) {
+    const ways: Array<{ stacked: Comb[]; around: boolean }> = [];
+    if (combs.length > 0) ways.push({ stacked: combs, around: false });
+    if (halves) ways.push({ stacked: [], around: true });
+    if (halves && combs.length > 0) ways.push({ stacked: combs, around: true });
+    let best: Comb[] = [];
+    for (const way of ways) {
+      stackedCables = new Map(way.stacked.flatMap((comb) => [...comb.cables].map((id) => [id, comb] as const)));
+      const tried = redraw(way.around ? layAround(way.stacked) : lay(way.stacked));
+      if (seenAt(tried) > seenAt(start)) {
+        start = tried;
+        best = way.stacked;
+      }
+    }
+    stackedCables = new Map(best.flatMap((comb) => [...comb.cables].map((id) => [id, comb] as const)));
+  }
+
   // Where a label lies on something, the drawing is opened up there
-  return makeRoom(redraw(laid), redraw, deviceTemplates);
+  return makeRoom(start, redraw, deviceTemplates);
+}
+
+/** How large a drawing is drawn fitted to the reference window (see COMB) */
+function seenAt(drawing: LayoutResult): number {
+  const boxes = [
+    ...drawing.devices.map((device) => ({ ...device.position, ...frameOf(device) })),
+    ...drawing.areas.map((area) => ({ ...area.position, ...area.size })),
+  ];
+  const width = Math.max(...boxes.map((box) => box.x + box.width)) - Math.min(...boxes.map((box) => box.x));
+  const height = Math.max(...boxes.map((box) => box.y + box.height)) - Math.min(...boxes.map((box) => box.y));
+  return Math.min(COMB.board.width / width, COMB.board.height / height);
 }
