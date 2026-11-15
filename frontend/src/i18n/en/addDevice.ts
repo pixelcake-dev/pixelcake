@@ -1,10 +1,14 @@
 import type { Dictionary } from '../dictionary';
+import { formatCount } from '../numbers';
+
+/** A number of things as English writes it ("14,891") */
+const amount = (value: number) => formatCount('en', value);
 
 /** The window that adds a device, and the one that adds many */
 export const addDevice: Dictionary['addDevice'] = {
   /** In both windows: the type of a device, and a number of ports to choose from a list */
   type: 'Type',
-  ports: (count: number) => (count === 1 ? '1 port' : `${count} ports`),
+  ports: (count: number) => (count === 1 ? '1 port' : `${amount(count)} ports`),
 
   /** The window that adds one device, of the type picked in the panel */
   title: (typeName: string) => `Add a new ${typeName}`,
@@ -60,6 +64,6 @@ export const addDevice: Dictionary['addDevice'] = {
     total: 'Total devices:',
 
     selectAtLeastOne: 'Select at least one device to add',
-    added: (count: number) => (count === 1 ? '1 device added' : `${count} devices added`),
+    added: (count: number) => (count === 1 ? '1 device added' : `${amount(count)} devices added`),
   },
 };

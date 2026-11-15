@@ -1,4 +1,8 @@
 import { common } from './common';
+import { formatCount } from '../numbers';
+
+/** A number of things as Italian writes it («14.891») */
+const amount = (value: number) => formatCount('it', value);
 
 /** DHCP: the tab, the pool of a port or card, the labels of a lease */
 
@@ -59,8 +63,8 @@ export const dhcp = {
     [
       range.gateway ? `Gateway consegnato ${range.gateway}` : 'Nessun gateway consegnato',
       ...(range.dns ? [`server DNS consegnato ${range.dns}`] : []),
-      `${range.leased} ${range.leased === 1 ? 'assegnato' : 'assegnati'}, ` +
-        `${range.free} ${range.free === 1 ? 'libero' : 'liberi'} su ${range.size}`,
+      `${amount(range.leased)} ${range.leased === 1 ? 'assegnato' : 'assegnati'}, ` +
+        `${amount(range.free)} ${range.free === 1 ? 'libero' : 'liberi'} su ${amount(range.size)}`,
       ...(range.disabled ? [`${unit(range.disabled)} disabilitata: non risponde`] : []),
     ].join(' · '),
 
@@ -79,7 +83,7 @@ export const dhcp = {
     unusableUnnamed: "l'intervallo che risponde non è utilizzabile",
     usedUp: (server: string, size: number) =>
       `l'intervallo di ${server} è esaurito: ` +
-      (size === 1 ? 'il suo unico indirizzo è già preso' : `${size} indirizzi, tutti presi`),
+      (size === 1 ? 'il suo unico indirizzo è già preso' : `${amount(size)} indirizzi, tutti presi`),
     usedUpUnnamed: "l'intervallo che risponde è esaurito",
     /** A range with no address in it that can be given */
     empty: (server: string) => `l'intervallo di ${server} non ha indirizzi da assegnare`,
@@ -137,7 +141,7 @@ export const dhcp = {
       unserved: (device: string, card: string, reason: string) =>
         `${device} (${card}) resta senza indirizzo: ${reason}.`,
       rivals: (servers: string[]) =>
-        `${servers.length === 2 ? 'Due' : servers.length} server DHCP sulla stessa rete: ` +
+        `${servers.length === 2 ? 'Due' : amount(servers.length)} server DHCP sulla stessa rete: ` +
         `${servers.join('; ')}. Risponde il primo che ha un indirizzo libero.`,
     },
 

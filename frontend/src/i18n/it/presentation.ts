@@ -1,5 +1,10 @@
 /** Presentation mode: bar, panel, menu, and the sentences of an answer */
 
+import { formatCount } from '../numbers';
+
+/** A number of things as Italian writes it («14.891») */
+const amount = (value: number) => formatCount('it', value);
+
 /** What the failures do to the exchanges between end devices, in numbers */
 export interface ImpactCounts {
   /** The name of the exchange that was measured: Ping, Web, Email */
@@ -17,11 +22,11 @@ export interface ImpactCounts {
 const list = (items: string[]) =>
   items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`;
 
-const exchanges = (count: number) => (count === 1 ? '1 comunicazione' : `${count} comunicazioni`);
+const exchanges = (count: number) => (count === 1 ? '1 comunicazione' : `${amount(count)} comunicazioni`);
 
-const takeAnotherWay = (count: number) => `${count} ${count === 1 ? 'passa' : 'passano'} da un'altra strada`;
+const takeAnotherWay = (count: number) => `${amount(count)} ${count === 1 ? 'passa' : 'passano'} da un'altra strada`;
 
-const doNotChange = (count: number) => `${count} ${count === 1 ? 'non cambia' : 'non cambiano'}`;
+const doNotChange = (count: number) => `${amount(count)} ${count === 1 ? 'non cambia' : 'non cambiano'}`;
 
 /** The answer in a word or two, by its colour: it arrives, it does not, it cannot be tried */
 const headlines = {
@@ -151,17 +156,17 @@ export const presentation = {
     nothingWorked: (flowName: string) =>
       `Con ${flowName} nessuna comunicazione tra i dispositivi finali funzionava già prima dei guasti.`,
     scope: (flowName: string, endpoints: number, working: number) =>
-      `${flowName} tra i ${endpoints} dispositivi finali: ${exchanges(working)} che senza guasti ${working === 1 ? 'funziona' : 'funzionano'}.`,
+      `${flowName} tra i ${amount(endpoints)} dispositivi finali: ${exchanges(working)} che senza guasti ${working === 1 ? 'funziona' : 'funzionano'}.`,
     stop: (count: number) =>
-      count === 0 ? 'Nessuna si interrompe' : `${count} ${count === 1 ? 'si interrompe' : 'si interrompono'}`,
+      count === 0 ? 'Nessuna si interrompe' : `${amount(count)} ${count === 1 ? 'si interrompe' : 'si interrompono'}`,
     takeAnotherWay,
     doNotChange,
     shortestWay:
       'Il motore prende la strada più corta che funziona; protocolli come lo spanning tree non sono simulati.',
 
     show: (source: string, target: string) => `Mostra da ${source} a ${target}`,
-    andMore: (count: number) => (count === 1 ? 'e un altro' : `e altri ${count}`),
-    andMoreDevices: (count: number) => (count === 1 ? 'e un altro dispositivo' : `e altri ${count} dispositivi`),
+    andMore: (count: number) => (count === 1 ? 'e un altro' : `e altri ${amount(count)}`),
+    andMoreDevices: (count: number) => (count === 1 ? 'e un altro dispositivo' : `e altri ${amount(count)} dispositivi`),
     showAll: 'Mostra tutto',
     showLess: 'Mostra meno',
 
@@ -171,14 +176,14 @@ export const presentation = {
         broken === 0
           ? working === 1
             ? "l'unica comunicazione non si interrompe"
-            : `nessuna delle ${working} comunicazioni si interrompe`
+            : `nessuna delle ${amount(working)} comunicazioni si interrompe`
           : working === 1
             ? "l'unica comunicazione si interrompe"
-            : `${broken} ${broken === 1 ? 'comunicazione' : 'comunicazioni'} su ${working} ${broken === 1 ? 'si interrompe' : 'si interrompono'}`,
+            : `${amount(broken)} ${broken === 1 ? 'comunicazione' : 'comunicazioni'} su ${amount(working)} ${broken === 1 ? 'si interrompe' : 'si interrompono'}`,
       ];
       if (rerouted > 0) parts.push(takeAnotherWay(rerouted));
       if (unchanged > 0 && working > 1) parts.push(doNotChange(unchanged));
-      return `Sul resto della rete (${flowName} tra i ${endpoints} dispositivi finali): ${parts.join(', ')}.`;
+      return `Sul resto della rete (${flowName} tra i ${amount(endpoints)} dispositivi finali): ${parts.join(', ')}.`;
     },
   },
 

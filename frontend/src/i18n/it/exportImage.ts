@@ -1,3 +1,8 @@
+import { formatCount } from '../numbers';
+
+/** A number of things as Italian writes it («14.891») */
+const amount = (value: number) => formatCount('it', value);
+
 /** The board as a picture: the window, the notices, what is written in the picture */
 export const exportImage = {
   title: 'Esporta immagine',
@@ -18,7 +23,7 @@ export const exportImage = {
     veryLarge: 'Molto grande',
     /** The pixels of the PNG; `reduced` when the browser cannot make it as large as asked */
     pixels: (width: number, height: number, reduced: boolean) => {
-      const size = `${width} × ${height} pixel`;
+      const size = `${amount(width)} × ${amount(height)} pixel`;
       return reduced ? `${size} (ridotta: è il massimo che il browser riesce a creare)` : size;
     },
   },

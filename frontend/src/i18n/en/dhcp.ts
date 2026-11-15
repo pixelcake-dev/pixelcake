@@ -1,5 +1,9 @@
 import type { Dictionary } from '../dictionary';
 import { common } from './common';
+import { formatCount } from '../numbers';
+
+/** A number of things as English writes it ("14,891") */
+const amount = (value: number) => formatCount('en', value);
 
 /** DHCP: the tab, the pool of a port or card, the labels of a lease */
 
@@ -58,7 +62,7 @@ export const dhcp: Dictionary['dhcp'] = {
     [
       range.gateway ? `Gateway ${range.gateway}` : 'No gateway for clients',
       ...(range.dns ? [`DNS server ${range.dns}`] : []),
-      `${range.leased} leased, ${range.free} free of ${range.size}`,
+      `${amount(range.leased)} leased, ${amount(range.free)} free of ${amount(range.size)}`,
       ...(range.disabled ? [`${unit(range.disabled)} disabled: it does not answer`] : []),
     ].join(' · '),
 
@@ -77,7 +81,7 @@ export const dhcp: Dictionary['dhcp'] = {
     unusableUnnamed: 'the range that answers cannot be used',
     usedUp: (server: string, size: number) =>
       `the range of ${server} is used up: ` +
-      (size === 1 ? 'its only address is already taken' : `${size} addresses, all taken`),
+      (size === 1 ? 'its only address is already taken' : `${amount(size)} addresses, all taken`),
     usedUpUnnamed: 'the range that answers is used up',
     /** A range with no address in it that can be given */
     empty: (server: string) => `the range of ${server} has no addresses to hand out`,
@@ -134,7 +138,7 @@ export const dhcp: Dictionary['dhcp'] = {
       unserved: (device: string, card: string, reason: string) =>
         `${device} (${card}) is left without an address: ${reason}.`,
       rivals: (servers: string[]) =>
-        `${servers.length === 2 ? 'Two' : servers.length} DHCP servers on the same network: ` +
+        `${servers.length === 2 ? 'Two' : amount(servers.length)} DHCP servers on the same network: ` +
         `${servers.join('; ')}. The first that has a free address answers.`,
     },
 

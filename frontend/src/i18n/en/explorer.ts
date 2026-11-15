@@ -1,8 +1,12 @@
 import type { Dictionary } from '../dictionary';
+import { formatCount } from '../numbers';
+
+/** A number of things as English writes it ("14,891") */
+const amount = (value: number) => formatCount('en', value);
 
 /** The Explorer panel: the project and its boards */
 
-const devices = (count: number) => (count === 1 ? '1 device' : `${count} devices`);
+const devices = (count: number) => (count === 1 ? '1 device' : `${amount(count)} devices`);
 
 export const explorer: Dictionary['explorer'] = {
   devices,

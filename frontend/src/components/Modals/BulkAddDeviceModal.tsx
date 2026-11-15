@@ -446,7 +446,7 @@ const BulkAddDeviceModal = () => {
           <div className="flex items-center justify-between text-sm">
             <span className="font-medium text-[var(--text-color)]">{t.addDevice.bulk.total}</span>
             <span className="text-lg font-bold text-[var(--text-color)]">
-              {totalCount}
+              {t.common.count(totalCount)}
             </span>
           </div>
         </div>
@@ -466,7 +466,7 @@ const BulkAddDeviceModal = () => {
             disabled={totalCount === 0}
             className="flex-1 px-4 py-1.5 text-sm font-semibold rounded-md border border-[var(--text-color)] bg-[var(--text-color)] text-[var(--bg-canvas)] enabled:hover:bg-[var(--accent-color)] enabled:hover:border-[var(--accent-color)] enabled:hover:text-[var(--on-accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {t.common.actions.add} ({totalCount})
+            {t.common.actions.add} ({t.common.count(totalCount)})
           </button>
         </div>
       </div>

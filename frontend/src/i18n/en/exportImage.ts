@@ -1,4 +1,8 @@
 import type { Dictionary } from '../dictionary';
+import { formatCount } from '../numbers';
+
+/** A number of things as English writes it ("14,891") */
+const amount = (value: number) => formatCount('en', value);
 
 /** The board as a picture: the window, the notices, what is written in the picture */
 export const exportImage: Dictionary['exportImage'] = {
@@ -20,7 +24,7 @@ export const exportImage: Dictionary['exportImage'] = {
     veryLarge: 'Very large',
     /** The pixels of the PNG; `reduced` when the browser cannot make it as large as asked */
     pixels: (width: number, height: number, reduced: boolean) => {
-      const size = width * height === 1 ? '1 × 1 pixel' : `${width} × ${height} pixels`;
+      const size = width * height === 1 ? '1 × 1 pixel' : `${amount(width)} × ${amount(height)} pixels`;
       return reduced ? `${size} (reduced: the largest the browser can create)` : size;
     },
   },

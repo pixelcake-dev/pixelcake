@@ -1,6 +1,11 @@
 /** The Explorer panel: the project and its canvases */
 
-const devices = (count: number) => (count === 1 ? '1 dispositivo' : `${count} dispositivi`);
+import { formatCount } from '../numbers';
+
+/** A number of things as Italian writes it («14.891») */
+const amount = (value: number) => formatCount('it', value);
+
+const devices = (count: number) => (count === 1 ? '1 dispositivo' : `${amount(count)} dispositivi`);
 
 export const explorer = {
   devices,

@@ -1,4 +1,8 @@
 import type { Dictionary } from '../dictionary';
+import { formatCount } from '../numbers';
+
+/** A number of things as English writes it ("14,891") */
+const amount = (value: number) => formatCount('en', value);
 
 /** Reading a project file: what was repaired, what is wrong */
 
@@ -36,11 +40,11 @@ export const projectFile: Dictionary['projectFile'] = {
     vlanNamesDropped: (count: number) =>
       count === 1
         ? '1 invalid or duplicate VLAN name ignored.'
-        : `${count} invalid or duplicate VLAN names ignored.`,
+        : `${amount(count)} invalid or duplicate VLAN names ignored.`,
     vlanNamesCut: (count: number, maxLength: number) =>
       count === 1
-        ? `1 VLAN name too long, shortened to ${maxLength} characters.`
-        : `${count} VLAN names too long, shortened to ${maxLength} characters.`,
+        ? `1 VLAN name too long, shortened to ${amount(maxLength)} characters.`
+        : `${amount(count)} VLAN names too long, shortened to ${amount(maxLength)} characters.`,
 
     canvasUnnamed: (number: number, givenName: string) =>
       `Board ${number} has no name: named “${givenName}”.`,
@@ -49,35 +53,35 @@ export const projectFile: Dictionary['projectFile'] = {
         canvasName,
         count === 1
           ? '1 invalid or duplicate device ignored.'
-          : `${count} invalid or duplicate devices ignored.`
+          : `${amount(count)} invalid or duplicate devices ignored.`
       ),
     devicesRepaired: (canvasName: string, count: number) =>
       inCanvas(
         canvasName,
-        count === 1 ? '1 incomplete device repaired.' : `${count} incomplete devices repaired.`
+        count === 1 ? '1 incomplete device repaired.' : `${amount(count)} incomplete devices repaired.`
       ),
     connectionsDropped: (canvasName: string, count: number) =>
-      inCanvas(canvasName, count === 1 ? '1 invalid link ignored.' : `${count} invalid links ignored.`),
+      inCanvas(canvasName, count === 1 ? '1 invalid link ignored.' : `${amount(count)} invalid links ignored.`),
     connectionsDuplicate: (canvasName: string, count: number) =>
       inCanvas(
         canvasName,
         count === 1
           ? '1 link with a duplicate ID removed.'
-          : `${count} links with a duplicate ID removed.`
+          : `${amount(count)} links with a duplicate ID removed.`
       ),
     connectionsDetached: (canvasName: string, count: number) =>
       inCanvas(
         canvasName,
         count === 1
           ? '1 link to a device that does not exist removed.'
-          : `${count} links to devices that do not exist removed.`
+          : `${amount(count)} links to devices that do not exist removed.`
       ),
     areasDropped: (canvasName: string, count: number) =>
-      inCanvas(canvasName, count === 1 ? '1 invalid area ignored.' : `${count} invalid areas ignored.`),
+      inCanvas(canvasName, count === 1 ? '1 invalid area ignored.' : `${amount(count)} invalid areas ignored.`),
     areasRepaired: (canvasName: string, count: number) =>
       inCanvas(
         canvasName,
-        count === 1 ? '1 incomplete area repaired.' : `${count} incomplete areas repaired.`
+        count === 1 ? '1 incomplete area repaired.' : `${amount(count)} incomplete areas repaired.`
       ),
     viewReset: (canvasName: string) =>
       inCanvas(canvasName, 'view missing or not valid, reset to the starting position.'),
@@ -86,13 +90,13 @@ export const projectFile: Dictionary['projectFile'] = {
     canvasIdsGiven: (count: number) =>
       count === 1
         ? '1 board with a missing or duplicate ID: given a new ID.'
-        : `${count} boards with a missing or duplicate ID: given new IDs.`,
+        : `${amount(count)} boards with a missing or duplicate ID: given new IDs.`,
     activeCanvasNotFound: (openedName: string) => `Active board not found: “${openedName}” opened.`,
 
     noTemplateList: 'List of custom templates missing: no template imported.',
     templatesDropped: (count: number) =>
       count === 1
         ? '1 invalid custom template ignored.'
-        : `${count} invalid custom templates ignored.`,
+        : `${amount(count)} invalid custom templates ignored.`,
   },
 };

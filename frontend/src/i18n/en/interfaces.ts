@@ -1,5 +1,9 @@
 import type { Dictionary } from '../dictionary';
 import { common } from './common';
+import { formatCount } from '../numbers';
+
+/** A number of things as English writes it ("14,891") */
+const amount = (value: number) => formatCount('en', value);
 
 /** Ports and network cards: their editors, lists, summaries and what is wrong with one */
 
@@ -35,10 +39,10 @@ export const interfaces: Dictionary['interfaces'] = {
   portsTab: {
     summary: (linked: number, total: number) => {
       const ports = total === 1 ? 'port' : 'ports';
-      return `${linked} of ${total} ${ports} connected. Choose a port to see and change its settings.`;
+      return `${amount(linked)} of ${amount(total)} ${ports} connected. Choose a port to see and change its settings.`;
     },
     count: 'Number of ports',
-    countOption: (count: number) => (count === 1 ? '1 port' : `${count} ports`),
+    countOption: (count: number) => (count === 1 ? '1 port' : `${amount(count)} ports`),
     nonePicked: 'Choose a port to see and change its settings.',
     none: 'No ports configured for this device.',
   },
@@ -121,7 +125,7 @@ export const interfaces: Dictionary['interfaces'] = {
       const notAttached = 'the device is not attached to any network yet.';
       if (portCount === 1) return `The port has no address and no cable: ${notAttached}`;
       if (portCount === 2) return `Neither of the 2 ports has an address or a cable: ${notAttached}`;
-      return `None of the ${portCount} ports has an address or a cable: ${notAttached}`;
+      return `None of the ${amount(portCount)} ports has an address or a cable: ${notAttached}`;
     },
     columns: {
       port: 'Port',
@@ -138,14 +142,14 @@ export const interfaces: Dictionary['interfaces'] = {
     spare: (count: number) =>
       count === 1
         ? 'One more port is free: no address and no cable.'
-        : `${count} more ports are free: no address and no cable.`,
+        : `${amount(count)} more ports are free: no address and no cable.`,
 
     /** A switch: how many ports, and how they are split among the VLANs */
     switchCounts: (total: number, linked: number, disabled: number) =>
       [
-        total === 1 ? '1 port' : `${total} ports`,
-        `${linked} connected`,
-        ...(disabled === 0 ? [] : [`${disabled} disabled`]),
+        total === 1 ? '1 port' : `${amount(total)} ports`,
+        `${amount(linked)} connected`,
+        ...(disabled === 0 ? [] : [`${amount(disabled)} disabled`]),
       ].join(' · ') + '.',
     /** `<vlan/>` is the VLAN with its name, `<ports/>` the numbers of the ports in it */
     vlanPorts: (portCount: number): string =>

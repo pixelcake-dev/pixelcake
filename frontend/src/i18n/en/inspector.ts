@@ -1,5 +1,9 @@
 import type { Dictionary } from '../dictionary';
 import { common } from './common';
+import { formatCount } from '../numbers';
+
+/** A number of things as English writes it ("14,891") */
+const amount = (value: number) => formatCount('en', value);
 
 /** The window of a device: its frame, the first tab, saving */
 
@@ -39,7 +43,7 @@ export const inspector: Dictionary['inspector'] = {
         noCable: 'No cable attached.',
         onlyCard: `The name, speed and MAC of the card are in the <tab>${cardsTab} tab</tab>.`,
         firstOfSeveral: (count: number) =>
-          `It is the first of ${count} cards, the one the device is known by: the others, and the name, speed and MAC of each, are in the <tab>${cardsTab} tab</tab>.`,
+          `It is the first of ${amount(count)} cards, the one the device is known by: the others, and the name, speed and MAC of each, are in the <tab>${cardsTab} tab</tab>.`,
       },
     },
 

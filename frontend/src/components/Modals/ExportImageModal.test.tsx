@@ -305,8 +305,11 @@ describe('ExportImageModal — the choices', () => {
 
     const [width] = pictureSize();
     expect(width).toBeGreaterThan(30000);
-    expect(pixels()).toMatch(/^\d+ × \d+ pixel \(ridotta: è il massimo che il browser riesce a creare\)$/);
-    const painted = Number(pixels()?.split(' ')[0]);
+    expect(pixels()).toMatch(/^[\d.]+ × [\d.]+ pixel \(ridotta: è il massimo che il browser riesce a creare\)$/);
+    // (more than ten thousand pixels, written as Italian writes a number: «16.260»)
+    const side = pixels()?.split(' ')[0] ?? '';
+    expect(side).toMatch(/^\d{2}\.\d{3}$/);
+    const painted = Number(side.replace('.', ''));
     expect(painted).toBeLessThanOrEqual(images.MAX_PNG_SIDE);
     expect(painted).toBeGreaterThan(images.MAX_PNG_SIDE * 0.99);
     await waitFor(() => expect(rasterizeSvg.mock.calls.at(-1)?.[1]).toBe(painted));
@@ -697,7 +700,8 @@ describe('ExportImageModal — while presenting', () => {
     // the name of the cut cable gives way to the mark of the cut
     expect(texts).not.toContain('Linea principale');
 
-    // under it: the same words as the panel
+    // under it: the same words as the panel, once the effect of the failure is worked out
+    await waitFor(() => expect(pageTexts()).toHaveLength(5));
     const panel = screen.getByRole('complementary', { name: 'Pannello della presentazione' });
     const verdict = panel.querySelector('.presentation-verdict');
     const headline = verdict?.querySelector('strong')?.textContent ?? '';

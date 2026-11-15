@@ -1,7 +1,12 @@
 /** YAML and Terraform: the window, and what an import reports */
 
-const devices = (count: number) => (count === 1 ? '1 dispositivo' : `${count} dispositivi`);
-const connections = (count: number) => (count === 1 ? '1 connessione' : `${count} connessioni`);
+import { formatCount } from '../numbers';
+
+/** A number of things as Italian writes it («14.891») */
+const amount = (value: number) => formatCount('it', value);
+
+const devices = (count: number) => (count === 1 ? '1 dispositivo' : `${amount(count)} dispositivi`);
+const connections = (count: number) => (count === 1 ? '1 connessione' : `${amount(count)} connessioni`);
 
 export const importExport = {
   /** How many devices and connections: of the canvas, of a file */
@@ -17,7 +22,7 @@ export const importExport = {
       'usa il formato YAML.',
     noDevices: 'Nessun dispositivo nella topologia corrente.',
     addDevicesFirst: 'Aggiungi dispositivi al canvas per poterli esportare.',
-    lines: (count: number) => (count === 1 ? '1 riga' : `${count} righe`),
+    lines: (count: number) => (count === 1 ? '1 riga' : `${amount(count)} righe`),
 
     copy: 'Copia negli appunti',
     copied: 'Copiato',
@@ -33,7 +38,7 @@ export const importExport = {
     dragOrClick: 'Trascina un file qui o clicca per selezionare',
     supportedFormats: 'Formati supportati: .yaml, .yml',
 
-    warningCount: (count: number) => (count === 1 ? '1 avviso' : `${count} avvisi`),
+    warningCount: (count: number) => (count === 1 ? '1 avviso' : `${amount(count)} avvisi`),
     devicesFound: 'Dispositivi trovati',
     warnings: 'Avvisi',
 

@@ -1,9 +1,13 @@
 import type { Dictionary } from '../dictionary';
+import { formatCount } from '../numbers';
+
+/** A number of things as English writes it ("14,891") */
+const amount = (value: number) => formatCount('en', value);
 
 /** YAML and Terraform: the window, and what an import reports */
 
-const devices = (count: number) => (count === 1 ? '1 device' : `${count} devices`);
-const connections = (count: number) => (count === 1 ? '1 link' : `${count} links`);
+const devices = (count: number) => (count === 1 ? '1 device' : `${amount(count)} devices`);
+const connections = (count: number) => (count === 1 ? '1 link' : `${amount(count)} links`);
 
 export const importExport: Dictionary['importExport'] = {
   /** How many devices and links: of the board, of a file */
@@ -19,7 +23,7 @@ export const importExport: Dictionary['importExport'] = {
       'YAML format.',
     noDevices: 'No devices in the current topology.',
     addDevicesFirst: 'Add devices to the board to export them.',
-    lines: (count: number) => (count === 1 ? '1 line' : `${count} lines`),
+    lines: (count: number) => (count === 1 ? '1 line' : `${amount(count)} lines`),
 
     copy: 'Copy to clipboard',
     copied: 'Copied',
@@ -35,7 +39,7 @@ export const importExport: Dictionary['importExport'] = {
     dragOrClick: 'Drag a file here or click to choose one',
     supportedFormats: 'Supported formats: .yaml, .yml',
 
-    warningCount: (count: number) => (count === 1 ? '1 warning' : `${count} warnings`),
+    warningCount: (count: number) => (count === 1 ? '1 warning' : `${amount(count)} warnings`),
     devicesFound: 'Devices found',
     warnings: 'Warnings',
 

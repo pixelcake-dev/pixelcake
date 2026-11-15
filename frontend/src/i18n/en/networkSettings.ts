@@ -1,4 +1,8 @@
 import type { Dictionary } from '../dictionary';
+import { formatCount } from '../numbers';
+
+/** A number of things as English writes it ("14,891") */
+const amount = (value: number) => formatCount('en', value);
 
 /** Settings, network tab: what a new device starts from */
 
@@ -8,7 +12,7 @@ const example = (value: string) => `e.g. ${value}`;
 const listOf = (names: string[]) => {
   const shown = names.slice(0, 4);
   const more = names.length - shown.length;
-  if (more > 0) return `${shown.join(', ')} and ${more === 1 ? 'one more' : `${more} more`}`;
+  if (more > 0) return `${shown.join(', ')} and ${more === 1 ? 'one more' : `${amount(more)} more`}`;
   if (shown.length === 1) return shown[0];
   return `${shown.slice(0, -1).join(', ')} and ${shown[shown.length - 1]}`;
 };
@@ -43,13 +47,13 @@ export const networkSettings: Dictionary['networkSettings'] = {
     missing: (names: string[]) =>
       names.length === 1
         ? `On this board ${names[0]} has no DNS server.`
-        : `On this board ${names.length} devices have no DNS server.`,
+        : `On this board ${amount(names.length)} devices have no DNS server.`,
     button: (server: string) => `Assign ${server}`,
     question: {
       title: (server: string, names: string[]) =>
         names.length === 1
           ? `Assign the DNS server ${server} to ${names[0]}?`
-          : `Assign the DNS server ${server} to ${names.length} devices?`,
+          : `Assign the DNS server ${server} to ${amount(names.length)} devices?`,
       detail: (names: string[]) =>
         (names.length === 1
           ? 'It is written on its network card.'
@@ -62,7 +66,7 @@ export const networkSettings: Dictionary['networkSettings'] = {
     done: (names: string[]) =>
       names.length === 1
         ? `DNS server assigned to ${names[0]}`
-        : `DNS server assigned to ${names.length} devices`,
+        : `DNS server assigned to ${amount(names.length)} devices`,
   },
 
   /** Over the table of the VLANs of the project */
