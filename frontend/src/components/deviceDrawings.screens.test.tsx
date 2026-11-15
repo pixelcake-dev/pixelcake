@@ -201,10 +201,10 @@ describe('the templates in the settings', () => {
     render(<TemplateEditModal isOpen onClose={() => {}} template={printer} />);
 
     const chosen = () => screen.getAllByRole('radio').find((choice) => choice.getAttribute('aria-checked') === 'true');
-    expect(chosen()?.getAttribute('aria-label')).toBe('Printer');
+    expect(chosen()?.getAttribute('aria-label')).toBe('Stampante');
 
-    fireEvent.click(screen.getByRole('radio', { name: 'IP Camera' }));
-    expect(chosen()?.getAttribute('aria-label')).toBe('IP Camera');
+    fireEvent.click(screen.getByRole('radio', { name: 'Telecamera IP' }));
+    expect(chosen()?.getAttribute('aria-label')).toBe('Telecamera IP');
     fireEvent.click(document.querySelectorAll<HTMLButtonElement>('.modal-actions button')[1]);
 
     expect(templates().find((template) => template.id === 'tpl-printer')?.icon).toBe('telecamera-ip');

@@ -34,6 +34,14 @@ that, with the colours of the theme (`--device-lower`, `--device-upper`,
 `--device-ground`, and the colours of the states in `index.css`), and
 `utils/drawingImage.ts` does the same in the exported picture.
 
+`icone.json` is the kit's own list of its drawings, as it came with them: the
+name of each and the group it is in (the network, the servers, the data, the
+end devices). The script writes the groups with the shapes
+(`DEVICE_DRAWING_GROUPS`), in the order of the kit, and stops when a drawing
+is in no group or a group names a drawing that has no file. The drawing
+picker of a template shows the drawings in those groups; their names, in
+both languages, are in the dictionaries (`templates.devices.drawingNames`).
+
 To change a drawing, or add one: keep the construction above (the script
 stops on a file that is built otherwise), run `pnpm drawings:build`, and give
 the new drawing a device in `utils/deviceDrawing.ts`.

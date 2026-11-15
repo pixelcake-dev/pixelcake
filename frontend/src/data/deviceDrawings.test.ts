@@ -12,6 +12,7 @@ import { describe, it, expect } from 'vitest';
 import {
   DEVICE_DRAWINGS,
   DEVICE_DRAWING_CUT,
+  DEVICE_DRAWING_GROUPS,
   DEVICE_DRAWING_IDS,
   DEVICE_DRAWING_SIZE,
 } from './deviceDrawings';
@@ -120,5 +121,20 @@ describe('the drawings of the devices, as data', () => {
       expect(shapes, id).not.toMatch(/<title|\bid="|url\(|<defs|<mask|<clipPath|<script|href=/i);
       expect(shapes, id).toMatch(/^(<(rect|circle|ellipse|path) class="[lg]" [^<>]*\/>)+$/);
     }
+  });
+
+  it('are in the groups of the kit (its icone.json), in its order, each drawing in one', () => {
+    const list = Object.values(
+      import.meta.glob<string>('/src/assets/device-drawings/icone.json', { query: '?raw', import: 'default', eager: true })
+    );
+    expect(list).toHaveLength(1);
+    const kit = JSON.parse(list[0]) as { icone: Array<{ id: string; gruppo: string }> };
+
+    expect(DEVICE_DRAWING_GROUPS.flatMap((entry) => entry.drawings.map((id) => `${entry.group}:${id}`))).toEqual(
+      kit.icone.map((entry) => `${entry.gruppo}:${entry.id}`)
+    );
+    expect(DEVICE_DRAWING_GROUPS.map((entry) => entry.group)).toEqual(['rete', 'server', 'dati', 'dispositivi']);
+    const grouped = DEVICE_DRAWING_GROUPS.flatMap((entry) => [...entry.drawings]);
+    expect([...grouped].sort()).toEqual([...DEVICE_DRAWING_IDS].sort());
   });
 });

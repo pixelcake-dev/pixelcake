@@ -1,6 +1,8 @@
 // Reads the drawings of the devices (src/assets/device-drawings/*.svg) and
 // writes them as data to src/data/deviceDrawings.ts, so that the app draws a
 // device without a request for its picture, in the colours of its theme.
+// The groups the kit puts them in (icone.json of the same folder) go with
+// them: every drawing is in one, and a group names no drawing that is not.
 //
 //   pnpm drawings:build
 //
@@ -232,8 +234,29 @@ export function readDrawings(files) {
     .map((id) => readDrawing(id, files[id]));
 }
 
-/** The module, from the files as { id: text } */
-export function buildModule(files) {
+/**
+ * The groups of the drawings, as the kit names them in its icone.json: in
+ * its order, each with its drawings in their order
+ */
+export function readGroups(kit, ids) {
+  const groups = [];
+  for (const entry of kit.icone) {
+    if (!ids.includes(entry.id)) throw new Error(`icone.json: ${entry.id}, which has no file`);
+    let group = groups.find((one) => one.group === entry.gruppo);
+    if (!group) groups.push((group = { group: entry.gruppo, drawings: [] }));
+    if (group.drawings.includes(entry.id)) throw new Error(`icone.json: ${entry.id} twice`);
+    group.drawings.push(entry.id);
+  }
+  const missing = ids.filter((id) => !kit.icone.some((entry) => entry.id === id));
+  if (missing.length > 0) throw new Error(`icone.json: no group for ${missing.join(', ')}`);
+  return groups;
+}
+
+/** The module, from the files as { id: text } and the kit's icone.json */
+export function buildModule(files, kit) {
+  const groups = readGroups(kit, Object.keys(files))
+    .map((entry) => `  { group: '${entry.group}', drawings: [${entry.drawings.map((id) => `'${id}'`).join(', ')}] },`)
+    .join('\n');
   const entries = readDrawings(files)
     .map(
       (drawing) =>
@@ -278,6 +301,16 @@ export type DeviceDrawingId = keyof typeof DEVICE_DRAWINGS;
 
 /** The drawings, in the order of their names */
 export const DEVICE_DRAWING_IDS = Object.keys(DEVICE_DRAWINGS) as DeviceDrawingId[];
+
+/**
+ * The drawings in the groups of the kit they come from (icone.json of the
+ * folder), in its order: the network, the servers, the data, the end devices
+ */
+export const DEVICE_DRAWING_GROUPS = [
+${groups}
+] as const satisfies ReadonlyArray<{ group: string; drawings: readonly DeviceDrawingId[] }>;
+
+export type DeviceDrawingGroup = (typeof DEVICE_DRAWING_GROUPS)[number]['group'];
 `;
 }
 
@@ -291,8 +324,13 @@ export async function readSources() {
   return files;
 }
 
+/** The kit's own list of its drawings, with their groups */
+export async function readKit() {
+  return JSON.parse(await readFile(path.join(SOURCE, 'icone.json'), 'utf8'));
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const files = await readSources();
-  await writeFile(OUTPUT, buildModule(files), 'utf8');
+  await writeFile(OUTPUT, buildModule(files, await readKit()), 'utf8');
   console.log(`${Object.keys(files).length} drawings written to ${path.relative(ROOT, OUTPUT)}`);
 }

@@ -624,10 +624,50 @@ button.area-label:focus-visible {
 
 /* The drawings a template can be given (components/ui/DrawingPicker.tsx):
    a grid of buttons, the chosen one framed in the accent */
+/* The drawings a template can have, a row for each group of the kit: the
+   name of the group in small capitals, as every label, then its drawings.
+   Where the eight drawings of the longest group and the name beside them do
+   not fit (the window of a generic template), the name goes above them */
 .drawing-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  container-type: inline-size;
+}
+
+.drawing-picker-group {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+}
+
+.drawing-picker-caption {
+  padding-top: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-color-light);
+}
+
+.drawing-picker-items {
   display: grid;
   grid-template-columns: repeat(auto-fill, 44px);
   gap: 6px;
+}
+
+/* (112 for the name, 8 for the space, 8 × 44 + 7 × 6 for the drawings) */
+@container (max-width: 513px) {
+  .drawing-picker-group {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .drawing-picker-caption {
+    padding-top: 0;
+  }
 }
 
 .drawing-picker-item {

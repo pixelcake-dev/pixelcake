@@ -24,6 +24,40 @@ export const templates: Dictionary['templates'] = {
     baseType: 'Base type',
     /** The drawing a device of the template is shown with, chosen among those of the app */
     drawing: 'Drawing',
+    /** The groups the drawings are shown in, those of the kit they come from */
+    drawingGroups: {
+      rete: 'Network',
+      server: 'Servers',
+      dati: 'Data',
+      dispositivi: 'End devices',
+    },
+    /** The name of each drawing, as the kit calls it: the title of its choice, and its name for a screen reader */
+    drawingNames: {
+      router: 'Router',
+      switch: 'Switch',
+      firewall: 'Firewall',
+      'access-point': 'Access point',
+      'load-balancer': 'Load balancer',
+      cloud: 'Cloud / Internet',
+      server: 'Server',
+      'server-mail': 'Mail server',
+      'server-web': 'Web server',
+      'server-vps': 'VPS server',
+      'server-proxy': 'Proxy server',
+      'server-dns': 'DNS server',
+      'server-dhcp': 'DHCP server',
+      database: 'Database',
+      'storage-s3': 'S3 storage',
+      nas: 'NAS',
+      pc: 'PC',
+      laptop: 'Laptop',
+      smartphone: 'Smartphone',
+      tablet: 'Tablet',
+      'telefono-ip': 'IP phone',
+      stampante: 'Printer',
+      'telecamera-ip': 'IP camera',
+      iot: 'IoT device',
+    },
 
     generic: {
       intro: 'Built-in devices, ready to use',

@@ -1,0 +1,137 @@
+{
+  "stile": "strato",
+  "stato": "colore dello strato superiore",
+  "icone": [
+    {
+      "id": "router",
+      "nome": "Router",
+      "gruppo": "rete"
+    },
+    {
+      "id": "switch",
+      "nome": "Switch",
+      "gruppo": "rete"
+    },
+    {
+      "id": "firewall",
+      "nome": "Firewall",
+      "gruppo": "rete"
+    },
+    {
+      "id": "access-point",
+      "nome": "Access point",
+      "gruppo": "rete"
+    },
+    {
+      "id": "load-balancer",
+      "nome": "Load balancer",
+      "gruppo": "rete"
+    },
+    {
+      "id": "cloud",
+      "nome": "Cloud / Internet",
+      "gruppo": "rete"
+    },
+    {
+      "id": "server",
+      "nome": "Server",
+      "gruppo": "server"
+    },
+    {
+      "id": "server-mail",
+      "nome": "Server mail",
+      "gruppo": "server"
+    },
+    {
+      "id": "server-web",
+      "nome": "Server web",
+      "gruppo": "server"
+    },
+    {
+      "id": "server-vps",
+      "nome": "Server VPS",
+      "gruppo": "server"
+    },
+    {
+      "id": "server-proxy",
+      "nome": "Server proxy",
+      "gruppo": "server"
+    },
+    {
+      "id": "server-dns",
+      "nome": "Server DNS",
+      "gruppo": "server"
+    },
+    {
+      "id": "server-dhcp",
+      "nome": "Server DHCP",
+      "gruppo": "server"
+    },
+    {
+      "id": "database",
+      "nome": "Database",
+      "gruppo": "dati"
+    },
+    {
+      "id": "storage-s3",
+      "nome": "Storage S3",
+      "gruppo": "dati"
+    },
+    {
+      "id": "nas",
+      "nome": "NAS",
+      "gruppo": "dati"
+    },
+    {
+      "id": "pc",
+      "nome": "PC",
+      "gruppo": "dispositivi"
+    },
+    {
+      "id": "laptop",
+      "nome": "Laptop",
+      "gruppo": "dispositivi"
+    },
+    {
+      "id": "smartphone",
+      "nome": "Smartphone",
+      "gruppo": "dispositivi"
+    },
+    {
+      "id": "tablet",
+      "nome": "Tablet",
+      "gruppo": "dispositivi"
+    },
+    {
+      "id": "telefono-ip",
+      "nome": "Telefono IP",
+      "gruppo": "dispositivi"
+    },
+    {
+      "id": "stampante",
+      "nome": "Stampante",
+      "gruppo": "dispositivi"
+    },
+    {
+      "id": "telecamera-ip",
+      "nome": "Telecamera IP",
+      "gruppo": "dispositivi"
+    },
+    {
+      "id": "iot",
+      "nome": "Dispositivo IoT",
+      "gruppo": "dispositivi"
+    }
+  ],
+  "predefinito": {
+    "chiaro": "#5E8096",
+    "scuro": "#C9D8E2"
+  },
+  "stati": {
+    "spento": "#9AA7B0",
+    "ok": "#2FA866",
+    "avviso": "#F2C230",
+    "errore": "#E0483E",
+    "selezionato": "#F07D2A"
+  }
+}

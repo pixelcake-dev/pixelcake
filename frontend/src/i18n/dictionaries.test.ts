@@ -57,6 +57,20 @@ const SAME_IN_BOTH = new Set([
   'help.about.licenceText',
   'help.about.repository',
   'presentation.caption.failuresLine',
+  // (the names of drawings the Italian interface writes as the English ones, as the kit does)
+  'templates.devices.drawingNames.router',
+  'templates.devices.drawingNames.switch',
+  'templates.devices.drawingNames.firewall',
+  'templates.devices.drawingNames.access-point',
+  'templates.devices.drawingNames.load-balancer',
+  'templates.devices.drawingNames.cloud',
+  'templates.devices.drawingNames.server',
+  'templates.devices.drawingNames.database',
+  'templates.devices.drawingNames.nas',
+  'templates.devices.drawingNames.pc',
+  'templates.devices.drawingNames.laptop',
+  'templates.devices.drawingNames.smartphone',
+  'templates.devices.drawingNames.tablet',
 ]);
 
 describe('the two dictionaries', () => {

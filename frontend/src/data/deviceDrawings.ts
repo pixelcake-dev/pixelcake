@@ -175,3 +175,16 @@ export type DeviceDrawingId = keyof typeof DEVICE_DRAWINGS;
 
 /** The drawings, in the order of their names */
 export const DEVICE_DRAWING_IDS = Object.keys(DEVICE_DRAWINGS) as DeviceDrawingId[];
+
+/**
+ * The drawings in the groups of the kit they come from (icone.json of the
+ * folder), in its order: the network, the servers, the data, the end devices
+ */
+export const DEVICE_DRAWING_GROUPS = [
+  { group: 'rete', drawings: ['router', 'switch', 'firewall', 'access-point', 'load-balancer', 'cloud'] },
+  { group: 'server', drawings: ['server', 'server-mail', 'server-web', 'server-vps', 'server-proxy', 'server-dns', 'server-dhcp'] },
+  { group: 'dati', drawings: ['database', 'storage-s3', 'nas'] },
+  { group: 'dispositivi', drawings: ['pc', 'laptop', 'smartphone', 'tablet', 'telefono-ip', 'stampante', 'telecamera-ip', 'iot'] },
+] as const satisfies ReadonlyArray<{ group: string; drawings: readonly DeviceDrawingId[] }>;
+
+export type DeviceDrawingGroup = (typeof DEVICE_DRAWING_GROUPS)[number]['group'];

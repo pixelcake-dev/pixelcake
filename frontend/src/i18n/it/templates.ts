@@ -1,5 +1,7 @@
 /** Device and link templates: lists and editors */
 
+import type { DeviceDrawingGroup, DeviceDrawingId } from '@/data/deviceDrawings';
+
 /** The button that adds a link type: the empty list names it */
 const newLinkType = 'Nuovo tipo di connessione';
 
@@ -22,6 +24,40 @@ export const templates = {
     baseType: 'Tipo di base',
     /** The drawing a device of the template is shown with, chosen among those of the app */
     drawing: 'Disegno',
+    /** The groups the drawings are shown in, those of the kit they come from */
+    drawingGroups: {
+      rete: 'Rete',
+      server: 'Server',
+      dati: 'Dati',
+      dispositivi: 'Dispositivi finali',
+    } satisfies Record<DeviceDrawingGroup, string>,
+    /** The name of each drawing, as the kit calls it: the title of its choice, and its name for a screen reader */
+    drawingNames: {
+      router: 'Router',
+      switch: 'Switch',
+      firewall: 'Firewall',
+      'access-point': 'Access point',
+      'load-balancer': 'Load balancer',
+      cloud: 'Cloud / Internet',
+      server: 'Server',
+      'server-mail': 'Server mail',
+      'server-web': 'Server web',
+      'server-vps': 'Server VPS',
+      'server-proxy': 'Server proxy',
+      'server-dns': 'Server DNS',
+      'server-dhcp': 'Server DHCP',
+      database: 'Database',
+      'storage-s3': 'Storage S3',
+      nas: 'NAS',
+      pc: 'PC',
+      laptop: 'Laptop',
+      smartphone: 'Smartphone',
+      tablet: 'Tablet',
+      'telefono-ip': 'Telefono IP',
+      stampante: 'Stampante',
+      'telecamera-ip': 'Telecamera IP',
+      iot: 'Dispositivo IoT',
+    } satisfies Record<DeviceDrawingId, string>,
 
     generic: {
       intro: 'Dispositivi predefiniti disponibili per uso rapido',
