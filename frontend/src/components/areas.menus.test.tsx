@@ -211,6 +211,22 @@ describe('«Racchiudi in un riquadro»', () => {
     expect(second.position.y + second.size.height).toBe(lowerY + 94 + AREA_MARGIN.bottom);
   });
 
+  it('a device that is not selected, close beside those that are: the area does not cover it', () => {
+    // (jsdom measures nothing: a device is taken to be its frame, 104 by 94)
+    const selected = [addPc('PC-1', { x: 0, y: 0 }), addPc('PC-2', { x: 200, y: 0 })];
+    const beside = { x: 304 + AREA_MIN_MARGIN.side + AREA_GAP + 2, y: 0 };
+    addPc('PC-3', beside);
+    render(<TopMenuBar />);
+    act(() => store().selectMultipleDevices(selected));
+    fireEvent.click(screen.getByText('Racchiudi in un riquadro'));
+
+    const [area] = store().areas;
+    // with its whole room it would have covered the edge of PC-3: that side gives way
+    expect(304 + AREA_MARGIN.side).toBeGreaterThan(beside.x);
+    expect(area.position.x + area.size.width).toBe(beside.x - AREA_GAP);
+    expect(area.position.x).toBe(-AREA_MARGIN.side);
+  });
+
   it('around one device of an area: the new area is inside it, under its label', () => {
     const devices = [addPc('PC-1', { x: 0, y: 0 }), addPc('PC-2', { x: 200, y: 0 })];
     render(<TopMenuBar />);
