@@ -13,7 +13,9 @@
  * sites), those alone are: the others hang under them. A device is as many levels down as there are cables
  * between it and the nearest top, and every cable is laid from the upper end
  * to the lower one, whichever end it was drawn from. A cable between two
- * devices of the same level keeps them side by side.
+ * devices of the same level is left out of dagre, which would put one a rank
+ * under the other: each stays on its level, held there by its cable to the
+ * level above, and the two are side by side.
  *
  * The areas are groups of the layout (dagre's compound graph): the devices of
  * an area, and the areas inside it, stay together, and the area is drawn
@@ -240,11 +242,9 @@ export function arrangeDrawing(
     if (area) graph.setParent(device.id, area);
   }
 
-  // Every cable from its upper end to its lower one; side by side when the two are on one level
-  const kindOrder = (device: NetworkDevice) => {
-    const index = ['Cloud', 'Firewall', 'Router', 'Switch'].indexOf(device.type);
-    return index === -1 ? 4 : index;
-  };
+  // Every cable from its upper end to its lower one. One between two devices
+  // of a level is left out: given to dagre (with a length of 0) it puts one
+  // end a rank under the other, and other rankers fail on it
   const byId = new Map(devices.map((device) => [device.id, device] as const));
   for (const connection of connections) {
     const a = byId.get(connection.source);
@@ -252,13 +252,13 @@ export function arrangeDrawing(
     if (!a || !b || a.id === b.id || !levels.has(a.id) || !levels.has(b.id)) continue;
     const la = levels.get(a.id)!;
     const lb = levels.get(b.id)!;
-    const upperFirst = la < lb || (la === lb && (kindOrder(a) < kindOrder(b) || (kindOrder(a) === kindOrder(b) && a.id < b.id)));
-    const [upper, lower] = upperFirst ? [a, b] : [b, a];
+    if (la === lb) continue;
+    const [upper, lower] = la < lb ? [a, b] : [b, a];
     const label = labelSize(connection);
     graph.setEdge(
       upper.id,
       lower.id,
-      { minlen: Math.abs(la - lb), weight: la === lb ? 2 : 1, width: label.width, height: label.height, labelpos: 'c' },
+      { minlen: Math.abs(la - lb), width: label.width, height: label.height, labelpos: 'c' },
       connection.id
     );
   }

@@ -62,9 +62,12 @@ function deviceBox(device: Scene['devices'][number]): Box {
 
 /**
  * The gap that parts a thing that moves with some of the devices from
- * another: `mover` is how far each moves for a gap of 1 beyond `at` (a label
+ * another: `moves` is how far each moves for a gap of 1 beyond `at` (a label
  * moves half as far when one end of its cable is beyond, and the other not).
- * Undefined when no gap at `at` can part them.
+ * The one further along goes on beyond the other; when it cannot (it moves no
+ * further), the other way round: two things across each other, a label on the
+ * line of a border, have no order of their own. Undefined when no gap at `at`
+ * can part them.
  */
 function parting(
   axis: Axis,
@@ -73,12 +76,15 @@ function parting(
   second: { box: Box; moves: number },
   room: number
 ): Gap | undefined {
-  const [before, after] = mid(first.box, axis) <= mid(second.box, axis) ? [first, second] : [second, first];
-  const rate = after.moves - before.moves;
-  if (rate <= 0) return undefined;
-  const needed = hi(before.box, axis) + room - lo(after.box, axis);
-  if (needed <= 0) return undefined;
-  return { axis, at, by: Math.ceil(needed / rate) + 1 };
+  const along = mid(first.box, axis) <= mid(second.box, axis) ? [first, second] : [second, first];
+  for (const [before, after] of [along, [along[1], along[0]]]) {
+    const rate = after.moves - before.moves;
+    if (rate <= 0) continue;
+    const needed = hi(before.box, axis) + room - lo(after.box, axis);
+    if (needed <= 0) return undefined;
+    return { axis, at, by: Math.ceil(needed / rate) + 1 };
+  }
+  return undefined;
 }
 
 /** The first crowded place of the drawing, and the gap that clears it */

@@ -94,6 +94,33 @@ describe('the levels come from the network', () => {
     const levels = networkLevels([...devices, device('Alone', 'PC')], connections);
     expect(levels.has('d-Alone')).toBe(false);
   });
+
+  it('with no router the top is a switch, even when a server has more cables', () => {
+    // a server with three cards on three switches; the first switch also has a PC
+    const devices = [device('Srv', 'Server'), device('SW-1', 'Switch'), device('SW-2', 'Switch'), device('SW-3', 'Switch'), device('PC', 'PC')];
+    const connections = [cable('Srv', 'SW-1'), cable('Srv', 'SW-2'), cable('Srv', 'SW-3'), cable('PC', 'SW-1')];
+    const levels = networkLevels(devices, connections);
+    expect(['SW-1', 'Srv', 'PC', 'SW-2'].map((label) => levels.get(`d-${label}`))).toEqual([0, 1, 1, 2]);
+  });
+});
+
+describe('two devices of one level, cabled together', () => {
+  it.each(['TB', 'LR'] as const)('%s: side by side, not one a level under the other', (direction) => {
+    // two routers, each the top of its side, with a switch and a PC under it
+    const devices = [
+      device('R-1', 'Router'),
+      device('R-2', 'Router'),
+      device('SW-1', 'Switch'),
+      device('SW-2', 'Switch'),
+      device('PC-1', 'PC'),
+      device('PC-2', 'PC'),
+    ];
+    const connections = [cable('R-1', 'R-2'), cable('SW-1', 'R-1'), cable('SW-2', 'R-2'), cable('PC-1', 'SW-1'), cable('PC-2', 'SW-2')];
+    const laid = arrangeDrawing({ devices, connections, areas: [] }, direction);
+    const along = (label: string) => (direction === 'TB' ? at(laid.devices, label).y : at(laid.devices, label).x);
+    expect(along('R-1')).toBe(along('R-2'));
+    expect(along('SW-1')).toBe(along('SW-2'));
+  });
 });
 
 describe.each(['TB', 'LR'] as const)('laid out %s', (direction: LayoutDirection) => {
@@ -215,6 +242,36 @@ describe.each(SAMPLES)('%s, laid out', (_, create) => {
       list.map((area) => devices.filter((one) => holds({ ...area.position, ...area.size }, frame(one))).map((one) => one.id).sort());
     const laid = arrangeDrawing({ devices: sample.devices, connections: sample.connections, areas });
     expect(membersOf(laid.devices, laid.areas)).toEqual(membersOf(sample.devices, areas));
+  });
+});
+
+describe('laid out again, from what a layout made', () => {
+  it('the two sites, vertical then horizontal: no label is left on the border of an area', () => {
+    // where a visitor had them after «Verticale», their devices first moved about inside their areas
+    // (loaded through the store, with the ids it gives); «Orizzontale» left the label of the main line
+    // across the lower border of the head office
+    setLanguage('it');
+    const store = () => useNetworkStore.getState();
+    store().clearAllDevices();
+    store().loadSample(createRedundancySample());
+    const places: Record<string, [number, number]> = {
+      'R-Riserva': [472, 0], 'R-Sede': [174, 256], 'R-Filiale': [605, 390], 'SW-Core': [174, 656],
+      'SW-Piano-1': [30, 1056], 'SW-Piano-2': [256, 1190], 'Srv-File': [174, 1056], 'PC-Sede-1': [30, 1496],
+      'PC-Sede-2': [256, 1630], 'SW-Filiale': [605, 790], 'PC-Filiale-1': [533, 1190], 'PC-Filiale-2': [677, 1190],
+    };
+    for (const one of store().devices) store().updateDevice(one.id, { position: { x: places[one.label][0], y: places[one.label][1] } });
+    for (const area of store().areas) {
+      store().updateArea(
+        area.id,
+        area.label === 'Sede'
+          ? { position: { x: 14, y: 216 }, size: { width: 362, height: 1524 } }
+          : { position: { x: 517, y: 350 }, size: { width: 280, height: 950 } }
+      );
+    }
+    store().applyAutoLayout('LR');
+    expect(crowding(store())).toEqual([]);
+    expect(deviceOverlaps(store())).toEqual([]);
+    expect(areaProblems(store())).toEqual([]);
   });
 });
 
