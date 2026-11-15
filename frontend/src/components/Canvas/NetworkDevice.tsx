@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import { Handle, Position, useUpdateNodeInternals } from 'reactflow';
 import type { NodeProps } from 'reactflow';
@@ -128,6 +128,12 @@ const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>
 
   // The drawing of the device: the one of its template, else the one of its type
   const drawing = drawingOf(template, data.type);
+  // (the same objects while the drawing is the same: a device dragged does
+  // not draw its four points again at every step)
+  const pointStyles = useMemo(
+    () => Object.fromEntries(SIDES.map(({ side }) => [side, pointStyle(drawing, side)])) as Record<Side, CSSProperties>,
+    [drawing]
+  );
 
   // The cables end next to what is drawn, and every drawing has its own
   // shape: when the drawing of a device changes, React Flow is told to look
@@ -228,7 +234,7 @@ const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>
           position={position}
           id={side}
           className={`connect-point connect-point-${side}`}
-          style={pointStyle(drawing, side)}
+          style={pointStyles[side]}
           isConnectable={!presenting}
         />
       ))}
