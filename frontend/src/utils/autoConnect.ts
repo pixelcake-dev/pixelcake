@@ -1,304 +1,541 @@
 /**
- * Automatic connection (Vista → Connessione automatica), as it was before
- * the layout was made again: moved here from utils/autoLayout.ts.
+ * The automatic connection (Vista → Collega i dispositivi senza cavo): a
+ * cable for each device that has none, where a network engineer would put
+ * it, and nothing else.
+ *
+ * 1. An end device with no cable goes to the nearest switch of its own
+ *    network. An access point is one of them, and is cabled before the
+ *    devices on its Wi-Fi, so that its first card stays its cable.
+ * 2. A laptop, a smartphone or a tablet with no cable goes to the nearest
+ *    access point of its network with a radio card free, else to a switch.
+ * 3. A group of devices cabled together with no router, firewall or Internet
+ *    in it gets one cable up: an access point with only its Wi-Fi devices to
+ *    the nearest switch of its network; a group with switches (one switch
+ *    with its devices, or several) from the switch of it nearest to a router,
+ *    a firewall or a core switch (a switch cabled to a router or a firewall)
+ *    of its network. One cable for the whole group: never one that closes a
+ *    loop, since every cable added joins two groups.
+ *
+ * The network of a device is the one of its addresses (address and mask). A
+ * switch is on the networks of what is cabled to it (the addresses of its end
+ * devices, of the router ports its cables end on) and of the VLANs set on its
+ * ports, known by the cables of the drawing that join a port in a VLAN to an
+ * address; while one of its VLANs is not known that way, it may be on any
+ * other network as well. With none of these, a switch with no VLANs set is on
+ * the network of its own address; one with VLANs, or with no address, may be
+ * on any (the address of a switch with VLANs is the one it is managed at). A
+ * device on DHCP may be on any network too: it goes by distance alone.
+ *
+ * A cable takes a free interface meant for it: on a switch, a port in the
+ * VLAN of the device's network, or one with nothing set on it, never a port
+ * of another network's VLAN; on a router or a firewall, a port with an address
+ * on the switch's network, or one with none, never another network's gateway.
+ * End devices take the first such port of a switch, uplinks its trunk port or
+ * else its last free one. A firewall whose ports carry zones gets its cable
+ * with its end not bound: the port, and with it the zone, is the user's to
+ * choose (engine/interfaces.ts, requiresExplicitBinding).
+ *
+ * Never cabled automatically: routers and firewalls between themselves, the
+ * Internet, end devices between themselves. No cable is given a name. Among
+ * the devices waiting for a cable, the one nearest to where it can go is
+ * cabled first, so that the last free ports go to the nearest.
+ *
+ * What is left alone is said, with the reason. Pure: the cables to add and
+ * the devices left alone are handed back, nothing is changed.
  */
 
-import type { NetworkDevice, NetworkConnection, ConnectionType } from '@/types';
+import type { ConnectionType, NetworkConnection, NetworkDevice, Port } from '@/types';
+import {
+  type ConnectionEnd,
+  type DeviceInterface,
+  boundInterface,
+  listInterfaces,
+  normalizeBindings,
+  requiresExplicitBinding,
+  usedInterfaceKeys,
+} from '@/engine';
+import { getNetworkAddress, isValidIP } from './ipHelpers';
 
-/**
- * Device Tier Hierarchy
- * Lower tier = higher in network hierarchy (closer to edge/internet)
- */
-export const DeviceTier = {
-  TIER_1_EDGE: 1,      // Router (Internet Gateway)
-  TIER_2_SECURITY: 2,  // Firewall
-  TIER_3_CORE: 3,      // Core Switch
-  TIER_4_DISTRIB: 4,   // Distribution Switch, Load Balancer
-  TIER_5_ACCESS: 5,    // End devices (PC, Server, Database, AP)
-  TIER_UNKNOWN: 99,    // Unknown device type
-} as const;
+/** Why a device was given no cable */
+export type LeftAloneReason =
+  /** an end device: no switch of its network (nor access point) */
+  | 'noSwitch'
+  /** a switch with no cable: no router, firewall or core switch of its network */
+  | 'noUplink'
+  /** where it could go, no port is free for it (or none of its own) */
+  | 'noFreePort'
+  /** a router, a firewall or the Internet with no cable: cabled by hand */
+  | 'byHand';
 
-export type DeviceTier = typeof DeviceTier[keyof typeof DeviceTier];
+export interface LeftAlone {
+  deviceId: string;
+  reason: LeftAloneReason;
+}
 
-/**
- * Map device types to their tier in network hierarchy
- */
-const DEVICE_TIER_MAP: Record<string, DeviceTier> = {
-  'Router': DeviceTier.TIER_1_EDGE,
-  'Firewall': DeviceTier.TIER_2_SECURITY,
-  'Switch': DeviceTier.TIER_4_DISTRIB, // Default for generic switches
-  'LoadBalancer': DeviceTier.TIER_4_DISTRIB,
-  'PC': DeviceTier.TIER_5_ACCESS,
-  'Server': DeviceTier.TIER_5_ACCESS,
-  'Database': DeviceTier.TIER_5_ACCESS,
-  'AccessPoint': DeviceTier.TIER_5_ACCESS,
-  'Cloud': DeviceTier.TIER_1_EDGE, // Cloud gateway at edge
-};
+/** What the menu says afterwards: how many cables, and who was left alone */
+export interface ConnectionSummary {
+  added: number;
+  left: LeftAlone[];
+}
 
-/**
- * Get device tier based on type and label
- * Core switches are detected by name (e.g., "Core", "core-switch")
- */
-export function getDeviceTier(device: NetworkDevice): DeviceTier {
-  // Special case: Core switches (Switch type but with "core" in name)
-  if (device.type === 'Switch' && device.label.toLowerCase().includes('core')) {
-    return DeviceTier.TIER_3_CORE;
-  }
+export interface LooseDevicesConnected {
+  /** The new cables, bound to the interfaces they take */
+  connections: NetworkConnection[];
+  /** The devices that still have no cable, or no way up, and why */
+  left: LeftAlone[];
+  /** The connection counter after the ids taken */
+  nextCounter: number;
+}
 
-  // Check if device type exists in tier map
-  const tier = DEVICE_TIER_MAP[device.type];
-  if (tier !== undefined) {
-    return tier;
-  }
+/** Cabled by hand, never automatically */
+const BY_HAND = new Set(['Router', 'Firewall', 'Cloud']);
+/** Where a switch takes its uplink (a cloud is the Internet: by hand) */
+const UPLINK = new Set(['Router', 'Firewall']);
+/** What goes on the Wi-Fi when there is an access point for it */
+const WIRELESS = new Set(['tpl-laptop', 'tpl-smartphone', 'tpl-tablet']);
+const DEFAULT_MASK = '255.255.255.0';
 
-  // Unknown device type
-  return DeviceTier.TIER_UNKNOWN;
+const isSwitch = (device: NetworkDevice) => device.type === 'Switch';
+const isEndDevice = (device: NetworkDevice) => !isSwitch(device) && !BY_HAND.has(device.type);
+const isAccessPoint = (device: NetworkDevice) =>
+  device.type === 'AccessPoint' && device.templateId !== 'tpl-iotgateway';
+const isWireless = (device: NetworkDevice) =>
+  isEndDevice(device) && device.templateId !== undefined && WIRELESS.has(device.templateId);
+
+interface Address {
+  ip: string;
+  mask: string;
 }
 
 /**
- * Determine connection type based on device tiers and IP subnets
- * Uses hybrid approach: hierarchy tier + subnet relationship
+ * The networks a device is on: those its addresses tell, and whether it may
+ * be on others too (nothing to tell them by, or a VLAN nothing tells yet)
  */
-export function getConnectionType(
-  sourceDevice: NetworkDevice,
-  targetDevice: NetworkDevice
-): ConnectionType {
-  const sourceTier = getDeviceTier(sourceDevice);
-  const targetTier = getDeviceTier(targetDevice);
-
-  // Extract network class (first 2 octets) to detect inter-building connections.
-  // A device that takes its address from DHCP has none to tell a building by:
-  // it is where the device it is cabled to is
-  const leased = (device: NetworkDevice) => device.nics?.[0]?.dhcp === true;
-  const sourceNetClass = sourceDevice.ip.split('.').slice(0, 2).join('.');
-  const targetNetClass = targetDevice.ip.split('.').slice(0, 2).join('.');
-  const isInterBuilding =
-    !leased(sourceDevice) && !leased(targetDevice) && sourceNetClass !== targetNetClass;
-
-  // Extract subnet (first 3 octets)
-  const sourceSubnet = sourceDevice.ip.split('.').slice(0, 3).join('.');
-  const targetSubnet = targetDevice.ip.split('.').slice(0, 3).join('.');
-  const isSameSubnet = sourceSubnet === targetSubnet;
-
-  // Inter-building connections are always backbone
-  if (isInterBuilding) {
-    return 'backbone';
-  }
-
-  // Tier-based connection type determination
-  // Router → Firewall
-  if (sourceTier === DeviceTier.TIER_1_EDGE && targetTier === DeviceTier.TIER_2_SECURITY) {
-    return 'uplink';
-  }
-
-  // Firewall → Core Switch
-  if (sourceTier === DeviceTier.TIER_2_SECURITY && targetTier === DeviceTier.TIER_3_CORE) {
-    return 'trunk';
-  }
-
-  // Core Switch → Distribution Switch/LoadBalancer
-  if (sourceTier === DeviceTier.TIER_3_CORE && targetTier === DeviceTier.TIER_4_DISTRIB) {
-    return 'trunk';
-  }
-
-  // Distribution → Access (Switch/LoadBalancer → End Devices)
-  if (sourceTier === DeviceTier.TIER_4_DISTRIB && targetTier === DeviceTier.TIER_5_ACCESS) {
-    return 'access';
-  }
-
-  // Access-to-Access connections (same tier end devices)
-  if (sourceTier === DeviceTier.TIER_5_ACCESS && targetTier === DeviceTier.TIER_5_ACCESS) {
-    // If same subnet, it's local access
-    // If different subnet, it's a special backbone link (e.g., DB replication)
-    return isSameSubnet ? 'access' : 'backbone';
-  }
-
-  // Default fallback based on subnet relationship
-  return isSameSubnet ? 'access' : 'trunk';
-}
-/**
- * Calculate Euclidean distance between two devices
- */
-function calculateDistance(dev1: NetworkDevice, dev2: NetworkDevice): number {
-  const dx = dev1.position.x - dev2.position.x;
-  const dy = dev1.position.y - dev2.position.y;
-  return Math.sqrt(dx * dx + dy * dy);
+interface Networks {
+  known: Address[];
+  open: boolean;
 }
 
+function addressOf(ip: string | undefined, mask: string | undefined): Address | undefined {
+  if (!ip || !isValidIP(ip)) return undefined;
+  return { ip, mask: mask && isValidIP(mask) ? mask : DEFAULT_MASK };
+}
+
+const known = (list: Array<Address | undefined>): Address[] =>
+  list.filter((one): one is Address => one !== undefined);
+
 /**
- * Check if connection already exists between two devices
+ * The addresses a device has of its own: its cards' (not those on DHCP:
+ * they take theirs from where they are cabled), else its ports' and the
+ * address it has as a device.
  */
-function connectionExists(
-  connections: NetworkConnection[],
-  sourceId: string,
-  targetId: string
-): boolean {
-  return connections.some(
-    (conn) =>
-      (conn.source === sourceId && conn.target === targetId) ||
-      (conn.source === targetId && conn.target === sourceId) // Bidirectional check
+function ownAddresses(device: NetworkDevice): Address[] {
+  if (device.nics && device.nics.length > 0) {
+    return known(device.nics.filter((card) => !card.dhcp).map((card) => addressOf(card.ip, card.subnet)));
+  }
+  return known([
+    ...(device.ports ?? []).map((one) => addressOf(one.ip, one.subnet)),
+    addressOf(device.ip, device.subnet),
+  ]);
+}
+
+/** Two addresses on one network, as the mask of either one sees it */
+function sameNetwork(a: Address, b: Address): boolean {
+  return (
+    getNetworkAddress(a.ip, a.mask) === getNetworkAddress(b.ip, a.mask) ||
+    getNetworkAddress(a.ip, b.mask) === getNetworkAddress(b.ip, b.mask)
   );
 }
 
-/**
- * Auto-connect devices based on hierarchy tier and proximity
- * Creates intelligent connections using hybrid approach (tier + IP subnet)
- *
- * @param devices - Array of network devices with positions
- * @param existingConnections - Existing connections to avoid duplicates
- * @param startingCounter - Starting connection counter from store
- * @returns Array of new connections to add
- */
-export function autoConnectDevices(
-  devices: NetworkDevice[],
-  existingConnections: NetworkConnection[],
-  startingCounter: number
-): NetworkConnection[] {
-  const newConnections: NetworkConnection[] = [];
-  let connectionCounter = startingCounter;
+const overlap = (a: Address[], b: Address[]) => a.some((one) => b.some((other) => sameNetwork(one, other)));
 
-  // Group devices by tier
-  const devicesByTier = new Map<DeviceTier, NetworkDevice[]>();
-  devices.forEach((device) => {
-    const tier = getDeviceTier(device);
-    if (!devicesByTier.has(tier)) {
-      devicesByTier.set(tier, []);
-    }
-    devicesByTier.get(tier)!.push(device);
-  });
+/** Two devices that may be on one network */
+const share = (a: Networks, b: Networks) => a.open || b.open || overlap(a.known, b.known);
 
-  // Sort tiers ascending (Edge → Access)
-  const sortedTiers = Array.from(devicesByTier.keys()).sort((a, b) => a - b);
+/** How well an interface on `addresses` suits a cable toward `toward`: 0 meant for it, 2 maybe, undefined not */
+const fits = (addresses: Address[], toward: Networks): 0 | 2 | undefined =>
+  overlap(addresses, toward.known) ? 0 : toward.open || toward.known.length === 0 ? 2 : undefined;
 
-  // Connect each tier to the tier above it (lower tier number = higher in hierarchy)
-  for (let i = 0; i < sortedTiers.length; i++) {
-    const currentTier = sortedTiers[i];
-    const currentDevices = devicesByTier.get(currentTier)!;
+/** The one VLAN of a port in access mode (none on a trunk port, or with none set) */
+function accessVlan(port: Port): number | undefined {
+  if (port.portType === 'trunk') return undefined;
+  if (typeof port.vlan === 'number') return port.vlan;
+  return Array.isArray(port.vlan) && port.vlan.length === 1 ? port.vlan[0] : undefined;
+}
 
-    // Find parent tier (tier immediatamente precedente, non il primo in assoluto)
-    // Es: se tiers = [1, 2, 5] e currentTier=5 → parentTier=2 (non 1!)
-    const parentTier = sortedTiers
-      .filter((t) => t < currentTier)
-      .sort((a, b) => b - a)[0]; // Prendi il più alto tra quelli minori
+/** Every VLAN set on a port: its own, or those its trunk carries */
+const vlansOf = (port: Port): number[] =>
+  port.vlan === undefined ? [] : Array.isArray(port.vlan) ? port.vlan : [port.vlan];
 
-    if (parentTier !== undefined) {
-      const parentDevices = devicesByTier.get(parentTier)!;
+const distance = (a: NetworkDevice, b: NetworkDevice) =>
+  Math.hypot(a.position.x - b.position.x, a.position.y - b.position.y);
 
-      // Connect each current device to closest parent device
-      currentDevices.forEach((device) => {
-        // Find closest parent device (prefer same building by network class)
-        const deviceNetClass = device.ip.split('.').slice(0, 2).join('.');
+/** The sides a new cable ends on: facing each other, from the upper device */
+function sidesFor(upper: NetworkDevice, lower: NetworkDevice): Pick<NetworkConnection, 'sourceHandle' | 'targetHandle'> {
+  const dx = lower.position.x - upper.position.x;
+  const dy = lower.position.y - upper.position.y;
+  if (Math.abs(dy) >= Math.abs(dx)) {
+    return dy >= 0 ? { sourceHandle: 'bottom', targetHandle: 'top' } : { sourceHandle: 'top', targetHandle: 'bottom' };
+  }
+  return dx >= 0 ? { sourceHandle: 'right', targetHandle: 'left' } : { sourceHandle: 'left', targetHandle: 'right' };
+}
 
-        // First try same building
-        let closestParent = parentDevices
-          .filter((p) => p.ip.split('.').slice(0, 2).join('.') === deviceNetClass)
-          .sort((a, b) => calculateDistance(device, a) - calculateDistance(device, b))[0];
+/** The binding field of one end (none when the end is left unbound) */
+function bound(end: ConnectionEnd, iface: DeviceInterface | undefined): Partial<NetworkConnection> {
+  if (!iface) return {};
+  if (end === 'source') return iface.kind === 'port' ? { sourcePort: iface.port.id } : { sourceNic: iface.nic.id };
+  return iface.kind === 'port' ? { targetPort: iface.port.id } : { targetNic: iface.nic.id };
+}
 
-        // If no parent in same building, use closest parent overall
-        if (!closestParent) {
-          closestParent = parentDevices
-            .sort((a, b) => calculateDistance(device, a) - calculateDistance(device, b))[0];
-        }
+/** Room for a cable on a device: the interface it takes, none when it stays unbound */
+interface Room {
+  iface: DeviceInterface | undefined;
+}
 
-        // Create connection if it doesn't exist
-        if (closestParent && !connectionExists(existingConnections, device.id, closestParent.id)) {
-          const connectionType = getConnectionType(closestParent, device);
+/** A cable to make: from `upper` down to `lower`, on these interfaces */
+interface Choice {
+  upper: NetworkDevice;
+  lower: NetworkDevice;
+  upperEnd: Room;
+  lowerEnd: Room;
+  distance: number;
+}
 
-          newConnections.push({
-            id: `conn-${connectionCounter++}`,
-            source: closestParent.id,
-            target: device.id,
-            type: connectionType,
-            sourceHandle: null,
-            targetHandle: null,
-          });
-        }
-      });
-    }
+/** The drawing as the cables are added: who is cabled to whom, what is taken */
+class Board {
+  private readonly byId: Map<string, NetworkDevice>;
+  private readonly order: Map<string, number>;
+  readonly connections: NetworkConnection[];
+  readonly added: NetworkConnection[] = [];
+  /** VLAN → the addresses its ports are cabled to; made again after each cable */
+  private vlanNetworks: Map<number, Address[]> | undefined;
+
+  constructor(devices: NetworkDevice[], existing: NetworkConnection[]) {
+    this.byId = new Map(devices.map((device) => [device.id, device]));
+    this.order = new Map(devices.map((device, index) => [device.id, index]));
+    // The cables as the board keeps them: each end on its interface
+    this.connections = normalizeBindings(
+      devices,
+      existing.filter((one) => this.byId.has(one.source) && this.byId.has(one.target))
+    ).slice();
   }
 
-  // Special case: Connect devices within same tier if they're Database replicas
-  const accessDevices = devicesByTier.get(DeviceTier.TIER_5_ACCESS) || [];
-  const databases = accessDevices.filter((d) => d.type === 'Database');
+  rank = (device: NetworkDevice) => this.order.get(device.id) ?? 0;
 
-  if (databases.length >= 2) {
-    // Group databases by network class (same building)
-    const dbByBuilding = new Map<string, NetworkDevice[]>();
-    databases.forEach((db) => {
-      const netClass = db.ip.split('.').slice(0, 2).join('.');
-      if (!dbByBuilding.has(netClass)) {
-        dbByBuilding.set(netClass, []);
-      }
-      dbByBuilding.get(netClass)!.push(db);
-    });
+  cablesOf = (device: NetworkDevice) =>
+    this.connections.filter((one) => one.source === device.id || one.target === device.id);
 
-    // Connect databases within same building (replication links)
-    dbByBuilding.forEach((buildingDbs) => {
-      if (buildingDbs.length >= 2) {
-        // Connect first DB to second DB (primary-replica pattern)
-        const [primary, replica] = buildingDbs;
-        if (!connectionExists(existingConnections, primary.id, replica.id)) {
-          newConnections.push({
-            id: `conn-${connectionCounter++}`,
-            source: primary.id,
-            target: replica.id,
-            type: 'backbone', // Replication is backbone
-            label: 'DB Replication',
-            sourceHandle: null,
-            targetHandle: null,
-          });
-        }
-      }
-    });
+  private peerOf(connection: NetworkConnection, device: NetworkDevice): NetworkDevice | undefined {
+    return this.byId.get(connection.source === device.id ? connection.target : connection.source);
   }
 
-  // Special case: Inter-building backbone connections
-  // Connect routers/firewalls between different buildings
-  const edgeDevices = [
-    ...(devicesByTier.get(DeviceTier.TIER_1_EDGE) || []),
-    ...(devicesByTier.get(DeviceTier.TIER_2_SECURITY) || []),
-  ];
+  /** A switch cabled to a router or a firewall */
+  isCore = (device: NetworkDevice) =>
+    isSwitch(device) && this.cablesOf(device).some((one) => UPLINK.has(this.peerOf(one, device)?.type ?? ''));
 
-  if (edgeDevices.length >= 2) {
-    // Group edge devices by building
-    const edgeByBuilding = new Map<string, NetworkDevice[]>();
-    edgeDevices.forEach((device) => {
-      const netClass = device.ip.split('.').slice(0, 2).join('.');
-      if (!edgeByBuilding.has(netClass)) {
-        edgeByBuilding.set(netClass, []);
-      }
-      edgeByBuilding.get(netClass)!.push(device);
-    });
-
-    // Connect buildings (mesh topology between edge devices)
-    const buildings = Array.from(edgeByBuilding.keys());
-    if (buildings.length >= 2) {
-      // Connect each building to every other building (full mesh for WAN)
-      for (let i = 0; i < buildings.length; i++) {
-        for (let j = i + 1; j < buildings.length; j++) {
-          const building1Devices = edgeByBuilding.get(buildings[i])!;
-          const building2Devices = edgeByBuilding.get(buildings[j])!;
-
-          // Connect first edge device of each building (typically router or firewall)
-          const device1 = building1Devices[0];
-          const device2 = building2Devices[0];
-
-          if (!connectionExists(existingConnections, device1.id, device2.id)) {
-            newConnections.push({
-              id: `conn-${connectionCounter++}`,
-              source: device1.id,
-              target: device2.id,
-              type: 'backbone',
-              label: `WAN ${device1.label}-${device2.label}`,
-              bandwidth: '1Gbps',
-              sourceHandle: null,
-              targetHandle: null,
-            });
+  /** The devices cabled together, group by group, in the order of the drawing */
+  groups(): NetworkDevice[][] {
+    const seen = new Set<string>();
+    const found: NetworkDevice[][] = [];
+    for (const start of this.byId.values()) {
+      if (seen.has(start.id)) continue;
+      const group = [start];
+      seen.add(start.id);
+      for (let index = 0; index < group.length; index += 1) {
+        for (const one of this.cablesOf(group[index])) {
+          const peer = this.peerOf(one, group[index]);
+          if (peer && !seen.has(peer.id)) {
+            seen.add(peer.id);
+            group.push(peer);
           }
         }
       }
+      found.push(group);
     }
+    return found;
   }
 
-  return newConnections;
+  /** The address on the far end of a cable from a switch: an end device's, or a router port's */
+  private addressesBeyond(connection: NetworkConnection, device: NetworkDevice): Address[] {
+    const peer = this.peerOf(connection, device);
+    if (!peer) return [];
+    if (isEndDevice(peer)) return ownAddresses(peer);
+    if (!UPLINK.has(peer.type)) return [];
+    const iface = boundInterface(connection, peer);
+    return known([addressOf(iface?.ip, iface?.subnet)]);
+  }
+
+  /** Which network each VLAN is, by the cables from a port in it to an address */
+  private vlans(): Map<number, Address[]> {
+    if (this.vlanNetworks) return this.vlanNetworks;
+    const map = new Map<number, Address[]>();
+    for (const one of this.connections) {
+      for (const end of ['source', 'target'] as const) {
+        const device = this.byId.get(end === 'source' ? one.source : one.target);
+        if (!device || !isSwitch(device)) continue;
+        const iface = boundInterface(one, device, end);
+        const vlan = iface?.kind === 'port' ? accessVlan(iface.port) : undefined;
+        if (vlan === undefined) continue;
+        map.set(vlan, [...(map.get(vlan) ?? []), ...this.addressesBeyond(one, device)]);
+      }
+    }
+    this.vlanNetworks = map;
+    return map;
+  }
+
+  /** The networks a device is on (see the top of this file) */
+  networksOf(device: NetworkDevice): Networks {
+    const own = ownAddresses(device);
+    if (!isSwitch(device)) return { known: own, open: own.length === 0 };
+    const reached = this.cablesOf(device).flatMap((one) => this.addressesBeyond(one, device));
+    // (VLAN 1 is where every port starts: not one set apart)
+    const vlans = [...new Set((device.ports ?? []).flatMap(vlansOf))].filter((vlan) => vlan !== 1);
+    const ofVlans = vlans.flatMap((vlan) => this.vlans().get(vlan) ?? []);
+    // (a VLAN whose network nothing tells yet may be any)
+    const untold = vlans.some((vlan) => (this.vlans().get(vlan) ?? []).length === 0);
+    if (reached.length > 0 || ofVlans.length > 0) return { known: [...reached, ...ofVlans], open: untold };
+    if (vlans.length > 0) return { known: [], open: true };
+    return { known: own, open: own.length === 0 };
+  }
+
+  /**
+   * How well a free port of `device` suits a cable to `peer`, whose end is on
+   * `toward`: 0 meant for it, higher less so; undefined when it is meant for
+   * another network
+   */
+  private suits(device: NetworkDevice, port: Port, peer: NetworkDevice, toward: Networks): number | undefined {
+    if (UPLINK.has(device.type)) {
+      const address = addressOf(port.ip, port.subnet);
+      return address ? fits([address], toward) : 1;
+    }
+    if (!isSwitch(device)) return 1;
+    const trunk = port.portType === 'trunk';
+    const vlan = accessVlan(port);
+    if (isSwitch(peer)) return trunk ? 0 : vlan === undefined ? 1 : 2;
+    if (trunk) return UPLINK.has(peer.type) ? 0 : 3;
+    const vlanNetworks = vlan === undefined ? [] : (this.vlans().get(vlan) ?? []);
+    return vlanNetworks.length > 0 ? fits(vlanNetworks, toward) : 1;
+  }
+
+  /**
+   * Room on `device` for a cable to `peer`, or none: the interface it takes
+   * (no interface on a device that has none, nor on a firewall with zones,
+   * where the user chooses it)
+   */
+  roomOn(device: NetworkDevice, peer: NetworkDevice, toward: Networks): Room | undefined {
+    if (requiresExplicitBinding(device)) {
+      // (each cable on it takes a port, bound or still to be chosen)
+      return (device.ports ?? []).length > this.cablesOf(device).length ? { iface: undefined } : undefined;
+    }
+    const interfaces = listInterfaces(device);
+    if (interfaces.length === 0) return { iface: undefined };
+    const used = usedInterfaceKeys(device, this.connections);
+    // An uplink of a switch from its last ports, its devices from the first
+    const fromTheEnd = isSwitch(device) && (isSwitch(peer) || UPLINK.has(peer.type));
+    const ranked = interfaces
+      .filter((iface) => !used.has(iface.key))
+      .map((iface) => ({ iface, score: iface.kind === 'port' ? this.suits(device, iface.port, peer, toward) : 0 }))
+      .filter((one): one is { iface: DeviceInterface; score: number } => one.score !== undefined)
+      .sort((a, b) => {
+        if (a.score !== b.score) return a.score - b.score;
+        if (a.iface.enabled !== b.iface.enabled) return a.iface.enabled ? -1 : 1;
+        if (a.iface.kind === 'port' && b.iface.kind === 'port') {
+          return fromTheEnd ? b.iface.port.id - a.iface.port.id : a.iface.port.id - b.iface.port.id;
+        }
+        return 0;
+      });
+    return ranked.length > 0 ? { iface: ranked[0].iface } : undefined;
+  }
+
+  /** The cable from `upper` down to `lower`, on interfaces meant for it; none when either has no room */
+  choiceFor(upper: NetworkDevice, lower: NetworkDevice): Choice | undefined {
+    const upperEnd = this.roomOn(upper, lower, this.networksOf(lower));
+    if (!upperEnd) return undefined;
+    // (the lower end goes with the network of the port it is cabled to, where it has one)
+    const upperAddress = addressOf(upperEnd.iface?.ip, upperEnd.iface?.subnet);
+    const toward = upperAddress ? { known: [upperAddress], open: false } : this.networksOf(upper);
+    const lowerEnd = this.roomOn(lower, upper, toward);
+    if (!lowerEnd) return undefined;
+    return { upper, lower, upperEnd, lowerEnd, distance: distance(upper, lower) };
+  }
+
+  add(choice: Choice, type: ConnectionType, id: string) {
+    const connection: NetworkConnection = {
+      id,
+      source: choice.upper.id,
+      target: choice.lower.id,
+      ...sidesFor(choice.upper, choice.lower),
+      ...bound('source', choice.upperEnd.iface),
+      ...bound('target', choice.lowerEnd.iface),
+      type,
+    };
+    this.connections.push(connection);
+    this.added.push(connection);
+    this.vlanNetworks = undefined;
+  }
+}
+
+/** Nearest first; on a tie, the one drawn first */
+const nearestFirst = (board: Board) => (a: Choice, b: Choice) =>
+  a.distance - b.distance || board.rank(a.lower) - board.rank(b.lower) || board.rank(a.upper) - board.rank(b.upper);
+
+/**
+ * Cable the waiting devices one at a time, the one nearest to where it can
+ * go first. What can go nowhere is handed back with its reason: 'none' when
+ * there was no place of its network at all.
+ */
+function settle(
+  board: Board,
+  waiting: NetworkDevice[],
+  placesFor: (device: NetworkDevice) => NetworkDevice[],
+  nextId: () => string
+): Map<string, 'none' | 'noFreePort'> {
+  const open = [...waiting];
+  const reasons = new Map<string, 'none' | 'noFreePort'>();
+  while (open.length > 0) {
+    let best: Choice | undefined;
+    for (const device of open) {
+      const places = placesFor(device);
+      const choice = places.map((upper) => board.choiceFor(upper, device)).find((one) => one !== undefined);
+      if (!choice) {
+        reasons.set(device.id, places.length === 0 ? 'none' : 'noFreePort');
+        continue;
+      }
+      if (!best || nearestFirst(board)(choice, best) < 0) best = choice;
+    }
+    if (!best) break;
+    board.add(best, 'access', nextId());
+    reasons.delete(best.lower.id);
+    open.splice(open.indexOf(best.lower), 1);
+  }
+  return reasons;
+}
+
+/**
+ * One cable up for each group with no router, firewall or Internet: from the
+ * group's `members` that are nearest to a place outside it. The nearest
+ * group first; what is said of a group that can go nowhere is handed back.
+ */
+function climb(
+  board: Board,
+  members: (group: NetworkDevice[]) => NetworkDevice[],
+  placesFor: (device: NetworkDevice, group: Set<string>) => NetworkDevice[],
+  typeFor: (upper: NetworkDevice) => ConnectionType,
+  nextId: () => string
+): Map<string, 'none' | 'noFreePort'> {
+  for (;;) {
+    let best: Choice | undefined;
+    const reasons = new Map<string, 'none' | 'noFreePort'>();
+    for (const group of board.groups()) {
+      if (group.some((device) => BY_HAND.has(device.type))) continue;
+      const inGroup = new Set(group.map((device) => device.id));
+      const pairs = members(group).flatMap((member) =>
+        placesFor(member, inGroup).map((upper) => ({ upper, lower: member, distance: distance(upper, member) }))
+      );
+      if (pairs.length === 0) {
+        for (const member of members(group)) reasons.set(member.id, 'none');
+        continue;
+      }
+      const choices = pairs
+        .sort((a, b) => a.distance - b.distance || board.rank(a.lower) - board.rank(b.lower) || board.rank(a.upper) - board.rank(b.upper))
+        .map((pair) => ({ pair, choice: board.choiceFor(pair.upper, pair.lower) }));
+      const first = choices.find((one) => one.choice !== undefined)?.choice;
+      if (!first) {
+        // (said of the one of the group nearest to where it could go)
+        reasons.set(choices[0].pair.lower.id, 'noFreePort');
+        continue;
+      }
+      if (!best || nearestFirst(board)(first, best) < 0) best = first;
+    }
+    if (!best) return reasons;
+    board.add(best, typeFor(best.upper), nextId());
+  }
+}
+
+/**
+ * The cables for the devices that have none, and for the groups with no way
+ * up, and the devices left alone with the reason. `startingCounter` is the
+ * store's connection counter: the new ids follow it, skipping any taken.
+ */
+export function connectLooseDevices(
+  devices: NetworkDevice[],
+  existing: NetworkConnection[],
+  startingCounter: number
+): LooseDevicesConnected {
+  const board = new Board(devices, existing);
+  const taken = new Set(existing.map((one) => one.id));
+  let counter = startingCounter;
+  const nextId = () => {
+    let id = `conn-${counter++}`;
+    while (taken.has(id)) id = `conn-${counter++}`;
+    taken.add(id);
+    return id;
+  };
+
+  const loose = devices.filter((device) => board.cablesOf(device).length === 0);
+  const left = new Map<string, LeftAloneReason>();
+  const nearestTo = (device: NetworkDevice) => (a: NetworkDevice, b: NetworkDevice) =>
+    distance(device, a) - distance(device, b) || board.rank(a) - board.rank(b);
+  const switches = devices.filter(isSwitch);
+  const ofItsNetwork = (device: NetworkDevice, places: NetworkDevice[]) => {
+    const networks = board.networksOf(device);
+    return places.filter((one) => one.id !== device.id && share(networks, board.networksOf(one))).sort(nearestTo(device));
+  };
+
+  // 1. End devices on a cable (the access points among them) to a switch
+  const wired = loose.filter((device) => isEndDevice(device) && !isWireless(device));
+  for (const [id, reason] of settle(board, wired, (device) => ofItsNetwork(device, switches), nextId)) {
+    left.set(id, reason === 'none' ? 'noSwitch' : reason);
+  }
+
+  // 2. Laptops, smartphones and tablets to an access point, else to a switch
+  const accessPoints = devices.filter(isAccessPoint);
+  const wireless = loose.filter(isWireless);
+  const radiosFor = (device: NetworkDevice) => [...ofItsNetwork(device, accessPoints), ...ofItsNetwork(device, switches)];
+  for (const [id, reason] of settle(board, wireless, radiosFor, nextId)) {
+    left.set(id, reason === 'none' ? 'noSwitch' : reason);
+  }
+
+  // 3. An access point with only its Wi-Fi devices: to a switch
+  const apGroups = climb(
+    board,
+    (group) => (group.some(isSwitch) ? [] : group.filter(isAccessPoint)),
+    (device, group) => ofItsNetwork(device, switches.filter((one) => !group.has(one.id))),
+    () => 'access',
+    nextId
+  );
+  for (const [id, reason] of apGroups) {
+    // (one with no switch to go to is as it was drawn; one with none at all was said above)
+    if (reason === 'noFreePort' && !left.has(id)) left.set(id, reason);
+  }
+
+  // 4. Switches with no way up: to a router, a firewall or a core switch
+  const ups = devices.filter((device) => UPLINK.has(device.type) || isSwitch(device));
+  const switchGroups = climb(
+    board,
+    (group) => group.filter(isSwitch),
+    (device, group) => ofItsNetwork(device, ups.filter((one) => !group.has(one.id) && (UPLINK.has(one.type) || board.isCore(one)))),
+    (upper) => (isSwitch(upper) ? 'trunk' : 'uplink'),
+    nextId
+  );
+  for (const [id, reason] of switchGroups) {
+    const device = devices.find((one) => one.id === id);
+    if (reason === 'noFreePort') left.set(id, reason);
+    // A switch with its devices and nowhere to go up to is as it was drawn:
+    // only one with no cable at all is said
+    else if (device && board.cablesOf(device).length === 0) left.set(id, 'noUplink');
+  }
+
+  // 5. Routers, firewalls and the Internet still with no cable: by hand
+  for (const device of loose) {
+    if (BY_HAND.has(device.type) && board.cablesOf(device).length === 0) left.set(device.id, 'byHand');
+  }
+
+  return {
+    connections: board.added,
+    left: devices
+      .filter((device) => left.has(device.id))
+      .map((device) => ({ deviceId: device.id, reason: left.get(device.id) as LeftAloneReason })),
+    nextCounter: counter,
+  };
 }

@@ -15,7 +15,7 @@ import type {
 } from '@/types';
 import { AREA_MIN_SIZE, nextAreaId, readAreas, tidyAreaLabel } from '@/utils/canvasAreas';
 import { arrangeDrawing, type LayoutDirection } from '@/utils/autoLayout';
-import { autoConnectDevices } from '@/utils/autoConnect';
+import { connectLooseDevices, type ConnectionSummary } from '@/utils/autoConnect';
 import { cleanupConnections } from '@/utils/cleanupConnections';
 import { safeJSONStorage } from '@/utils/safeStorage';
 import type { SampleNetwork } from '@/utils/sampleNetwork';
@@ -123,7 +123,12 @@ interface NetworkStore {
    * each device is drawn, and so where its cables end
    */
   applyAutoLayout: (direction?: LayoutDirection, deviceTemplates?: DeviceTemplate[]) => void;
-  autoConnectDevices: () => void;
+  /**
+   * A cable for each device that has none, and an uplink for each switch
+   * with none (utils/autoConnect.ts): what was added, and what was left
+   * alone with the reason
+   */
+  autoConnectDevices: () => ConnectionSummary;
 
   // Actions - Utility
   clearAllDevices: () => void;
@@ -528,24 +533,16 @@ export const useNetworkStore = create<NetworkStore>()(
 
       autoConnectDevices: () => {
         const { devices, connections, connectionCounter } = get();
-
-        // Generate new intelligent connections (passa il counter corretto!)
-        const newConnections = autoConnectDevices(devices, connections, connectionCounter);
-
-        // Bind each generated link to free interfaces, in order
-        const boundConnections: NetworkConnection[] = [];
-        for (const connection of newConnections) {
-          boundConnections.push(
-            bindConnection(connection, devices, [...connections, ...boundConnections])
-          );
+        // (the new cables come bound to the interfaces they take)
+        const result = connectLooseDevices(devices, connections, connectionCounter);
+        if (result.connections.length > 0) {
+          set({
+            connections: [...connections, ...result.connections],
+            connectionCounter: result.nextCounter,
+          });
+          get().markChanged();
         }
-
-        // Add new connections to store
-        set({
-          connections: [...connections, ...boundConnections],
-          connectionCounter: connectionCounter + newConnections.length,
-        });
-        get().markChanged();
+        return { added: result.connections.length, left: result.left };
       },
 
       // Utility Actions

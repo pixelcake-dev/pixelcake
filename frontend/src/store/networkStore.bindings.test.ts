@@ -286,19 +286,22 @@ describe('networkStore interface bindings', () => {
       s.addDevice(makePc('PC-1', '192.168.1.10', { position: { x: 100, y: 400 } }));
       s.addDevice(makePc('PC-2', '192.168.1.11', { position: { x: 300, y: 400 } }));
 
-      store.getState().autoConnectDevices();
+      const summary = store.getState().autoConnectDevices();
 
       const { devices, connections, connectionCounter } = store.getState();
-      expect(connections).toHaveLength(3); // router–switch, switch–pc1, switch–pc2
+      expect(summary).toEqual({ added: 3, left: [] });
+      expect(connections).toHaveLength(3); // switch–pc1, switch–pc2, router–switch
       expect(connectionCounter).toBe(3);
       const all = claims(devices, connections);
       expect(all).toHaveLength(6); // every end bound
       expect(new Set(all).size).toBe(6); // no interface shared
-      // Router-1 uses its first port, the switch three different ones
+      // Router-1 uses its first port; the switch gives its PCs its first ports
+      // and takes its uplink on its last one
+      expect(all.filter(c => c.startsWith('dev-0|'))).toEqual(['dev-0|port:1']);
       expect(all.filter(c => c.startsWith('dev-1|')).sort()).toEqual([
         'dev-1|port:1',
         'dev-1|port:2',
-        'dev-1|port:3',
+        'dev-1|port:8',
       ]);
     });
 

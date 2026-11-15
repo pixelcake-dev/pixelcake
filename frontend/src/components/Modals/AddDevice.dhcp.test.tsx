@@ -1,7 +1,8 @@
 /**
  * A new device is proposed an address nobody has: not one written by hand,
  * and not one a card on DHCP is leased. One by one (AddDeviceModal), in bulk
- * (BulkAddDeviceModal), and when the layout groups devices by their network.
+ * (BulkAddDeviceModal). And a device on DHCP is laid out and cabled by the
+ * cables and the switches there are, as any other.
  *
  *            Router-1 (hands out 192.168.10.3–9 on port 1)
  *     port 1 /       \ port 2
@@ -17,7 +18,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
 import { arrangeDrawing } from '@/utils/autoLayout';
-import { getConnectionType } from '@/utils/autoConnect';
+import { connectLooseDevices } from '@/utils/autoConnect';
 import { resolveDhcp } from '@/engine';
 import type { NetworkDevice } from '@/types';
 import AddDeviceModal from './AddDeviceModal';
@@ -97,11 +98,14 @@ describe('the layout and a device on DHCP', () => {
     expect(laid.find(d => d.label === 'PC-1')).toMatchObject({ ip: '', nics: [{ dhcp: true, ip: '' }] });
   });
 
-  it('does not take a cable to it for a line between two buildings', () => {
-    // (it has no address of its own to tell a building by)
-    expect(getConnectionType(named('SW-Office'), named('PC-1'))).toBe(
-      getConnectionType(named('SW-Office'), named('PC-2'))
-    );
-    expect(getConnectionType(named('SW-Office'), named('PC-1'))).not.toBe('backbone');
+  it('with its cable gone, the automatic connection takes it to the nearest switch, as any other', () => {
+    // (it has no address of its own to tell its network by)
+    const { devices, connections, connectionCounter } = store();
+    const pc = named('PC-1');
+    const rest = connections.filter(c => c.source !== pc.id && c.target !== pc.id);
+    const { connections: added, left } = connectLooseDevices(devices, rest, connectionCounter);
+    expect(added).toHaveLength(1);
+    expect(added[0]).toMatchObject({ source: named('SW-Office').id, target: pc.id, type: 'access' });
+    expect(left).toEqual([]);
   });
 });
