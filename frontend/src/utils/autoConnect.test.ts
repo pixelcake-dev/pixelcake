@@ -317,6 +317,16 @@ describe('never automatic', () => {
     const result = connectLooseDevices([sw('SW-1', '10.0.0.2', 0, 0), pc('PC-1', '10.0.0.11', 30, 300)], [], 5);
     expect(result.connections[0]).toMatchObject({ id: 'conn-5', sourceHandle: 'bottom', targetHandle: 'top' });
   });
+
+  it('a new cable ends on the sides the cable of its nearest neighbour on that side of the switch does', () => {
+    // a row of devices on the left of the switch, their cables into a line under them (a stack of a layout):
+    // a cable straight across the row would go through PC-2
+    const devices = [sw('SW-1', '10.0.0.2', 600, 0), pc('PC-1', '10.0.0.11', 0, -40), pc('PC-2', '10.0.0.12', 300, -40)];
+    const row: NetworkConnection = { id: 'c2', source: 'PC-2', target: 'SW-1', sourceHandle: 'bottom', targetHandle: 'left', sourceNic: 'nic-1', targetPort: 2 };
+    const result = connectLooseDevices(devices, [row], 1);
+    expect(made(result)).toEqual(['SW-1>PC-1']);
+    expect(result.connections[0]).toMatchObject({ sourceHandle: 'left', targetHandle: 'bottom' });
+  });
 });
 
 /** Ports in access mode, with what is set on some of them */

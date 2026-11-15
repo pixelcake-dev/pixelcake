@@ -459,12 +459,35 @@ class Board {
     return { upper, lower, upperEnd, lowerEnd, distance: distance(upper, lower), tier: 0 };
   }
 
+  /**
+   * The sides the cable of the nearest neighbour ends on: another end device
+   * cabled to `upper`, on the same side of it as `lower` and nearer to it
+   * than `upper` is (in a stack of a layout, a cable straight across the row
+   * would go through the others). Undefined with no such neighbour.
+   */
+  private sidesLikeNeighbour(upper: NetworkDevice, lower: NetworkDevice): Pick<NetworkConnection, 'sourceHandle' | 'targetHandle'> | undefined {
+    const side = (device: NetworkDevice) => [
+      Math.sign(device.position.x - upper.position.x),
+      Math.sign(device.position.y - upper.position.y),
+    ];
+    const [sx, sy] = side(lower);
+    const near = this.cablesOf(upper)
+      .map((one) => ({ one, peer: this.peerOf(one, upper) }))
+      .filter(({ one, peer }) => peer && peer.id !== lower.id && isEndDevice(peer) && one.sourceHandle && one.targetHandle)
+      .filter(({ peer }) => side(peer!)[0] === sx && side(peer!)[1] === sy && distance(peer!, lower) < distance(upper, lower))
+      .sort((a, b) => distance(a.peer!, lower) - distance(b.peer!, lower))[0];
+    if (!near) return undefined;
+    const upperSide = near.one.source === upper.id ? near.one.sourceHandle : near.one.targetHandle;
+    const peerSide = near.one.source === upper.id ? near.one.targetHandle : near.one.sourceHandle;
+    return { sourceHandle: upperSide, targetHandle: peerSide };
+  }
+
   add(choice: Choice, type: ConnectionType, id: string) {
     const connection: NetworkConnection = {
       id,
       source: choice.upper.id,
       target: choice.lower.id,
-      ...sidesFor(choice.upper, choice.lower),
+      ...(this.sidesLikeNeighbour(choice.upper, choice.lower) ?? sidesFor(choice.upper, choice.lower)),
       ...bound('source', choice.upperEnd.iface),
       ...bound('target', choice.lowerEnd.iface),
       type,
