@@ -208,9 +208,6 @@ const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>
   return (
     <div
       className={`network-device group ${magnifyClasses} ${stateClasses}`}
-      // The note of the device is read by resting the pointer on it: the
-      // drawing carries no mark for it
-      title={data.notes || undefined}
       onContextMenu={handleContextMenu}
       onDoubleClick={handleDoubleClick}
       onMouseEnter={handleMouseEnter}
@@ -248,6 +245,11 @@ const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>
           <span className="sr-only">Guasto simulato</span>
         </span>
       )}
+
+      {/* The note of the device: the app shows it to the eye in a panel of its
+          own when the pointer rests here (DeviceNote); a screen reader has it
+          here. The drawing carries no mark for it */}
+      {data.notes?.trim() && <span className="sr-only">Nota: {data.notes.trim()}</span>}
 
       {/* (what the lamp says of the answer on screen, for who cannot see its colour) */}
       {state === 'error' && <span className="sr-only">Qui si ferma</span>}

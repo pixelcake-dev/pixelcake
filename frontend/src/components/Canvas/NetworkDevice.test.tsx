@@ -148,13 +148,19 @@ describe('a device on the canvas', () => {
     expect(drawingOf('Sconosciuto').dataset.drawing).toBe('server');
   });
 
-  it('shows its note to the pointer that rests on it, and carries no mark for it', async () => {
+  it('carries no mark for its note: the app shows it in a panel (DeviceNote), a screen reader has it here', async () => {
     add('PC-1', 'PC', { notes: 'In sala riunioni' });
     add('PC-2');
     await renderCanvas();
 
-    expect(frameOf('PC-1').title).toBe('In sala riunioni');
-    expect(frameOf('PC-2').hasAttribute('title')).toBe(false);
+    const words = (label: string) =>
+      [...frameOf(label).querySelectorAll('.sr-only')].map((span) => span.textContent);
+    expect(words('PC-1')).toEqual(['Nota: In sala riunioni']);
+    expect(words('PC-2')).toEqual([]);
+    // what is drawn is the same, and the browser has no tooltip of its own to show
+    const drawn = (label: string) => frameOf(label).querySelector('.device-content')?.children.length;
+    expect(drawn('PC-1')).toBe(drawn('PC-2'));
+    expect(frameOf('PC-1').hasAttribute('title')).toBe(false);
   });
 });
 

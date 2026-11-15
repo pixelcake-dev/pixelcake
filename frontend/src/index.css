@@ -890,6 +890,43 @@ body.react-flow-connecting .connect-point:hover::before {
   background-color: rgba(var(--accent-color-rgb), 0.12);
 }
 
+/* The note of a device, shown by the app when the pointer rests on the
+   device (DeviceNote.tsx): a panel of the look of the menus, under the
+   device, that never takes the pointer. Its lines are the lines of the
+   note, as wide as reads well; a long note stops after six lines */
+.device-note {
+  position: fixed;
+  z-index: 250;
+  transform: translateX(-50%);
+  max-width: 280px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background-color: var(--bg-menu);
+  color: var(--text-color);
+  font-size: 12.5px;
+  line-height: 18px;
+  text-align: left;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  box-shadow: 0 8px 24px var(--shadow-color);
+  pointer-events: none;
+}
+
+/* (the lines are cut inside the room of the panel: none shows under the last) */
+.device-note-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  line-clamp: 6;
+  overflow: hidden;
+}
+
+/* (with no room under the device it is above it, its bottom where the device starts) */
+.device-note.device-note-above {
+  transform: translate(-50%, -100%);
+}
+
 /* Packet Animation */
 #packet {
   position: absolute;

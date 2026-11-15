@@ -5,12 +5,13 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { ReactFlowProvider } from 'reactflow';
 import { useNetworkStore } from '@/store/networkStore';
 import { useUIStore } from '@/store/uiStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
 import NetworkCanvas from '@/components/Canvas/NetworkCanvas';
+import { NOTE_REST_MS } from '@/components/Canvas/DeviceNote';
 import ContextMenu from '@/components/ui/ContextMenu';
 import HelpModal from './HelpModal';
 import InspectorModal from './InspectorModal';
@@ -132,8 +133,14 @@ describe('the guide — the window of a device and its note', () => {
         <NetworkCanvas />
       </ReactFlowProvider>
     );
-    // (the browser shows the `title` of what the pointer rests on)
-    const drawn = screen.getByText('PC-1', { selector: '.device-name' }).closest('.network-device');
-    expect(drawn).toHaveAttribute('title', 'Postazione di Marta');
+    // (the app shows it in a panel of its own, after a short rest of the pointer)
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const drawn = screen.getByText('PC-1', { selector: '.device-name' }).closest('.network-device')!;
+    fireEvent.mouseEnter(drawn);
+    act(() => {
+      vi.advanceTimersByTime(NOTE_REST_MS);
+    });
+    vi.useRealTimers();
+    expect(document.querySelector('.device-note')?.textContent).toBe('Postazione di Marta');
   });
 });

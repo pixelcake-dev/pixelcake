@@ -34,6 +34,7 @@ import { miniMapAreaColour, miniMapColour } from '@/utils/miniMapColour';
 import CustomEdge from './CustomEdge';
 import ParticleEdge from './ParticleEdge';
 import PacketAnimation from './PacketAnimation';
+import DeviceNote from './DeviceNote';
 import WelcomeScreen from '@/components/WelcomeScreen';
 import { useNetworkStore } from '@/store/networkStore';
 import { useProjectStore } from '@/store/projectStore';
@@ -650,6 +651,7 @@ const NetworkCanvas = () => {
         {!presenting && <MiniMap nodeColor={miniMapNodeColour} />}
         {/* Packet Animation Logic */}
         <PacketAnimation />
+        <DeviceNote />
       </ReactFlow>
       </div>
     </div>

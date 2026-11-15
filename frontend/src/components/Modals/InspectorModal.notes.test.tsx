@@ -156,8 +156,10 @@ describe('the note of a device — on the drawing', () => {
   }
   const onCanvas = (label: string) =>
     screen.getByText(label, { selector: '.device-name' }).closest<HTMLElement>('.network-device');
+  /** The note as the device says it to a screen reader (the app shows it to the eye in a panel) */
+  const noteOf = (label: string) => onCanvas(label)?.querySelector(':scope > .sr-only')?.textContent ?? null;
 
-  it('is what shows when the pointer rests on the device, and nothing is added to the device', () => {
+  it('is what the device says of itself, and nothing is drawn on the device for it', () => {
     stubBrowser();
     store().updateDevice(device('PC-1').id, { notes: 'Postazione di Marta.\nDa sostituire a gennaio.' });
     render(
@@ -166,15 +168,15 @@ describe('the note of a device — on the drawing', () => {
       </ReactFlowProvider>
     );
 
-    expect(onCanvas('PC-1')).toHaveAttribute('title', 'Postazione di Marta.\nDa sostituire a gennaio.');
-    expect(onCanvas('PC-2')).not.toHaveAttribute('title');
+    expect(noteOf('PC-1')).toBe('Nota: Postazione di Marta.\nDa sostituire a gennaio.');
+    expect(noteOf('PC-2')).toBeNull();
     // a device with a note is drawn like one without: icon, name, address
     const parts = (label: string) =>
       Array.from(onCanvas(label)?.querySelector('.device-content')?.children ?? []).map((child) =>
         child.getAttribute('class')?.split(' ')[0]
       );
     expect(parts('PC-1')).toEqual(parts('PC-2'));
-    expect(onCanvas('PC-1')?.textContent).not.toContain('Marta');
+    expect(onCanvas('PC-1')?.querySelector('.device-content')?.textContent).not.toContain('Marta');
   });
 
   it('follows the note as it is written, changed and taken away', () => {
@@ -187,17 +189,17 @@ describe('the note of a device — on the drawing', () => {
         <InspectorModal />
       </>
     );
-    expect(onCanvas('Router-1')).not.toHaveAttribute('title');
+    expect(noteOf('Router-1')).toBeNull();
 
     openInspectorOverCanvas('Router-1');
     fireEvent.change(note(), { target: { value: 'contratto fino al 2027' } });
     save();
-    expect(onCanvas('Router-1')).toHaveAttribute('title', 'contratto fino al 2027');
+    expect(noteOf('Router-1')).toBe('Nota: contratto fino al 2027');
 
     openInspectorOverCanvas('Router-1');
     fireEvent.change(note(), { target: { value: '' } });
     save();
-    expect(onCanvas('Router-1')).not.toHaveAttribute('title');
+    expect(noteOf('Router-1')).toBeNull();
   });
 
   /** The window of a device, opened next to the canvas that is on screen */
