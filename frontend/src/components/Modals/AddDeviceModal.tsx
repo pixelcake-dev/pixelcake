@@ -12,6 +12,7 @@ import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { findNextAvailableIP, generateMacAddress } from '@/utils/ipHelpers';
 import { firstFreePlace } from '@/utils/placeDevice';
+import { newDeviceName, newDevicePorts } from '@/utils/newDevice';
 import { nicProblems, tidyNic } from '@/utils/interfaceProblems';
 import { isEndDeviceKind } from '@/utils/defaultDns';
 import { isL3Type, withLeases } from '@/engine';
@@ -50,10 +51,9 @@ const AddDeviceModal = () => {
         ? templates.find((tpl) => tpl.id === addDeviceTemplateId)
         : templates.find((tpl) => tpl.type === addDeviceType);
 
-      // Auto-generate device name using template name for specificity
-      const templateName = template?.name || addDeviceType;
-      const typeCount = devices.filter((d) => d.type === addDeviceType).length;
-      setName(`${templateName.replace(/\s+/g, '-')}-${typeCount}`);
+      // The name is proposed: the name of the template and the lowest number
+      // that leaves it free on the canvas (the same name bulk add gives)
+      setName(newDeviceName(template?.name || addDeviceType, devices));
 
       // Find next available IP: not one a device has, written by hand or
       // leased by DHCP
@@ -133,17 +133,12 @@ const AddDeviceModal = () => {
     // gateway is its default route, set later by whoever configures it
     const routesTraffic = isL3Type(addDeviceType);
 
-    // Initialize ports array if device supports ports
+    // Initialize ports array if device supports ports (the ports bulk add gives too)
     const template = addDeviceTemplateId
       ? templates.find((tpl) => tpl.id === addDeviceTemplateId)
       : templates.find((tpl) => tpl.type === addDeviceType);
     const ports: Port[] | undefined = template?.supportsPorts && portCount
-      ? Array.from({ length: portCount }, (_, i) => ({
-          id: i + 1,
-          enabled: true,
-          speed: 'auto',
-          portType: routesTraffic ? 'lan' : 'access',
-        }))
+      ? newDevicePorts(portCount, addDeviceType)
       : undefined;
 
     // The device is named by its first card: its own three fields follow it

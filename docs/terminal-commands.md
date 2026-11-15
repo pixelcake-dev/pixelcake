@@ -46,7 +46,7 @@ network needs them to reach it and to be reached from it.
 ## Principles
 
 1. **Verb first**: `ping`, `trace`, `show`, `set`, `add`, `connect`, `use`…
-2. **Prepositions are optional noise** where unambiguous: `show config of Switch-0` ≡ `show config Switch-0`.
+2. **Prepositions are optional noise** where unambiguous: `show config of Switch-1` ≡ `show config Switch-1`.
 3. **Role keywords** (`from`, `to`, `of`, `on`, `via`) split multi-word device names: `ping PC Sales 1 from Core Switch HQ`.
 4. **Context**: `use <device>` enters a device context (prompt becomes `PC-1>`); `from` and `on` are then implied. `exit` leaves.
 5. **Vendor-neutral vocabulary**: `show neighbors` not `show cdp neighbors`; `interface 3 down` not `no shutdown`; `add route` not `ip route`. **`interfaces` is THE standard unified term** — ports and NICs in one table.

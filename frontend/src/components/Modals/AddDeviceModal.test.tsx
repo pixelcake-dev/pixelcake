@@ -351,3 +351,39 @@ describe('AddDeviceModal — the address of a new end device is typed where it i
     expect(screen.getByLabelText('Posizione')).toBeInTheDocument();
   });
 });
+
+describe('AddDeviceModal — the name of a new device is proposed, to be changed', () => {
+  /** The name the window shows for a new device of a template; `typed` replaces it, and the device is added */
+  const addNamed = (type: string, templateId: string, typed?: string) => {
+    useUIStore.getState().setAddDeviceType(type, templateId);
+    useUIStore.getState().openModal('addDevice');
+    const view = render(<AddDeviceModal />);
+    const shown = screen.getByLabelText<HTMLInputElement>(/^Nome del dispositivo/).value;
+    if (typed !== undefined) {
+      fireEvent.change(screen.getByLabelText(/^Nome del dispositivo/), { target: { value: typed } });
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Aggiungi' }));
+    view.unmount();
+    return shown;
+  };
+  const labels = () => useNetworkStore.getState().devices.map((device) => device.label);
+
+  it('the name of the template and the lowest number that is free, from 1', () => {
+    expect(addNamed('PC', 'tpl-pc')).toBe('PC-1');
+    expect(addNamed('PC', 'tpl-pc')).toBe('PC-2');
+    // (the number is of the template: a printer is of the type of a PC)
+    expect(addNamed('PC', 'tpl-printer')).toBe('Printer-1');
+    expect(addNamed('Server', 'tpl-mailserver')).toBe('Mail-Server-1');
+    expect(labels()).toEqual(['PC-1', 'PC-2', 'Printer-1', 'Mail-Server-1']);
+  });
+
+  it('what is typed in its place is the name of the device, and the next proposal does not repeat it', () => {
+    expect(addNamed('PC', 'tpl-pc', 'Reception')).toBe('PC-1');
+    expect(labels()).toEqual(['Reception']);
+
+    // a name of the kind the window proposes, typed by hand and in small letters
+    expect(addNamed('PC', 'tpl-pc', 'pc-1')).toBe('PC-1');
+    expect(addNamed('PC', 'tpl-pc')).toBe('PC-2');
+    expect(labels()).toEqual(['Reception', 'pc-1', 'PC-2']);
+  });
+});
