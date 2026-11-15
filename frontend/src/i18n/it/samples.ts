@@ -143,4 +143,116 @@ export const samples = {
       branchBackupLine: 'filiale, linea di riserva',
     },
   },
+  /**
+   * The network of a multinational in Italy: a head office in Milan, a second
+   * site in Rome, a disaster recovery data centre, seven branches, joined by
+   * a carrier's MPLS network. Device names are codes, the same in every
+   * language (`R-MI`, `PC-RM-101`); what is said in words is here.
+   */
+  multinational: {
+    /** The area of each site */
+    sites: {
+      milan: 'Milano · Sede centrale',
+      rome: 'Roma · Sede',
+      disasterRecovery: 'Bologna · DC di disaster recovery',
+      turin: 'Torino · Filiale',
+      venice: 'Venezia · Filiale',
+      florence: 'Firenze · Filiale',
+      naples: 'Napoli · Filiale',
+      bari: 'Bari · Magazzino',
+      palermo: 'Palermo · Negozio',
+      cagliari: 'Cagliari · Filiale',
+    },
+    /** The areas inside the head office */
+    areas: {
+      internet: 'Internet',
+      dmz: 'DMZ',
+      serverRoom,
+      floor: (n: number) => `Piano ${n}`,
+    },
+    /** The carrier's network every site is joined to */
+    carrier: 'Rete MPLS',
+    devices: {
+      customer: 'Cliente',
+      remoteWorker: 'Telelavoro',
+      /** A guest's phone or tablet, with the code of the site, as the other devices have */
+      guest: (site: string, n: number) => `Ospite-${site}-${n}`,
+    },
+    /** The name of each VLAN, the same number on every site */
+    vlans: {
+      default: 'Predefinita',
+      users: 'Utenti',
+      voice: 'Voce',
+      guests: 'Ospiti',
+      cameras: 'Telecamere',
+      tills: 'Casse',
+    },
+    ports: {
+      inside: 'Interno',
+      servers: 'Server',
+      lan: 'LAN',
+      shop: 'Negozio',
+      /** A port of a router or a firewall named after the VLAN it serves */
+      ofVlan: (name: string, vlan: number) => `${name} (VLAN ${vlan})`,
+      lineTo: (place: string) => `Linea ${place}`,
+    },
+    /** Places named in the ports and in the notes of the routes */
+    places: {
+      milan: 'Milano',
+      rome: 'Roma',
+      disasterRecovery: 'DC DR',
+      turin: 'Torino',
+      venice: 'Venezia',
+      florence: 'Firenze',
+      naples: 'Napoli',
+      bari: 'Bari',
+      palermo: 'Palermo',
+      cagliari: 'Cagliari',
+    },
+    cables: {
+      mainLine: 'Linea principale',
+      drFibre: 'Fibra DR',
+    },
+    /** What a route, a port forward or a rule is there for */
+    notes: {
+      viaMainLine: (place: string) => `${place}, linea principale`,
+      viaBackup: (place: string) => `${place}, di riserva su MPLS`,
+      branch: (place: string) => `filiale di ${place}`,
+      company: 'rete aziendale',
+      otherSites: 'le altre sedi, attraverso il router WAN',
+      headOfficeGuests: 'gli ospiti della sede, dietro il firewall',
+      shopGuests: 'ospiti del negozio di Palermo',
+      publicSite: 'sito pubblico',
+      incomingMail: 'posta in arrivo',
+      publicDns: 'DNS pubblico',
+      vpn: 'accesso da remoto',
+      guestsNeverInside: 'gli ospiti non entrano mai nella rete aziendale',
+      guestsAskPublicDns: 'gli ospiti chiedono i nomi al DNS pubblico',
+      guestsBrowse: 'gli ospiti navigano',
+      publicSiteFromOutside: 'il sito pubblico, da fuori',
+      mailFromOutside: 'la posta in arrivo, da fuori',
+      dnsFromOutside: 'il DNS pubblico, da fuori',
+      vpnFromOutside: "l'accesso da remoto, da fuori",
+      vpnToApplications: 'da remoto, le applicazioni web interne',
+      proxyBrowses: 'il proxy naviga per i dipendenti',
+      staffThroughProxy: 'i dipendenti navigano solo attraverso il proxy',
+      siteReadsErp: 'il sito legge il catalogo dal gestionale',
+      camerasOnlyRecorder: 'le telecamere parlano solo con il registratore, sulla loro rete',
+      sensorsToArchive: "i sensori mandano i dati all'archivio di Milano",
+      sensorsNothingElse: "e nient'altro",
+      tillsToServer: 'le casse parlano con il loro server a Milano',
+      tillsNothingElse: "e con nient'altro",
+      guestsOut: 'poi escono su Internet, attraverso Milano',
+    },
+    /** The names the DNS servers of the company answer for */
+    hostNames: {
+      erp: 'erp.gruppo.example',
+      mail: 'posta.gruppo.example',
+      intranet: 'intranet.gruppo.example',
+      files: 'archivio.gruppo.example',
+      tills: 'casse.gruppo.example',
+      www: 'www.gruppo.example',
+      vpn: 'vpn.gruppo.example',
+    },
+  },
 };
