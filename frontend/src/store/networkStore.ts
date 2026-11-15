@@ -14,7 +14,7 @@ import type {
   GlobalNetworkSettings,
 } from '@/types';
 import { AREA_MIN_SIZE, nextAreaId, readAreas, tidyAreaLabel } from '@/utils/canvasAreas';
-import { arrangeDrawing, type LayoutDirection } from '@/utils/autoLayout';
+import { arrangeInSteps, type LayoutDirection } from '@/utils/autoLayout';
 import { connectLooseDevices, type ConnectionSummary } from '@/utils/autoConnect';
 import { cleanupConnections } from '@/utils/cleanupConnections';
 import { safeJSONStorage } from '@/utils/safeStorage';
@@ -120,9 +120,13 @@ interface NetworkStore {
   /**
    * Lay the drawing out again (utils/autoLayout.ts): vertically or
    * horizontally, the areas following their devices. The templates say how
-   * each device is drawn, and so where its cables end
+   * each device is drawn, and so where its cables end. A drawing seen whole
+   * laid out plainly is laid out at once, in the call; a larger one in steps
+   * that leave the page free between them, done when the promise is kept. A
+   * drawing changed in the meantime is left as it is (what was laid out is no
+   * longer there)
    */
-  applyAutoLayout: (direction?: LayoutDirection, deviceTemplates?: DeviceTemplate[]) => void;
+  applyAutoLayout: (direction?: LayoutDirection, deviceTemplates?: DeviceTemplate[]) => Promise<void>;
   /**
    * A cable for each device that has none, and an uplink for each switch
    * with none (utils/autoConnect.ts): what was added, and what was left
@@ -518,9 +522,19 @@ export const useNetworkStore = create<NetworkStore>()(
       },
 
       // Layout Actions
-      applyAutoLayout: (direction = 'TB', deviceTemplates = []) => {
+      applyAutoLayout: async (direction = 'TB', deviceTemplates = []) => {
         const { devices, connections, areas } = get();
-        const laid = arrangeDrawing({ devices, connections, areas }, direction, deviceTemplates);
+        const steps = arrangeInSteps({ devices, connections, areas }, direction, deviceTemplates);
+        let step = steps.next();
+        // (between two steps the page draws, and answers the pointer)
+        while (!step.done) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          step = steps.next();
+        }
+        // (changed meanwhile: what was laid out is no longer there)
+        const now = get();
+        if (now.devices !== devices || now.connections !== connections || now.areas !== areas) return;
+        const laid = step.value;
         set({
           devices: laid.devices,
           connections: laid.connections,

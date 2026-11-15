@@ -276,6 +276,25 @@ export function arrangeDrawing(
   direction: LayoutDirection = 'TB',
   deviceTemplates: DeviceTemplate[] = []
 ): LayoutResult {
+  const steps = arrangeInSteps(input, direction, deviceTemplates);
+  for (;;) {
+    const step = steps.next();
+    if (step.done) return step.value;
+  }
+}
+
+/**
+ * The same, step by step: a drawing too large to be seen whole laid out
+ * plainly is laid out again in other ways, and it stops before each (a
+ * second or so in all on the multinational, in steps of a fraction of it),
+ * so that whoever runs it can leave the page free in between. A drawing
+ * seen whole laid out plainly is done in one step.
+ */
+export function* arrangeInSteps(
+  input: LayoutInput,
+  direction: LayoutDirection = 'TB',
+  deviceTemplates: DeviceTemplate[] = []
+): Generator<void, LayoutResult, void> {
   const { devices, connections, areas } = input;
   if (devices.length === 0) return input;
 
@@ -512,6 +531,10 @@ export function arrangeDrawing(
     for (let parent = parentOf.get(id); parent; parent = parentOf.get(parent)) count++;
     return count;
   };
+  /** The two ends of a cable, whichever it starts from; and how many cables join each two */
+  const pairOf = (connection: NetworkConnection) => [connection.source, connection.target].sort().join(' ');
+  const cablesBetween = new Map<string, number>();
+  for (const connection of connections) cablesBetween.set(pairOf(connection), (cablesBetween.get(pairOf(connection)) ?? 0) + 1);
   const redraw = (now: NetworkDevice[]): LayoutResult => {
     const at = new Map(now.map((device) => [device.id, device] as const));
     const frameAt = (id: string) => ({ ...at.get(id)!.position, ...frameOf(at.get(id)!) });
@@ -582,10 +605,10 @@ export function arrangeDrawing(
           ? { ...connection, sourceHandle: parentSide, targetHandle: leafSide }
           : { ...connection, sourceHandle: leafSide, targetHandle: parentSide };
       }
-      const pair = [connection.source, connection.target].sort().join(' ');
+      const pair = pairOf(connection);
       const nth = pairs.get(pair) ?? 0;
       pairs.set(pair, nth + 1);
-      const twice = connections.filter((other) => [other.source, other.target].sort().join(' ') === pair).length > 1;
+      const twice = (cablesBetween.get(pair) ?? 0) > 1;
       if (twice && nth < 2) {
         const side = (direction === 'TB' ? ['left', 'right'] : ['top', 'bottom'])[nth];
         return { ...connection, sourceHandle: side, targetHandle: side };
@@ -609,6 +632,7 @@ export function arrangeDrawing(
     if (halves && combs.length > 0) ways.push({ stacked: combs, around: true });
     let best: Comb[] = [];
     for (const way of ways) {
+      yield;
       stackedCables = new Map(way.stacked.flatMap((comb) => [...comb.cables].map((id) => [id, comb] as const)));
       const tried = redraw(way.around ? layAround(way.stacked) : lay(way.stacked));
       if (seenAt(tried) > seenAt(start)) {
@@ -617,6 +641,7 @@ export function arrangeDrawing(
       }
     }
     stackedCables = new Map(best.flatMap((comb) => [...comb.cables].map((id) => [id, comb] as const)));
+    yield;
   }
 
   // Where a label lies on something, the drawing is opened up there

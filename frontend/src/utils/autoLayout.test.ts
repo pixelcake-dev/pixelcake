@@ -10,7 +10,7 @@ import { setLanguage } from '@/i18n';
 import { useNetworkStore } from '@/store/networkStore';
 import type { CanvasArea, NetworkConnection, NetworkDevice } from '@/types';
 import { areaProblems, crowding, deviceOverlaps, holds, sceneOf } from '@/test/drawingChecks';
-import { arrangeDrawing, networkLevels, type LayoutDirection } from './autoLayout';
+import { arrangeDrawing, arrangeInSteps, networkLevels, type LayoutDirection } from './autoLayout';
 import { AREA_MARGIN } from './canvasAreas';
 import { deviceHeight, DEVICE_METRICS } from './deviceGeometry';
 import { createCompanySample } from './sampleCompany';
@@ -314,6 +314,25 @@ describe('a large drawing: the multinational', () => {
     expect(membersOf(laid.devices, laid.areas)).toEqual(membersOf(sample.devices, areas));
   });
 
+  it('is worked out in steps, the drawing as in one go; a small sample in one step', () => {
+    setLanguage('it');
+    const sample = createMultinationalSample();
+    const input = { devices: sample.devices, connections: sample.connections, areas: sample.areas.map((area, index) => ({ ...area, id: `area-${index + 1}` })) };
+    const steps = arrangeInSteps(input, 'LR');
+    let stops = 0;
+    let step = steps.next();
+    while (!step.done) {
+      stops += 1;
+      step = steps.next();
+    }
+    expect(stops).toBeGreaterThan(1);
+    expect(step.value).toEqual(arrangeDrawing(input, 'LR'));
+
+    const small = createRedundancySample();
+    const once = arrangeInSteps({ ...small, areas: small.areas.map((area, index) => ({ ...area, id: `area-${index + 1}` })) }, 'LR').next();
+    expect(once.done).toBe(true);
+  });
+
   it('a small sample is laid out as it was: every cable across the levels ends on facing sides', () => {
     // (the leaves under a device are only stacked beside it when a plain layout could not be seen whole)
     for (const create of [createCompanySample, createSampleTopology, createPerimeterSample, createRedundancySample]) {
@@ -344,5 +363,30 @@ describe('the store: Vista → Disposizione automatica', () => {
     expect(now.areas.map((area) => area.position)).not.toEqual(before);
     expect(areaProblems(now)).toEqual([]);
     expect(now.hasUnsavedChanges).toBe(true);
+  });
+
+  it('a large drawing is laid out in steps: done when the promise is kept; a drawing changed meanwhile is left as it is', async () => {
+    setLanguage('it');
+    useNetworkStore.getState().clearAllDevices();
+    useNetworkStore.getState().loadSample(createMultinationalSample());
+    const drawn = useNetworkStore.getState().devices;
+
+    const laying = useNetworkStore.getState().applyAutoLayout('TB');
+    // (not yet: the page is free between the steps)
+    expect(useNetworkStore.getState().devices).toBe(drawn);
+    await laying;
+    const laid = useNetworkStore.getState().devices;
+    expect(laid.filter((one, index) => one.position.x !== drawn[index].position.x || one.position.y !== drawn[index].position.y).length).toBeGreaterThan(100);
+    expect(areaProblems(useNetworkStore.getState())).toEqual([]);
+
+    // a device moved by hand while it is laid out again: everything stays as it is, the device where it was put
+    const again = useNetworkStore.getState().applyAutoLayout('LR');
+    const [first] = laid;
+    const put = { x: first.position.x + 40, y: first.position.y };
+    useNetworkStore.getState().updateDevice(first.id, { position: put });
+    await again;
+    const now = useNetworkStore.getState().devices;
+    expect(now[0].position).toEqual(put);
+    expect(now.slice(1).map((one) => one.position)).toEqual(laid.slice(1).map((one) => one.position));
   });
 });

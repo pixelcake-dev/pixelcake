@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { act, render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { act, render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { useNetworkStore } from '@/store/networkStore';
 import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
@@ -85,7 +85,8 @@ describe('the guide — the automatic layout', () => {
     await settled();
     expect(answers.asked).toHaveLength(1);
     const y = (label: string) => named(label)?.position.y ?? Number.NaN;
-    expect(y('Internet')).toBeLessThan(y('FW-1'));
+    // (laid out once the page has drawn the question gone)
+    await waitFor(() => expect(y('Internet')).toBeLessThan(y('FW-1')));
     expect(y('FW-1')).toBeLessThan(y('SW-1'));
     expect(y('SW-1')).toBeLessThan(y('PC-1'));
   });

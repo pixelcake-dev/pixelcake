@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { toast } from 'sonner';
 import { useNetworkStore } from '@/store/networkStore';
 import { createNewProject } from '@/utils/projectFileAccess';
@@ -56,6 +56,8 @@ describe('Vista → Disposizione automatica', () => {
 
     fireEvent.click(screen.getByText('Orizzontale'));
     await settled();
+    // (the page first draws the question gone, then lays the drawing out)
+    await waitFor(() => expect(network().hasUnsavedChanges).toBe(true));
 
     expect(places()).not.toEqual(before);
     expect(network().hasUnsavedChanges).toBe(true);

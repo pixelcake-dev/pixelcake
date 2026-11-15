@@ -104,7 +104,9 @@ const TopMenuBar = () => {
     const words = t.menu.layoutQuestion;
     const yes = await askConfirm({ title: words.title, detail: words.detail, confirmLabel: words.confirm });
     if (!yes) return;
-    applyAutoLayout(direction, useTemplateStore.getState().templates);
+    // (the page first draws the question gone: a large drawing takes a moment)
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await applyAutoLayout(direction, useTemplateStore.getState().templates);
   };
 
   // A cable for each device that has none; then how many, and who was left alone and why
