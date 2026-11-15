@@ -21,11 +21,10 @@ export const menu = {
     fit: 'Adatta alla finestra',
     presentation: 'Modalità presentazione',
     autoLayout: 'Disposizione automatica',
+    /** From where the traffic leaves the network down (vertical) or across (horizontal) */
     layouts: {
-      hierarchicalVertical: 'Gerarchica, verticale',
-      hierarchicalHorizontal: 'Gerarchica, orizzontale',
-      subnetVertical: 'Per subnet, verticale',
-      subnetHorizontal: 'Per subnet, orizzontale',
+      vertical: 'Verticale',
+      horizontal: 'Orizzontale',
     },
     autoConnect: 'Connessione automatica',
     magnify: 'Ingrandisci',

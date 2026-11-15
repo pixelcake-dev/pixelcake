@@ -15,7 +15,6 @@ import {
   ArrowDown,
   ArrowRight,
   Network,
-  Building2,
   Presentation,
   Sparkles,
   SquareDashed,
@@ -70,7 +69,7 @@ const TopMenuBar = () => {
   const handleSave = () => void saveProject();
   const handleSaveAs = () => void saveProjectAs();
 
-  const handleAutoLayout = (_grouping: 'hierarchical' | 'subnet-grouped', direction: LayoutDirection) => {
+  const handleAutoLayout = (direction: LayoutDirection) => {
     const deviceCount = useNetworkStore.getState().devices.length;
     if (deviceCount === 0) {
       toast.info(t.menu.notices.nothingToArrange);
@@ -220,26 +219,15 @@ const TopMenuBar = () => {
               {t.menu.view.autoLayout}
               <div className="nested-dropdown">
                 <ul>
-                  <li onClick={(e) => { e.stopPropagation(); handleAutoLayout('hierarchical', 'TB'); }}>
+                  <li onClick={(e) => { e.stopPropagation(); handleAutoLayout('TB'); }}>
                     <Network size={14} style={{ display: 'inline', marginRight: '6px' }} />
                     <ArrowDown size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                    {t.menu.view.layouts.hierarchicalVertical}
+                    {t.menu.view.layouts.vertical}
                   </li>
-                  <li onClick={(e) => { e.stopPropagation(); handleAutoLayout('hierarchical', 'LR'); }}>
+                  <li onClick={(e) => { e.stopPropagation(); handleAutoLayout('LR'); }}>
                     <Network size={14} style={{ display: 'inline', marginRight: '6px' }} />
                     <ArrowRight size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                    {t.menu.view.layouts.hierarchicalHorizontal}
-                  </li>
-                  <hr />
-                  <li onClick={(e) => { e.stopPropagation(); handleAutoLayout('subnet-grouped', 'TB'); }}>
-                    <Building2 size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                    <ArrowDown size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                    {t.menu.view.layouts.subnetVertical}
-                  </li>
-                  <li onClick={(e) => { e.stopPropagation(); handleAutoLayout('subnet-grouped', 'LR'); }}>
-                    <Building2 size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                    <ArrowRight size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                    {t.menu.view.layouts.subnetHorizontal}
+                    {t.menu.view.layouts.horizontal}
                   </li>
                 </ul>
               </div>

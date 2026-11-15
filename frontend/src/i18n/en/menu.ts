@@ -23,11 +23,10 @@ export const menu: Dictionary['menu'] = {
     fit: 'Fit to window',
     presentation: 'Presentation mode',
     autoLayout: 'Auto-layout',
+    /** From where the traffic leaves the network down (vertical) or across (horizontal) */
     layouts: {
-      hierarchicalVertical: 'Hierarchical, vertical',
-      hierarchicalHorizontal: 'Hierarchical, horizontal',
-      subnetVertical: 'Grouped by subnet, vertical',
-      subnetHorizontal: 'Grouped by subnet, horizontal',
+      vertical: 'Vertical',
+      horizontal: 'Horizontal',
     },
     autoConnect: 'Auto-connect',
     magnify: 'Magnify',
