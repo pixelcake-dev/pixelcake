@@ -152,6 +152,53 @@ describe('an end device', () => {
     const result = connectLooseDevices([sw('SW-1', '10.0.0.2', 400, 0), ap, phone, printer], [wire('c1', 'SW-1', 'AP-1')], 1);
     expect(made(result).sort()).toEqual(['AP-1>Phone-1', 'SW-1>Printer-1']);
   });
+
+  it('a laptop goes to an access point, not to an IoT gateway', () => {
+    const gateway = device({
+      id: 'IoT-1',
+      type: 'AccessPoint',
+      templateId: 'tpl-iotgateway',
+      ip: '10.0.0.6',
+      ...at(300, 0),
+      nics: [nic({ ip: '10.0.0.6' }), nic({ id: 'nic-2', name: 'wlan0' })],
+    });
+    const laptop = pc('Laptop-1', '10.0.0.21', 300, 200, { templateId: 'tpl-laptop' });
+    const result = connectLooseDevices([sw('SW-1', '10.0.0.2', 0, 0), gateway, laptop], [wire('c1', 'SW-1', 'IoT-1')], 1);
+    expect(made(result)).toEqual(['SW-1>Laptop-1']);
+  });
+
+  it('a card on DHCP goes by distance alone, whatever address it had last', () => {
+    const leased = pc('PC-1', '192.168.99.50', 100, 200, { nics: [nic({ ip: '192.168.99.50', dhcp: true })] });
+    expect(made(connectLooseDevices([sw('SW-1', '10.0.0.2', 100, 0), leased], [], 1))).toEqual(['SW-1>PC-1']);
+  });
+
+  it('an address with no mask written is taken with the mask of a /24', () => {
+    const unmasked = pc('PC-1', '10.0.0.11', 0, 200, { subnet: '', nics: [nic({ ip: '10.0.0.11', subnet: '' })] });
+    const result = connectLooseDevices([sw('SW-Other', '10.0.1.2', 0, 0), sw('SW-Own', '10.0.0.2', 600, 0), unmasked], [], 1);
+    expect(made(result)).toEqual(['SW-Own>PC-1']);
+  });
+
+  it('the last free port goes to the nearest device', () => {
+    const one = sw('SW-1', '10.0.0.2', 0, 0, 1);
+    const result = connectLooseDevices([one, pc('PC-Far', '10.0.0.12', 0, 600), pc('PC-Near', '10.0.0.11', 0, 150)], [], 1);
+    expect(made(result)).toEqual(['SW-1>PC-Near']);
+    expect(leftAlone(result)).toEqual({ 'PC-Far': 'noFreePort' });
+  });
+
+  it('a device drawn with no interfaces still gets its cable, its end not bound', () => {
+    const bare = device({ id: 'Old-1', type: 'Server', ip: '10.0.0.40', ...at(0, 200) });
+    const result = connectLooseDevices([sw('SW-1', '10.0.0.2', 0, 0), bare], [], 1);
+    expect(made(result)).toEqual(['SW-1>Old-1']);
+    expect(result.connections[0].targetNic).toBeUndefined();
+    expect(result.connections[0].targetPort).toBeUndefined();
+  });
+
+  it('the new ids follow the counter, past those taken', () => {
+    const devices = [sw('SW-1', '10.0.0.2', 0, 0), pc('PC-1', '10.0.0.11', 0, 200), pc('PC-0', '10.0.0.10', 300, 200)];
+    const result = connectLooseDevices(devices, [{ id: 'conn-1', source: 'SW-1', target: 'PC-0' }], 1);
+    expect(result.connections.map((one) => one.id)).toEqual(['conn-2']);
+    expect(result.nextCounter).toBe(3);
+  });
 });
 
 describe('a switch with no uplink', () => {
@@ -184,6 +231,19 @@ describe('a switch with no uplink', () => {
 
     const alone = connectLooseDevices([router('R-1', 0, 0, ['10.5.0.1']), sw('SW-1', '10.0.0.3', 0, 200)], [], 1);
     expect(leftAlone(alone)).toEqual({ 'SW-1': 'noUplink', 'R-1': 'byHand' });
+  });
+
+  it('a router is on the networks of all its ports, not only of its own address', () => {
+    // its own address is the one towards the Internet; port 2 is the switch's gateway
+    const result = connectLooseDevices([router('R-1', 0, 0, ['10.0.0.1', '192.168.10.1']), sw('SW-1', '192.168.10.2', 0, 200)], [], 1);
+    expect(made(result)).toEqual(['R-1>SW-1']);
+    expect(result.connections[0].sourcePort).toBe(2);
+  });
+
+  it('ports left in VLAN 1 are no VLANs set apart: the switch is on the network of its address', () => {
+    const plain = switchWith('SW-1', vlanPorts({ 1: { vlan: 1 }, 2: { vlan: 1 } }), { ip: '10.1.0.2', ...at(0, 0) });
+    const result = connectLooseDevices([plain, pc('PC-1', '10.0.0.11', 0, 200)], [], 1);
+    expect(leftAlone(result)).toEqual({ 'PC-1': 'noSwitch', 'SW-1': 'noUplink' });
   });
 });
 
@@ -227,6 +287,20 @@ describe('never automatic', () => {
     expect(result.connections[0].sourcePort).toBeUndefined();
     // (the uplink of a switch: its last free port)
     expect(result.connections[0].targetPort).toBe(8);
+  });
+
+  it('a firewall with zones whose every port has a cable has no room left', () => {
+    const fw = device({
+      id: 'FW-1',
+      type: 'Firewall',
+      ip: '10.0.0.1',
+      ...at(0, 0),
+      ports: [port(1, { ip: '10.0.0.1', subnet: '255.255.255.0', securityZone: 'trust' })],
+    });
+    const taken: NetworkConnection = { id: 'c1', source: 'FW-1', target: 'PC-0', targetNic: 'nic-1' };
+    const result = connectLooseDevices([fw, pc('PC-0', '10.0.0.5', 300, 0), sw('SW-1', '10.0.0.2', 0, 200)], [taken], 1);
+    expect(made(result)).toEqual([]);
+    expect(leftAlone(result)).toEqual({ 'SW-1': 'noFreePort' });
   });
 
   it('the sides of a new cable face each other, from the upper device down', () => {
@@ -305,6 +379,33 @@ describe('the port it takes', () => {
     expect(result.connections[0].sourcePort).toBe(3);
   });
 
+  it('what a VLAN is, learnt from a cable just added: the next device does not take that VLAN\'s port', () => {
+    // nothing cabled: the PC, nearest, takes port 1 and so tells that VLAN 10 is the offices';
+    // the access point of the Wi-Fi then passes over port 2
+    const swv = switchWith('SW-V', vlanPorts({ 1: { vlan: 10 }, 2: { vlan: 10 }, 3: { vlan: 20 } }), { ip: '10.99.0.3', ...at(0, 0) });
+    const ap = device({ id: 'AP-1', type: 'AccessPoint', ip: '192.168.20.2', ...at(0, 400), nics: [nic({ ip: '192.168.20.2' })] });
+    const result = connectLooseDevices([swv, pc('PC-1', '192.168.10.11', 0, 150), ap], [], 1);
+    expect(portsTaken(result)).toEqual({ 'PC-1': 1, 'AP-1': 3 });
+  });
+
+  it('a switch is on the networks of the VLANs its trunk carries', () => {
+    const r1 = router('R-1', 0, 0, ['192.168.10.1', '192.168.20.1']);
+    const core = switchWith('SW-Core', vlanPorts({ 1: { portType: 'trunk', vlan: [10, 20] }, 7: { vlan: 10 }, 8: { vlan: 20 } }), { ip: '10.99.0.2', ...at(0, 200) });
+    // the floor switch has no access port in a VLAN: only its trunk tells its networks
+    const floor = switchWith('SW-Floor', vlanPorts({ 8: { portType: 'trunk', vlan: [10, 20] } }), { ip: '10.99.0.5', ...at(800, 400) });
+    const cables = [bound('c1', 'R-1', 1, 'SW-Core', 7), bound('c2', 'R-1', 2, 'SW-Core', 8), bound('c3', 'SW-Core', 1, 'SW-Floor', 8)];
+    const result = connectLooseDevices([r1, core, floor, pc('PC-1', '192.168.10.11', 800, 600)], cables, 1);
+    expect(made(result)).toEqual(['SW-Floor>PC-1']);
+  });
+
+  it('a trunk port tells no VLAN its network, even when it carries one VLAN alone', () => {
+    // port 8, a trunk of VLAN 20 alone, is cabled to the offices' gateway: VLAN 20 is not the offices'
+    const r1 = router('R-1', 0, 0, ['192.168.10.1']);
+    const swv = switchWith('SW-V', vlanPorts({ 3: { vlan: 20 }, 8: { portType: 'trunk', vlan: [20] } }), { ip: '10.99.0.3', ...at(0, 200) });
+    const result = connectLooseDevices([r1, swv, pc('PC-1', '192.168.10.11', 0, 400)], [bound('c1', 'R-1', 1, 'SW-V', 8)], 1);
+    expect(result.connections[0].sourcePort).toBe(1);
+  });
+
   it('a router gives the port with an address on the network of the switch, never one of another network', () => {
     const drawn = [sw('SW-1', '192.168.10.2', 0, 200), pc('PC-1', '192.168.10.11', 0, 400)];
     const r1 = router('R-1', 0, 0, ['192.168.30.1', '', '192.168.10.1']);
@@ -320,6 +421,23 @@ describe('the port it takes', () => {
     const full = connectLooseDevices(busy, [toPc], 1);
     expect(made(full)).toEqual([]);
     expect(leftAlone(full)).toEqual({ 'SW-1': 'noFreePort' });
+  });
+
+  it('an end device passes over a trunk port and a port turned off', () => {
+    const swt = switchWith('SW-1', vlanPorts({ 1: { portType: 'trunk' }, 2: { enabled: false } }), { ip: '10.0.0.2', ...at(0, 0) });
+    const result = connectLooseDevices([swt, pc('PC-1', '10.0.0.11', 0, 200)], [], 1);
+    expect(result.connections[0].sourcePort).toBe(3);
+  });
+
+  it('the switch end of an uplink takes the port in the VLAN of the router port it is cabled to', () => {
+    // VLAN 20 is known by SW-X, cabled to the Wi-Fi's gateway; SW-V and its PC have no way up
+    const r1 = router('R-1', 0, 0, ['192.168.10.1', '192.168.20.1']);
+    const other = switchWith('SW-X', vlanPorts({ 8: { vlan: 20 } }), { ip: '10.99.0.9', ...at(900, 200) });
+    const swv = switchWith('SW-V', vlanPorts({ 1: { vlan: 10 }, 7: { vlan: 10 }, 8: { vlan: 20 } }), { ip: '10.99.0.3', ...at(0, 200) });
+    const toPc: NetworkConnection = { id: 'c2', source: 'SW-V', target: 'PC-1', sourcePort: 1, targetNic: 'nic-1' };
+    const result = connectLooseDevices([r1, other, swv, pc('PC-1', '192.168.10.11', 0, 400)], [bound('c1', 'R-1', 2, 'SW-X', 8), toPc], 1);
+    expect(made(result)).toEqual(['R-1>SW-V']);
+    expect(result.connections[0]).toMatchObject({ sourcePort: 1, targetPort: 7 });
   });
 
   it('between two switches: a trunk port where there is one, else the last free port', () => {
@@ -339,6 +457,45 @@ describe('a group with no way up', () => {
     const result = connectLooseDevices(devices, rest, 1);
     expect(made(result)).toEqual(['sw-uffici>ap-uffici']);
     expect(result.connections[0]).toMatchObject({ sourcePort: 4, targetNic: 'nic-1' });
+  });
+
+  it('an access point cabled to a switch with no way up: the group goes up from its switch', () => {
+    const r1 = router('R-1', 0, 0, ['10.0.0.1', '']);
+    const core = sw('SW-Core', '10.0.0.2', 300, 0);
+    // (a card free, and nearer to the core switch than its own switch is)
+    const ap = device({
+      id: 'AP-1',
+      type: 'AccessPoint',
+      ip: '10.0.0.5',
+      ...at(300, 150),
+      nics: [nic({ ip: '10.0.0.5' }), nic({ id: 'nic-2', name: 'wlan0' })],
+    });
+    const result = connectLooseDevices([r1, core, sw('SW-A', '10.0.0.3', 300, 400), ap], [bound('c1', 'R-1', 1, 'SW-Core', 8), wire('c2', 'SW-A', 'AP-1')], 1);
+    expect(made(result)).toEqual(['SW-Core>SW-A']);
+    expect(result.left).toEqual([]);
+  });
+
+  it('a switch with a way up gets no second one, not even to a router with no cable', () => {
+    const result = connectLooseDevices(
+      [router('R-1', 0, 0, ['10.0.0.1']), sw('SW-1', '10.0.0.2', 0, 200), router('R-2', 100, 300, ['10.0.0.254'])],
+      [wire('c1', 'R-1', 'SW-1')],
+      1
+    );
+    expect(made(result)).toEqual([]);
+    expect(leftAlone(result)).toEqual({ 'R-2': 'byHand' });
+  });
+
+  it('the nearest group goes up first: it takes the last free port of the router', () => {
+    // one free port on the router; the far switch, drawn first, goes up through the near one
+    const devices = [router('R-1', 0, 0, ['10.0.0.1']), sw('SW-Far', '10.0.0.2', 0, 800), sw('SW-Near', '10.0.0.3', 0, 200)];
+    expect(made(connectLooseDevices(devices, [], 1))).toEqual(['R-1>SW-Near', 'SW-Near>SW-Far']);
+  });
+
+  it('never to the Internet, even when it is nearer than the router', () => {
+    const internet = device({ id: 'Internet', type: 'Cloud', ...at(0, 150), nics: [nic(), nic({ id: 'nic-2', name: 'eth1' })] });
+    const result = connectLooseDevices([router('R-1', 300, 0, ['10.0.0.1']), internet, sw('SW-1', '10.0.0.2', 0, 300)], [], 1);
+    expect(made(result)).toEqual(['R-1>SW-1']);
+    expect(leftAlone(result)).toEqual({ Internet: 'byHand' });
   });
 });
 
