@@ -49,6 +49,7 @@ export const exportImage: Dictionary['exportImage'] = {
   copyHint: 'Copy the image (PNG) to paste it into a document or a message',
   copied: 'Copied',
   preparing: 'Preparing the PNG…',
+  waitingForEffect: 'Working out the effect of the failures…',
   /** Where the browser asks where to save */
   save: (format: string) => `Save ${format}…`,
   /** Where it can only download */

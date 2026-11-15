@@ -6,11 +6,12 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { act, render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { useNetworkStore } from '@/store/networkStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
 import { createRedundancySample } from '@/utils/sampleRedundancy';
+import { assessImpact } from '@/engine';
 import { device, host, link, port } from '@/test/networkFixtures';
 import PresentationPanel from './PresentationPanel';
 
@@ -36,6 +37,13 @@ const cable = (a: string, b: string) => {
 
 const section = (name: string) => screen.getByRole('region', { name });
 const verdict = () => screen.getByRole('status');
+
+/** The effect of the failures comes a moment after the answer: worked out a slice at a time */
+const effectShown = () =>
+  waitFor(() => {
+    expect(document.querySelector('.presentation-impact-computing')).toBeNull();
+    expect(document.querySelector('.presentation-impact')).not.toBeNull();
+  });
 
 beforeEach(() => {
   localStorage.clear();
@@ -274,7 +282,7 @@ describe('PresentationPanel — the answer', () => {
 });
 
 describe('PresentationPanel — what happens if this breaks', () => {
-  it('the main line: the answer takes the backup line and says so; nothing is lost', () => {
+  it('the main line: the answer takes the backup line and says so; nothing is lost', async () => {
     render(<PresentationPanel />);
     act(() => presentation().ask(id('PC-Filiale-1'), id('Srv-File')));
     const before = simulation().runId;
@@ -288,6 +296,7 @@ describe('PresentationPanel — what happens if this breaks', () => {
     expect(simulation().path).toContain(id('R-Riserva'));
     expect(simulation().links).not.toContain(cable('R-Sede', 'R-Filiale'));
 
+    await effectShown();
     const failures = section('Guasti simulati');
     expect(within(failures).getByRole('button', { name: 'Ripara il cavo R-Sede – R-Filiale' })).toBeInTheDocument();
     expect(failures).toHaveTextContent('Ping tra i 5 dispositivi finali: 20 comunicazioni che senza guasti funzionano.');
@@ -297,10 +306,11 @@ describe('PresentationPanel — what happens if this breaks', () => {
     expect(failures).toHaveTextContent('spanning tree non sono simulati');
   });
 
-  it('the core switch: counts what stops, device by device', () => {
+  it('the core switch: counts what stops, device by device', async () => {
     render(<PresentationPanel />);
 
     act(() => presentation().toggleDeviceFailure(id('SW-Core')));
+    await effectShown();
 
     const failures = section('Guasti simulati');
     expect(within(failures).getByRole('button', { name: 'Ripara SW-Core' })).toBeInTheDocument();
@@ -317,7 +327,7 @@ describe('PresentationPanel — what happens if this breaks', () => {
     ]);
   });
 
-  it('counts one exchange in the singular', () => {
+  it('counts one exchange in the singular', async () => {
     // A firewall between an outside PC and a server in the DMZ: with ping,
     // only the server reaches the PC (the zone policy), so one exchange works
     act(() => {
@@ -344,6 +354,7 @@ describe('PresentationPanel — what happens if this breaks', () => {
     render(<PresentationPanel />);
 
     act(() => presentation().toggleDeviceFailure(id('fw')));
+    await effectShown();
 
     const failures = section('Guasti simulati');
     expect(failures).toHaveTextContent('Ping tra i 2 dispositivi finali: 1 comunicazione che senza guasti funziona.');
@@ -354,7 +365,7 @@ describe('PresentationPanel — what happens if this breaks', () => {
     ]);
   });
 
-  it('cuts a long list short, says how much is left, and shows it all on request', () => {
+  it('cuts a long list short, says how much is left, and shows it all on request', async () => {
     // nine PCs on one switch: with the switch down each loses the other eight
     act(() => {
       network().clearAllDevices();
@@ -375,6 +386,7 @@ describe('PresentationPanel — what happens if this breaks', () => {
     render(<PresentationPanel />);
 
     act(() => presentation().toggleDeviceFailure(id('sw')));
+    await effectShown();
 
     const failures = section('Guasti simulati');
     expect(failures).toHaveTextContent('72 si interrompono');
@@ -402,16 +414,17 @@ describe('PresentationPanel — what happens if this breaks', () => {
     expect(rows()).toHaveLength(7);
   });
 
-  it('a short list is shown whole, with nothing to unfold', () => {
+  it('a short list is shown whole, with nothing to unfold', async () => {
     render(<PresentationPanel />);
     act(() => presentation().toggleDeviceFailure(id('SW-Core')));
+    await effectShown();
 
     const failures = section('Guasti simulati');
     expect(within(failures).queryByRole('button', { name: 'Mostra tutto' })).toBeNull();
     expect(failures.querySelector('.presentation-impact-more')).toBeNull();
   });
 
-  it('needs two end devices to measure anything', () => {
+  it('needs two end devices to measure anything', async () => {
     act(() => {
       for (const label of ['PC-Sede-1', 'PC-Sede-2', 'PC-Filiale-1', 'PC-Filiale-2']) {
         network().removeDevice(id(label));
@@ -420,15 +433,17 @@ describe('PresentationPanel — what happens if this breaks', () => {
     render(<PresentationPanel />);
 
     act(() => presentation().toggleDeviceFailure(id('SW-Core')));
+    await effectShown();
 
     expect(section('Guasti simulati')).toHaveTextContent(
       "Per misurare l'effetto servono almeno due dispositivi finali"
     );
   });
 
-  it('a click on a lost destination asks that very question', () => {
+  it('a click on a lost destination asks that very question', async () => {
     render(<PresentationPanel />);
     act(() => presentation().toggleDeviceFailure(id('SW-Core')));
+    await effectShown();
 
     fireEvent.click(screen.getByRole('button', { name: 'Mostra da PC-Filiale-1 a Srv-File' }));
 
@@ -457,16 +472,17 @@ describe('PresentationPanel — what happens if this breaks', () => {
     expect(within(section('Guasti simulati')).getByText(/Cosa succede se si rompe/)).toBeInTheDocument();
   });
 
-  it('measures the effect with the kind of exchange chosen', () => {
+  it('measures the effect with the kind of exchange chosen', async () => {
     render(<PresentationPanel />);
     act(() => presentation().toggleDeviceFailure(id('SW-Core')));
 
     fireEvent.click(screen.getByRole('button', { name: 'Web' }));
+    await effectShown();
 
     expect(section('Guasti simulati')).toHaveTextContent('Web tra i 5 dispositivi finali');
   });
 
-  it('says so when nothing worked to begin with', () => {
+  it('says so when nothing worked to begin with', async () => {
     // without its switches the drawing has no cable left to an end device
     act(() => {
       for (const device of network().devices) {
@@ -476,6 +492,7 @@ describe('PresentationPanel — what happens if this breaks', () => {
     render(<PresentationPanel />);
 
     act(() => presentation().toggleDeviceFailure(id('R-Sede')));
+    await effectShown();
 
     expect(section('Guasti simulati')).toHaveTextContent(
       'Con Ping nessuna comunicazione tra i dispositivi finali funzionava già prima dei guasti.'
@@ -528,6 +545,73 @@ describe('PresentationPanel — keeping up with the drawing', () => {
     expect(presentation()).toMatchObject({ sourceId: null, targetId: null, failedDevices: [] });
     expect(simulation().isRunning).toBe(false);
     expect(screen.getByText(/Scegli da dove parte e dove arriva/)).toBeInTheDocument();
+  });
+});
+
+describe('PresentationPanel — the effect, worked out while the page goes on', () => {
+  /** What the engine says the failures do, worked out here in one go */
+  const expectedEffect = (devices: string[], connections: string[]) =>
+    assessImpact({ devices: network().devices, connections: network().connections }, { devices, connections }, { flow: 'ping' });
+  const stopLine = (count: number) => (count === 0 ? 'Nessuna si interrompe' : `${count} si interrompono`);
+
+  it('the answer comes at once; the effect a moment after, a line saying meanwhile that it is being worked out', async () => {
+    render(<PresentationPanel />);
+    act(() => presentation().ask(id('PC-Filiale-1'), id('Srv-File')));
+    act(() => presentation().toggleConnectionFailure(cable('R-Sede', 'R-Filiale')));
+
+    expect(verdict()).toHaveTextContent('Arriva');
+    expect(screen.getByText("Arriva lo stesso, per un'altra strada: ora passa da R-Riserva.")).toBeInTheDocument();
+    const failures = section('Guasti simulati');
+    expect(failures).toHaveTextContent("Calcolo l'effetto sul resto della rete…");
+    expect(failures).not.toHaveTextContent('si interromp');
+
+    await effectShown();
+    expect(failures).toHaveTextContent("12 passano da un'altra strada");
+    expect(failures).not.toHaveTextContent('Calcolo');
+  });
+
+  it('another failure while the first is worked out: what shows is the effect of both, never of the first alone', async () => {
+    render(<PresentationPanel />);
+    const main = cable('R-Sede', 'R-Filiale');
+    act(() => presentation().toggleConnectionFailure(main));
+    act(() => presentation().toggleDeviceFailure(id('SW-Core')));
+
+    await effectShown();
+    const both = expectedEffect([id('SW-Core')], [main]);
+    const failures = section('Guasti simulati');
+    expect(failures).toHaveTextContent(stopLine(both.broken.length));
+    expect(both.broken.length).toBeGreaterThan(0);
+    // (the main line alone stops nothing: had its effect come late, it would say so)
+    expect(failures).not.toHaveTextContent('Nessuna si interrompe');
+  });
+
+  it('a repair while it is worked out: the line goes, and nothing is said about the effect', async () => {
+    render(<PresentationPanel />);
+    act(() => presentation().toggleDeviceFailure(id('SW-Core')));
+    expect(section('Guasti simulati')).toHaveTextContent("Calcolo l'effetto");
+    act(() => presentation().toggleDeviceFailure(id('SW-Core')));
+
+    expect(document.querySelector('.presentation-impact')).toBeNull();
+    // and it stays so once the work that was stopped would have ended
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(document.querySelector('.presentation-impact')).toBeNull();
+    expect(within(section('Guasti simulati')).getByText(/Cosa succede se si rompe/)).toBeInTheDocument();
+  });
+
+  it('back to a failure tried before: its own effect, at once', async () => {
+    render(<PresentationPanel />);
+    const main = cable('R-Sede', 'R-Filiale');
+    act(() => presentation().toggleConnectionFailure(main));
+    await effectShown();
+    act(() => presentation().toggleConnectionFailure(main));
+    act(() => presentation().toggleDeviceFailure(id('SW-Core')));
+    await effectShown();
+    act(() => presentation().toggleDeviceFailure(id('SW-Core')));
+    act(() => presentation().toggleConnectionFailure(main));
+
+    // (kept since: no line, the effect of the main line alone)
+    expect(document.querySelector('.presentation-impact-computing')).toBeNull();
+    expect(section('Guasti simulati')).toHaveTextContent("12 passano da un'altra strada");
   });
 });
 

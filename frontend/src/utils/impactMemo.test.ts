@@ -8,7 +8,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { assessImpact } from '@/engine';
 import type { Failures } from '@/engine';
 import { createRedundancySample } from './sampleRedundancy';
-import { baselineOf, forgetImpacts, impactOf } from './impactMemo';
+import { baselineOf, forgetImpacts, impactOf, knownImpact, stopImpactWork, workOutImpact } from './impactMemo';
+import { createMultinationalSample } from './sampleMultinational';
 
 const sample = createRedundancySample();
 const drawing = { devices: sample.devices, connections: sample.connections };
@@ -67,4 +68,91 @@ describe('impactOf', () => {
     expect(again).not.toBe(first);
     expect(again).toEqual(first);
   });
+});
+
+/* ── the same, a slice at a time, the page going on between two slices ── */
+
+// (a slice of no time at all: one pair at a time, many slices even on a small drawing)
+const SLICES = { sliceMs: 0 };
+const ping = { flow: 'ping' as const };
+const main = cut('link-principale');
+const backup = cut('link-riserva-filiale');
+
+describe('workOutImpact', () => {
+  it('gives the report the engine gives in one go, and keeps it for the panel and the picture alike', async () => {
+    const report = await workOutImpact(drawing, main, ping, SLICES);
+    expect(report).toEqual(assessImpact(drawing, main, ping));
+    expect(knownImpact(drawing, main, ping)).toBe(report);
+    expect(impactOf(drawing, main, ping)).toBe(report);
+  });
+
+  it('asked twice for the same thing, it is worked out once', async () => {
+    const first = workOutImpact(drawing, main, ping, SLICES);
+    const second = workOutImpact(drawing, cut('link-principale', 'link-principale'), ping, SLICES);
+    expect(second).toBe(first);
+    expect(await second).toBe(await first);
+  });
+
+  it('another failure asked for stops the work for the first, which is never kept', async () => {
+    const first = workOutImpact(drawing, main, ping, SLICES);
+    const second = workOutImpact(drawing, backup, ping, SLICES);
+    expect(await first).toBeNull();
+    expect(await second).toEqual(assessImpact(drawing, backup, ping));
+    expect(knownImpact(drawing, main, ping)).toBeUndefined();
+    expect(knownImpact(drawing, backup, ping)).toBe(await second);
+  });
+
+  it('so does another kind of exchange, another drawing, or nothing broken any more', async () => {
+    const asPing = workOutImpact(drawing, main, ping, SLICES);
+    const asWeb = workOutImpact(drawing, main, { flow: 'web' }, SLICES);
+    expect(await asPing).toBeNull();
+    // (the drawing changed: the store gives it new lists)
+    const changed = { devices: [...drawing.devices], connections: [...drawing.connections] };
+    const onChanged = workOutImpact(changed, main, ping, SLICES);
+    expect(await asWeb).toBeNull();
+    stopImpactWork();
+    expect(await onChanged).toBeNull();
+    expect(knownImpact(drawing, main, { flow: 'web' })).toBeUndefined();
+    expect(knownImpact(changed, main, ping)).toBeUndefined();
+  });
+
+  it('a result that comes late never stands for what is asked now', async () => {
+    // the first finishes, then the second is asked and is still being worked out
+    const first = await workOutImpact(drawing, main, ping, SLICES);
+    const second = workOutImpact(drawing, backup, ping, SLICES);
+    // what is known now is the first for the first, and nothing yet for the second
+    expect(knownImpact(drawing, main, ping)).toBe(first);
+    expect(knownImpact(drawing, backup, ping)).toBeUndefined();
+    const report = await second;
+    expect(report).not.toEqual(first);
+    expect(knownImpact(drawing, backup, ping)).toBe(report);
+    expect(knownImpact(drawing, main, ping)).toBe(first);
+  });
+
+  it('on the multinational, the page is given back every few milliseconds, and the report is the one of the engine', async () => {
+    const large = createMultinationalSample();
+    const topo = { devices: large.devices, connections: large.connections };
+    const failures = cut(large.connections.find((c) => c.source === 'r-mi-wan' && c.target === 'r-rm')!.id);
+    // a timer that should run every millisecond: how long it ever waits is how long the page is held
+    let last = performance.now();
+    let longest = 0;
+    const ticker = setInterval(() => {
+      const now = performance.now();
+      longest = Math.max(longest, now - last);
+      last = now;
+    }, 1);
+    try {
+      const report = await workOutImpact(topo, failures, ping);
+      expect(report).not.toBeNull();
+      expect({ working: report!.working, broken: report!.broken.length, rerouted: report!.rerouted.length }).toEqual({
+        working: 14891,
+        broken: 0,
+        rerouted: 4422,
+      });
+    } finally {
+      clearInterval(ticker);
+    }
+    // (slices of 8 ms; a generous bound, for a busy machine)
+    expect(longest).toBeLessThan(250);
+  }, 120_000);
 });

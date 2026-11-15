@@ -144,6 +144,8 @@ export const presentation = {
   /** What the failures do to the exchanges between end devices */
   impact: {
     heading: 'Sul resto della rete',
+    /** While the effect is being worked out: the answer is on screen already */
+    computing: "Calcolo l'effetto sul resto della rete…",
     tooFewEndDevices:
       "Per misurare l'effetto servono almeno due dispositivi finali (PC, server…) con un indirizzo.",
     nothingWorked: (flowName: string) =>

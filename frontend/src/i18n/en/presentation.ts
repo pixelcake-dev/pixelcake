@@ -138,6 +138,7 @@ export const presentation: Dictionary['presentation'] = {
   /** What the failures do to the exchanges between end devices */
   impact: {
     heading: 'On the rest of the network',
+    computing: 'Working out the effect on the rest of the network…',
     tooFewEndDevices: 'Measuring the effect takes at least two end devices (PCs, servers…) with an address.',
     nothingWorked: (flowName: string) =>
       `With ${flowName}, no exchange between the end devices worked even before the failures.`,

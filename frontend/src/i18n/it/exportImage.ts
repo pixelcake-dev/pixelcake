@@ -47,6 +47,8 @@ export const exportImage = {
   copyHint: "Copia l'immagine (PNG) per incollarla in un documento o in un messaggio",
   copied: 'Copiata',
   preparing: 'Preparo il PNG…',
+  /** While the effect of the failures, written under the picture, is being worked out */
+  waitingForEffect: "Calcolo l'effetto dei guasti…",
   /** Where the browser asks where to save */
   save: (format: string) => `Salva ${format}…`,
   /** Where it can only download */

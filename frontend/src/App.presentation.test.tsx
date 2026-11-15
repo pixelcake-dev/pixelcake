@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { act, render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { useNetworkStore } from '@/store/networkStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
@@ -81,7 +81,7 @@ describe('App — presentation mode', () => {
     expect(document.querySelector('.app-container')?.className).not.toContain('presenting');
   });
 
-  it('a whole presentation by clicks: ask, break, see, repair, leave — and the drawing is untouched', () => {
+  it('a whole presentation by clicks: ask, break, see, repair, leave — and the drawing is untouched', async () => {
     render(<App />);
     const before = JSON.stringify([network().devices, network().connections, network().viewport]);
     fireEvent.click(screen.getByRole('button', { name: /Presenta/ }));
@@ -106,7 +106,8 @@ describe('App — presentation mode', () => {
     expect(nodeOf('R-Sede').querySelector('.network-device')?.className).toContain('device-failed');
     const failures = screen.getByRole('region', { name: 'Guasti simulati' });
     expect(within(failures).getByRole('button', { name: 'Ripara R-Sede' })).toBeInTheDocument();
-    expect(failures).toHaveTextContent('12 si interrompono');
+    // (the effect comes a moment after the answer)
+    await waitFor(() => expect(failures).toHaveTextContent('12 si interrompono'));
 
     // repair it from its own menu
     fireEvent.click(nodeOf('R-Sede'), { clientX: 70, clientY: 70 });

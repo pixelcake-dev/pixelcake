@@ -762,10 +762,40 @@ describe('ExportImageModal — while presenting', () => {
 
     expect(screen.queryByRole('checkbox', { name: 'Domanda e risposta sotto il disegno' })).toBeNull();
     expect(check('Guasti simulati sotto il disegno')).toBeChecked();
+    // (the effect of the failures is worked out a slice at a time: the caption waits for it)
+    await waitFor(() => expect(pageTexts().slice(1)).toHaveLength(2));
     const caption = pageTexts().slice(1);
     expect(caption[0]).toBe('Guasti simulati: SW-Core e cavo R-Sede – R-Filiale');
     expect(caption[1]).toMatch(/^Sul resto della rete \(Ping tra i 5 dispositivi finali\): \d+ comunicazioni su 20 si interrompono/);
     expect(picture().querySelector('svg > circle')).toBeNull();
+  });
+
+  it('opened before the effect of a failure is worked out: nothing leaves without it, and the button says why', async () => {
+    act(() => {
+      presentation().enter();
+    });
+    render(
+      <>
+        <PresentationBar />
+        <PresentationPanel />
+        <ExportImageModal />
+      </>
+    );
+    await openDialog();
+    // a failure while the window is open: the panel and the window wait for the same work
+    act(() => presentation().toggleDeviceFailure(id('SW-Core')));
+
+    const save = screen.getByRole('button', { name: /Calcolo l'effetto dei guasti/ });
+    expect(save).toBeDisabled();
+    // the panel says the same, meanwhile
+    expect(document.querySelector('.presentation-impact-computing')).not.toBeNull();
+
+    await waitFor(() => expect(pageTexts().slice(1)).toHaveLength(2));
+    expect(pageTexts()[2]).toMatch(/^Sul resto della rete \(Ping tra i 5 dispositivi finali\): 16 comunicazioni su 20 si interrompono/);
+    expect(screen.queryByRole('button', { name: /Calcolo l'effetto dei guasti/ })).toBeNull();
+    // and the panel shows the very report the picture says
+    expect(document.querySelector('.presentation-impact-computing')).toBeNull();
+    expect(screen.getByRole('region', { name: 'Guasti simulati' })).toHaveTextContent('16 si interrompono');
   });
 
   it('with neither question nor failure there is nothing to say under the drawing', async () => {

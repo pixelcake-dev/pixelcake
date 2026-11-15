@@ -163,7 +163,7 @@ const PresentationPanel = () => {
   const stopSimulation = useSimulationStore((state) => state.stopSimulation);
 
   // The answer is worked out here whether the panel is open or not
-  const { answer, intactAnswer, impact, reached } = usePresentationAnswer();
+  const { answer, intactAnswer, impact, impactComputing, reached } = usePresentationAnswer();
 
   const labelOf = useMemo(() => {
     const labels = new Map(devices.map((device) => [device.id, device.label] as const));
@@ -381,6 +381,16 @@ const PresentationPanel = () => {
                   </button>
                 </li>
               </ul>
+
+              {/* (the effect comes a moment after the answer: worked out a slice at a time) */}
+              {impactComputing && (
+                <div className="presentation-impact">
+                  <h5>{t.presentation.impact.heading}</h5>
+                  <p className="presentation-hint presentation-impact-computing" aria-live="polite">
+                    {t.presentation.impact.computing}
+                  </p>
+                </div>
+              )}
 
               {impact && (
                 <div className="presentation-impact">
