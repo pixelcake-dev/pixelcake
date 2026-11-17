@@ -33,7 +33,7 @@ An end that is **not attached** has none of this. The engine lets the packet thr
 
 ## On a firewall with zones {#firewall}
 
-On a firewall whose ports carry security zones the end is never attached by itself. Picking a port there would be picking a policy: the port decides the zone, and the zone decides what the firewall lets through. So a cable to such a firewall is made with that end not attached, and you choose the port in “Edit link”, under "Interface on" and the name of the firewall. The terminal does the same: `connect` leaves the end open and says so.
+On a firewall whose ports carry security zones the end is never attached by itself. Picking a port there would be picking a policy: the port decides the zone, and when no rule matches the zone decides what the firewall lets through. So a cable to such a firewall is made with that end not attached, and you choose the port in “Edit link”, under "Interface on" and the name of the firewall. The terminal does the same: `connect` leaves the end open and says so.
 
 Until the port is chosen the firewall cannot tell which zone the cable is in. In the company sample, take away the cable from FW-Edge to Router-Core and draw it again, and the trace through the firewall changes from the zone policy to a note:
 

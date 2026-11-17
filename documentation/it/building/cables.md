@@ -33,7 +33,7 @@ Un'estremità **non assegnata** non ha niente di tutto questo. Il motore lascia 
 
 ## Su un firewall con zone {#firewall}
 
-Su un firewall le cui porte hanno zone di sicurezza, l'estremità non viene mai assegnata da sola. Scegliere una porta lì vorrebbe dire scegliere una politica: la porta decide la zona, e la zona decide che cosa il firewall lascia passare. Perciò un cavo verso un firewall di questo tipo nasce con quell'estremità non assegnata, e la porta si sceglie in «Modifica connessione», sotto "Interfaccia su" e il nome del firewall. Anche il terminale fa così: `connect` lascia l'estremità senza interfaccia e lo dice.
+Su un firewall le cui porte hanno zone di sicurezza, l'estremità non viene mai assegnata da sola. Scegliere una porta lì vorrebbe dire scegliere una politica: la porta decide la zona, e quando nessuna regola corrisponde è la zona a decidere che cosa il firewall lascia passare. Perciò un cavo verso un firewall di questo tipo nasce con quell'estremità non assegnata, e la porta si sceglie in «Modifica connessione», sotto "Interfaccia su" e il nome del firewall. Anche il terminale fa così: `connect` lascia l'estremità senza interfaccia e lo dice.
 
 Finché la porta non è scelta il firewall non sa in quale zona sia il cavo. Nella rete dell'azienda, elimina il cavo da FW-Edge a Router-Core e disegnalo di nuovo: nel `trace` attraverso il firewall, al posto della politica delle zone compare una nota:
 
