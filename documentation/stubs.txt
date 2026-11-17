@@ -34,9 +34,3 @@ terminal/asking
 terminal/show
 terminal/help
 terminal/grammar
-reference/project-file
-reference/yaml
-reference/shortcuts
-reference/samples
-reference/limits-and-faq
-reference/licences

@@ -4,25 +4,122 @@ description: "La rete di un canvas in YAML, da copiare, scaricare e ricaricare; 
 order: 2
 ---
 
-> [!TODO]
-> Fonti: README.md (Export, What it does not do), la guida (yaml), le utility di import ed export.
+I dispositivi e le connessioni del canvas aperto si possono scrivere come testo YAML, copiare o scaricare, e rileggere da un file `.yaml` o `.yml`. È un modo per guardare una rete come testo, per tenerla in un repository, o per costruirne una con uno script. Non è il modo di salvare un progetto: lo YAML contiene la rete e nulla di come è disegnata, mentre [il file del progetto](project-file.md) contiene tutto. La stessa finestra offre anche un'esportazione Terraform, che è soltanto una bozza ([più sotto](#limits)).
 
 ## Esportare {#export}
 
-> [!TODO]
-> Il pannello Import/Export; copiare o scaricare.
+«Import/Export», nella barra a sinistra, apre la finestra; la prima scheda è l'esportazione. «Formato:» sceglie tra YAML e «Terraform HCL (bozza)». Il testo è mostrato come verrà scritto, con il numero di righe e il numero di dispositivi e di connessioni del canvas. «Copia negli appunti» lo copia; il secondo pulsante lo scarica come `<nome del progetto>-topology.yaml`, con il nome in minuscolo e ogni carattere che non sia una lettera, una cifra, un trattino o un trattino basso trasformato in un trattino. Un canvas senza dispositivi non ha nulla da esportare, e i due pulsanti sono spenti.
+
+Si esporta solo il canvas aperto. Un progetto con più canvas si esporta un canvas alla volta, cambiando canvas e riaprendo la finestra.
 
 ## Importare {#import}
 
-> [!TODO]
-> Al posto del canvas o in aggiunta.
+La seconda scheda prende un file: lo si trascina sul riquadro, oppure si fa clic sul riquadro per sceglierlo. Si accettano solo `.yaml` e `.yml`; per qualunque altro file arriva `Formato non supportato. Usa un file .yaml o .yml.` Non cambia ancora nulla: la finestra mostra il nome del file, quanti dispositivi e quante connessioni contiene, l'elenco «Dispositivi trovati» con il tipo e l'indirizzo di ciascuno e, se il file ha dei problemi, l'elenco «Avvisi».
+
+«Modalità:» dice dove vanno i dispositivi:
+
+- «Sostituisci topologia» svuota prima il canvas, dispositivi, connessioni e riquadri, e carica il file al suo posto. Non chiede conferma e non si può annullare: se il canvas vale la pena di essere tenuto, salva prima il progetto su file. Le impostazioni di rete del progetto e i nomi delle sue VLAN non vengono toccati.
+- «Aggiungi alla topologia» lascia ciò che c'è sul canvas e aggiunge i dispositivi e le connessioni del file, con ID nuovi.
+
+«Importa» lo fa, e un avviso dice quanti dispositivi e quante connessioni sono entrati. Il pulsante è spento finché il file non contiene nessun dispositivo.
+
+Il file non ha le posizioni, quindi i dispositivi vengono disposti su una griglia: tante colonne quanto la radice quadrata del numero, arrotondata per eccesso, a 250 unità l'una dall'altra in orizzontale e 200 in verticale, a partire da 100, 100, nell'ordine del file. Con «Aggiungi alla topologia» la griglia parte dallo stesso punto, e i dispositivi nuovi possono finire sopra quelli che c'erano già. Vista → Disposizione automatica rimette in ordine il disegno (chiede prima, e non si può annullare).
+
+Il lettore accetta il file come lo scrive l'app, con tutto sotto una chiave `pixelcake:`, e anche le stesse liste all'inizio del file senza `pixelcake:` intorno. Ciò che non gli serve lo legge come valore predefinito: un dispositivo senza nome si chiama `Device-1`, `Device-2`…, uno senza tipo è un `PC`, un'interfaccia senza stato è accesa. Ciò che non va viene detto negli avvisi:
+
+| Avviso | Quando |
+|---|---|
+| `Errore di lettura del file YAML: …` | Il testo non è YAML; segue il motivo del lettore, con la riga. |
+| `Il file YAML non contiene dati validi` | Il file è vuoto, oppure è un valore solo. |
+| `Struttura YAML non riconosciuta` | La chiave `pixelcake:` contiene qualcosa che non è un insieme di campi. |
+| `Nessun dispositivo trovato nel file` | Non c'è la lista `devices`, o è vuota. |
+| `Dispositivo 3: formato non valido, ignorato` | Una voce di `devices` non è un insieme di campi. |
+| `Router-1: IP "abc" non valido` | L'indirizzo di un dispositivo o di una porta non è fatto di quattro gruppi di al massimo tre cifre. Si controlla solo la forma: `300.1.1.1` passa. |
+| `Porta 1: VLAN fuori intervallo (1–4094)` | Una VLAN di una porta è fuori dall'intervallo. Il valore viene segnalato, non corretto. |
+| `FW-Edge: regola 2 incompleta o non valida, ignorata` | Una regola ha bisogno di `allow` o `deny`, di un servizio e di entrambe le estremità. Rotte, inoltri e record DNS dicono lo stesso di sé (`rotta 1 senza destinazione o prossimo salto`, `inoltro 1 incompleto o non valido`, `record DNS 1 senza nome o indirizzo`). Gli altri tengono il loro ordine. |
+| `Porta 2: server DHCP senza primo o ultimo indirizzo, ignorato` | Un pool senza `start` o senza `end`. |
+| `Connessione 4: dispositivo di partenza «PC-9» non trovato` | Una connessione nomina un dispositivo che il file non ha (così anche per la destinazione). La connessione viene lasciata fuori. |
+| `Connessione 2: porta 3 non trovata su «A», estremità non assegnata` | La porta, o la scheda, nominata da una connessione non è su quel dispositivo. La connessione resta e l'estremità si attacca a un'interfaccia libera quando il file si carica. |
+| `Connessione 2: porta 1 di «B» già usata da un'altra connessione, estremità non assegnata` | Due connessioni nominano la stessa interfaccia. La prima la tiene. |
+
+Un file con degli avvisi si può importare lo stesso: ciò che non va viene lasciato fuori e il resto viene letto.
 
 ## I campi {#fields}
 
-> [!TODO]
-> Un breve esempio del formato.
+L'inizio del file in cui viene esportata la rete di esempio «Ufficio: due reti e un router»:
+
+```yaml
+# PixelCake Topology Export
+# Generated: 2026-11-17
+# Devices: 7 | Connections: 6
+
+pixelcake:
+  version: "1.0"
+  project: Progetto senza nome
+  exported: 2026-11-17
+
+  devices:
+    - name: Router-1
+      type: Router
+      template_id: tpl-router
+      ip: 192.168.10.1
+      subnet: 255.255.255.0
+      location: Sala server
+      ports:
+        - id: 1
+          name: LAN Uffici
+          enabled: true
+          ip: 192.168.10.1
+          subnet: 255.255.255.0
+          speed: auto
+          mode: lan
+        …
+  connections:
+    - source: PC-1
+      target: SW-Office
+      source_nic: eth0
+      target_port: 1
+      type: access
+      bandwidth: 1 Gbps
+    …
+```
+
+Le righe di commento in alto e `version`, `project` e `exported` servono a chi legge il file: l'importazione non li usa. Una connessione nomina i suoi due dispositivi per nome, e la porta o la scheda a ciascuna estremità: `source_port: 8` per una porta, `source_nic: eth0` per una scheda (con il suo nome).
+
+Che cosa porta un dispositivo, quando ce l'ha: `type`, `template_id` (che tipo di server o di storage è), `ip`, `subnet`, `gateway`, `vendor`, `location`, `notes`, `vlan` (l'elenco del dispositivo), `stp`, e poi le liste. Una porta ha `id`, `name`, `enabled`, `ip`, `subnet`, `speed`, `mode`, `vlan` (un numero per una porta di accesso, una lista per un trunk), `poe`, `nat`, `dhcp_server`, `security_zone`, `description`. Una scheda ha `name`, `enabled`, `ip`, `subnet`, `gateway`, `dns`, `speed`, `mac`, `description`, e `dhcp: true` al posto degli indirizzi quando prende i suoi da un server. Le liste sono `routes` (`destination`, `via`), `firewall_rules`, `port_forwards` e `dns_records`.
+
+Regole e inoltri sono scritti nell'ordine in cui vengono letti, che è l'ordine che conta:
+
+```yaml
+      routes:
+        - destination: 192.168.0.0/16
+          via: 10.0.0.1
+          description: reti interne
+      firewall_rules:
+        - action: allow
+          service: web
+          from: untrust
+          to: 172.16.0.10
+          description: portale clienti
+        - action: allow
+          service: email
+          from: untrust
+          to: 192.168.30.40
+          description: posta in arrivo
+      port_forwards:
+        - service: web
+          interface: 3
+          to: 172.16.0.10
+          description: portale clienti
+```
+
+È una parte di FW-Edge nella rete dell'azienda. L'indirizzo che una scheda riceve dal DHCP non si scrive mai, e nemmeno l'indirizzo a cui un nome si risolve: discendono dal disegno.
 
 ## Limiti {#limits}
 
-> [!TODO]
-> Nomi che sembrano numeri; il Terraform non si può applicare.
+> [!LIMITS]
+> - **Lo YAML non è il progetto.** Lascia fuori le posizioni dei dispositivi, i riquadri, le impostazioni di rete del progetto, i nomi delle VLAN, i template personalizzati, il colore di una connessione e gli altri canvas. Ricaricare uno YAML dà la stessa rete, disegnata su una griglia nuova. Per tenere un progetto si salva il file del progetto.
+> - **I nomi sono le chiavi.** Una connessione trova i suoi dispositivi per nome. Due dispositivi con lo stesso nome non si distinguono: le connessioni vanno all'ultimo dei due, senza nessun avviso. Un nome che lo YAML legge come altro che testo, come `10` o `true`, viene scritto così com'è e riletto come numero o come booleano: il dispositivo viene rinominato `Device-1`, `Device-2`… senza avviso, e le connessioni che lo nominano risultano con un dispositivo non trovato. Dai ai dispositivi nomi con una lettera dentro.
+> - **Si controlla solo la forma.** Una maschera, un gateway, una zona, un servizio o un tipo che l'app non conosce viene letto così com'è: un dispositivo di tipo `Banana` viene importato. La simulazione lo tratta poi come può.
+> - **L'esportazione Terraform è una bozza.** Scrive tipi di risorsa segnaposto (`network_switch`, `compute_instance`…) e non nomina nessun provider, quindi `terraform apply` non ha nulla a cui applicarla. Porta indirizzi, VLAN, porte, schede, record DNS e connessioni, e lascia fuori rotte, regole del firewall, inoltri e note. Due dispositivi i cui nomi differiscono solo per la punteggiatura (`PC 1` e `PC-1`) ricevono lo stesso nome di risorsa, e le virgolette in un nome non vengono protette. Serve a mostrare dove va il progetto, non a essere usata.
+> - **Non c'è l'importazione di Terraform.** Leggere un file `.tfstate`, o un Terraform qualsiasi, non è realizzato: entra solo YAML.
