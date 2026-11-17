@@ -4,16 +4,16 @@ description: "Il linguaggio del terminale scritto per intero: la grammatica, le 
 order: 10
 ---
 
-Questa pagina è per chi vuole tutto il linguaggio in una pagina sola: le regole su cui è costruito, la grammatica, e le parole che accetta oltre a quelle che la grammatica nomina. Le altre pagine di questa sezione spiegano un comando alla volta; questa spiega come si legge una riga. La specifica del linguaggio, che l'app segue, è il file [docs/terminal-commands.md](https://github.com/pixelcake-dev/pixelcake/blob/main/docs/terminal-commands.md) dell'archivio: porta la versione del linguaggio, e le sue sessioni sono eseguite dagli stessi test degli esempi di questo riferimento. È scritta in inglese, come il linguaggio.
+Questa pagina è per chi vuole tutto il linguaggio in una pagina sola: le regole su cui è costruito, la grammatica, e le parole che accetta oltre a quelle che la grammatica nomina. Le altre pagine di questa sezione spiegano un comando alla volta; questa spiega come si legge una riga. La specifica del linguaggio, che l'app segue, è il file [docs/terminal-commands.md](https://github.com/pixelcake-dev/pixelcake/blob/main/docs/terminal-commands.md) del repository: riporta la versione del linguaggio, e le sue sessioni sono eseguite dagli stessi test degli esempi di questo riferimento. È scritta in inglese, come il linguaggio.
 
 ## Principi {#principles}
 
 1. **Prima il verbo.** Una riga comincia con ciò che si deve fare: `ping`, `trace`, `show`, `set`, `add`, `connect`, `use`.
-2. **Le preposizioni sono rumore facoltativo** dove non c'è ambiguità: `show config of Switch-1` e `show config Switch-1` sono la stessa riga.
+2. **Le preposizioni sono facoltative** dove non c'è ambiguità: `show config of Switch-1` e `show config Switch-1` sono la stessa riga.
 3. **Le parole di ruolo spezzano i nomi.** `from`, `to`, `of`, `on` e `via` dicono che cos'è ogni parte della riga, così che il nome di un dispositivo di più parole non abbia bisogno di virgolette: `ping PC Sales 1 from Core Switch HQ`.
 4. **Il contesto.** `use <device>` fa di un dispositivo quello di cui parlano tutti i comandi: il prompt prende il suo nome, e `from` e `on` sono sottintesi. `exit` esce ([Aiuto e sessione](help.md#use)).
-5. **Parole neutre rispetto ai produttori.** `show neighbors`, non il nome di un protocollo; `interface 3 down`, non `no shutdown`; `add route`, non `ip route`. Un'interfaccia è un'unica parola per una porta e per una scheda di rete, e `interfaces` è la tabella standard di entrambe.
-6. **Le tolleranze fanno parte del linguaggio.** Preposizioni facoltative, articoli scartati, le parole `device` e `host`, nomi tra virgolette, un indirizzo al posto di un dispositivo, e un suggerimento quando un verbo o un dispositivo non si trova ([più avanti](#tolerances)).
+5. **Parole che non appartengono a nessun produttore.** `show neighbors`, non il nome di un protocollo; `interface 3 down`, non `no shutdown`; `add route`, non `ip route`. *Interfaccia* è una parola sola per una porta e per una scheda di rete, e `interfaces` è la tabella standard di entrambe.
+6. **Le tolleranze fanno parte del linguaggio.** Preposizioni facoltative, articoli ignorati, le parole `device` e `host`, nomi tra virgolette, un indirizzo al posto di un dispositivo, e un suggerimento quando un verbo o un dispositivo non si trova ([più avanti](#tolerances)).
 7. **Ogni rifiuto dice che cosa ci si aspettava.** Un comando che non si può eseguire risponde con la forma che avrebbe dovuto avere, oppure con il motivo nei termini della rete (`PC-1 is a PC: routes belong on routers and firewalls`), e non cambia nulla.
 
 ## La grammatica {#ebnf}
@@ -84,30 +84,30 @@ name          ::= label "." label { "." label }     (* www.company.example *)
 
 In un contesto di dispositivo (`use …`) le parti `["from" device]`, `[["of"] device]` e `[["on"] device]` valgono per il dispositivo del contesto. `show dhcp` e `show dns` senza dispositivo, fuori da un contesto, riguardano tutto il disegno. Dove un comando finisce con qualcosa che può essere un dispositivo di più parole (la destinazione di una regola, l'indirizzo di un inoltro o di un record), è `on` a separarlo dal dispositivo a cui il comando si riferisce, e non si può tralasciare: `["on" device]`.
 
-La grammatica nomina la forma di ogni comando. Per restare breve lascia fuori le parole che significano come una che nomina: stanno nella tabella dei [sinonimi](#aliases).
+La grammatica nomina la forma di ogni comando. Per restare breve lascia fuori le parole che hanno lo stesso significato di una che nomina: sono nella tabella dei [sinonimi](#aliases).
 
 ## Parole, nomi e virgolette {#tokens}
 
-- **Una riga viene tagliata in parole** negli spazi. Maiuscole e minuscole non contano né per le parole del linguaggio (`PING`, `Show`), né per il nome di un dispositivo: `web-gestionale` trova Web-Gestionale.
+- **Una riga viene divisa in parole** dagli spazi. Maiuscole e minuscole non contano né per le parole del linguaggio (`PING`, `Show`), né per il nome di un dispositivo: `web-gestionale` trova Web-Gestionale.
 - **Un dispositivo è una sequenza di parole.** Tutto ciò che sta tra due parole di ruolo è un nome di dispositivo, unito con spazi singoli: `ping Core Switch HQ from PC Sales 1` ha due dispositivi di tre parole ciascuno. Le parole di ruolo sono `from`, `to`, `of`, `on` e `via`, e, ultima in un `trace`, `as`.
-- **Le virgolette tengono intero un nome.** Una parola tra virgolette non è mai una parola di ruolo e non viene mai scartata: `ping "Gateway to HQ" from "PC-1"`. Metti tra virgolette un nome che ha dentro una parola di ruolo. Una virgoletta non chiusa arriva fino alla fine della riga, e una coppia di virgolette senza nulla in mezzo viene ignorata.
-- **Un nome corrisponde a un dispositivo esattamente** (gli spazi contati una volta, maiuscole ignorate), oppure corrisponde un indirizzo: quello del dispositivo, o di una delle sue porte o schede che sia attiva. Un indirizzo sta per il dispositivo, e dove una domanda ha una destinazione è l'indirizzo puntato ([Destinazioni](asking.md#targets)). Un nome che non corrisponde non viene mai indovinato: viene rifiutato, con un suggerimento.
-- **Un nome di host è un nome con almeno un punto**, `www.azienda.example`: dove una domanda ha una destinazione, e un dispositivo o un indirizzo non corrispondono, viene cercato prima in un server DNS ([Interrogare](asking.md#targets)). È anche il nome di un record ([DHCP e DNS](dhcp-and-dns.md#add-record)). Una parola senza punto non è un nome di host.
+- **Le virgolette tengono intero un nome.** Una parola tra virgolette non è mai una parola di ruolo e non viene mai ignorata: `ping "Gateway to HQ" from "PC-1"`. Metti tra virgolette un nome che ha dentro una parola di ruolo. Una virgoletta non chiusa vale fino alla fine della riga, e una coppia di virgolette senza nulla in mezzo viene ignorata.
+- **Un nome corrisponde a un dispositivo esattamente** (gli spazi contati una volta, maiuscole ignorate), oppure corrisponde un indirizzo: quello del dispositivo, o di una delle sue porte o schede che sia attiva. Un indirizzo sta per il dispositivo, e dove una domanda ha una destinazione conta proprio quell'indirizzo ([Destinazioni](asking.md#targets)). Un nome che non corrisponde non viene mai indovinato: viene rifiutato, con un suggerimento.
+- **Un nome di host è un nome con almeno un punto**, `www.azienda.example`: dove una domanda ha una destinazione, e un dispositivo o un indirizzo non corrispondono, viene chiesto prima a un server DNS ([Interrogare](asking.md#targets)). È anche il nome di un record ([DHCP e DNS](dhcp-and-dns.md#add-record)). Una parola senza punto non è un nome di host.
 - **Un numero** è una o più cifre: una porta, una VLAN da 1 a 4094, una posizione in un elenco. **Una rete** è un indirizzo e un prefisso, `192.168.30.0/24`, oppure `default`.
 - **I valori vengono controllati prima di essere scritti**: un indirizzo che non è un indirizzo, una rete che non è una rete, una VLAN fuori da 1–4094 vengono rifiutati con la forma che ci si aspettava. La maschera di `set subnet` è l'unico valore che non viene controllato.
 
 ## Tolleranze {#tolerances}
 
-Ciò che il terminale accetta oltre alla forma della grammatica. Fa parte del linguaggio, e ogni voce è una riga da leggere nell'analizzatore:
+Ciò che il terminale accetta oltre alla forma della grammatica. Fa parte del linguaggio, e ogni voce si ritrova nel codice dell'analizzatore:
 
-- **Preposizioni facoltative.** `of`, `on`, `to` e `from` si possono tralasciare dove la grammatica le mette tra parentesi quadre, e vengono saltate quando stanno in testa a un nome: `show ip of PC-1`, `show ip on PC-1`, `show ip PC-1`.
-- **Articoli.** `the` e `a` in testa a un nome vengono scartati: `ping the Web-01 from the PC-1`.
-- **Le parole `device` e `host`**, in testa a un nome, vengono scartate anch'esse: `use device SW-Office`, `ping Web-01 from host PC-1`. Un nome che le ha dentro (`Meeting Room Host`), o che sta tra virgolette, viene tenuto com'è.
-- **Un indirizzo dove ci si aspetta un dispositivo**, in ogni comando. Un indirizzo digitato è l'indirizzo puntato.
-- **Un suggerimento quando qualcosa non si trova.** Un verbo sconosciuto riceve come risposta il verbo più vicino (`pinng` → `ping`); una parola sconosciuta dopo `show`, la più vicina (`did you mean "show devices"?`); un dispositivo che non si trova, il nome più vicino, quando è abbastanza vicino da essere un errore di battitura (`did you mean "Web-01"?`).
+- **Preposizioni facoltative.** `of`, `on`, `to` e `from` si possono tralasciare dove la grammatica le mette tra parentesi quadre, e vengono ignorate quando stanno all'inizio di un nome: `show ip of PC-1`, `show ip on PC-1`, `show ip PC-1`.
+- **Articoli.** `the` e `a` all'inizio di un nome vengono ignorati: `ping the Web-01 from the PC-1`.
+- **Le parole `device` e `host`**, all'inizio di un nome, vengono ignorate anch'esse: `use device SW-Office`, `ping Web-01 from host PC-1`. Un nome che le ha dentro (`Meeting Room Host`), o che sta tra virgolette, resta com'è.
+- **Un indirizzo dove ci si aspetta un dispositivo**, in ogni comando. Conta proprio l'indirizzo digitato.
+- **Un suggerimento quando qualcosa non si trova.** Per un verbo sconosciuto viene suggerito il verbo più vicino (`pinng` → `ping`); per una parola sconosciuta dopo `show`, la più vicina (`did you mean "show devices"?`); per un dispositivo che non si trova, il nome più vicino, quando è abbastanza vicino da essere un errore di battitura (`did you mean "Web-01"?`).
 - **Una riga vuota** viene saltata: il terminale stampa un nuovo prompt.
 
-Una riga rifiutata riceve una risposta in tre parti: `unknown command: "<la riga>"`, poi ciò che ci si aspettava o la parola più vicina, poi `type "help" for the command list`. Un dispositivo che non si trova riceve `device not found: "<nome>"`. Tutto il resto è un motivo, nelle parole della rete.
+Una riga rifiutata riceve una risposta in tre parti: `unknown command: "<la riga>"`, poi ciò che ci si aspettava o la parola più vicina, poi `type "help" for the command list`. Un dispositivo che non si trova riceve `device not found: "<nome>"`. Tutto il resto è un motivo, nei termini della rete.
 
 ### I sinonimi {#aliases}
 
@@ -130,18 +130,18 @@ Una riga rifiutata riceve una risposta in tre parti: `unknown command: "<la riga
 | `interface <id> pool …` | `interface <id> dhcp pool …`, e `interface <id> dhcp server …` |
 | `none` in `ip`, `gateway`, `zone`, `dns`, `pool` | `clear`. Per `pool` anche `off` |
 | `off` in `nat` e `dhcp` | `none`, `no`, `disable` |
-| `gateway` in un pool | `gw` |
+| `gateway` in `interface … pool` | `gw` |
 | `allow`, `deny` | `permit`, `block` |
 | un servizio `any` | `all` |
 | un servizio `ping` | `icmp` |
 | un servizio `web` | `http`, `https` |
 | un servizio `email` | `mail`, `smtp` |
 | `interface` in `add forward … from interface <n>` | `port`, oppure niente |
-| `<first> to <last>` in un pool | `<first>-<last>`, oppure `<first> <last>` |
+| `<first> to <last>` in `interface … pool` | `<first>-<last>`, oppure `<first> <last>` |
 
 ### Le versioni del linguaggio {#versions}
 
-Il linguaggio ha una versione, mostrata da `help` nella prima riga, e descritta nella [panoramica](index.md#version). Fino alla versione 1.0 le forme della grammatica sono stabili, ma i sinonimi e la formulazione delle risposte possono ancora cambiare tra due versioni minori: gli esempi di questo riferimento vengono eseguiti sull'app a ogni modifica, e falliscono quando una risposta non è quella stampata qui.
+Il linguaggio ha una versione, mostrata da `help` nella prima riga, e descritta nella [panoramica](index.md#version). Fino alla versione 1.0 le forme della grammatica sono stabili, ma i sinonimi e la formulazione delle risposte possono ancora cambiare tra due versioni minori: gli esempi di questo riferimento vengono eseguiti sull'app a ogni modifica, e i test falliscono quando una risposta non è quella stampata qui.
 
 ## Vedi anche {#see-also}
 

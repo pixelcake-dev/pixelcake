@@ -1,10 +1,10 @@
 ---
 title: "Firewall e NAT"
-description: "I comandi per le zone di sicurezza e le regole di un firewall, per il NAT sorgente e per gli inoltri di porta."
+description: "I comandi per le zone di sicurezza e le regole di un firewall, per il NAT sorgente e per gli inoltri."
 order: 5
 ---
 
-Un firewall mette ogni sua porta in una zona di sicurezza e filtra ciò che passa da una zona all'altra con un elenco ordinato di regole. Un router o un firewall può anche tradurre gli indirizzi: il NAT sorgente su una porta, e gli inoltri che pubblicano un servizio all'interno. Questi comandi scrivono le stesse impostazioni delle schede «Porte», «Regole» e «NAT» della finestra del dispositivo. Che cosa significano, e che cosa ne fa il motore, è in [Zone e regole del firewall](../services/firewall.md) e in [NAT e inoltri](../services/nat.md); le pagine di questa sezione elencano i comandi. `show rules` e `show nat` rileggono il risultato ([Comandi show](show.md#show-rules)).
+Un firewall mette ogni sua porta in una zona di sicurezza e filtra ciò che passa da una zona all'altra con un elenco ordinato di regole. Un router o un firewall può anche tradurre gli indirizzi: il NAT sorgente su una porta, e gli inoltri, che rendono raggiungibile da fuori un servizio interno. Questi comandi scrivono le stesse impostazioni delle schede «Porte», «Regole» e «NAT» della finestra del dispositivo. Che cosa significano, e che cosa ne fa il motore, è spiegato in [Zone e regole del firewall](../services/firewall.md) e in [NAT e inoltri](../services/nat.md); le pagine di questa sezione elencano i comandi. `show rules` e `show nat` rileggono il risultato ([Comandi show](show.md#show-rules)).
 
 Nella sintassi qui sotto `<n>` è il numero di una porta, `<firewall>` un firewall e `<device>` un router o un firewall; `on <device>` si può tralasciare dentro `use <device>`. La notazione è spiegata nella [panoramica](index.md#conventions). I comandi sono in inglese, come tutto il terminale.
 
@@ -21,7 +21,7 @@ Mette una porta di un firewall in una zona di sicurezza. `trust` è l'interno, `
 | `<n>` | Il numero di una porta del firewall |
 | `trust`, `untrust`, `dmz`, `none` | La zona della porta, oppure nessuna zona |
 
-Solo le porte di un firewall hanno una zona. Come viene giudicato un flusso da una zona a un'altra è in [Zone e regole del firewall](../services/firewall.md#zones).
+Solo le porte di un firewall hanno una zona. Come viene giudicato un flusso da una zona all'altra è spiegato in [Zone e regole del firewall](../services/firewall.md#zones).
 
 ```ncl sample=company
 pixelcake> show ports FW-Edge
@@ -49,7 +49,7 @@ add rule [<position>] allow|deny [<service>|any] from <source> to <destination> 
   allow may be written permit, deny block
 ```
 
-Aggiunge una regola all'elenco di un firewall. Le regole si leggono dall'alto, e la prima che corrisponde a servizio, origine e destinazione decide; quando nessuna corrisponde, decide la politica delle zone ([regole](../services/firewall.md#rules)).
+Aggiunge una regola all'elenco di un firewall. Le regole si leggono dall'alto, e la prima che corrisponde per servizio, partenza e destinazione decide; quando nessuna corrisponde, decide la politica delle zone ([regole](../services/firewall.md#rules)).
 
 | Parametro | Che cos'è |
 |---|---|
@@ -59,9 +59,9 @@ Aggiunge una regola all'elenco di un firewall. Le regole si leggono dall'alto, e
 | `<source>`, `<destination>` | `any`, una zona (`trust`, `untrust`, `dmz`), un indirizzo, una rete (`192.168.30.0/24`) o un dispositivo |
 | `<firewall>` | Il dispositivo su cui va la regola. Dentro `use <device>` si tralascia |
 
-Un dispositivo dato come origine o destinazione viene scritto nella regola come il suo indirizzo, e la risposta dice quale (`Srv-Auth → 192.168.30.10`): la regola tiene quell'indirizzo anche se il dispositivo lo cambia dopo. Un dispositivo a cui l'indirizzo è stato assegnato dal DHCP lo dice a sua volta. Un dispositivo senza indirizzo viene rifiutato. Se una regola nomina una zona in cui non sta nessuna porta del firewall, la regola viene aggiunta e la risposta lo dice.
+Un dispositivo indicato come partenza o destinazione viene scritto nella regola con il suo indirizzo, e la risposta dice quale (`Srv-Auth → 192.168.30.10`): la regola tiene quell'indirizzo anche se poi il dispositivo lo cambia. Se l'indirizzo gli è stato assegnato dal DHCP, la risposta dice anche questo. Un dispositivo senza indirizzo viene rifiutato. Se una regola nomina una zona in cui non sta nessuna porta del firewall, la regola viene aggiunta e la risposta lo dice.
 
-Anche un router accetta regole, anche se il rifiuto che nomina i firewall non lo dice: il motore filtra su un router che ha almeno una regola, come fa su un firewall.
+Anche un router accetta regole, benché il messaggio di rifiuto parli solo di firewall: il motore filtra su un router che ha almeno una regola, come fa su un firewall.
 
 ```ncl sample=company
 pixelcake> add rule 1 deny web from 203.0.113.50 to Portale-Clienti on FW-Edge
@@ -110,7 +110,7 @@ remove rule <n> [from] <firewall>
 delete rule <n> [from] <firewall>
 ```
 
-Toglie dall'elenco la regola numero `<n>`, numerata come la numera `show rules`; le regole dopo di lei salgono di uno. `delete` è uguale a `remove`, e dopo il numero si può scrivere `on` al posto di `from`.
+Toglie dall'elenco la regola numero `<n>`, con il numero che le dà `show rules`; le regole successive salgono di un posto. `delete` è uguale a `remove`, e dopo il numero si può scrivere `on` al posto di `from`.
 
 | Parametro | Che cos'è |
 |---|---|
@@ -142,7 +142,7 @@ dns
 any
 ```
 
-I servizi che una regola o un inoltro possono nominare, e le parole con cui si scrive ciascuno. Maiuscole e minuscole non contano. `any` sta per tutti e quattro ed è ciò che significa una regola o un inoltro senza servizio; `all` è la stessa parola. `trace … as <service>` accetta i quattro servizi ma non `any` ([Interrogare](asking.md#trace)). Qualunque altra cosa, come `ssh` o il numero di una porta, viene rifiutata: il motore conosce questi quattro e nessuna porta.
+I servizi che una regola o un inoltro possono nominare, e le parole con cui si scrive ciascuno. Maiuscole e minuscole non contano. `any` sta per tutti e quattro ed è ciò che significa una regola o un inoltro senza servizio; `all` è la stessa parola. `trace … as <service>` accetta i quattro servizi ma non `any` ([Interrogare](asking.md#trace)). Qualunque altra cosa, come `ssh` o il numero di una porta, viene rifiutata: il motore conosce questi quattro servizi, e nessun numero di porta.
 
 ```ncl sample=company
 pixelcake> add rule allow gopher from any to any on FW-Edge
@@ -160,13 +160,13 @@ interface <n> nat [on] <device>
 interface <n> nat off [on] <device>
 ```
 
-Accende il NAT sorgente su una porta di un router o di un firewall: ciò che il dispositivo inoltra da quella porta esce con l'indirizzo della porta, e le risposte tornano al vero mittente. `nat off` lo spegne; `nat none` è uguale. Entrambi non fanno nulla, e lo dicono, quando la porta è già come richiesto.
+Accende il NAT sorgente su una porta di un router o di un firewall: ciò che il dispositivo inoltra da quella porta esce con l'indirizzo della porta, e le risposte tornano al vero mittente. `nat off` lo spegne; `nat none` è uguale. Se la porta è già come richiesto, nessuno dei due fa nulla, e la risposta lo dice.
 
 | Parametro | Che cos'è |
 |---|---|
 | `<n>` | Il numero di una porta di un router o di un firewall |
 
-Una porta senza indirizzo viene accettata, e la risposta dice che non si traduce nulla finché non ne ha uno. Il passaggio di una traccia dice che cosa è stato tradotto (`NAT: source 192.168.10.12 → 203.0.113.1`, [NAT sorgente](../services/nat.md#source-nat)).
+Una porta senza indirizzo viene accettata, e la risposta dice che non si traduce nulla finché non ne ha uno. Nel `trace`, la riga di quel dispositivo dice che cosa è stato tradotto (`NAT: source 192.168.10.12 → 203.0.113.1`, [NAT sorgente](../services/nat.md#source-nat)).
 
 ```ncl sample=company
 pixelcake> show nat FW-Edge
@@ -206,16 +206,16 @@ NAT is set on the ports of a router or a firewall: SW-Core is a Switch
 add forward [<service>|any] from [interface] <n> to <address> [on] <device>
 ```
 
-Pubblica all'esterno un servizio di un dispositivo interno: ciò che arriva all'indirizzo della porta `<n>`, per quel servizio, viene mandato all'indirizzo interno. Gli inoltri si leggono dall'alto e viene preso il primo che corrisponde ([inoltri di porta](../services/nat.md#forwards)).
+Pubblica all'esterno un servizio di un dispositivo interno: ciò che arriva all'indirizzo della porta `<n>`, per quel servizio, viene mandato all'indirizzo interno. Gli inoltri si leggono dall'alto e vale il primo che corrisponde ([inoltri](../services/nat.md#forwards)).
 
 | Parametro | Che cos'è |
 |---|---|
 | `<service>` | Uno dei [servizi](#services), oppure `any`. Senza, l'inoltro vale per ogni servizio |
-| `<n>` | Il numero della porta su cui arriva il traffico, che deve avere un indirizzo. Prima si può scrivere `interface` o `port`, oppure niente |
+| `<n>` | Il numero della porta su cui arriva il traffico, che deve avere un indirizzo. Prima del numero si può scrivere `interface` o `port`, oppure niente |
 | `<address>` | L'indirizzo interno, oppure un dispositivo: il comando scrive allora il suo indirizzo e dice quale |
 | `<device>` | Il router o il firewall. Dentro `use <device>` si tralascia |
 
-La risposta dà il numero dell'inoltro, l'indirizzo a cui il servizio si raggiunge da fuori e, quando servono, un avviso che un inoltro precedente prende prima lo stesso traffico e un promemoria che un firewall ha bisogno anche di una regola che lasci entrare il traffico ([con le regole di un firewall](../services/nat.md#with-rules)). Aggiungere un inoltro che il dispositivo ha già lo dice e non aggiunge nulla.
+La risposta dà il numero dell'inoltro, l'indirizzo a cui il servizio si raggiunge da fuori e, quando serve, un avviso se un inoltro precedente prende già lo stesso traffico, e un promemoria: su un firewall serve anche una regola che lasci entrare il traffico ([con le regole di un firewall](../services/nat.md#with-rules)). Se il dispositivo ha già lo stesso inoltro, il comando lo dice e non aggiunge nulla.
 
 ```ncl sample=company
 pixelcake> add forward ping from interface 3 to Portale-Clienti on FW-Edge
@@ -252,7 +252,7 @@ remove forward <n> [from] <device>
 delete forward <n> [from] <device>
 ```
 
-Toglie dall'elenco l'inoltro numero `<n>`, numerato come lo numera `show nat`. `delete` è uguale a `remove`, e `on` si può scrivere al posto di `from`.
+Toglie dall'elenco l'inoltro numero `<n>`, con il numero che gli dà `show nat`. `delete` è uguale a `remove`, e `on` si può scrivere al posto di `from`.
 
 | Parametro | Che cos'è |
 |---|---|
@@ -320,4 +320,4 @@ Router-Core has no forwards
 - [Zone e regole del firewall](../services/firewall.md), [NAT e inoltri](../services/nat.md): le zone, la politica delle zone, le regole, la traduzione, e ciò che non è simulato.
 - [Comandi show](show.md#show-rules): `show rules`, `show nat`, e `show ports` per le zone.
 - [Interrogare](asking.md#trace): `trace … as <service>`, per vedere quale regola decide.
-- [Interfacce e VLAN](interfaces-and-vlans.md#ip): l'indirizzo di una porta, di cui servono NAT e inoltri.
+- [Interfacce e VLAN](interfaces-and-vlans.md#ip): l'indirizzo di una porta, che serve al NAT e agli inoltri.

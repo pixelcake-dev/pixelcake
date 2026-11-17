@@ -1,12 +1,12 @@
 ---
 title: "DHCP e DNS"
-description: "I comandi che mettono una scheda sul DHCP, danno a un'interfaccia un intervallo di indirizzi da assegnare, indicano un server DNS e tengono i record di uno."
+description: "I comandi che mettono una scheda sul DHCP, danno a un'interfaccia un intervallo di indirizzi da assegnare, indicano un server DNS e gestiscono i suoi record."
 order: 6
 ---
 
-Due servizi permettono a un dispositivo di ricevere ciò che altrimenti dovrebbe avere scritto addosso. Il DHCP dà a una scheda di rete indirizzo, maschera, gateway e server DNS. Il DNS fa sì che un nome stia per un indirizzo. Questi comandi impostano entrambi, come le schede «DHCP» e «DNS» della finestra di un dispositivo, e `show dhcp` e `show dns` rileggono il risultato ([Comandi show](show.md#show-dhcp)). Come il motore calcola un'assegnazione e una ricerca, e che cosa lascia fuori, è in [DHCP](../services/dhcp.md) e in [DNS](../services/dns.md). Usare un nome in una domanda è in [Interrogare](asking.md#targets).
+Due servizi permettono a un dispositivo di ricevere ciò che altrimenti andrebbe scritto a mano. Il DHCP dà a una scheda di rete indirizzo, subnet mask, gateway e server DNS. Il DNS permette di usare un nome al posto di un indirizzo. Questi comandi impostano entrambi, come le schede «DHCP» e «DNS» della finestra di un dispositivo, e `show dhcp` e `show dns` rileggono il risultato ([Comandi show](show.md#show-dhcp)). Come il motore calcola un'assegnazione e una ricerca, e che cosa lascia fuori, è spiegato in [DHCP](../services/dhcp.md) e in [DNS](../services/dns.md). Come si usa un nome in una domanda lo spiega [Interrogare](asking.md#targets).
 
-Gli esempi girano sulla rete di esempio «Azienda: uffici, Wi-Fi, server e DMZ», dove Router-Core assegna gli indirizzi degli uffici e del Wi-Fi e Srv-Auth è il server DNS. Nella sintassi qui sotto `<name>` è il nome di una scheda (`eth0`), `<id>` il numero di una porta o il nome di una scheda, `<address>` un indirizzo IPv4; `on <device>` si può tralasciare dentro `use <device>`. La notazione è spiegata nella [panoramica](index.md#conventions). I comandi sono in inglese, come tutto il terminale, e i nomi di host della rete di esempio sono quelli italiani (`gestionale.azienda.example`).
+Gli esempi usano la rete di esempio «Azienda: uffici, Wi-Fi, server e DMZ», dove Router-Core assegna gli indirizzi degli uffici e del Wi-Fi e Srv-Auth è il server DNS. Nella sintassi qui sotto `<name>` è il nome di una scheda (`eth0`), `<id>` il numero di una porta o il nome di una scheda, `<address>` un indirizzo IPv4; `on <device>` si può tralasciare dentro `use <device>`. La notazione è spiegata nella [panoramica](index.md#conventions). I comandi sono in inglese, come tutto il terminale, e i nomi di host della rete di esempio sono quelli italiani (`gestionale.azienda.example`).
 
 ## interface … dhcp {#dhcp-client}
 
@@ -15,7 +15,7 @@ interface <name> dhcp [on] <device>
 interface <name> dhcp off [on] <device>
 ```
 
-Una scheda di rete prende l'indirizzo dal server DHCP della sua rete, oppure smette di farlo. La risposta dice quale indirizzo viene assegnato alla scheda, con maschera, gateway e server DNS, e da quale pool; oppure, quando nessun server può servirla, perché. `dhcp off` lascia la scheda senza indirizzo, e la risposta dice come darglielo. `dhcp none` è uguale a `dhcp off`.
+Una scheda di rete prende l'indirizzo dal server DHCP della sua rete, oppure smette di farlo. La risposta dice quale indirizzo viene assegnato alla scheda, con subnet mask, gateway e server DNS, e da quale intervallo; oppure, quando nessun server può servirla, perché. `dhcp off` lascia la scheda senza indirizzo, e la risposta dice come darglielo. `dhcp none` è uguale a `dhcp off`.
 
 | Parametro | Che cos'è |
 |---|---|
@@ -23,9 +23,9 @@ Una scheda di rete prende l'indirizzo dal server DHCP della sua rete, oppure sme
 | `<device>` | Il dispositivo a cui appartiene la scheda |
 
 - Un router, un firewall e uno switch non hanno un client DHCP: i loro indirizzi si scrivono a mano, e il comando viene rifiutato. Per la porta di un router o di un firewall il rifiuto nomina `interface <n> pool`, qui sotto.
-- Una scheda che è lei stessa un server DHCP (ha un pool) smette di assegnare indirizzi quando ne chiede uno: una scheda non fa le due cose, e la risposta lo dice.
-- Finché una scheda è sul DHCP non tiene un indirizzo suo. Un indirizzo scritto a mano, con `interface <name> ip` o con `set ip` (quando è la prima scheda), la toglie dal DHCP ([Interfacce e VLAN](interfaces-and-vlans.md#ip)). Gateway e server DNS arrivano con l'assegnazione, e `interface <name> gateway` e `interface <name> dns` vengono rifiutati.
-- Un'assegnazione non viene ricordata: il motore la ricalcola dal disegno ogni volta, come l'indirizzo libero più basso del pool ([quale indirizzo](../services/dhcp.md#which-address)).
+- Una scheda che è a sua volta un server DHCP (ha un intervallo da assegnare) smette di assegnare indirizzi quando ne chiede uno: una scheda non fa le due cose, e la risposta lo dice.
+- Finché una scheda è sul DHCP non ha un indirizzo proprio. Un indirizzo scritto a mano, con `interface <name> ip` o con `set ip` (quando è la prima scheda), la toglie dal DHCP ([Interfacce e VLAN](interfaces-and-vlans.md#ip)). Gateway e server DNS arrivano con l'assegnazione, e `interface <name> gateway` e `interface <name> dns` vengono rifiutati.
+- Un'assegnazione non viene ricordata: il motore la ricalcola dal disegno ogni volta, come l'indirizzo libero più basso dell'intervallo ([quale indirizzo](../services/dhcp.md#which-address)).
 
 ```ncl sample=company
 pixelcake> show ip PC-Vendite
@@ -55,7 +55,7 @@ pixelcake> interface eth0 gateway 192.168.10.1 on PC-Vendite
 interface eth0 on PC-Vendite: gateway 192.168.10.1
 ```
 
-Una scheda a cui nessun server risponde non ha indirizzo, e dice perché:
+Una scheda a cui nessun server risponde non ha indirizzo, e la risposta dice perché:
 
 ```ncl sample=office
 pixelcake> interface eth0 dhcp on Web-01
@@ -83,17 +83,17 @@ interface <id> [dhcp] pool <first> to <last> [gateway <address>] [dns <address>]
 interface <id> pool none [on] <device>
 ```
 
-Un'interfaccia assegna un intervallo di indirizzi alla sua rete: una porta di un router o di un firewall, oppure una scheda di un server. Un pool è l'intervallo, e con ogni indirizzo il server consegna la maschera della sua interfaccia, un gateway e un server DNS. Un'interfaccia ha un solo pool: uno nuovo sostituisce il vecchio.
+Un'interfaccia assegna alla sua rete gli indirizzi di un intervallo (il `pool` del comando): una porta di un router o di un firewall, oppure una scheda di un server. Con ogni indirizzo il server consegna la subnet mask della sua interfaccia, un gateway e un server DNS. Un'interfaccia ha un solo intervallo: uno nuovo sostituisce il vecchio.
 
 | Parametro | Che cos'è |
 |---|---|
-| `<id>` | Il numero di una porta, o il nome di una scheda di un server. L'interfaccia deve avere un indirizzo: il pool è per la sua rete |
+| `<id>` | Il numero di una porta, o il nome di una scheda di un server. L'interfaccia deve avere un indirizzo: l'intervallo è per la sua rete |
 | `<first>`, `<last>` | Il primo e l'ultimo indirizzo dell'intervallo, entrambi dentro la rete dell'interfaccia. `to` si può tralasciare, oppure i due si scrivono `<first>-<last>` |
-| `gateway <address>` | Il gateway consegnato. `gw` è la stessa parola. Senza, un router o un firewall consegna l'indirizzo della porta stessa, e un server non ne consegna nessuno: i suoi client parlano allora solo dentro la loro rete |
+| `gateway <address>` | Il gateway consegnato. `gw` è la stessa parola. Senza, un router o un firewall consegna l'indirizzo della porta stessa, e un server non ne consegna nessuno: allora i suoi client comunicano solo dentro la loro rete |
 | `dns <address>` | Il server DNS consegnato. Senza, nessuno |
-| `none` | Ferma il pool. `off` è uguale |
+| `none` | Spegne il server DHCP dell'interfaccia. `off` è uguale |
 
-`interface <id> dhcp pool …` è lo stesso comando con una parola in più. Le due opzioni `gateway` e `dns` si possono scrivere in un ordine o nell'altro. La risposta dà il numero degli indirizzi dell'intervallo, ciò che viene consegnato, chi ha già un'assegnazione da quel pool e un avviso quando un altro pool risponde alla stessa rete: serve il primo del disegno che ha ancora un indirizzo ([chi risponde a chi](../services/dhcp.md#servers)). `pool none` dice chi resta senza indirizzo.
+`interface <id> dhcp pool …` è lo stesso comando con una parola in più. Le due opzioni `gateway` e `dns` si possono scrivere in un ordine o nell'altro. La risposta dà il numero degli indirizzi dell'intervallo, ciò che viene consegnato, chi ha già un indirizzo da quell'intervallo e un avviso quando un altro server risponde sulla stessa rete: risponde il primo del disegno che ha ancora un indirizzo da dare ([chi risponde a chi](../services/dhcp.md#servers)). `pool none` dice chi resta senza indirizzo.
 
 ```ncl sample=company
 pixelcake> show dhcp Router-Core
@@ -151,14 +151,14 @@ PC-1 — addressing
 interface <name> dns <address>|none [on] <device>
 ```
 
-Il server DNS che una scheda di rete interroga quando al posto di un indirizzo si usa un nome: l'indirizzo di un dispositivo del disegno che tiene dei record. `dns none` fa sì che la scheda non interroghi nessuno; `clear` è la stessa parola. Un dispositivo interroga attraverso la sua prima scheda attiva che indica un server. Un router, un firewall e uno switch non hanno schede e non interrogano nessuno.
+Il server DNS che una scheda di rete interroga quando al posto di un indirizzo si usa un nome: l'indirizzo di un dispositivo del disegno che ha dei record. `dns none` fa sì che la scheda non interroghi nessuno; `clear` è la stessa parola. Un dispositivo fa le sue domande dalla prima scheda attiva che indica un server. Un router, un firewall e uno switch non hanno schede e non interrogano nessuno.
 
 | Parametro | Che cos'è |
 |---|---|
 | `<name>` | Il nome di una scheda di rete |
-| `<address>` | L'indirizzo del server DNS. Viene controllato come indirizzo, non come dispositivo: se nessun dispositivo lo ha, lo dice il motore nella ricerca |
+| `<address>` | L'indirizzo del server DNS. Viene controllato come indirizzo, non come dispositivo: se nessun dispositivo ce l'ha, lo dice il motore quando fa la domanda |
 
-Su una scheda che è sul DHCP il comando viene rifiutato: il server DNS arriva con l'assegnazione, dal `dns` del pool.
+Su una scheda che è sul DHCP il comando viene rifiutato: il server DNS arriva con l'assegnazione, dall'opzione `dns` di `interface … pool`.
 
 ```ncl sample=company
 pixelcake> show dns PC-Vendite
@@ -192,15 +192,15 @@ interface eth0 on Portatile-1 takes its address from DHCP: the DNS server comes 
 add record <name> [to] <address> [on] <server>
 ```
 
-Un server tiene un record: un nome di host e l'indirizzo per cui sta. Il server risponde a una ricerca per i nomi che tiene, e per nessun altro.
+Aggiunge un record a un server: un nome di host e l'indirizzo che gli corrisponde. Il server risponde alle domande sui nomi che conosce, e su nessun altro.
 
 | Parametro | Che cos'è |
 |---|---|
-| `<name>` | Un nome di host con almeno un punto, `gestionale.azienda.example`. Maiuscole e minuscole sono uguali: viene tenuto in minuscolo |
+| `<name>` | Un nome di host con almeno un punto, `gestionale.azienda.example`. Maiuscole e minuscole non contano: viene salvato in minuscolo |
 | `<address>` | Un indirizzo IPv4, oppure un dispositivo: il comando scrive allora l'indirizzo del dispositivo e dice quale. Al posto di `to` si può scrivere `is` o `at`, oppure niente |
 | `<server>` | Un dispositivo di tipo Server. Dentro `use <device>` si tralascia |
 
-Un nome ha un indirizzo solo: un nome già presente prende il nuovo indirizzo, e la risposta dice qual era; lo stesso nome con lo stesso indirizzo non aggiunge nulla. Il dispositivo dato come indirizzo viene scritto come l'indirizzo che ha adesso: se il suo indirizzo cambia più tardi, il record non lo segue.
+Un nome ha un indirizzo solo: un nome già presente prende il nuovo indirizzo, e la risposta dice qual era; lo stesso nome con lo stesso indirizzo non aggiunge nulla. Un dispositivo indicato al posto dell'indirizzo viene scritto con l'indirizzo che ha adesso: se poi il suo indirizzo cambia, il record non lo segue.
 
 ```ncl sample=company
 pixelcake> add record intranet.azienda.example Web-Gestionale on Srv-Auth
@@ -234,13 +234,13 @@ remove record <n>|<name> [from] <server>
 delete record <n>|<name> [from] <server>
 ```
 
-Toglie un record, per il suo numero nell'elenco del server (`show dns <server>` li numera) o per il suo nome. I record dopo di lui salgono di uno. `delete` è uguale a `remove`, e `on` si può scrivere al posto di `from`.
+Toglie un record, per il suo numero nell'elenco del server (`show dns <server>` li numera) o per il suo nome. I record successivi salgono di un posto. `delete` è uguale a `remove`, e `on` si può scrivere al posto di `from`.
 
 | Parametro | Che cos'è |
 |---|---|
 | `<n>` | Il numero di un record, da 1 |
 | `<name>` | Il nome di un record |
-| `<server>` | Il server che lo tiene |
+| `<server>` | Il server che ha il record |
 
 ```ncl sample=company
 pixelcake> remove record 1 from Srv-Auth

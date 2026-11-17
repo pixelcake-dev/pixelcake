@@ -6,7 +6,7 @@ order: 2
 
 Questi comandi cambiano un dispositivo nel suo insieme, oppure il cavo tra due dispositivi. Ciò che appartiene a una porta o a una scheda di rete (il suo indirizzo, il suo stato, la sua VLAN, la sua zona) si imposta con `interface` e ha pagine proprie: [Interfacce e VLAN](interfaces-and-vlans.md), [Firewall e NAT](firewall-and-nat.md) e [DHCP e DNS](dhcp-and-dns.md). Come ogni comando che cambia la rete, modificano il disegno che vedi: la modifica è subito sul canvas e viene conservata con il progetto come ogni altra ([panoramica](index.md#edits)).
 
-Un dispositivo si indica con il nome che ha sul canvas, oppure con uno dei suoi indirizzi; `[of]` e `[to]` sono parole che il terminale accetta e di cui non ha bisogno. La [panoramica](index.md#conventions) spiega il resto della notazione. I comandi sono in inglese, come tutto il terminale.
+Un dispositivo si indica con il nome che ha sul canvas, oppure con uno dei suoi indirizzi; `[of]` e `[to]` sono parole che il terminale accetta ma che si possono omettere. La [panoramica](index.md#conventions) spiega il resto della notazione. I comandi sono in inglese, come tutto il terminale.
 
 ## set {#set}
 
@@ -17,18 +17,18 @@ set subnet [of] <device> [to] <mask>
 set name [of] <device> [to] <new name>
 ```
 
-Imposta una proprietà di un dispositivo: il suo indirizzo, il suo gateway predefinito, la sua maschera o il suo nome. Sono indirizzo, maschera, gateway e nome della scheda «Generale» della finestra del dispositivo ([indirizzi](../building/addresses.md)).
+Imposta una proprietà di un dispositivo: il suo indirizzo, il suo gateway predefinito, la sua maschera o il suo nome. Sono i campi indirizzo, subnet mask, gateway e nome della scheda «Generale» della finestra del dispositivo ([indirizzi](../building/addresses.md)).
 
 | Parametro | Che cos'è |
 |---|---|
 | `<device>` | Il dispositivo da cambiare. Dentro `use <device>` si tralascia |
 | `<address>` | Un indirizzo IPv4, `192.168.10.21`. Viene controllato prima di essere scritto |
-| `<mask>` | La maschera di sottorete, `255.255.255.0`. Il comando scrive ciò che viene digitato: non viene controllata |
-| `<new name>` | Il nuovo nome del dispositivo, di una o più parole. È l'ultima cosa del comando, quindi non servono virgolette |
+| `<mask>` | La subnet mask, `255.255.255.0`. Il comando scrive ciò che viene digitato: non viene controllata |
+| `<new name>` | Il nuovo nome del dispositivo, di una o più parole. Viene per ultimo nel comando, quindi non servono virgolette |
 
 Che cosa fa ciascuno:
 
-- **Su un dispositivo con schede di rete**, `set ip`, `set gateway` e `set subnet` scrivono la prima scheda, quella che la finestra del dispositivo mostra come suo indirizzo. Per ogni altra scheda si usano `interface <name> ip` e `interface <name> gateway` ([Interfacce e VLAN](interfaces-and-vlans.md#ip)).
+- **Su un dispositivo con schede di rete**, `set ip`, `set gateway` e `set subnet` cambiano la prima scheda, quella che la finestra del dispositivo mostra come suo indirizzo. Per ogni altra scheda si usano `interface <name> ip` e `interface <name> gateway` ([Interfacce e VLAN](interfaces-and-vlans.md#ip)).
 - **Su un router o su un firewall**, `set gateway` imposta la rotta predefinita, e la risposta lo dice. `add route default` fa lo stesso con un prossimo salto che può essere un dispositivo ([Rotte](routes.md)). `set ip` imposta l'indirizzo con cui il dispositivo è conosciuto; l'indirizzo di ogni porta si imposta con `interface <n> ip`.
 - **Su uno switch**, `set ip` imposta l'indirizzo a cui lo switch risponde, perché nessuna porta di uno switch ne ha uno.
 - **Se l'indirizzo è già di un altro dispositivo**, il comando lo scrive lo stesso e stampa un avviso con il nome di quel dispositivo.
@@ -87,7 +87,7 @@ connect <device> [to] <device>
 disconnect <device> [from] <device>
 ```
 
-`connect` disegna una connessione tra due dispositivi, come fa trascinare un cavo dall'uno all'altro sul canvas; `disconnect` la toglie. Ogni estremità di una nuova connessione viene attaccata alla prima interfaccia libera del suo dispositivo: la porta con il numero più basso, oppure una scheda di rete, e la risposta dice quale. I due dispositivi si possono dare in un ordine o nell'altro, e `to` o `from` si possono tralasciare quando ciascun nome è di una parola sola.
+`connect` disegna una connessione tra due dispositivi, come quando sul canvas trascini un cavo dall'uno all'altro; `disconnect` la toglie. Ogni estremità di una nuova connessione viene assegnata alla prima interfaccia libera del suo dispositivo: la porta con il numero più basso, oppure una scheda di rete, e la risposta dice quale. I due dispositivi si possono indicare in un ordine o nell'altro, e `to` o `from` si possono tralasciare quando ciascun nome è di una parola sola.
 
 | Parametro | Che cos'è |
 |---|---|
@@ -95,9 +95,9 @@ disconnect <device> [from] <device>
 
 Che cosa dice la risposta:
 
-- Un'estremità senza interfaccia libera (tutte le porte sono occupate, oppure il dispositivo non ne ha) viene disegnata lo stesso, ma non attaccata a un'interfaccia, e la risposta lo dice. Una connessione non attaccata a un'interfaccia non si può controllare porta per porta: le regole per porta vengono saltate e il motore lo scrive nelle sue note.
-- Su un firewall le cui porte hanno zone di sicurezza l'estremità non viene mai attaccata da sola, anche se ci sono porte libere: è la porta a decidere la zona. La risposta lo dice, e dice dove scegliere la porta, nella finestra della connessione (vedi [Su un firewall con zone](../building/cables.md#firewall)).
-- Su un firewall le cui porte sono in zone di sicurezza l'estremità non viene attaccata nemmeno così: la porta, e con lei la zona, si sceglie nella finestra della connessione, che si apre con «Modifica connessione». La risposta dice che la porta di una nuova connessione si sceglie a mano, e che fino ad allora quell'estremità non è attaccata.
+- Un'estremità senza interfaccia libera (tutte le porte sono occupate, oppure il dispositivo non ne ha) viene disegnata lo stesso, ma non assegnata a un'interfaccia, e la risposta lo dice. Una connessione non assegnata a un'interfaccia non si può controllare porta per porta: le regole che riguardano le porte vengono saltate, e il motore lo scrive nelle sue note.
+- Su un firewall le cui porte hanno zone di sicurezza l'estremità non viene mai assegnata da sola, anche se ci sono porte libere: è la porta a decidere la zona. La risposta lo dice, e dice dove scegliere la porta, nella finestra della connessione (vedi [Su un firewall con zone](../building/cables.md#firewall)).
+- Su un firewall le cui porte sono in zone di sicurezza l'estremità non viene assegnata nemmeno così: la porta, e con essa la zona, si sceglie nella finestra della connessione, che si apre con «Modifica connessione». La risposta dice che la porta di una nuova connessione si sceglie a mano, e che fino ad allora quell'estremità non è assegnata.
 - `connect` tra due dispositivi che hanno già una connessione non fa nulla, e lo dice. Anche `disconnect` tra due dispositivi che non ne hanno lo dice.
 
 ```ncl sample=office
