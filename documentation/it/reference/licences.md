@@ -1,22 +1,22 @@
 ---
 title: "Licenze e riconoscimenti"
-description: "La licenza di PixelCake, dei suoi disegni e di queste pagine, e dei caratteri e delle icone che porta con sé."
+description: "La licenza di PixelCake, dei suoi disegni e di queste pagine, e quelle dei caratteri e delle icone che include."
 order: 6
 ---
 
-PixelCake è libero e open source. Ciò che è suo sta sotto una licenza sola, e ciò che porta con sé da altri tiene la licenza che i suoi autori gli hanno dato. I testi delle licenze dei caratteri e delle icone viaggiano con l'app, e la guida li nomina: Aiuto → Informazioni, sotto «Licenze di terzi».
+PixelCake è libero e open source. Ciò che è suo sta sotto una licenza sola, e ciò che porta con sé da altri tiene la licenza che i suoi autori gli hanno dato. I testi delle licenze dei caratteri e delle icone sono inclusi nell'app, e la guida li elenca: Aiuto → Informazioni, sotto «Licenze di terzi».
 
 ## PixelCake {#app}
 
-PixelCake è rilasciato con la GNU Affero General Public License, versione 3, `AGPL-3.0-only`. Il testo è il file [LICENSE](https://github.com/pixelcake-dev/pixelcake/blob/main/LICENSE) dell'archivio.
+PixelCake è rilasciato con la GNU Affero General Public License, versione 3, `AGPL-3.0-only`. Il testo è il file [LICENSE](https://github.com/pixelcake-dev/pixelcake/blob/main/LICENSE) del repository.
 
 In due frasi, e non come consulenza legale: puoi usarlo, studiarlo, modificarlo e condividerlo, per qualunque scopo. Se lo modifichi e lasci che altre persone usino la tua versione attraverso una rete, devi offrire loro il codice sorgente della tua versione con la stessa licenza.
 
-I disegni dei dispositivi sono propri di PixelCake, con la stessa licenza dell'app. Queste pagine fanno parte dello stesso archivio, nella cartella `documentation/`, e viaggiano con lui con quella licenza. Il codice è su [github.com/pixelcake-dev/pixelcake](https://github.com/pixelcake-dev/pixelcake).
+I disegni dei dispositivi sono propri di PixelCake, con la stessa licenza dell'app. Queste pagine fanno parte dello stesso repository, nella cartella `documentation/`, e hanno la stessa licenza. Il codice è su [github.com/pixelcake-dev/pixelcake](https://github.com/pixelcake-dev/pixelcake).
 
-## Che cosa porta con sé {#bundled}
+## Che cosa include {#bundled}
 
-L'app e queste pagine portano i due caratteri dell'interfaccia; l'app porta due serie di icone. Il testo di ogni licenza è un file dell'app compilata, sotto `licenses/`.
+L'app e queste pagine includono i due caratteri dell'interfaccia; l'app include anche due serie di icone. Il testo di ogni licenza è un file dell'app compilata, sotto `licenses/`.
 
 | Che cosa | Licenza | A che cosa serve | Testo |
 |---|---|---|---|
@@ -27,7 +27,7 @@ L'app e queste pagine portano i due caratteri dell'interfaccia; l'app porta due 
 
 Le icone sono incluse nell'app: mentre lavori non si scarica nulla da un servizio di icone. Lo stesso vale per i caratteri. I disegni dei dispositivi non vengono da queste serie.
 
-L'app è fatta anche con librerie open source, che tengono le loro licenze e sono elencate con le versioni in `frontend/package.json`: React e React DOM, React Flow, Zustand, Sonner, dagre e react-custom-scrollbars-2 (MIT), il componente Iconify per React (MIT), `lucide-react` e `yaml` (ISC). Le loro licenze stanno nei loro pacchetti, con il sorgente.
+L'app è fatta anche con librerie open source, ciascuna con la sua licenza, elencate con le loro versioni in `frontend/package.json`: React e React DOM, React Flow, Zustand, Sonner, dagre e react-custom-scrollbars-2 (MIT), il componente Iconify per React (MIT), `lucide-react` e `yaml` (ISC). I testi delle loro licenze sono nei rispettivi pacchetti, con il sorgente.
 
 ## Riconoscimenti {#credits}
 

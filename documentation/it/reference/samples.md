@@ -1,14 +1,14 @@
 ---
 title: "Le reti di esempio"
-description: "Le cinque reti che vengono con l'app: che cosa contiene ciascuna, a che cosa serve, e quali esempi di queste pagine girano su di lei."
+description: "Le cinque reti che vengono con l'app: che cosa contiene ciascuna, a che cosa serve, e quali esempi di queste pagine la usano."
 order: 4
 ---
 
-Con l'app vengono cinque reti già configurate, così che ci sia qualcosa a cui fare domande prima di aver disegnato niente. Stanno nel pannello «Aggiungi», sotto «Esempi»; la schermata di benvenuto carica la prima con «Carica la rete di esempio». Caricarne una sostituisce ciò che c'è sul canvas, dopo la domanda «Caricare la rete di esempio?», e le impostazioni di rete del progetto diventano quelle dell'esempio: la rete da cui partono i dispositivi nuovi, il gateway, il server DNS quando c'è e un nome per ogni VLAN. I riquadri, i rettangoli colorati che dicono che cos'è un gruppo di dispositivi, ci sono in tutti gli esempi tranne l'ufficio.
+L'app ha cinque reti già configurate, per avere qualcosa a cui fare domande prima ancora di disegnare. Stanno nel pannello «Aggiungi», sotto «Esempi»; la schermata di benvenuto carica la prima con «Carica la rete di esempio». Caricarne una sostituisce ciò che c'è sul canvas, dopo la domanda «Caricare la rete di esempio?», e le impostazioni di rete del progetto diventano quelle dell'esempio: la rete da cui partono i dispositivi nuovi, il gateway, il server DNS quando c'è e un nome per ogni VLAN. I riquadri, i rettangoli colorati che dicono che cos'è un gruppo di dispositivi, ci sono in tutte le reti di esempio tranne quella dell'ufficio.
 
-Un esempio dà ai suoi dispositivi i nomi della lingua che l'interfaccia ha quando lo si carica, e li tiene poi: il PC delle vendite dell'azienda è `PC-Sales` in inglese e `PC-Vendite` in italiano. Il terminale parla inglese in tutte e due le lingue. Le immagini di questa pagina sono il canvas di ogni esempio esportato come immagine, una per lingua dove i nomi cambiano.
+Una rete di esempio dà ai suoi dispositivi i nomi nella lingua che ha l'interfaccia quando la si carica, e poi li tiene: il PC delle vendite dell'azienda è `PC-Sales` in inglese e `PC-Vendite` in italiano. Il terminale parla inglese in tutte e due le lingue. Le immagini di questa pagina sono il canvas di ogni rete esportato come immagine, una per lingua dove i nomi cambiano.
 
-Gli esempi di questa pagina girano sulla rete che li precede. Ognuno si può scrivere nel terminale ([il terminale](../terminal/index.md#open)) su un esempio appena caricato.
+I comandi di questa pagina usano la rete descritta subito prima. Ognuno si può provare nel terminale ([il terminale](../terminal/index.md#open)) su una rete di esempio appena caricata.
 
 ## Azienda {#company}
 
@@ -32,7 +32,7 @@ Ping failed (blocked): request: firewall FW-Edge: no rule matches, zone policy d
   dropped at: FW-Edge
 ```
 
-Altre domande per cui l'esempio è fatto: `show dhcp` elenca i due pool e i due indirizzi assegnati; `show vlans` ([VLAN](../building/vlans.md#trunk)) mostra il trunk; `browse Portale-Clienti from Cliente-Remoto` raggiunge il portale sul suo indirizzo pubblico, attraverso l'inoltro.
+Altre domande per cui questa rete è fatta: `show dhcp` elenca i due intervalli e i due indirizzi assegnati; `show vlans` ([VLAN](../building/vlans.md#trunk)) mostra il trunk; `browse Portale-Clienti from Cliente-Remoto` raggiunge il portale sul suo indirizzo pubblico, attraverso l'inoltro.
 
 ## Ufficio {#office}
 
@@ -40,7 +40,7 @@ Altre domande per cui l'esempio è fatto: `show dhcp` elenca i due pool e i due 
 
 ![La rete dell'ufficio. In alto Router-1, collegato a SW-Office a sinistra e a SW-Servers a destra. SW-Office ha sotto PC-1 e PC-2; SW-Servers ha sotto Web-01 e Mail-01.](../../media/samples/office.svg "La rete dell'ufficio: due reti, un router.")
 
-Da provare. Dai a un PC un gateway che non è il router e guarda la risposta nominarlo:
+Da provare. Dai a un PC un gateway che non è il router, e guarda come la risposta lo nomina:
 
 ```ncl sample=office
 pixelcake> ping Web-01 from PC-1
@@ -58,7 +58,7 @@ La pagina sulle [VLAN](../building/vlans.md#vlan-1) prende questa rete e la divi
 
 ## Sede {#site}
 
-«Sede: VLAN, DMZ e firewall»: 10 dispositivi e 10 connessioni, in tre riquadri (Internet, DMZ, Rete interna). L'interno ha due VLAN, uffici (10) e server (20), e Router-Core instrada tra l'una e l'altra; la sua rotta predefinita è il firewall. FW-Edge ha una porta per ogni zona e una regola sola: web da fuori verso il server web pubblico nella DMZ. Fa il NAT sulla porta che guarda Internet, e un inoltro pubblica il server web su 203.0.113.1.
+«Sede: VLAN, DMZ e firewall»: 10 dispositivi e 10 connessioni, in tre riquadri (Internet, DMZ, Rete interna). L'interno ha due VLAN, uffici (10) e server (20), e Router-Core instrada tra l'una e l'altra; la sua rotta predefinita è il firewall. FW-Edge ha una porta per ogni zona e una regola sola: web da fuori verso il server web pubblico nella DMZ. Fa il NAT sulla porta rivolta a Internet, e un inoltro pubblica il server web su 203.0.113.1.
 
 ![La rete della sede. Il riquadro Internet, in alto, contiene il simbolo di Internet e PC-Remoto. FW-Edge, fuori da ogni riquadro, è collegato a Internet, a SW-DMZ a destra e a Router-Core a sinistra. Il riquadro DMZ contiene SW-DMZ e Web-Pubblico. La rete interna contiene Router-Core, collegato con due cavi, con le etichette VLAN 10 e VLAN 20, a SW-Core, che ha PC-Uffici-1, PC-Uffici-2 e Srv-Interno.](../../media/samples/site.it.svg "La rete della sede: un firewall con tre zone.")
 
@@ -92,7 +92,7 @@ Ping failed (blocked): request: firewall FW-Edge: no rule matches, zone policy d
 
 ![La rete delle due sedi. In alto R-Riserva, collegato con cavi tratteggiati, con l'etichetta Linea di riserva, a R-Sede a sinistra e a R-Filiale a destra. R-Sede e R-Filiale sono collegati da un cavo a puntini con l'etichetta Linea principale. Il riquadro Sede contiene R-Sede, SW-Core con Srv-File, e sotto SW-Piano-1 e SW-Piano-2, ciascuno con un PC, collegati a SW-Core e tra loro. Il riquadro Filiale contiene R-Filiale, SW-Filiale, PC-Filiale-1 e PC-Filiale-2.](../../media/samples/two-sites.it.svg "La rete delle due sedi: una linea principale, una di riserva, e un anello di switch nella sede.")
 
-Da provare. Le due rotte, poi la strada che fa un ping finché la linea principale è su:
+Da provare. Le due rotte, poi la strada che fa un ping finché la linea principale funziona:
 
 ```ncl sample=two-sites
 pixelcake> show routes R-Sede
@@ -115,7 +115,7 @@ Tracing route to PC-Filiale-1 (192.168.2.11) from PC-Sede-1:
 Trace complete: destination reached.
 ```
 
-Poi rompila. Il terminale non può tagliare un cavo: lo si fa in una presentazione ([Presentazione](../asking/presentation.md#failures)). Premi «Presenta», fai clic sul cavo con l'etichetta «Linea principale» e scegli «Simula un guasto». Il pannello conta, tra i 5 dispositivi finali, 20 scambi che funzionano senza il guasto: nessuno si ferma, 12 prendono un'altra strada (quelli tra le due sedi, ora per R-Riserva) e 8 non cambiano.
+Poi rompila. Il terminale non può tagliare un cavo: lo si fa in una presentazione ([Presentazione](../asking/presentation.md#failures)). Premi «Presenta», fai clic sul cavo con l'etichetta «Linea principale» e scegli «Simula un guasto». Il pannello conta, tra i 5 dispositivi finali, 20 comunicazioni che senza il guasto funzionano: nessuna si interrompe, 12 passano da un'altra strada (quelle tra le due sedi, ora per R-Riserva) e 8 non cambiano.
 
 ## Multinazionale {#multinational}
 
@@ -127,7 +127,7 @@ Una delle sedi, il negozio di Palermo, da sola:
 
 ![Il negozio di Palermo, nel suo riquadro. FW-PA, in alto a destra, è collegato a SW-PA con un cavo per ogni VLAN. SW-PA ha le tre casse POS-PA-1, POS-PA-2 e POS-PA-3, la stampante PRN-PA, PC-PA-1 e il tablet TAB-PA-1, e il punto di accesso AP-PA-OSP, con i due dispositivi degli ospiti sul suo Wi-Fi.](../../media/samples/multinational-shop.it.svg "Il negozio di Palermo, dietro il suo firewall.")
 
-Da provare. Un trace da un PC di Roma all'applicazione ERP di Milano prende la linea diretta di Roma, passa dal router della WAN di Milano e arriva; le casse del negozio raggiungono il loro server col web e con nient'altro; un ospite non raggiunge le telecamere del magazzino:
+Da provare. Un `trace` da un PC di Roma all'applicazione ERP di Milano prende la linea diretta di Roma, passa dal router della WAN di Milano e arriva; le casse del negozio raggiungono il loro server solo con il web; un ospite non raggiunge le telecamere del magazzino:
 
 ```ncl sample=multinational
 pixelcake> trace ERP-APP from PC-RM-101
@@ -160,10 +160,10 @@ Ping failed (blocked): request: firewall FW-PA: denied by rule 3 (deny any from 
   dropped at: FW-PA
 ```
 
-Poi rompi qualcosa, in una presentazione: taglia il cavo con l'etichetta «Linea principale» tra R-MI-WAN e R-RM, la linea principale di Roma. Il pannello conta, tra i 132 dispositivi finali, 14.891 scambi che funzionano senza il guasto: nessuno si ferma, 4.422 prendono un'altra strada (Roma passa dall'MPLS), 10.469 non cambiano. Ci mette qualche secondo a calcolarlo.
+Poi rompi qualcosa, in una presentazione: taglia il cavo con l'etichetta «Linea principale» tra R-MI-WAN e R-RM, la linea principale di Roma. Il pannello conta, tra i 132 dispositivi finali, 14.891 comunicazioni che senza il guasto funzionano: nessuna si interrompe, 4422 passano da un'altra strada (Roma passa dall'MPLS), 10.469 non cambiano. Ci mette qualche secondo a calcolarlo.
 
 > [!LIMITS]
-> - Un esempio è un punto di partenza, non il modello di un'azienda vera. I suoi indirizzi sono fatti per l'esempio, e ciò che lascia fuori è ciò che l'app lascia fuori ([Limiti e domande](limits-and-faq.md#not-simulated)).
-> - Caricare un esempio sostituisce il canvas e le impostazioni di rete del progetto, senza annullamento. Salva il progetto su file prima, se il canvas vale la pena di essere tenuto.
+> - Una rete di esempio è un punto di partenza, non il modello di un'azienda vera. I suoi indirizzi sono fatti per l'esempio, e ciò che lascia fuori è ciò che l'app lascia fuori ([Limiti e domande](limits-and-faq.md#not-simulated)).
+> - Caricare una rete di esempio sostituisce il canvas e le impostazioni di rete del progetto, e non si può annullare. Salva prima il progetto su file, se il canvas merita di essere conservato.
 > - Internet e la rete MPLS sono sostituti: il motore lo dice in una nota e lascia passare il traffico. Un operatore vero non è simulato.
-> - La lingua in cui si carica un esempio è per sempre quella dei nomi dei suoi dispositivi: caricarlo in inglese e poi passare l'interfaccia all'italiano non rinomina `PC-Sales`.
+> - I dispositivi di una rete di esempio tengono per sempre i nomi della lingua in cui è stata caricata: caricarlo in inglese e poi passare l'interfaccia all'italiano non rinomina `PC-Sales`.

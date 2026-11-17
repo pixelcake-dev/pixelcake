@@ -4,7 +4,7 @@ description: Che cosa è cambiato in PixelCake, versione per versione, e dove se
 order: 7
 ---
 
-Ogni cambiamento di PixelCake che si può notare è scritto nel registro delle modifiche del repository, dal più recente, man mano che si fa: [CHANGELOG.md](https://github.com/pixelcake-dev/pixelcake/blob/main/CHANGELOG.md). È in inglese, e nomina i controlli dell'interfaccia con le loro etichette nelle due lingue.
+Ogni cambiamento visibile di PixelCake viene scritto, man mano, nel registro delle modifiche del repository, dal più recente: [CHANGELOG.md](https://github.com/pixelcake-dev/pixelcake/blob/main/CHANGELOG.md). È in inglese, e nomina i controlli dell'interfaccia con le loro etichette nelle due lingue.
 
 ## Versioni {#versions}
 
