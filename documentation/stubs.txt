@@ -16,11 +16,6 @@ building/notes
 building/bulk-add
 building/layout-and-connection
 building/templates
-services/routes
-services/firewall
-services/nat
-services/dhcp
-services/dns
 asking/simulation-panel
 asking/how-the-engine-decides
 asking/presentation
