@@ -110,7 +110,7 @@ describe('the home of the documentation', () => {
   it.each(LANGUAGES)('%s: shows its video with a poster, playing only when the script lets it', (lang) => {
     const doc = parse(renderPage(model, pageOf(lang, 'index')));
     const video = doc.querySelector('[data-video] video');
-    expect(video?.getAttribute('poster')).toMatch(new RegExp(`first-network\\.${lang}\\.poster\\.png$`));
+    expect(video?.getAttribute('poster')).toMatch(new RegExp(`home/firewall-ping\\.${lang}\\.poster\\.png$`));
     expect(video?.hasAttribute('muted')).toBe(true);
     expect(video?.hasAttribute('loop')).toBe(true);
     expect(video?.hasAttribute('playsinline')).toBe(true);
