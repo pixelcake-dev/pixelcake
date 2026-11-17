@@ -5,7 +5,7 @@ description: Come disegnare una rete in PixelCake, configurarla, e chiederle se 
 
 PixelCake è un ambiente per progettare piccole reti, che funziona nel browser. Disegni la rete, la configuri, poi le fai una domanda: questo PC raggiunge quel server? Se non lo raggiunge, la risposta dice dove si ferma il pacchetto, e perché. Queste pagine ne spiegano ogni parte.
 
-![Dal pannello a sinistra si aggiungono tre dispositivi, un PC, un server e un firewall, uniti da due cavi. Nel terminale un ping dal PC raggiunge il server; una regola aggiunta al firewall nega il ping, e lo stesso ping poi si ferma al firewall, con la regola che l'ha fermato.](../media/getting-started/first-network.it.mp4 "Tre dispositivi, due cavi, una domanda, poi una regola del firewall che cambia la risposta.")
+![Dal pannello a sinistra si aggiungono tre dispositivi, un PC, un server e un firewall, uniti da due cavi. Nel terminale un ping dal PC raggiunge il server; una regola aggiunta al firewall nega il ping, e lo stesso ping poi si ferma al firewall, con la regola che l'ha fermato.](../media/home/firewall-ping.it.mp4 "Tre dispositivi, due cavi, una domanda, poi una regola del firewall che cambia la risposta.")
 
 ## Da dove cominciare {#start}
 

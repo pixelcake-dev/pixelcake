@@ -101,7 +101,8 @@ export function encode({ timed, workDir, outBase, formats, fps, gifWidth, dither
     made.mp4 = { file, bytes: statSync(file).size };
   }
   if (formats.includes('png')) {
-    const file = outBase + '.png';
+    // named as the documentation wants it, next to the video: <name>.poster.png
+    const file = outBase + '.poster.png';
     const frame = posterWall ? frameAt(timed, posterWall) : timed[timed.length - 1];
     copyFileSync(frame.file, file);
     made.png = { file, bytes: statSync(file).size };

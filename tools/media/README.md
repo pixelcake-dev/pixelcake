@@ -35,7 +35,7 @@ into `media-out/`:
 |---|---|
 | `readme-demo.en.gif` | the GIF (two passes: `palettegen`, then `paletteuse`) |
 | `readme-demo.en.mp4` | H.264, `yuv420p`, `+faststart` |
-| `readme-demo.en.png` | the poster: the frame marked by the scenario's `poster` step (else the last) |
+| `readme-demo.en.poster.png` | the poster: the frame marked by the scenario's `poster` step (else the last) |
 
 Other runs:
 

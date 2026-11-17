@@ -5,7 +5,7 @@ description: How to draw a network in PixelCake, configure it, and ask it whethe
 
 PixelCake is a designer for small networks that runs in the browser. You draw the network, configure it, then ask it a question: does this PC reach that server? If it does not, the answer says where the packet stops, and why. These pages explain every part of it.
 
-![Three devices are added from the panel on the left, a PC, a server and a firewall, and joined by two cables. In the terminal a ping from the PC reaches the server; a rule added to the firewall denies the ping, and the same ping then stops at the firewall, with the rule that stopped it.](../media/getting-started/first-network.en.mp4 "Three devices, two cables, a question, then a firewall rule that changes the answer.")
+![Three devices are added from the panel on the left, a PC, a server and a firewall, and joined by two cables. In the terminal a ping from the PC reaches the server; a rule added to the firewall denies the ping, and the same ping then stops at the firewall, with the rule that stopped it.](../media/home/firewall-ping.en.mp4 "Three devices, two cables, a question, then a firewall rule that changes the answer.")
 
 ## Where to start {#start}
 
