@@ -8,6 +8,8 @@ A firewall in PixelCake decides on every packet that crosses it. It has two tool
 
 The examples on this page use the sample network “Site: VLANs, DMZ and firewall”. Its firewall, FW-Edge, has the offices behind port 1, a DMZ with a web server behind port 2, and the Internet at port 3.
 
+![The site sample. FW-Edge is in the middle, with three cables. One goes up to the Internet symbol and Remote-PC, in the Internet area. One goes left to Router-Core, which has SW-Core, two PCs and Srv-Internal behind it, in the Internal network area. One goes right to SW-DMZ and Web-Public, in the DMZ area.](../../media/firewall/zones.en.svg "The site sample. The three ports of FW-Edge face the internal network (trust), the DMZ (dmz) and the Internet (untrust).")
+
 ## Zones {#zones}
 
 A zone says how far a network is trusted. There are three, and a port is in one of them or in none:

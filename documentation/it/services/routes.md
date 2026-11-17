@@ -16,7 +16,11 @@ Ogni router e ogni firewall ha una tabella di instradamento, e il motore la legg
 
 Se più righe contengono la destinazione, vince la più specifica, cioè quella con la maschera più lunga: una /24 prima di una /16, e tutte e due prima della rotta predefinita, che è /0. A parità di maschera, la collegata viene prima della statica e la statica prima della predefinita.
 
-Per vedere la tabella apri con un doppio clic la finestra di un router o di un firewall e vai nella scheda «Rotte». Sotto «Tabella di instradamento» ci sono le righe che il motore legge: «Destinazione», «Prossimo salto», «Esce da» e «Tipo», comprese le modifiche non ancora salvate. Nel terminale `show routes` stampa la stessa tabella. La rete di esempio «Due sedi: linea principale e di riserva» ha il router della sede, R-Sede, unito alla filiale da una linea principale e, passando per un terzo router, da una linea di riserva:
+Per vedere la tabella apri con un doppio clic la finestra di un router o di un firewall e vai nella scheda «Rotte». Sotto «Tabella di instradamento» ci sono le righe che il motore legge: «Destinazione», «Prossimo salto», «Esce da» e «Tipo», comprese le modifiche non ancora salvate. Nel terminale `show routes` stampa la stessa tabella. La rete di esempio «Due sedi: linea principale e di riserva» ha il router della sede, R-Sede, unito alla filiale da una linea principale e, passando per un terzo router, da una linea di riserva.
+
+![Le due sedi. A sinistra la sede: R-Sede sopra SW-Core, con il file server e due switch di piano con un PC ciascuno. A destra la filiale: R-Filiale sopra SW-Filiale, con due PC. Una linea punteggiata, la linea principale, unisce R-Sede e R-Filiale. Una linea tratteggiata, la linea di riserva, sale da R-Sede a R-Riserva e scende a R-Filiale.](../../media/routes/two-sites.it.svg "Le due sedi: la linea principale tra R-Sede e R-Filiale, punteggiata, e la linea di riserva passando da R-Riserva, tratteggiata.")
+
+La tabella di R-Sede:
 
 ```ncl sample=two-sites
 pixelcake> show routes R-Sede

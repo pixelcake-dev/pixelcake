@@ -16,7 +16,11 @@ Every router and every firewall has a routing table, and the engine reads it eac
 
 When more than one row fits the destination, the most specific one wins: the one with the longest mask. A /24 comes before a /16, and both before the default route, which is /0. With the same mask, connected comes before static, and static before default.
 
-To see the table, open the window of a router or a firewall with a double click and go to the “Routes” tab. Under “Routing table” it lists the rows the engine reads: “Destination”, “Next hop”, “Interface” and “Type”, with the changes you have not saved yet. In the terminal `show routes` prints the same table. The sample network “Two sites: main line and backup line” has a head-office router, R-HQ, joined to the branch by a main line and, through a third router, a backup line:
+To see the table, open the window of a router or a firewall with a double click and go to the “Routes” tab. Under “Routing table” it lists the rows the engine reads: “Destination”, “Next hop”, “Interface” and “Type”, with the changes you have not saved yet. In the terminal `show routes` prints the same table. The sample network “Two sites: main line and backup line” has a head-office router, R-HQ, joined to the branch by a main line and, through a third router, a backup line.
+
+![The two sites. On the left the head office: R-HQ above SW-Core, with the file server and two floor switches with a PC each. On the right the branch: R-Branch above SW-Branch, with two PCs. A dotted line, the main line, joins R-HQ and R-Branch. A dashed line, the backup line, goes from R-HQ up to R-Backup and down to R-Branch.](../../media/routes/two-sites.en.svg "The two sites: the main line between R-HQ and R-Branch, dotted, and the backup line through R-Backup, dashed.")
+
+The table of R-HQ:
 
 ```ncl sample=two-sites
 pixelcake> show routes R-HQ

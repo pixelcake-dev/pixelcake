@@ -8,6 +8,8 @@ In PixelCake un firewall decide su ogni pacchetto che lo attraversa. Ha due stru
 
 Gli esempi di questa pagina usano la rete di esempio «Sede: VLAN, DMZ e firewall». Il suo firewall, FW-Edge, ha gli uffici dietro la porta 1, una DMZ con un server web dietro la porta 2 e Internet alla porta 3.
 
+![La rete di esempio della sede. FW-Edge sta al centro, con tre cavi. Uno sale verso il simbolo Internet e PC-Remoto, nel riquadro Internet. Uno va a sinistra verso Router-Core, che ha dietro SW-Core, due PC e Srv-Interno, nel riquadro Rete interna. Uno va a destra verso SW-DMZ e Web-Pubblico, nel riquadro DMZ.](../../media/firewall/zones.it.svg "La rete di esempio della sede. Le tre porte di FW-Edge guardano la rete interna (trust), la DMZ (dmz) e Internet (untrust).")
+
 ## Le zone {#zones}
 
 Una zona dice quanto ci si fida di una rete. Sono tre, e una porta sta in una di esse oppure in nessuna:
