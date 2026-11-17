@@ -9,6 +9,12 @@
 
 PixelCake is a browser-based designer for small networks. You draw the network, configure it, then ask it a question: does this PC reach that server? If it does not, you see where the traffic stops and why.
 
+<p align="center">
+  <img src="docs/demo.gif" alt="A screen recording of PixelCake, in the browser. A PC, a server and a firewall are added from the panel and joined by cables. In the terminal, a ping from the PC to the server arrives, and the answer says so. Then a rule that denies ping is added to the firewall, and the same ping stops at the firewall, which turns red, with the rule named as the reason.">
+</p>
+
+<p align="center"><a href="https://app.pixelcake.dev"><b>Try it in your browser</b></a>: nothing to install, no account.</p>
+
 ![The sample network of a small company, its groups of devices in areas (Internet, Edge, Core, Offices, Servers), with the terminal: a ping from PC-Sales to Web-ERP that works; the gateway of PC-Sales set to a wrong address; the same ping stopped at PC-Sales, with the reason; then the addresses of PC-Sales](docs/screenshot.png)
 
 **Status:** early prototype. It is good for exploring and explaining a small network. Do not use its answers to validate a real one: the [limits](#what-it-does-not-do) are listed below.
