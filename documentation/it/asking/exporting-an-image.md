@@ -29,7 +29,7 @@ Il file prende il nome dal progetto, e dal canvas quando il progetto ne ha più 
   - **«Domanda e risposta sotto il disegno»**, solo da una presentazione (vedi [più avanti](#presentation));
   - **«Sfondo trasparente»**: il disegno da solo, senza una pagina dietro, da mettere su una pagina che ha il suo sfondo. L'anteprima mostra allora un fondo a scacchi.
 
-L'immagine viene ridisegnata dai dati del canvas, non presa dallo schermo. Mostra sempre **tutto** il disegno, qualunque parte sia nella finestra e a qualunque ingrandimento, con i nomi e gli indirizzi sotto i dispositivi (un dispositivo su DHCP mostra l'indirizzo che gli è stato assegnato), le etichette dei cavi e i riquadri, a meno che Vista → «Mostra i riquadri» non li abbia nascosti. Non mostra nessuna selezione e nessun punto di collegamento.
+L'immagine viene ridisegnata dai dati del canvas, non presa dallo schermo. Mostra sempre **tutto** il disegno, qualunque parte sia nella finestra e a qualunque ingrandimento, con i nomi e gli indirizzi sotto i dispositivi (un dispositivo in DHCP mostra l'indirizzo che gli è stato assegnato), le etichette dei cavi e i riquadri, a meno che Vista → «Mostra i riquadri» non li abbia nascosti. Non mostra nessuna selezione e nessun punto di collegamento.
 
 Fuori da una presentazione mostra anche la **spia** dell'ultima risposta: il dispositivo che ha risposto diventa verde e quello che ha fermato la domanda diventa rosso, come sul canvas (vedi [che cosa resta sul canvas](simulation-panel.md#afterwards)), e un dispositivo che aspetta un indirizzo lo dice.
 

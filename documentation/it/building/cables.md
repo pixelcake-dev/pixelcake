@@ -8,7 +8,7 @@ Una connessione è la linea che disegni tra due dispositivi; il cavo è la cosa 
 
 ## Disegnare un cavo {#draw}
 
-![Due dispositivi, un PC e uno switch, vengono trascinati lontano l'uno dall'altro; un cavo viene tirato dal lato destro del PC, che diventa arancione, fino allo switch; la finestra della connessione mostra poi eth0 sul PC e Porta 1 sullo switch.](../../media/cables/draw.it.mp4 "Disegnare un cavo, e la finestra della connessione che mostra dove è collegata ogni estremità.")
+![Due dispositivi, un PC e uno switch, vengono trascinati lontano l'uno dall'altro; un cavo viene tirato dal lato destro del PC, che diventa arancione, fino allo switch; la finestra della connessione mostra poi eth0 sul PC e Porta 1 sullo switch.](../../media/cables/draw.it.mp4 "Disegnare un cavo, e la finestra della connessione che mostra a quale interfaccia è assegnata ogni estremità.")
 
 1. Porta il puntatore sul bordo di un dispositivo. Una fascia lungo ciascuno dei quattro lati della cornice, profonda 12 unità, fa partire un cavo; il lato sotto il puntatore diventa arancione.
 2. Premi lì e trascina fino a un altro dispositivo. Una linea segue il puntatore.
@@ -33,7 +33,7 @@ Un'estremità **non assegnata** non ha niente di tutto questo. Il motore lascia 
 
 ## Su un firewall con zone {#firewall}
 
-Su un firewall le cui porte hanno zone di sicurezza, l'estremità non viene mai assegnata da sola. Scegliere una porta lì vorrebbe dire scegliere una politica: la porta decide la zona, e la zona decide che cosa il firewall lascia passare. Perciò un cavo verso un firewall di questo tipo nasce con quell'estremità non assegnata, e la porta si sceglie in «Modifica connessione», sotto "Interfaccia su" e il nome del firewall. Anche il terminale fa così: `connect` lascia l'estremità aperta e lo dice.
+Su un firewall le cui porte hanno zone di sicurezza, l'estremità non viene mai assegnata da sola. Scegliere una porta lì vorrebbe dire scegliere una politica: la porta decide la zona, e la zona decide che cosa il firewall lascia passare. Perciò un cavo verso un firewall di questo tipo nasce con quell'estremità non assegnata, e la porta si sceglie in «Modifica connessione», sotto "Interfaccia su" e il nome del firewall. Anche il terminale fa così: `connect` lascia l'estremità senza interfaccia e lo dice.
 
 Finché la porta non è scelta il firewall non sa in quale zona sia il cavo. Nella rete dell'azienda, elimina il cavo da FW-Edge a Router-Core e disegnalo di nuovo: nel `trace` attraverso il firewall, al posto della politica delle zone compare una nota:
 

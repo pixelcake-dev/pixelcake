@@ -60,7 +60,7 @@ Mail-01                  Server         192.168.20.20    -
 show interfaces [of] <device>
 ```
 
-Le porte e le schede di rete di un dispositivo in una tabella sola, qualunque dispositivo sia. È la tabella da cui il linguaggio prende il nome: un'interfaccia è l'unica parola per entrambe.
+Le porte e le schede di rete di un dispositivo in una tabella sola, qualunque dispositivo sia. È la tabella standard del linguaggio: *interfaccia* è una parola sola per entrambe.
 
 | Colonna | Che cosa dice |
 |---|---|
@@ -294,7 +294,7 @@ Router-Core is not a firewall and has no rules: it filters nothing
 show nat [of] <device>
 ```
 
-NAT sorgente e inoltri: le interfacce che traducono ciò che esce da loro, con l'indirizzo che ciascuna dà, poi gli inoltri nell'ordine in cui si leggono, con l'indirizzo a cui ciascuno è pubblicato. Un dispositivo che non ha né l'uno né l'altro lo dice.
+NAT in uscita e inoltri: le interfacce che traducono ciò che esce da loro, con l'indirizzo che ciascuna dà, poi gli inoltri nell'ordine in cui si leggono, con l'indirizzo a cui ciascuno è pubblicato. Un dispositivo che non ha né l'uno né l'altro lo dice.
 
 ```ncl sample=company
 pixelcake> show nat FW-Edge

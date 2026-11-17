@@ -96,8 +96,7 @@ disconnect <device> [from] <device>
 Che cosa dice la risposta:
 
 - Un'estremità senza interfaccia libera (tutte le porte sono occupate, oppure il dispositivo non ne ha) viene disegnata lo stesso, ma non assegnata a un'interfaccia, e la risposta lo dice. Una connessione non assegnata a un'interfaccia non si può controllare porta per porta: le regole che riguardano le porte vengono saltate, e il motore lo scrive nelle sue note.
-- Su un firewall le cui porte hanno zone di sicurezza l'estremità non viene mai assegnata da sola, anche se ci sono porte libere: è la porta a decidere la zona. La risposta lo dice, e dice dove scegliere la porta, nella finestra della connessione (vedi [Su un firewall con zone](../building/cables.md#firewall)).
-- Su un firewall le cui porte sono in zone di sicurezza l'estremità non viene assegnata nemmeno così: la porta, e con essa la zona, si sceglie nella finestra della connessione, che si apre con «Modifica connessione». La risposta dice che la porta di una nuova connessione si sceglie a mano, e che fino ad allora quell'estremità non è assegnata.
+- Su un firewall le cui porte hanno zone di sicurezza l'estremità non viene mai assegnata da sola, anche se ci sono porte libere: è la porta a decidere la zona. La risposta dice che la porta di una nuova connessione si sceglie a mano, nella finestra della connessione (clic destro, «Modifica connessione»), e che fino ad allora quell'estremità non è assegnata (vedi [Su un firewall con zone](../building/cables.md#firewall)).
 - `connect` tra due dispositivi che hanno già una connessione non fa nulla, e lo dice. Anche `disconnect` tra due dispositivi che non ne hanno lo dice.
 
 ```ncl sample=office

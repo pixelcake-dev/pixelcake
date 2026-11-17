@@ -8,7 +8,7 @@ In PixelCake un firewall decide su ogni pacchetto che lo attraversa. Ha due stru
 
 Gli esempi di questa pagina usano la rete di esempio «Sede: VLAN, DMZ e firewall». Il suo firewall, FW-Edge, ha gli uffici dietro la porta 1, una DMZ con un server web dietro la porta 2 e Internet alla porta 3.
 
-![La rete di esempio della sede. FW-Edge sta al centro, con tre cavi. Uno sale verso il simbolo Internet e PC-Remoto, nel riquadro Internet. Uno va a sinistra verso Router-Core, che ha dietro SW-Core, due PC e Srv-Interno, nel riquadro Rete interna. Uno va a destra verso SW-DMZ e Web-Pubblico, nel riquadro DMZ.](../../media/firewall/zones.it.svg "La rete di esempio della sede. Le tre porte di FW-Edge guardano la rete interna (trust), la DMZ (dmz) e Internet (untrust).")
+![La rete di esempio della sede. FW-Edge sta al centro, con tre cavi. Uno sale verso il simbolo Internet e PC-Remoto, nel riquadro Internet. Uno va a sinistra verso Router-Core, che ha dietro SW-Core, due PC e Srv-Interno, nel riquadro Rete interna. Uno va a destra verso SW-DMZ e Web-Pubblico, nel riquadro DMZ.](../../media/firewall/zones.it.svg "La rete di esempio della sede. Le tre porte di FW-Edge sono rivolte verso la rete interna (trust), la DMZ (dmz) e Internet (untrust).")
 
 ## Le zone {#zones}
 
@@ -18,7 +18,7 @@ Una zona dice quanto ci si fida di una rete. Sono tre, e una porta sta in una di
 - **dmz**: una rete di server raggiunti da fuori, tenuta separata dagli uffici.
 - **untrust**: l'esterno, Internet.
 
-La zona appartiene alla porta, non al dispositivo né al cavo. Nella finestra del firewall apri la scheda «Porte», scegli la porta e imposta «Zona di sicurezza»: «Nessuna», «Trust (rete fidata)», «Untrust (rete non fidata)» oppure «DMZ (zona demilitarizzata)». Non cambia nulla finché non premi «Salva». Nel terminale si fa con `interface <n> zone <zona> on <firewall>` ([riferimento](../terminal/firewall-and-nat.md#zone)); `show ports` ha una colonna apposta:
+La zona appartiene alla porta, non al dispositivo né al cavo. Nella finestra del firewall apri la scheda «Porte», scegli la porta e imposta «Zona di sicurezza»: «Nessuna», «Trust (rete fidata)», «Untrust (rete non fidata)» oppure «DMZ (zona demilitarizzata)». Non cambia nulla finché non premi «Salva». Nel terminale si fa con `interface <n> zone <zona> on <firewall>` ([riferimento](../terminal/firewall-and-nat.md#zone)); `show ports` ha una colonna apposita:
 
 ```ncl sample=site
 pixelcake> show ports FW-Edge
@@ -31,9 +31,9 @@ PORT   STATE      MODE     VLAN       ZONE     IP               LINK
 
 La «Modalità della porta» (LAN, WAN o DMZ) è un'etichetta e non decide nulla: su un firewall conta la zona di sicurezza.
 
-Il motore deve sapere a quale porta è attaccato un cavo, per sapere da quale zona entra un pacchetto e da quale esce. Una connessione tracciata verso un firewall che ha delle zone non viene attaccata a una porta da sola: la porta, e con essa la zona, si sceglie nella finestra della connessione. Fai clic con il tasto destro sulla connessione, scegli «Modifica connessione» e, sotto «Interfacce», scegli la porta nell'elenco intitolato `Interfaccia su FW-Edge`. Un'estremità non attaccata non ha una zona: una regola che nomina una zona viene saltata, e il trace lo dice in una nota.
+Il motore deve sapere a quale porta è collegato un cavo, per sapere da quale zona entra un pacchetto e da quale esce. Una connessione disegnata verso un firewall che ha delle zone non viene assegnata a una porta da sola: la porta, e con essa la zona, si sceglie nella finestra della connessione. Fai clic destro sulla connessione, scegli «Modifica connessione» e, sotto «Interfacce», scegli la porta nell'elenco intitolato `Interfaccia su FW-Edge`. Un'estremità non assegnata non ha una zona: una regola che nomina una zona viene saltata, e il `trace` lo dice in una nota.
 
-Una porta con «Nessuna» come zona è lo stesso: niente zona, niente politica. Lì una regola che nomina una zona viene saltata, con la stessa nota, e ciò che nessun'altra regola decide è permesso; il trace scrive `no zone binding: allowed`:
+Una porta con «Nessuna» come zona è lo stesso: niente zona, niente politica. Lì una regola che nomina una zona viene saltata, con la stessa nota, e ciò che nessun'altra regola decide è permesso; il `trace` scrive `no zone binding: allowed`:
 
 ```ncl sample=site
 pixelcake> interface 2 zone none on FW-Edge
@@ -85,22 +85,22 @@ Tracing route to PC-Uffici-1 (192.168.10.11) from Web-Pubblico:
 Trace failed (blocked): firewall FW-Edge: no rule matches, zone policy dmz → trust denied
 ```
 
-Senza regole il motivo si legge `firewall policy on FW-Edge: dmz → trust denied`, con regole che non corrispondono `firewall FW-Edge: no rule matches, zone policy dmz → trust denied`. La scheda «Regole» lo dice sotto «Quando nessuna regola corrisponde».
+Senza regole il motivo è `firewall policy on FW-Edge: dmz → trust denied`; con regole che non corrispondono, `firewall FW-Edge: no rule matches, zone policy dmz → trust denied`. La scheda «Regole» lo dice sotto «Quando nessuna regola corrisponde».
 
 ## Le regole {#rules}
 
-Una regola fa un'eccezione alla politica: lascia entrare ciò che la politica nega, o tiene fuori ciò che permette. Nella finestra del firewall vai nella scheda «Regole». Sotto «Regole del firewall» premi «Aggiungi regola» e compila la riga:
+Una regola fa un'eccezione alla politica: lascia entrare ciò che la politica nega, o tiene fuori ciò che permette. Nella finestra del firewall apri la scheda «Regole». Sotto «Regole del firewall» premi «Aggiungi regola» e compila la riga:
 
 - «Azione»: «Permetti» oppure «Nega».
 - «Servizio»: «Ping», «Web», «Email», «DNS» oppure «Qualsiasi».
 - «Da» e «A»: `any`, una zona (`trust`, `untrust`, `dmz`), un indirizzo, o una rete come `192.168.10.0/24`. Ogni altro nome viene rifiutato.
 - «Attiva»: una regola senza la spunta viene saltata.
 
-«Sposta in su» e «Sposta in giù» cambiano l'ordine; «Elimina la regola» toglie una riga. Il numero della prima colonna è quello che usano il terminale e i trace.
+«Sposta in su» e «Sposta in giù» cambiano l'ordine; «Elimina la regola» elimina una riga. Il numero della prima colonna è quello che usano il terminale e `trace`.
 
-Le regole si leggono dall'alto. La prima regola attiva in cui servizio, partenza e destinazione corrispondono decide, e quelle dopo non vengono guardate. Se nessuna corrisponde, decide la politica. «Da» è la partenza del pacchetto e «A» la sua destinazione, come le vede il firewall: una zona corrisponde alla zona della porta da cui il pacchetto entra, o da cui esce.
+Le regole si leggono dall'alto. La prima regola attiva in cui servizio, partenza e destinazione corrispondono decide, e quelle dopo non vengono lette. Se nessuna corrisponde, decide la politica. «Da» è la partenza del pacchetto e «A» la sua destinazione, come le vede il firewall: una zona corrisponde alla zona della porta da cui il pacchetto entra, o da cui esce.
 
-Nella rete di esempio gli uffici raggiungono il server web della DMZ, come dice la politica. Qui in fondo si aggiunge una regola che nega il web verso la DMZ a un solo PC degli uffici, quello con l'indirizzo 192.168.10.12. L'altro PC non ne è toccato:
+Nella rete di esempio gli uffici raggiungono il server web della DMZ, come dice la politica. Qui si aggiunge in fondo una regola che nega il web verso la DMZ a un solo PC degli uffici, quello con l'indirizzo 192.168.10.12. L'altro PC non ne è toccato:
 
 ```ncl sample=site
 pixelcake> show rules FW-Edge
@@ -151,7 +151,7 @@ La scheda «Regole» avvisa quando una regola nomina una zona in cui non c'è ne
 
 ## Le risposte {#replies}
 
-Un firewall tiene lo stato. Quando ha lasciato passare una richiesta, ne lascia passare la risposta, qualunque cosa dicano le regole e la politica sui flussi nuovi nell'altro verso. Senza questo la risposta di un server su Internet sarebbe un flusso nuovo verso una zona più fidata, e la politica la negherebbe. Il motore però tiene questo stato per il flusso, non per ciascun firewall: una risposta passa ogni firewall sulla strada del ritorno, anche uno che la richiesta non ha attraversato. La nota lo dice:
+Un firewall tiene lo stato. Quando ha lasciato passare una richiesta, ne lascia passare la risposta, qualunque cosa dicano le regole e la politica sui flussi nuovi nell'altro verso. Altrimenti la risposta di un server su Internet sarebbe un flusso nuovo verso una zona più fidata, e la politica la negherebbe. Il motore però tiene questo stato per il flusso, non per ciascun firewall: una risposta attraversa ogni firewall sulla strada del ritorno, anche uno che la richiesta non ha attraversato. La nota lo dice:
 
 ```ncl sample=site
 pixelcake> ping Web-Pubblico from PC-Uffici-1
@@ -196,9 +196,9 @@ Le regole giudicano solo ciò che attraversa il firewall. L'amministrazione del 
 ## Limiti {#limits}
 
 > [!LIMITS]
-> - Una regola ha quattro servizi: ping, web, email e DNS, oppure tutti. Non ci sono numeri di porta né protocolli: una regola non distingue una porta web da un'altra, né permette SSH.
+> - Una regola conosce quattro servizi: ping, web, email e DNS, oppure tutti. Non ci sono numeri di porta né protocolli: una regola non distingue una porta web da un'altra, né permette SSH.
 > - Tre zone, con nomi fissi: trust, untrust e dmz. Non ci sono altre zone né una politica personalizzata tra le zone; le regole sono le sole eccezioni.
-> - Una risposta passa perché è la risposta a un flusso permesso; non c'è una tabella delle connessioni, né un tempo massimo, né un limite a quante possono essere aperte. Così una risposta che torna per un'altra strada passa un firewall che non ha mai visto la richiesta.
+> - Una risposta passa perché è la risposta a un flusso permesso; non c'è una tabella delle connessioni, né un tempo massimo, né un limite a quante possono essere aperte. Così una risposta che torna per un'altra strada attraversa un firewall che non ha mai visto la richiesta.
 > - Ciò che è diretto al firewall stesso non viene filtrato.
 > - Il pacchetto è guardato solo per indirizzo e per zona. Non c'è ispezione di ciò che trasporta, né registro degli eventi, né limite di frequenza, né orari. L'opzione IPS/IDS di una porta è solo documentazione: il motore non la simula.
-> - Un'estremità di connessione non attaccata a una porta non ha una zona. Le regole che nominano una zona vengono saltate lì, e il trace lo dice; il traffico non viene fermato per questo.
+> - Un'estremità di connessione non assegnata a una porta non ha una zona. Le regole che nominano una zona vengono saltate lì, e il `trace` lo dice; il traffico non viene fermato per questo.

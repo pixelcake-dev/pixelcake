@@ -60,7 +60,7 @@ Mail-01                  Server         192.168.20.20    -
 show interfaces [of] <device>
 ```
 
-The ports and the network cards of a device in one table, whatever the device is. It is the table the language is named after: an interface is the one word for both.
+The ports and the network cards of a device in one table, whatever the device is. It is the standard table of the language: an interface is the one word for both.
 
 | Column | What it says |
 |---|---|

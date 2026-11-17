@@ -19,7 +19,7 @@ La scheda mostra le porte come una fila di caselle. Ognuna ha il suo numero, il 
 | «Modalità della porta» | switch | «Access (dispositivo finale)» o «Trunk (tra switch)». Decide come si legge la VLAN della porta: vedi [VLAN](vlans.md#access-and-trunk) |
 | «VLAN (singola)» o «VLAN (separate da virgola)» | switch | La VLAN di una porta di accesso, le VLAN che un trunk trasporta: vedi [VLAN](vlans.md) |
 | «Indirizzo IP», «Subnet mask» | router, firewall | L'indirizzo della porta. È il gateway dei dispositivi collegati lì, e la sua rete si raggiunge senza una rotta. Senza subnet mask vale `255.255.255.0`. Vedi [Indirizzi e gateway](addresses.md#router-ports) |
-| «Zona di sicurezza» | firewall | Trust, untrust, DMZ o nessuna. La zona decide che cosa il firewall lascia passare prima che si leggano le sue regole |
+| «Zona di sicurezza» | firewall | Trust, untrust, DMZ o nessuna. Il firewall legge prima le sue regole; quando nessuna corrisponde, è la politica delle zone a decidere che cosa passa ([Firewall](../services/firewall.md#policy)) |
 | «NAT attivo» | router, firewall | Ciò che il dispositivo inoltra da questa porta esce con l'indirizzo della porta |
 | «Server DHCP attivo» | router, firewall | La porta assegna indirizzi alle schede della sua rete che sono in DHCP |
 | «Velocità», «PoE attivo (Power over Ethernet)», «IPS/IDS attivo (Intrusion Prevention/Detection)» | velocità su tutte, PoE su uno switch, IPS su un firewall | Niente: restano con il disegno, e il motore non li legge |

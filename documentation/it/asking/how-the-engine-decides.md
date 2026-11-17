@@ -13,9 +13,9 @@ Lo stesso motore risponde al [pannello della simulazione](simulation-panel.md), 
 Quattro cose si decidono prima del primo salto.
 
 1. **Gli indirizzi da DHCP.** Una scheda di rete impostata per prendere l'indirizzo da un server DHCP ha l'indirizzo che le viene assegnato. Il motore lo ricava dal disegno, sempre allo stesso modo. Una scheda che non ne riceve nessuno resta senza indirizzo, e la risposta dice perché: [una scheda che non ne riceve](../services/dhcp.md#no-address).
-2. **I nomi.** Nel terminale un nome di host può prendere il posto di un dispositivo. Il motore chiede prima al server DNS del mittente, con una richiesta e una risposta che viaggiano come qualunque altro pacchetto, e solo dopo manda la domanda vera all'indirizzo trovato. Il pannello e la presentazione scelgono i dispositivi da un menu e non usano nomi: [una ricerca](../services/dns.md#lookup).
+2. **I nomi.** Nel terminale un nome di host può prendere il posto di un dispositivo. Il motore chiede prima al server DNS del mittente, con una richiesta e una risposta che viaggiano come qualunque altro pacchetto, e solo dopo manda la domanda vera all'indirizzo trovato. Il pannello e la presentazione scelgono i dispositivi dai menu e non usano nomi: [una ricerca](../services/dns.md#lookup).
 3. **Le due estremità esistono e hanno un indirizzo.** Senza, la risposta è `error` e dice quale dispositivo non ce l'ha (`PC-1 has no IP address configured`).
-4. **Un cavo le unisce.** Il motore cerca una qualunque catena di cavi tra i due dispositivi, come sono disegnati. Se non c'è, la risposta è `unreachable` (`no physical path between PC-1 and Web-01`). Un cavo tagliato da un [guasto simulato](#failures) resta disegnato: la risposta è allora un arresto, con il cavo come motivo.
+4. **Un cavo le unisce.** Il motore cerca una qualunque catena di cavi tra i due dispositivi, come sono disegnati. Se non c'è, la risposta è `unreachable` (`no physical path between PC-1 and Web-01`). Un cavo tagliato da un [guasto simulato](#failures) resta disegnato: allora il pacchetto si ferma, e il motivo è il cavo.
 
 Un dispositivo spento non manda nulla. Se è spento il mittente, la domanda si ferma su di lui (`PC-1 is down`).
 
@@ -41,21 +41,21 @@ Trace complete: destination reached.
 
 Ogni riga è un dispositivo attraversato dal pacchetto: `○` passato oltre, `●` consegnato, `✗` scartato. Dopo il trattino c'è ciò che il dispositivo ha fatto. PC-1 ha deciso che Web-01 è fuori dalla sua rete e ha mandato il pacchetto al gateway; la consegna ha attraversato SW-Office; Router-1 ha deciso che 192.168.20.0/24 sta sulla sua porta 2; la consegna ha attraversato SW-Servers e ha raggiunto Web-01.
 
-La strada non si sceglie con una metrica. Al livello 3 è la tabella di instradamento a dire quale indirizzo viene dopo; al livello 2 il motore prende la catena di cavi più corta che funziona, come spiega [più avanti](#layer-2). La velocità dei cavi e le etichette dei cavi non contano.
+La strada non si sceglie con una metrica. Al livello 3 è la tabella di instradamento a dire quale indirizzo viene dopo; al livello 2 il motore prende la catena di cavi più corta che funziona, come si spiega [più avanti](#layer-2). La velocità dei cavi e le etichette dei cavi non contano.
 
 ## Al livello 3 {#layer-3}
 
-Un dispositivo che lavora al livello 3 decide in quest'ordine: se il pacchetto è per lui o per un server che pubblica, quale rotta prendere, che cosa dice il firewall, e con quale indirizzo di origine esce il pacchetto. Il mittente non viene filtrato e non traduce ciò che manda lui stesso, e un firewall non filtra un pacchetto indirizzato al firewall stesso.
+Un dispositivo che lavora al livello 3 decide in quest'ordine: se il pacchetto è per lui o per un server che pubblica, quale rotta prendere, che cosa dice il firewall, e con quale indirizzo di partenza esce il pacchetto. Il mittente non viene filtrato e non traduce ciò che manda lui stesso, e un firewall non filtra un pacchetto indirizzato al firewall stesso.
 
 ### La rotta {#route}
 
 Il dispositivo cerca la destinazione nella sua tabella di instradamento. Le voci sono di tre tipi:
 
-- **connessa**: una rete in cui sta una delle sue porte o schede con un indirizzo;
+- **collegata**: una rete in cui sta una delle sue porte o schede con un indirizzo;
 - **statica**: una rotta scritta su un router o su un firewall;
 - **predefinita**: il gateway di una scheda di rete, il gateway di un router, o una rotta scritta verso `default`.
 
-Vince la voce più specifica. A parità di lunghezza una rete connessa batte una rotta statica, e una rotta statica batte la predefinita. Di due rotte verso la stessa rete si usa la prima scritta, e le altre sono [rotte di riserva](../services/routes.md#backup). Una rotta che esce da una porta spenta non si usa. La tabella è spiegata in [la tabella di instradamento](../services/routes.md#routing-table).
+Vince la voce più specifica. A parità di lunghezza una rete collegata batte una rotta statica, e una rotta statica batte la predefinita. Di due rotte verso la stessa rete si usa la prima scritta, e le altre sono [rotte di riserva](../services/routes.md#backup). Una rotta che esce da una porta spenta non si usa. La tabella è spiegata in [la tabella di instradamento](../services/routes.md#routing-table).
 
 Quando non c'è nessuna voce, il pacchetto si ferma qui e il motivo dice quale dispositivo e che cosa manca: `no default gateway configured on PC-1`, oppure `Router-1 has no route to 192.168.30.11`. Nemmeno una rotta il cui prossimo salto non sta in nessuna rete del dispositivo si può usare: il pacchetto si ferma lì, con quel motivo, anche quando una rotta di riserva o la rotta predefinita lo porterebbero avanti. Quando l'unica strada esce da una porta spenta, il motivo è quella porta: `port 2 on Router-1 is disabled`.
 
@@ -63,7 +63,7 @@ Trovato l'indirizzo successivo, il motore cerca il dispositivo che risponde per 
 
 ### Le rotte di riserva {#backup-route}
 
-Una rotta viene ritirata quando l'interfaccia da cui esce non ha più nessun cavo che funziona: ogni cavo è tagliato, o il dispositivo all'altro capo di ciascuno è spento (i due [guasti simulati](#failures)), oppure la porta stessa è spenta. La rotta successiva verso quella destinazione prende il suo posto. Quando la causa è un guasto simulato, la risposta porta una nota:
+Una rotta viene ritirata quando l'interfaccia da cui esce non ha più nessun cavo che funzioni: ogni cavo è tagliato, o il dispositivo all'altro capo di ciascuno è spento (i due [guasti simulati](#failures)), oppure la porta stessa è spenta. La rotta successiva verso quella destinazione prende il suo posto. Quando la causa è un guasto simulato, la risposta porta una nota:
 
 ```text
 note: R-HQ: the route 192.168.2.0/24 via 10.0.0.2 is unusable (link R-HQ–R-Branch is down), the route 192.168.2.0/24 via 10.0.1.2 is used instead
@@ -75,8 +75,8 @@ Due casi tengono la rotta principale. Una rete a cui il dispositivo è collegato
 
 Un firewall che un pacchetto attraversa (non uno che lo manda, non uno a cui è indirizzato) decide prima che il pacchetto prosegua:
 
-1. **Le regole**, dall'alto in basso. La prima regola attiva che corrisponde al servizio, all'origine e alla destinazione decide, se permettere o negare. Una regola che nomina una zona ha bisogno che il cavo sia collegato a una porta che sta in una zona, perché la zona appartiene alla porta: altrimenti la regola viene saltata, con una nota.
-2. **La politica delle zone**, quando nessuna regola corrisponde. Un nuovo flusso verso una zona più fidata viene negato: `untrust → trust`, `untrust → dmz` e `dmz → trust`. Tutto il resto è permesso. Un firewall che non conosce la zona di entrambi i lati, perché un cavo non è collegato a nessuna porta con una zona, permette, con una nota.
+1. **Le regole**, dall'alto in basso. La prima regola attiva che corrisponde per servizio, partenza e destinazione decide se permettere o negare. Una regola che nomina una zona ha bisogno che il cavo sia assegnato a una porta che sta in una zona, perché la zona appartiene alla porta: altrimenti la regola viene saltata, con una nota.
+2. **La politica delle zone**, quando nessuna regola corrisponde. Un nuovo flusso verso una zona più fidata viene negato: `untrust → trust`, `untrust → dmz` e `dmz → trust`. Tutto il resto è permesso. Un firewall che non conosce la zona di entrambi i lati, perché un cavo non è assegnato a nessuna porta con una zona, permette, con una nota.
 3. **Le risposte.** La risposta a un flusso permesso passa, qualunque cosa dicano le regole su un nuovo flusso in quel verso. Non si tiene una tabella dei flussi: ogni firewall sulla strada del ritorno lascia passare la risposta, anche uno che la richiesta non ha attraversato.
 
 ```ncl sample=site
@@ -100,9 +100,9 @@ Le regole e la politica sono in [Firewall](../services/firewall.md): [zone](../s
 
 ### La traduzione degli indirizzi {#nat}
 
-Un router o un firewall può cambiare gli indirizzi di un pacchetto, nell'ordine che dà un senso alle sue regole. Un pacchetto indirizzato al dispositivo viene prima mandato all'indirizzo che un [inoltro](../services/nat.md#forwards) indica. Il firewall vede allora la destinazione vera e l'origine vera. Per ultimo, un nuovo flusso che esce da una porta con il [NAT in uscita](../services/nat.md#source-nat) prende l'indirizzo di quella porta, e il dispositivo si ricorda del flusso per tradurre indietro la risposta.
+Un router o un firewall può cambiare gli indirizzi di un pacchetto, nell'ordine che dà un senso alle sue regole. Un pacchetto indirizzato al dispositivo viene prima mandato all'indirizzo che un [inoltro](../services/nat.md#forwards) indica. Il firewall vede allora la destinazione vera e la partenza vera. Per ultimo, un nuovo flusso che esce da una porta con il [NAT in uscita](../services/nat.md#source-nat) prende l'indirizzo di quella porta, e il dispositivo ricorda il flusso per tradurre indietro la risposta.
 
-Un simbolo Cloud il cui nome contiene Internet non porta indirizzi privati. Un pacchetto che arriva lì con un'origine o una destinazione privata si ferma, e il motivo dice quale delle due e che cosa avrebbe dovuto tradurla: [Internet non porta indirizzi privati](../services/nat.md#private). Quando Internet è di mezzo, un dispositivo dietro il NAT viene raggiunto al suo indirizzo pubblico se ne ha uno, altrimenti all'indirizzo con cui un inoltro lo pubblica, e una nota lo dice.
+Un simbolo Cloud il cui nome contiene Internet non trasporta indirizzi privati. Un pacchetto che arriva lì con un indirizzo di partenza o di destinazione privato si ferma, e il motivo dice quale dei due e che cosa avrebbe dovuto tradurlo: [Internet non trasporta indirizzi privati](../services/nat.md#private). Quando Internet è di mezzo, un dispositivo dietro il NAT viene raggiunto al suo indirizzo pubblico se ne ha uno, altrimenti all'indirizzo con cui un inoltro lo pubblica, e una nota lo dice.
 
 ```ncl sample=site
 pixelcake> browse Web-Pubblico from PC-Remoto
@@ -125,7 +125,7 @@ Per il web c'è un inoltro e per il ping no: lo stesso server si raggiunge con u
 
 ## Al livello 2 {#layer-2}
 
-La consegna cerca il dispositivo che risponde per l'indirizzo successivo sulla rete del mittente. Parte lungo i cavi e li segue in ampiezza, nell'ordine in cui i cavi sono stati disegnati, così che **si prende la catena di cavi più corta che funziona**. A parità di lunghezza si prende quella trovata per prima. Una porta spenta, un cavo tagliato o una VLAN che non passa vengono aggirati quando il disegno offre un'altra strada. Lo spanning tree non è simulato: un disegno con un anello di switch viene percorso senza girare in tondo, e nessuna porta viene bloccata.
+La consegna cerca il dispositivo che risponde per l'indirizzo successivo sulla rete del mittente. Parte lungo i cavi e li percorre in ampiezza, nell'ordine in cui i cavi sono stati disegnati, così che **si prende la catena di cavi più corta che funziona**. A parità di lunghezza si prende quella trovata per prima. Una porta spenta, un cavo tagliato o una VLAN che non passa vengono aggirati quando il disegno offre un'altra strada. Lo spanning tree non è simulato: un disegno con un anello di switch viene percorso senza girare in tondo, e nessuna porta viene bloccata.
 
 A ogni cavo il motore controlla, in quest'ordine:
 
@@ -134,9 +134,9 @@ A ogni cavo il motore controlla, in quest'ordine:
 3. **La VLAN può uscire da quella porta.** Su uno switch che applica le VLAN, una porta di accesso lascia uscire solo la sua VLAN, e un trunk solo quelle che trasporta: `VLAN 10 does not leave through port 2 on SW-Office: it is in the default VLAN 1`. Vedi [VLAN](../building/vlans.md) e, per la regola sulle porte che nessuno ha toccato, [la VLAN 1](../building/vlans.md#vlan-1).
 4. **Un router o un firewall senza indirizzi sulle porte** lascia passare il pacchetto, e un firewall di questo tipo applica comunque le sue regole e la sua politica delle zone tra le due porte attraversate.
 5. **La porta a cui arriva è accesa.**
-6. **Il dispositivo che raggiunge.** Uno switch o un access point prende la trama se la VLAN può entrare da quella porta, e la ricerca prosegue da lui. Un router con indirizzi sulle porte non porta mai una trama per altri: risponde se l'indirizzo è quello della porta a cui arriva il cavo (uno qualunque dei suoi, quando l'estremità del cavo non è collegata a nessuna porta), altrimenti la ricerca non passa da lui. Un dispositivo finale è uguale.
+6. **Il dispositivo che raggiunge.** Uno switch o un access point prende la trama se la VLAN può entrare da quella porta, e la ricerca prosegue da lui. Un router con indirizzi sulle porte non porta mai una trama per altri: risponde se l'indirizzo è quello della porta a cui arriva il cavo (uno qualunque dei suoi, quando l'estremità del cavo non è assegnata a nessuna porta), altrimenti la ricerca non passa da lui. Lo stesso vale per un dispositivo finale.
 
-L'estremità di un cavo è collegata a una porta o a una scheda di rete del suo dispositivo ([le due estremità](../building/cables.md#ends)). Le regole che appartengono a una porta, come il suo stato, la sua VLAN e la sua zona, si applicano solo quando questo è noto. L'estremità collegata a niente viene accettata, e la risposta porta una nota: `link A–B has no port binding…: per-port rules skipped`.
+L'estremità di un cavo è assegnata a una porta o a una scheda di rete del suo dispositivo ([le due estremità](../building/cables.md#ends)). Le regole che appartengono a una porta, come il suo stato, la sua VLAN e la sua zona, si applicano solo quando questo è noto. Un'estremità non assegnata viene accettata, e la risposta porta una nota: `link A–B has no port binding…: per-port rules skipped`.
 
 Quando nessuno risponde per l'indirizzo, il motivo è la prima cosa che ha fermato il pacchetto sulla catena di cavi più corta verso il dispositivo che avrebbe dovuto rispondere. Ciò che l'ha fermato su un ramo laterale non dice nulla sulla strada fin lì. Quando non l'ha fermato nulla, il motivo è ciò che non va nella rete: il dispositivo è su un'altra rete e in mezzo non c'è un router (`no router between subnets 192.168.10.0 and 192.168.20.0 — L2 devices cannot route`), oppure un dispositivo finale sta in mezzo (`PC-2 is an end device: it does not forward traffic for others`), oppure un router sta tra due dispositivi indirizzati nella stessa rete (`… a router does not pass traffic within one network`), oppure nessuno ha quell'indirizzo.
 
@@ -156,9 +156,9 @@ Un simbolo Cloud il cui nome non contiene Internet (la rete di un operatore, una
 
 ## Flussi: più di un pacchetto {#flows}
 
-Una domanda è raramente un pacchetto solo. Il motore trasforma ogni tipo di traffico in **tratte**, un pacchetto che va in un verso, e segue ogni tratta come sopra. Le tratte si valutano in ordine e la valutazione si ferma alla prima che fallisce: il motivo ne porta il nome (`request:`, `HTTP response:`, `delivery:`).
+Una domanda è raramente un pacchetto solo. Il motore trasforma ogni tipo di traffico in **tratti**, ciascuno un pacchetto che va in un verso, e segue ogni tratto come sopra. I tratti si valutano in ordine e la valutazione si ferma alla prima che fallisce: il motivo ne porta il nome (`request:`, `HTTP response:`, `delivery:`).
 
-| Traffico | Tratte | Per un firewall è |
+| Traffico | Tratti | Per un firewall è |
 |---|---|---|
 | Ping | richiesta, poi risposta | ping |
 | Pagina web | richiesta HTTP, poi risposta HTTP | web |
@@ -166,7 +166,7 @@ Una domanda è raramente un pacchetto solo. Il motore trasforma ogni tipo di tra
 | Email | invio SMTP al relay, poi consegna dal relay | email |
 
 - **Una risposta è un pacchetto a sé.** Parte solo se la richiesta è arrivata, torna all'indirizzo da cui la richiesta sembrava venire, e prende la strada che le dicono le sue tabelle. Può prendere un'altra strada rispetto alla richiesta, e può fallire dove la richiesta non ha fallito. Ogni firewall sulla sua strada la lascia passare perché risponde a un flusso permesso, anche un firewall che la richiesta non ha attraversato, e i dispositivi NAT lungo la strada la traducono indietro.
-- **L'email non ha risposta.** Il relay dipende dalla modalità email in Impostazioni → Rete, gruppo «Simulazione», campo «Modalità email (SMTP)». «Server di posta interno» usa il server di posta con meno cavi dal mittente, contati sul disegno. «Cloud (M365, Gmail…)» usa l'uscita verso Internet più vicina: un dispositivo il cui tipo, template o nome contiene Internet, Cloud, WAN o ISP. «Auto (rileva automaticamente)» preferisce il server di posta e ripiega sull'uscita, con una nota. Quando il destinatario è il server di posta c'è una tratta sola; quando lo è il mittente, la sola consegna.
+- **L'email non ha risposta.** Il relay dipende dalla modalità email in Impostazioni → Rete, gruppo «Simulazione», campo «Modalità email (SMTP)». «Server di posta interno» usa il server di posta con meno cavi dal mittente, contati sul disegno. «Cloud (M365, Gmail…)» usa l'uscita verso Internet più vicina: un dispositivo il cui tipo, template o nome contiene Internet, Cloud, WAN o ISP. «Auto (rileva automaticamente)» preferisce il server di posta e ripiega sull'uscita, con una nota. Quando il destinatario è il server di posta c'è un tratto solo; quando lo è il mittente, la sola consegna.
 - **Una pagina da un dispositivo che non è un server** si segue lo stesso, con una nota.
 
 ```ncl sample=office
@@ -177,7 +177,7 @@ Mailing PC-2 (192.168.10.12) from PC-1...
 Mail delivered to PC-2
 ```
 
-Siccome una risposta si valuta a parte, un ping può fallire dove un trace verso lo stesso dispositivo riesce. Nella rete delle due sedi, spegni la linea principale dalla parte della sede: la richiesta trova un'altra strada con la linea di riserva, ma il router della filiale non ne sa nulla e manda la risposta sulla linea principale, dove viene scartata.
+Siccome una risposta si valuta a parte, un ping può fallire dove un `trace` verso lo stesso dispositivo riesce. Nella rete delle due sedi, spegni la linea principale dalla parte della sede: la richiesta trova un'altra strada con la linea di riserva, ma il router della filiale non ne sa nulla e manda la risposta sulla linea principale, dove viene scartata.
 
 ```ncl sample=two-sites
 pixelcake> interface 2 down on R-Sede
@@ -201,10 +201,10 @@ Ping failed (blocked): reply: port 2 on R-Sede is disabled
 
 ## I guasti simulati {#failures}
 
-In [presentazione](presentation.md#failures) un dispositivo può essere dato per spento e un cavo per tagliato. Il disegno non cambia: al motore si dà l'elenco accanto al disegno, e non trova nulla che viaggi attraverso di loro.
+In [presentazione](presentation.md#failures) un dispositivo può essere dato per spento e un cavo per tagliato. Il disegno non cambia: il motore riceve l'elenco dei guasti insieme al disegno, e attraverso quei dispositivi e quei cavi non fa passare nulla.
 
 - Un dispositivo spento non manda nulla e non prende nulla. Un cavo tagliato non porta nulla. I motivi sono `SW-Core is down` e `link R-HQ–R-Branch is down`.
-- La consegna li aggira quando il disegno offre un'altra strada, e un router ritira una rotta che non ha più nessun cavo che funziona (vedi [le rotte di riserva](#backup-route)).
+- La consegna li aggira quando il disegno offre un'altra strada, e un router ritira una rotta che non ha più nessun cavo che funzioni (vedi [le rotte di riserva](#backup-route)).
 - Un'assegnazione DHCP non cambia: un dispositivo tiene l'indirizzo che aveva, anche quando è spento il suo server DHCP.
 - Una ricerca di nome è una domanda come le altre. Con il server DNS spento, o la strada verso di lui tagliata, un nome non trova nessun indirizzo mentre gli indirizzi rispondono ancora.
 
@@ -216,12 +216,12 @@ Una risposta è uno di quattro verdetti:
 
 | Verdetto | Significato |
 |---|---|
-| `success` | la destinazione ha risposto (e, per un flusso, ogni tratta è arrivata) |
+| `success` | la destinazione ha risposto (e, per un flusso, ogni tratto è arrivato) |
 | `blocked` | il pacchetto è stato scartato per strada: il motivo dice perché, e dove |
 | `unreachable` | nessuna catena di cavi unisce i due dispositivi |
 | `error` | la domanda non si può provare: un'estremità non esiste o non ha un indirizzo utilizzabile, le due estremità di uno scambio sono lo stesso dispositivo, oppure non c'è un server di posta o un'uscita verso Internet da cui far passare un'email |
 
-Un arresto dice due cose: il **motivo**, in una frase che nomina il dispositivo, la porta, la rotta o la regola; e il **dispositivo dove si è fermato**, `dropped at:` nel terminale, il riquadro rosso nel pannello e nella presentazione. È il dispositivo che ha in mano il pacchetto quando si ferma. Per una porta, una regola o una rotta è il dispositivo a cui appartengono; per un cavo tagliato o un dispositivo spento è il dispositivo davanti, l'ultimo che poteva ancora mandare. In un flusso il motivo comincia con il nome della tratta che è fallita.
+Quando il pacchetto si ferma, la risposta dice due cose: il **motivo**, in una frase che nomina il dispositivo, la porta, la rotta o la regola; e il **dispositivo dove si è fermato**, `dropped at:` nel terminale, la cornice rossa nel pannello e nella presentazione. È il dispositivo che ha in mano il pacchetto quando si ferma. Per una porta, una regola o una rotta è il dispositivo a cui appartengono; per un cavo tagliato o un dispositivo spento è il dispositivo davanti, l'ultimo che poteva ancora mandare. In un flusso il motivo comincia con il nome del tratto che è fallito.
 
 ```ncl sample=office
 pixelcake> interface 1 down on SW-Office
@@ -254,18 +254,18 @@ I motivi sono scritti in inglese, in entrambe le lingue dell'interfaccia, e nomi
 | `Internet does not carry private addresses: …` | un indirizzo privato è arrivato al simbolo Internet |
 | `SW-Core is down`, `link R-HQ–R-Branch is down` | un guasto simulato |
 | `PC-2 is an end device: it does not forward traffic for others` | l'unica strada passa da un dispositivo finale |
-| `Laptop-1 has no address: no DHCP server answers on its network` | una scheda su DHCP non ha ricevuto un indirizzo |
+| `Laptop-1 has no address: no DHCP server answers on its network` | una scheda in DHCP non ha ricevuto un indirizzo |
 | `routing loop: the packet comes back to Router-1` | due router se lo rimandano |
 
 Ciò che il motore non può verificare **non passa mai in silenzio come un successo**: aggiunge una nota alla risposta. Una nota non è un errore. Quelle più frequenti:
 
 - `Router-1 has no interface addresses: gateway and routing not verified`: le porte del router non hanno indirizzo, quindi si assume che faccia passare il pacchetto.
 - `Internet is not simulated: traffic assumed to pass`: il simbolo Internet è un segnaposto. `203.0.113.1 is not in the drawing: Internet assumed to take the traffic` dice che un gateway appartiene al mondo esterno.
-- `link A–B has no port binding…: per-port rules skipped`: un'estremità di un cavo non è collegata a nessuna porta o scheda.
+- `link A–B has no port binding…: per-port rules skipped`: un'estremità di un cavo non è assegnata a nessuna porta o scheda.
 - `firewall FW-1 has no zone binding: allowed`, oppure una regola che `names a zone and the link is not attached to a port: skipped`.
 - `firewall FW-1: allowed by rule 1 (…)`, `NAT: source … → …`, e la riga su una rotta di riserva, che dicono che cosa ha fatto il dispositivo e sono lì per essere lette.
 
-Il terminale stampa le note sotto la risposta. Il pannello della simulazione mostra solo il motivo di un arresto; la [presentazione](presentation.md#ask) mostra il percorso salto per salto con le note di ogni salto, e `trace` le stampa nel terminale.
+Il terminale stampa le note sotto la risposta. Il pannello della simulazione mostra solo il motivo per cui il pacchetto si è fermato; la [presentazione](presentation.md#ask) mostra il percorso salto per salto con le note di ogni salto, e `trace` le stampa nel terminale.
 
 ## Che cosa non è simulato {#not-simulated}
 
@@ -275,9 +275,9 @@ Il terminale stampa le note sotto la risposta. Il pannello della simulazione mos
 > - **Non ci sono tempo e carico.** Il tempo che stampa `ping` è ricavato dal numero di salti della richiesta (1 ms più 2 ms per ogni dispositivo tra le due estremità). Non ci sono velocità dei cavi, code, congestione, perdita di pacchetti o timeout.
 > - **Quattro servizi.** Un flusso è ping, web, email o DNS (un download è web per un firewall). Non ci sono porte TCP o UDP, e il traffico indirizzato al firewall stesso non viene filtrato.
 > - **Il NAT è per servizio, non per numero di porta.** Due flussi non si contendono mai una traduzione. Un server raggiunto da dentro al suo indirizzo pubblicato non è trattato a parte, e un dispositivo dietro due livelli di NAT si trova per nome solo attraverso il primo.
-> - **Un'assegnazione DHCP è calcolata, non negoziata.** Niente durata dell'assegnazione, rinnovo o prenotazione, niente relay attraverso un router, e una porta di router non può prendere il proprio indirizzo da DHCP.
-> - **Il DNS è un solo server, interrogato ogni volta.** Niente secondo server, niente inoltro tra server, niente cache, niente ricerca inversa, niente alias o caratteri jolly. I nomi sono per il terminale.
+> - **Un'assegnazione DHCP è calcolata, non negoziata.** Niente durata dell'assegnazione, rinnovo o prenotazione, niente relay attraverso un router, e una porta di router non può prendere il proprio indirizzo dal DHCP.
+> - **Il DNS è un solo server, interrogato ogni volta.** Niente secondo server, niente inoltro tra server, niente cache, niente ricerca inversa, niente alias o nomi jolly. I nomi sono per il terminale.
 > - **Le sottointerfacce dei router non sono modellate.** Per passare da una VLAN all'altra serve una porta di router in ciascuna VLAN.
-> - **Internet è un segnaposto.** Il simbolo di nome Internet porta indirizzi pubblici e rifiuta quelli privati; dietro di lui non si simula nulla. Un bilanciatore di carico lascia passare il traffico senza bilanciarlo.
+> - **Internet è un segnaposto.** Il simbolo chiamato Internet trasporta indirizzi pubblici e rifiuta quelli privati; dietro di lui non si simula nulla. Un bilanciatore di carico lascia passare il traffico senza bilanciarlo.
 >
 > Gli stessi limiti, in un posto solo, sono in [che cosa non è simulato](../reference/limits-and-faq.md#not-simulated).
