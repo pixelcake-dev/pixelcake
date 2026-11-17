@@ -21,6 +21,7 @@ import {
   boundInterface,
   interfaceLinks,
   listInterfaces,
+  requiresExplicitBinding,
   routingTable,
   isBackupRoute,
   hasInterfaceAddresses,
@@ -552,7 +553,7 @@ function runResolve(name: string, from: string | undefined, context: TerminalCon
 
 /** Said of what was typed where a host name was expected */
 function notAHostName(text: string): string {
-  return `"${text}" is not a host name: write it with a dot, as in www.azienda.example`;
+  return `"${text}" is not a host name: write it with a dot, as in www.company.example`;
 }
 
 /* ── show commands ────────────────────────────────────────────────────── */
@@ -1255,6 +1256,15 @@ function runConnect(action: 'connect' | 'disconnect', aQuery: string, bQuery: st
       [b, ifaceB],
     ] as const) {
       if (iface) continue;
+      if (requiresExplicitBinding(device)) {
+        lines.push(
+          muted(
+            `  ${device.label} has security zones, so the port of a new link is chosen by hand ` +
+              '(right click on the link, Edit link, Interfaces): until then that end is not bound, per-port rules are skipped there'
+          )
+        );
+        continue;
+      }
       const reason = listInterfaces(device).length === 0 ? 'has no interfaces' : 'has no free interface';
       lines.push(muted(`  ${device.label} ${reason}: that end is not bound, per-port rules are skipped there`));
     }
@@ -2123,7 +2133,7 @@ function runHelp(topic?: string): TerminalLine[] {
     heading(`PixelCake terminal — NCL v${NCL_VERSION} (Network Command Language, vendor-neutral)`),
     ...COMMAND_REFERENCE.map(([syntax, desc]) => line(`  ${syntax.padEnd(SYNTAX_WIDTH)} ${desc}`)),
     muted('  device names are case-insensitive and may be multi-word; IPs work anywhere a device is expected'),
-    muted('  a host name (www.azienda.example) works as a target: the source asks its DNS server for the address first'),
+    muted('  a host name (www.company.example) works as a target: the source asks its DNS server for the address first'),
     muted(`  every command explained, with examples: ${REFERENCE_URL}`),
   ];
 }

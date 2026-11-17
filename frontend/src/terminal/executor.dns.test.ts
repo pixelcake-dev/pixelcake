@@ -162,8 +162,8 @@ describe('add record', () => {
   it.each([
     [`add record www.azienda.example ${WEB} on PC-1`, 'PC-1 is a PC: records are kept by servers'],
     [`add record www.azienda.example ${WEB} on Router-1`, 'Router-1 is a Router: records are kept by servers'],
-    [`add record gestionale ${WEB} on Web-01`, '"gestionale" is not a host name: write it with a dot, as in www.azienda.example'],
-    [`add record ${WEB} ${WEB} on Web-01`, '"192.168.20.10" is not a host name: write it with a dot, as in www.azienda.example'],
+    [`add record gestionale ${WEB} on Web-01`, '"gestionale" is not a host name: write it with a dot, as in www.company.example'],
+    [`add record ${WEB} ${WEB} on Web-01`, '"192.168.20.10" is not a host name: write it with a dot, as in www.company.example'],
     ['add record www.azienda.example nowhere on Web-01', '"nowhere" is not an address or a device'],
     ['add record www.azienda.example 192.168.20.300 on Web-01', '"192.168.20.300" is not an address or a device'],
     [`add record www.azienda.example ${WEB}`, `specify a device: "add record www.azienda.example ${WEB} on <server>"`],
@@ -448,10 +448,10 @@ describe('resolve', () => {
       'specify a source: "resolve www.azienda.example from <device>" — or enter a device context with "use <device>"',
     ]);
     expect(output('resolve gestionale from PC-1')).toEqual([
-      '"gestionale" is not a host name: write it with a dot, as in www.azienda.example',
+      '"gestionale" is not a host name: write it with a dot, as in www.company.example',
     ]);
     expect(output(`resolve ${WEB} from PC-1`)).toEqual([
-      '"192.168.20.10" is not a host name: write it with a dot, as in www.azienda.example',
+      '"192.168.20.10" is not a host name: write it with a dot, as in www.company.example',
     ]);
     expect(output('resolve www.azienda.example from PC-9')[0]).toBe('device not found: "PC-9"');
   });
@@ -924,7 +924,7 @@ describe('help', () => {
     expect(output('help record').map(row => row.split('  ')[0])).toEqual(['add record <name> <address> on <server>']);
     expect(output('help resolve').map(row => row.split('  ')[0])).toEqual(['resolve <name> [from <device>]']);
     expect(output('help').slice(-2)).toEqual([
-      '  a host name (www.azienda.example) works as a target: the source asks its DNS server for the address first',
+      '  a host name (www.company.example) works as a target: the source asks its DNS server for the address first',
       '  every command explained, with examples: https://app.pixelcake.dev/docs/terminal/',
     ]);
     for (const [syntax] of COMMAND_REFERENCE) expect(syntax.length, syntax).toBeLessThanOrEqual(58);

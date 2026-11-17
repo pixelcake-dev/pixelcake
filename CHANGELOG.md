@@ -146,6 +146,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Two-part processing: configurable devices (with ports) + standard devices (with NICs)
 
 ### Fixed
+- **`connect` to a firewall with zones gave a wrong reason.** It said the firewall "has no free interface" when it has free ports: on a firewall with security zones the port of a new link is never chosen by the app, because it decides the zone. The terminal now says so, and where to choose it.
+- **An Italian example in the English terminal.** A name without a dot was refused with "as in www.azienda.example", and the last line of `help` named the same; both say www.company.example now, as the English guide does.
 - **The terminal took a VLAN that does not exist.** `add vlan 5000 to PC-1` was accepted and kept, while the window of a device and the commands of an interface refuse it: `add vlan` and `remove vlan` now take a number from 1 to 4094, as everywhere else, and say so otherwise.
 - **The cables of one device to a row of devices drew a double line.** The middle run of a stepped cable was halfway between its two ends, and an end sits next to what is drawn, higher or lower in each drawing: the five cables of SW-Servers ran at their own heights, a pixel or two apart, their labels too. The run is now halfway between the two frames, on the board, in a presentation and in the exported image, so that the cables of one switch to a row share one line, and their labels sit on it.
 - **Two devices of the site sample kept their English names in Italian.** Remote-PC and Web-Public are now PC-Remoto and Web-Pubblico in Italian, and the port of SW-DMZ that leads to the web server is named after it; in English they are as they were.

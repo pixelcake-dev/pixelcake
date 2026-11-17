@@ -117,6 +117,27 @@ describe('terminal executor — interfaces', () => {
       ]);
     });
 
+    it('on a firewall with zones, says that the port of that end is chosen by hand', () => {
+      useNetworkStore.getState().addDevice({
+        type: 'Firewall',
+        templateId: 'tpl-firewall',
+        label: 'FW-Zones',
+        ip: '10.9.9.1',
+        subnet: '255.255.255.0',
+        position: { x: 0, y: 0 },
+        ports: [
+          { id: 1, enabled: true, securityZone: 'trust' },
+          { id: 2, enabled: true },
+        ],
+      });
+
+      expect(output('connect FW-Zones to SW-Servers')).toEqual([
+        'connected FW-Zones (unbound) ↔ SW-Servers (port 3)',
+        '  FW-Zones has security zones, so the port of a new link is chosen by hand (right click on the link, Edit link, Interfaces): ' +
+          'until then that end is not bound, per-port rules are skipped there',
+      ]);
+    });
+
     it('still refuses a duplicate link without touching the bindings', () => {
       const before = useNetworkStore.getState().connections;
       expect(output('connect PC-1 to SW-Office')).toEqual([

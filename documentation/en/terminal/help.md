@@ -47,7 +47,7 @@ PixelCake terminal — NCL v0.5 (Network Command Language, vendor-neutral)
   use <device> / exit                                        enter/leave device context (implies "from" and "on")
   clear, help [command]                                      screen and this reference
   device names are case-insensitive and may be multi-word; IPs work anywhere a device is expected
-  a host name (www.azienda.example) works as a target: the source asks its DNS server for the address first
+  a host name (www.company.example) works as a target: the source asks its DNS server for the address first
   every command explained, with examples: https://app.pixelcake.dev/docs/terminal/
 ```
 
