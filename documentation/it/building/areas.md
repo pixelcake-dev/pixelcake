@@ -32,7 +32,7 @@ In entrambi i casi il riquadro nuovo è selezionato e il suo nome è pronto per 
 - **Colore**: clic destro → «Colore», e scegli uno dei sei: Ardesia, Verde, Ocra, Rosso, Viola, Petrolio.
 - **Eliminalo**: il tasto Canc (Delete), oppure clic destro → «Elimina», che chiede conferma. I dispositivi che racchiude restano dove sono.
 
-I riquadri appartengono al loro canvas: restano con lui quando passi a un altro canvas del progetto e torni, e si salvano nel file del progetto. L'esportazione YAML non ha posizioni, e non li contiene. In una presentazione i riquadri si vedono ma non si possono toccare; la mappa piccola li mostra come rettangoli tenui, e l'immagine esportata li disegna, in chiaro e in scuro.
+I riquadri appartengono al loro canvas: ci restano quando passi a un altro canvas del progetto e poi torni, e si salvano nel file del progetto. L'esportazione YAML non ha posizioni, e non li contiene. In una presentazione i riquadri si vedono ma non si possono toccare; la mappa piccola li mostra come rettangoli tenui, e l'immagine esportata li disegna, in chiaro e in scuro.
 
 ## Mostrarli e nasconderli {#show-hide}
 

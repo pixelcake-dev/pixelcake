@@ -4,7 +4,7 @@ description: "La licenza di PixelCake, dei suoi disegni e di queste pagine, e qu
 order: 6
 ---
 
-PixelCake è libero e open source. Ciò che è suo sta sotto una licenza sola, e ciò che porta con sé da altri tiene la licenza che i suoi autori gli hanno dato. I testi delle licenze dei caratteri e delle icone sono inclusi nell'app, e la guida li elenca: Aiuto → Informazioni, sotto «Licenze di terzi».
+PixelCake è libero e open source. Ciò che è suo ha una licenza sola, e ciò che include di altri autori ha la licenza che quegli autori gli hanno dato. I testi delle licenze dei caratteri e delle icone sono inclusi nell'app, e la guida li elenca: Aiuto → Informazioni, sotto «Licenze di terzi».
 
 ## PixelCake {#app}
 

@@ -67,7 +67,7 @@ Un valore che non può essere salvato viene segnalato in rosso sotto il suo camp
 
 Finché ne resta uno, «Salva» non chiude la finestra, e un avviso dice di quale porta o scheda si tratta: `Porta 1: "300.1.1.1" non è un indirizzo IPv4 valido`, `Scheda eth0: …`. Correggilo, oppure premi «Annulla» per lasciare il dispositivo com'era.
 
-L'app non controlla, invece, se i valori stanno bene insieme. Una porta con un indirizzo fuori dalla rete a cui porta il suo cavo, o due porte sulla stessa rete, vengono salvate. Che cosa ne fa il motore si vede alla prima domanda: un pacchetto che non trova la sua strada si ferma con un motivo ([Indirizzi e gateway](addresses.md#gateway)).
+L'app non controlla, invece, se i valori stanno bene insieme. Una porta con un indirizzo fuori dalla rete a cui arriva il suo cavo, o due porte sulla stessa rete, vengono salvate. Che cosa ne fa il motore si vede alla prima domanda: un pacchetto che non trova la sua strada si ferma con un motivo ([Indirizzi e gateway](addresses.md#gateway)).
 
 ## Limiti {#limits}
 

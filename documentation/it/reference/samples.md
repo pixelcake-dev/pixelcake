@@ -166,4 +166,4 @@ Poi rompi qualcosa, in una presentazione: taglia il cavo con l'etichetta «Linea
 > - Una rete di esempio è un punto di partenza, non il modello di un'azienda vera. I suoi indirizzi sono fatti per l'esempio, e ciò che lascia fuori è ciò che l'app lascia fuori ([Limiti e domande](limits-and-faq.md#not-simulated)).
 > - Caricare una rete di esempio sostituisce il canvas e le impostazioni di rete del progetto, e non si può annullare. Salva prima il progetto su file, se il canvas merita di essere conservato.
 > - Internet e la rete MPLS sono sostituti: il motore lo dice in una nota e lascia passare il traffico. Un operatore vero non è simulato.
-> - I dispositivi di una rete di esempio tengono per sempre i nomi della lingua in cui è stata caricata: caricarlo in inglese e poi passare l'interfaccia all'italiano non rinomina `PC-Sales`.
+> - I dispositivi di una rete di esempio tengono per sempre i nomi della lingua in cui è stata caricata: caricarla in inglese e poi passare l'interfaccia all'italiano non rinomina `PC-Sales`.

@@ -61,7 +61,7 @@ Sul canvas non cambia nulla finché non premi «Salva»; «Annulla» lascia il d
 
 - **Selezionare.** Un clic su un dispositivo lo seleziona. Ctrl + clic lo aggiunge alla selezione o lo toglie, e trascinando su uno spazio vuoto si disegna un riquadro di selezione.
 - **Copiare.** Modifica → «Copia» o Ctrl+C copia i dispositivi selezionati, con i cavi che li uniscono. Modifica → «Incolla» o Ctrl+V aggiunge le copie, 50 unità più a destra e più in basso. Una copia tiene il nome e gli indirizzi del dispositivo da cui è nata: rinominala e dalle un indirizzo prima di chiedere qualcosa alla rete.
-- **Eliminare.** Seleziona e premi il tasto Canc (Delete), che elimina subito, oppure clic destro → «Elimina», che chiede conferma. I cavi del dispositivo spariscono con lui. Un dispositivo tolto dal canvas non torna: sul canvas non si può annullare.
+- **Eliminare.** Seleziona e premi il tasto Canc (Delete), che elimina subito, oppure clic destro → «Elimina», che chiede conferma. I cavi del dispositivo spariscono insieme a lui. Un dispositivo tolto dal canvas non torna: sul canvas non si può annullare.
 
 ## Il colore di un dispositivo {#lamp}
 

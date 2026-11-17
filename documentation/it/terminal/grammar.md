@@ -130,14 +130,14 @@ Una riga rifiutata riceve una risposta in tre parti: `unknown command: "<la riga
 | `interface <id> pool …` | `interface <id> dhcp pool …`, e `interface <id> dhcp server …` |
 | `none` in `ip`, `gateway`, `zone`, `dns`, `pool` | `clear`. Per `pool` anche `off` |
 | `off` in `nat` e `dhcp` | `none`, `no`, `disable` |
-| `gateway` in un pool | `gw` |
+| `gateway` in `interface … pool` | `gw` |
 | `allow`, `deny` | `permit`, `block` |
 | un servizio `any` | `all` |
 | un servizio `ping` | `icmp` |
 | un servizio `web` | `http`, `https` |
 | un servizio `email` | `mail`, `smtp` |
 | `interface` in `add forward … from interface <n>` | `port`, oppure niente |
-| `<first> to <last>` in un pool | `<first>-<last>`, oppure `<first> <last>` |
+| `<first> to <last>` in `interface … pool` | `<first>-<last>`, oppure `<first> <last>` |
 
 ### Le versioni del linguaggio {#versions}
 

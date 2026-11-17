@@ -46,7 +46,7 @@ Gli indirizzi ci sono già: quando hai aggiunto ogni dispositivo, l'applicazione
 
 I tre dispositivi hanno tutti un indirizzo della rete 192.168.1.0/24, ognuno diverso dagli altri: lo vedi scritto sotto ogni nome sul canvas. È questo che va controllato.
 
-Il gateway, 192.168.1.1, non è un dispositivo di questo disegno, e non deve esserlo. Il gateway è dove un dispositivo manda ciò che non è per la sua rete. Qui è tutto una rete sola, quindi i tre dispositivi si raggiungono direttamente e il gateway non viene mai usato. Conta appena un router unisce una seconda rete: vedi [Il gateway](../building/addresses.md#gateway). Il firewall non ha indirizzo sulle sue porte, quindi fa passare il traffico tra l'una e l'altra come un bridge, e le regole scritte su di lui valgono lo stesso.
+Il gateway, 192.168.1.1, non è un dispositivo di questo disegno, e non deve esserlo. Il gateway è dove un dispositivo manda ciò che non è per la sua rete. Qui è tutto una rete sola, quindi i tre dispositivi si raggiungono direttamente e il gateway non viene mai usato. Conta appena un router unisce una seconda rete: vedi [Il gateway](../building/addresses.md#gateway). Il firewall non ha indirizzo sulle sue porte, quindi fa passare il traffico tra l'una e l'altra come un bridge, e le regole scritte su di esso valgono lo stesso.
 
 ## Fai la prima domanda {#ask}
 

@@ -1,6 +1,6 @@
 ---
 title: "Template"
-description: "I tipi di dispositivo e di connessione che l'app porta con sé, e quelli che fai tu."
+description: "I tipi di dispositivo e di connessione già pronti nell'app, e quelli che crei tu."
 order: 10
 ---
 
@@ -27,7 +27,7 @@ In Impostazioni → Template → «Dispositivi», la scheda «Dispositivi person
 3. «Disegno»: uno dei 24, nei gruppi Rete, Server, Dati e Dispositivi finali. All'inizio è il disegno del tipo di base.
 4. Premi «Salva template».
 
-Il tipo di base decide di che cosa è fatto il tipo nuovo. Uno Switch, un Router o un Firewall ha porte numerate (e VLAN e spanning tree su uno switch); gli altri quattro hanno schede di rete, una per cominciare. Il tipo di base decide anche che cosa ne fa il motore: un Router personalizzato instrada, uno Switch personalizzato inoltra dentro una rete, un Cloud personalizzato lascia passare il traffico, come i predefiniti ([Dispositivi](devices.md#kinds)). I ruoli che vanno con un nome, come il Mail Server da cui passa la posta, appartengono al template predefinito, non a uno personalizzato che si chiama semplicemente mail.
+Il tipo di base decide di che cosa è fatto il tipo nuovo. Uno Switch, un Router o un Firewall ha porte numerate (e VLAN e spanning tree su uno switch); gli altri quattro hanno schede di rete, una per cominciare. Il tipo di base decide anche che cosa ne fa il motore: un Router personalizzato instrada, uno Switch personalizzato inoltra dentro una rete, un Cloud personalizzato lascia passare il traffico, come i predefiniti ([Dispositivi](devices.md#kinds)). I ruoli che vanno con un nome, come il Mail Server da cui passa la posta, appartengono al template predefinito, non a uno personalizzato che si chiama soltanto mail.
 
 Il template nuovo compare nel pannello «Aggiungi», dopo gli altri, come "Template personalizzato (Server)", con il suo tipo di base tra parentesi, e si usa come ogni altro. «Elimina template» nell'elenco lo elimina, dopo una conferma; i dispositivi creati con esso restano sul canvas.
 
