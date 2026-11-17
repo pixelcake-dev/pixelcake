@@ -20,15 +20,6 @@ asking/simulation-panel
 asking/how-the-engine-decides
 asking/presentation
 asking/exporting-an-image
-terminal/index
-terminal/devices-and-addresses
-terminal/routes
-terminal/firewall-and-nat
-terminal/dhcp-and-dns
-terminal/asking
-terminal/show
-terminal/help
-terminal/grammar
 reference/project-file
 reference/yaml
 reference/shortcuts
