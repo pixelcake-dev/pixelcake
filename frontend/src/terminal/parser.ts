@@ -334,12 +334,12 @@ function parseVlan(kind: 'vlan-add' | 'vlan-remove', rest: Token[], raw: string)
   if (rest.length === 0 || rest[0].quoted || rest[0].lower !== 'vlan') return unknown(raw, usage);
   const idToken = rest[1];
   if (idToken === undefined) return unknown(raw, usage);
-  if (!/^\d+$/.test(idToken.text)) {
-    return unknown(raw, `VLAN id must be a number, got "${idToken.text}" — ${usage}`);
+  const id = vlanId(idToken.text);
+  if (id === undefined) {
+    return unknown(raw, `VLAN id must be a number from 1 to 4094, got "${idToken.text}" — ${usage}`);
   }
-  const vlanId = parseInt(idToken.text, 10);
   const device = joinTokens(stripLeadingNoise(rest.slice(2), ['to', 'from', 'of', 'on']));
-  return device ? { kind, vlanId, device } : { kind, vlanId };
+  return device ? { kind, vlanId: id, device } : { kind, vlanId: id };
 }
 
 /** `enable|disable port <n> on <device...>` — 'on' separates number and device. */

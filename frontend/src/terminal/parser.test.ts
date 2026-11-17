@@ -317,6 +317,15 @@ describe('parse — vlan add/remove', () => {
     expect(cmd.suggestion).toContain('number');
   });
 
+  it('rejects a vlan id outside 1-4094, as the window of a switch does', () => {
+    for (const input of ['add vlan 5000 to PC-1', 'add vlan 0 to PC-1', 'add vlan 4095 to PC-1', 'remove vlan 4095 from PC-1']) {
+      const cmd = expectKind(input, 'unknown');
+      expect(cmd.suggestion).toContain('VLAN id must be a number from 1 to 4094, got "');
+    }
+    expect(parse('add vlan 1 to PC-1')).toEqual({ kind: 'vlan-add', vlanId: 1, device: 'PC-1' });
+    expect(parse('add vlan 4094 to PC-1')).toEqual({ kind: 'vlan-add', vlanId: 4094, device: 'PC-1' });
+  });
+
   it('rejects add without the vlan keyword', () => {
     const cmd = expectKind('add 20 to Switch-0', 'unknown');
     expect(cmd.suggestion).toContain('add vlan');
