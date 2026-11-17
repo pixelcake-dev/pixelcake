@@ -1,0 +1,26 @@
+name: An idea
+description: Something PixelCake could do, or do better
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you are trying to do
+      description: The situation, before the solution. "I draw networks for a class and want to show why a VLAN stops traffic" says more than "add a button".
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you would like PixelCake to do
+    validations:
+      required: true
+  - type: textarea
+    id: real
+    attributes:
+      label: How a real network behaves
+      description: For an idea about the engine (routing, VLANs, firewall, DHCP, DNS…), what a real device would do, and where that is described, if you know.
+  - type: markdown
+    attributes:
+      value: |
+        "What it does not do" in the README and "Limits and questions" in the documentation list what the engine leaves out on purpose or has not reached yet.

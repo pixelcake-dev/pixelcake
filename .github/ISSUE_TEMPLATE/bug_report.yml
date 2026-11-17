@@ -1,0 +1,41 @@
+name: Something does not work
+description: The app, the terminal or the documentation does something wrong
+labels: ["bug"]
+body:
+  - type: textarea
+    id: steps
+    attributes:
+      label: What you did
+      description: The steps to see it, one per line. If it happens on a sample network, name it (Add → Samples).
+      placeholder: |
+        1. Load the sample "Office: two networks and a router"
+        2. In the terminal: ping PC-2 from PC-1
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened instead
+      description: The answer or the message, copied as it is. A screenshot helps for anything on the board.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Help → About shows it, for example "0.9.0 (Beta)". "app.pixelcake.dev" is enough if you used the published app today.
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and system
+      placeholder: Chrome 131 on Windows 11
+  - type: markdown
+    attributes:
+      value: |
+        A project file (File → Save) or a YAML export that shows the problem is the quickest way to a fix: you can drag it into a comment. Remove anything private from it first: names, addresses and notes are all in the file.

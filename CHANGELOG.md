@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-17
+
+The first public version: the app at https://app.pixelcake.dev, its documentation at https://app.pixelcake.dev/docs/, the code under the AGPL.
+
 ### Removed
 - **The layout by subnet** (Vista → Disposizione automatica → «Per subnet», “Grouped by subnet”). It grouped the devices by the first two numbers of their address, which tells neither where a device is nor which network it is on: a router or a firewall is on several networks, and the areas already group what belongs together, which a second grouping would pull apart. The two layouts left are «Verticale» and «Orizzontale» (“Vertical”, “Horizontal”).
 - **The Iconify icon picker of the templates**, its list of icons, and the colour of a template on screen: a template is shown with one of the drawings of the devices, chosen among them. The icon sets Solar and Carbon are no longer bundled: what is left of the icons are those of the interface, from Material Design Icons and Lucide.
@@ -18,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **More that did nothing**: the Inspector tab announcing Terraform fields, the terminal's Minimize and Maximize dots, two Terraform fields on custom templates, a click-to-connect mode and two windows nothing opened.
 
 ### Added
+- **How to contribute.** [CONTRIBUTING.md](CONTRIBUTING.md) says what helps most, how to set up and what the checks expect; contributions are accepted under a [Contributor Licence Agreement](CLA.md), accepted with a box in the pull request; a [code of conduct](CODE_OF_CONDUCT.md), a [security policy](SECURITY.md) with a private way to report, and forms for issues and pull requests.
 - **The documentation**, published with the app at https://app.pixelcake.dev/docs/ and, in Italian, /docs/it/: pages in the look of the site, light and dark, with a navigation, a search that asks no service, figures and videos, and the reference of the terminal. Aiuto has a new entry, «Documentazione» (“Documentation”), that opens it in the language of the interface in a new tab; the «Comandi del terminale» tab of the guide leads to the terminal reference, and the last line of `help` gives its address. Its sources are Markdown in `documentation/`, in English and in Italian; the build makes the pages, and the tests run every terminal example on the sample network it names and check every link, anchor, picture and label it quotes. 42 pages in each language, in six sections: getting started, with a first network built step by step; building a network; services and security (routes, firewall, NAT, DHCP, DNS); asking the network, with how the engine decides hop by hop; the reference of the terminal, command by command; and the reference (the project file, YAML, shortcuts, the sample networks, limits and questions, licences). Short videos and figures are made by the recorder of the app, in `tools/media/`, so that they can be made again when the app changes.
 - **A way back to the site.** The logo at the left of the bar, a new entry of Aiuto («Il sito di PixelCake», “The PixelCake website”), the first link of the welcome screen and a row of the About tab of the guide open https://pixelcake.dev, its Italian pages when the interface is in Italian. In a new tab: the drawing stays where it is.
 - **A fifth sample network: a multinational in Italy.** Last under Add → Samples, and not on the welcome screen, its entry saying how many devices it has: 181 devices on ten sites, with every kind of device. Milan, the head office, has two Internet providers, a firewall with zones, NAT, five port forwards and eleven ordered rules, a DMZ with a load balancer, a server room and four floors, its routers apart for the core and for the edge of the WAN; Rome and a disaster recovery data centre in Bologna reach it by a direct line, with the carrier's MPLS network as backup, and seven branches over MPLS: Turin with its VLANs, Venice, Florence and Cagliari small, Naples with voice, a warehouse in Bari behind a firewall (cameras with their recorder and nothing else, sensors that write only to the archive), a shop in Palermo behind a firewall (tills that reach only their server, guests' Wi-Fi that goes out to the Internet and never inside). One block of addresses for each site, DHCP on every network where people sit, DNS servers that know the names of the company, a public one in the DMZ. The drawing reads as Italy, north on top, an area for each site; its names, VLANs and notes are in both languages. Its answers are tested: what arrives, what is blocked and by which rule, every lease and every name, and what a cut line changes. Large samples have a layout rule of their own: all in view when fitted, nothing under the small map, nothing written over anything at 100 %, no cable across an area it does not belong to.
@@ -187,7 +192,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Auto-generated MAC addresses, IP/subnet/gateway configuration
 - **UI consistency**: Custom scrollbar design matches across BulkAddDeviceModal and NICList
 
-## [1.2.0] - 2025-11-23
+> Versions 0.6.0 to 0.8.0 were numbered 1.0.0 to 1.2.0 when they were made, before PixelCake was public. They ran with a backend that has since been removed.
+
+## [0.8.0] - 2025-11-23
 
 ### Added
 - **Backend v1.2**: Templates API (10 endpoints for device/connection templates)
@@ -243,7 +250,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Canvas position reset bug**: Real-time Zustand sync instead of drag-end only
 - **Packet animation paths**: Geometric handle calculation based on device centers
 
-## [1.1.0] - 2025-11-19
+## [0.7.0] - 2025-11-19
 
 ### Added
 - **Backend Database**: SQLAlchemy 2.0 async with SQLite (dev) / PostgreSQL (prod)
@@ -270,7 +277,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architecture**: Multi-tier with FastAPI backend + React frontend
 - **Data persistence**: SQLite database instead of files
 
-## [1.0.0] - 2025-11-08
+## [0.6.0] - 2025-11-08
 
 ### Added
 - **Frontend MVP**: React 19 + TypeScript + Vite + Tailwind CSS v3
@@ -339,7 +346,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/pixelcake-dev/pixelcake/compare/v1.2.0...HEAD
-[1.2.0]: https://github.com/pixelcake-dev/pixelcake/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/pixelcake-dev/pixelcake/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/pixelcake-dev/pixelcake/releases/tag/v1.0.0
+[Unreleased]: https://github.com/pixelcake-dev/pixelcake/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/pixelcake-dev/pixelcake/releases/tag/v0.9.0

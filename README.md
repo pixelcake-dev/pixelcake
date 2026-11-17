@@ -17,7 +17,7 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 
 ![The sample network of a small company, its groups of devices in areas (Internet, Edge, Core, Offices, Servers), with the terminal: a ping from PC-Sales to Web-ERP that works; the gateway of PC-Sales set to a wrong address; the same ping stopped at PC-Sales, with the reason; then the addresses of PC-Sales](docs/screenshot.png)
 
-**Status:** early prototype. It is good for exploring and explaining a small network. Do not use its answers to validate a real one: the [limits](#what-it-does-not-do) are listed below.
+**Status:** version 0.9.0, a beta. It is good for exploring and explaining a small network. Do not use its answers to validate a real one: the [limits](#what-it-does-not-do) are listed below.
 
 **Documentation:** [app.pixelcake.dev/docs](https://app.pixelcake.dev/docs/), in Italian [app.pixelcake.dev/docs/it](https://app.pixelcake.dev/docs/it/): how to draw a network, configure it and ask it questions, and every command of the terminal, with examples.
 
@@ -191,7 +191,7 @@ The app's icons are bundled with it: nothing is fetched from the Iconify API.
 
 ```bash
 cd frontend
-pnpm test:run      # 3692 tests: engine, terminal, project files, import/export, images, screens, the two languages, the documentation
+pnpm test:run      # about 3,700 tests: engine, terminal, project files, import/export, images, screens, the two languages, the documentation
 pnpm type-check
 pnpm lint
 pnpm build         # the app, then its documentation into dist/docs
@@ -226,6 +226,10 @@ Today the first two exist in a basic form and the third is only a sketch. The st
 
 1. Undo and redo.
 2. In the engine: spanning tree.
+
+## Contributing
+
+Bug reports, corrections to the documentation and reports of a wrong answer of the engine are the most useful help. [CONTRIBUTING.md](CONTRIBUTING.md) says how to set up and what the checks expect. A pull request is accepted under the [Contributor Licence Agreement](CLA.md): you keep the copyright of what you write and give the maintainer a licence to publish it in PixelCake. Security problems go to [SECURITY.md](SECURITY.md), not to a public issue; the [code of conduct](CODE_OF_CONDUCT.md) applies everywhere in the project.
 
 ## License
 

@@ -57,3 +57,9 @@ PixelCake è un prototipo in fase iniziale. Va bene per esplorare e spiegare una
 ## Segnalare un problema {#report}
 
 Apri una segnalazione su [github.com/pixelcake-dev/pixelcake/issues](https://github.com/pixelcake-dev/pixelcake/issues): la schermata di benvenuto ha un collegamento, «Segnala un problema». Di' che cosa hai fatto, che cosa ti aspettavi e che cosa è successo, in quale browser, e aggiungi il file del progetto se è piccolo, oppure i comandi del terminale che lo mostrano. Un file di progetto contiene i nomi che hai dato ai dispositivi e le note che hai scritto: guardalo prima di allegarlo. Puoi anche scrivere a pixelcake.dev@gmail.com.
+
+Un problema di sicurezza va segnalato in privato, non in una segnalazione pubblica: [SECURITY.md](https://github.com/pixelcake-dev/pixelcake/blob/main/SECURITY.md) spiega come.
+
+## Contribuire {#contributing}
+
+Le correzioni a queste pagine, le segnalazioni di errori e quelle di una risposta sbagliata del motore sono l'aiuto più utile. [CONTRIBUTING.md](https://github.com/pixelcake-dev/pixelcake/blob/main/CONTRIBUTING.md) spiega come preparare l'ambiente e che cosa chiedono i controlli. Una pull request viene accettata con il [Contributor Licence Agreement](https://github.com/pixelcake-dev/pixelcake/blob/main/CLA.md), l'accordo per chi contribuisce, che si accetta spuntando una casella nella sua descrizione: resti autore di quello che scrivi, e dai al responsabile del progetto una licenza per pubblicarlo in PixelCake, con l'AGPL o con altre licenze.
