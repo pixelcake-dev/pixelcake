@@ -124,6 +124,7 @@ describe('terminal executor — interfaces', () => {
         label: 'FW-Zones',
         ip: '10.9.9.1',
         subnet: '255.255.255.0',
+        gateway: '',
         position: { x: 0, y: 0 },
         ports: [
           { id: 1, enabled: true, securityZone: 'trust' },
