@@ -1,6 +1,6 @@
 ---
 title: "DHCP e DNS"
-description: "I comandi che mettono una scheda sul DHCP, danno a un'interfaccia un intervallo di indirizzi da assegnare, indicano un server DNS e gestiscono i suoi record."
+description: "I comandi che mettono una scheda in DHCP, danno a un'interfaccia un intervallo di indirizzi da assegnare, indicano un server DNS e gestiscono i suoi record."
 order: 6
 ---
 
@@ -24,7 +24,7 @@ Una scheda di rete prende l'indirizzo dal server DHCP della sua rete, oppure sme
 
 - Un router, un firewall e uno switch non hanno un client DHCP: i loro indirizzi si scrivono a mano, e il comando viene rifiutato. Per la porta di un router o di un firewall il rifiuto nomina `interface <n> pool`, qui sotto.
 - Una scheda che è a sua volta un server DHCP (ha un intervallo da assegnare) smette di assegnare indirizzi quando ne chiede uno: una scheda non fa le due cose, e la risposta lo dice.
-- Finché una scheda è sul DHCP non ha un indirizzo proprio. Un indirizzo scritto a mano, con `interface <name> ip` o con `set ip` (quando è la prima scheda), la toglie dal DHCP ([Interfacce e VLAN](interfaces-and-vlans.md#ip)). Gateway e server DNS arrivano con l'assegnazione, e `interface <name> gateway` e `interface <name> dns` vengono rifiutati.
+- Finché una scheda è in DHCP non ha un indirizzo proprio. Un indirizzo scritto a mano, con `interface <name> ip` o con `set ip` (quando è la prima scheda), la toglie dal DHCP ([Interfacce e VLAN](interfaces-and-vlans.md#ip)). Gateway e server DNS arrivano con l'assegnazione, e `interface <name> gateway` e `interface <name> dns` vengono rifiutati.
 - Un'assegnazione non viene ricordata: il motore la ricalcola dal disegno ogni volta, come l'indirizzo libero più basso dell'intervallo ([quale indirizzo](../services/dhcp.md#which-address)).
 
 ```ncl sample=company
@@ -158,7 +158,7 @@ Il server DNS che una scheda di rete interroga quando al posto di un indirizzo s
 | `<name>` | Il nome di una scheda di rete |
 | `<address>` | L'indirizzo del server DNS. Viene controllato come indirizzo, non come dispositivo: se nessun dispositivo ce l'ha, lo dice il motore quando fa la domanda |
 
-Su una scheda che è sul DHCP il comando viene rifiutato: il server DNS arriva con l'assegnazione, dall'opzione `dns` di `interface … pool`.
+Su una scheda che è in DHCP il comando viene rifiutato: il server DNS arriva con l'assegnazione, dall'opzione `dns` di `interface … pool`.
 
 ```ncl sample=company
 pixelcake> show dns PC-Vendite

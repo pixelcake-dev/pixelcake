@@ -4,7 +4,7 @@ description: "Chiamare un dispositivo per nome: i record di un server, il server
 order: 5
 ---
 
-Il DNS fa sì che un nome stia per un indirizzo. In PixelCake un server tiene un elenco di nomi, ciascuno con un indirizzo; a una scheda di rete si dice quale server interrogare; e un comando del terminale a cui si dà un nome chiede prima a quel server, poi prosegue verso l'indirizzo ricevuto. La ricerca è uno scambio vero, e può fallire come ogni altro. Il motore non ha una memoria delle risposte: un nome viene cercato ogni volta che una domanda lo usa.
+Il DNS permette di usare un nome al posto di un indirizzo. In PixelCake un server ha un elenco di nomi, ciascuno con un indirizzo; a una scheda di rete si dice quale server interrogare; e un comando del terminale a cui si dà un nome chiede prima a quel server, poi prosegue verso l'indirizzo ricevuto. La ricerca è uno scambio vero e proprio, e può fallire come ogni altro. Il motore non ha una memoria delle risposte: un nome viene cercato ogni volta che una domanda lo usa.
 
 I nomi funzionano solo nel terminale: `ping`, `trace`, `browse`, `mail` e `download` accettano un nome di host dove accettano un dispositivo, e `resolve` fa la sola ricerca. Il pannello della simulazione e la presentazione scelgono i dispositivi dai menu e non usano i nomi.
 
@@ -14,7 +14,7 @@ Gli esempi usano la rete di esempio «Azienda: uffici, Wi-Fi, server e DMZ», do
 
 Un server DNS è un server con almeno un record. Nella finestra del server apri la scheda «DNS». Sotto «Nomi conosciuti» premi «Aggiungi record» e compila un «Nome» e un «Indirizzo», per esempio `gestionale.azienda.example` e `192.168.30.30`. Non cambia nulla finché non premi «Salva». Nel terminale: `add record <nome> <indirizzo> on <server>` ([riferimento](../terminal/dhcp-and-dns.md#add-record)).
 
-Un nome è un nome di host: lettere, cifre e trattini, con almeno un punto. Maiuscole e minuscole sono uguali. Un nome ha un solo indirizzo: scriverlo di nuovo ne cambia l'indirizzo. Un server risponde solo per i nomi scritti su di lui, e un dispositivo senza record non risponde come server DNS.
+Un nome è un nome di host: lettere, cifre e trattini, con almeno un punto. Maiuscole e minuscole non contano. Un nome ha un solo indirizzo: scriverlo di nuovo ne cambia l'indirizzo. Un server risponde solo per i nomi scritti su di esso, e un dispositivo senza record non risponde come server DNS.
 
 `show dns` elenca i record di tutti i server del disegno, e chi interroga chi:
 
@@ -54,9 +54,9 @@ intranet.azienda.example is 192.168.30.30 (answered by Srv-Auth)
 
 ## Chi interroga chi {#who-asks}
 
-Ogni dispositivo decide a chi chiedere, sulla propria scheda di rete. Nella scheda «Schede di rete» della finestra, il campo «Server DNS» di una scheda di rete contiene l'indirizzo del server. È un indirizzo, non un nome. Un dispositivo chiede attraverso la prima scheda abilitata che indica un server. Un router, un firewall e uno switch non hanno schede, e non chiedono a nessuno.
+Ogni dispositivo decide a chi chiedere, sulla propria scheda di rete. Nella scheda «Schede di rete» della finestra, il campo «Server DNS» di una scheda di rete contiene l'indirizzo del server. È un indirizzo, non un nome. Un dispositivo fa le sue domande dalla prima scheda attiva che indica un server. Un router, un firewall e uno switch non hanno schede, e non chiedono a nessuno.
 
-Una scheda che prende l'indirizzo dal DHCP non sceglie: interroga il server che l'intervallo da cui arriva consegna, «Server DNS consegnato» nel server DHCP ([DHCP](dhcp.md#servers)). Il terminale rifiuta di scrivere un server DNS su una scheda così. `show dns` su un dispositivo dice quale server interroga e se è arrivato con l'assegnazione:
+Una scheda che prende l'indirizzo dal DHCP non sceglie: interroga il server DNS consegnato dall'intervallo da cui prende l'indirizzo, cioè il «Server DNS consegnato» del server DHCP ([DHCP](dhcp.md#servers)). Il terminale rifiuta di scrivere un server DNS su una scheda così. `show dns` su un dispositivo dice quale server interroga e se è arrivato con l'assegnazione:
 
 ```ncl sample=company
 pixelcake> show dns Portatile-1
@@ -65,7 +65,7 @@ DNS of Portatile-1
   a name is looked up each time it is used: no cache, no second server, no forwarding to another server
 ```
 
-Per non scrivere l'indirizzo su ogni scheda, Impostazioni → Rete ha «Server DNS predefinito»: i dispositivi nuovi partono con quello sulla loro scheda e, una volta salvato, si può assegnare ai dispositivi del canvas che non ne hanno ([Indirizzi e gateway](../building/addresses.md#project-network)).
+Per non scrivere l'indirizzo su ogni scheda, Impostazioni → Rete ha «Server DNS predefinito»: i dispositivi nuovi partono con quello sulla loro scheda e, una volta salvato, lo si può assegnare ai dispositivi del canvas che non ne hanno ([Indirizzi e gateway](../building/addresses.md#project-network)).
 
 Un dispositivo che non ha nessuno a cui chiedere non può cercare un nome, e lo dice. Lo stesso accade togliendo il server DNS a una scheda:
 
@@ -108,7 +108,7 @@ Lookup failed: PC-Vendite asks 8.8.8.8 for names, an address no device has
 
 ## Una ricerca {#lookup}
 
-Una ricerca è un viaggio di andata e ritorno. Una richiesta va dal dispositivo all'indirizzo del suo server DNS e la risposta torna, come un flusso del servizio DNS. Tutte e due sono seguite come ogni altro pacchetto: VLAN, rotte, regole del firewall, NAT e guasti valgono, e una ricerca si ferma negli stessi modi. Solo se arrivano tutte e due il record viene letto. Poi il comando prosegue verso l'indirizzo trovato, esattamente come se fosse stato scritto.
+Una ricerca è un viaggio di andata e ritorno. Una richiesta va dal dispositivo all'indirizzo del suo server DNS e la risposta torna, come un flusso del servizio DNS. Tutte e due sono seguite come ogni altro pacchetto: VLAN, rotte, regole del firewall, NAT e guasti valgono anche per lei, e una ricerca si ferma negli stessi modi. Solo se arrivano tutte e due il record viene letto. Poi il comando prosegue verso l'indirizzo trovato, esattamente come se fosse stato scritto.
 
 `resolve <nome>` fa la sola ricerca, e il comando che segue la mostra prima della sua risposta:
 
@@ -188,7 +188,7 @@ Reply from 192.168.30.30: hops=6 time=9ms
 
 > [!LIMITS]
 > - Una scheda indica un solo server DNS. Non c'è un secondo server di riserva.
-> - Un server risponde solo per i propri record. Non chiede a un altro server: non ci sono inoltro delle domande né ricorsione, e un server DNS pubblico che non è nel disegno non è nessuno.
+> - Un server risponde solo per i propri record. Non chiede a un altro server: non ci sono inoltro delle domande né ricorsione, e un server DNS pubblico che non è nel disegno, per il motore, non esiste.
 > - Niente memoria delle risposte né scadenze: ogni domanda che usa un nome lo cerca di nuovo.
 > - Niente ricerca inversa, nomi jolly o alias: un nome è un nome di host con un solo indirizzo.
 > - Un dispositivo senza scheda di rete, come un router, un firewall o uno switch, non chiede a nessuno.

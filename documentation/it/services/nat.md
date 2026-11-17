@@ -4,13 +4,13 @@ description: "Uscire su Internet con l'indirizzo di una porta, e pubblicare a qu
 order: 3
 ---
 
-Un indirizzo privato, come 192.168.10.11, ha senso solo dentro la sua rete. Per uscire su Internet un dispositivo ha bisogno di un indirizzo pubblico, e per essere raggiunto da Internet un server deve essere pubblicato a uno. Lo fa un router o un firewall traducendo gli indirizzi (NAT): ciò che esce prende l'indirizzo di una porta, e ciò che arriva a quell'indirizzo per un servizio viene passato a un server interno.
+Un indirizzo privato, come 192.168.10.11, ha senso solo dentro la sua rete. Per uscire su Internet un dispositivo ha bisogno di un indirizzo pubblico, e per essere raggiunto da Internet un server deve essere pubblicato su un indirizzo pubblico. Fa entrambe le cose un router o un firewall, traducendo gli indirizzi (NAT): ciò che esce prende l'indirizzo di una porta, e ciò che arriva a quell'indirizzo per un servizio viene passato a un server interno.
 
 Gli esempi usano la rete di esempio «Sede: VLAN, DMZ e firewall». Il suo firewall, FW-Edge, ha Internet alla porta 3, con l'indirizzo pubblico 203.0.113.1.
 
 ## Internet non trasporta indirizzi privati {#private}
 
-Un simbolo Cloud il cui nome contiene Internet (`Internet`, `Internet A`) rifiuta un pacchetto la cui origine o destinazione è in un intervallo privato: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 e 169.254.0.0/16. Il motivo dice quale dei due indirizzi è, e che cosa avrebbe dovuto tradurlo. Un simbolo Cloud con un altro nome, la rete di un operatore o una linea privata, lascia passare tutto.
+Un simbolo Cloud il cui nome contiene Internet (`Internet`, `Internet A`) rifiuta un pacchetto il cui indirizzo di partenza o di destinazione è in un intervallo privato: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 e 169.254.0.0/16. Il motivo dice quale dei due indirizzi è, e che cosa avrebbe dovuto tradurlo. Un simbolo Cloud con un altro nome, la rete di un operatore o una linea privata, lascia passare tutto.
 
 Perciò una rete ha bisogno del NAT per raggiungere Internet e per essere raggiunta. Qui il NAT è spento sulla porta 3 di FW-Edge. Un PC degli uffici non riesce a uscire, e Internet non riesce a raggiungere il PC:
 
@@ -31,9 +31,9 @@ Trace failed (blocked): Internet does not carry private addresses: 192.168.10.11
 
 ## Il NAT in uscita {#source-nat}
 
-Il NAT in uscita (source NAT) è un'impostazione di una porta. Un flusso nuovo che il router o il firewall inoltra da una porta con il NAT esce con l'indirizzo di quella porta, e il trace del dispositivo scrive `NAT: source 192.168.10.11 → 203.0.113.1`. Il dispositivo ricorda il flusso: quando la risposta torna a quell'indirizzo, viene mandata avanti al vero mittente. Una risposta non viene mai tradotta come un flusso a sé, e ciò che il dispositivo manda da sé non viene tradotto.
+Il NAT in uscita (source NAT) è un'impostazione di una porta. Un flusso nuovo che il router o il firewall inoltra da una porta con il NAT esce con l'indirizzo di quella porta, e nel `trace` la riga del dispositivo dice `NAT: source 192.168.10.11 → 203.0.113.1`. Il dispositivo ricorda il flusso: quando la risposta torna a quell'indirizzo, viene mandata avanti al vero mittente. Una risposta non viene mai tradotta come un flusso a sé, e ciò che il dispositivo manda da sé non viene tradotto.
 
-Per accenderlo apri la finestra del router o del firewall e vai nella scheda «NAT». Sotto «Porte con NAT» spunta la porta che guarda verso Internet. È la stessa scelta di «NAT attivo» sulla porta, nella scheda «Porte». Sono elencate solo le porte che hanno un indirizzo, perché ciò che esce prende quell'indirizzo; se nessuna porta ne ha uno la scheda lo dice e offre un pulsante per andare alla scheda «Porte». Non cambia nulla finché non premi «Salva». Nel terminale si fa con `interface <n> nat on <dispositivo>` ([riferimento](../terminal/firewall-and-nat.md#nat)).
+Per attivarlo apri la finestra del router o del firewall, poi la scheda «NAT». Sotto «Porte con NAT» spunta la porta rivolta verso Internet. È la stessa scelta di «NAT attivo» sulla porta, nella scheda «Porte». Sono elencate solo le porte che hanno un indirizzo, perché ciò che esce prende quell'indirizzo; se nessuna porta ne ha uno la scheda lo dice e offre un pulsante per andare alla scheda «Porte». Non cambia nulla finché non premi «Salva». Nel terminale si fa con `interface <n> nat on <dispositivo>` ([riferimento](../terminal/firewall-and-nat.md#nat)).
 
 ```ncl continue
 pixelcake> interface 3 nat on FW-Edge
@@ -56,7 +56,7 @@ FORWARDS (the first that matches is taken)
    1  web    from interface 3   (203.0.113.1) to 172.16.0.10
 ```
 
-Il trace mostra la traduzione a FW-Edge, nella stessa riga della rotta e della decisione del firewall. Lo stesso lo può fare un router, e la porta deve avere un indirizzo:
+Il `trace` mostra la traduzione su FW-Edge, nella stessa riga della rotta e della decisione del firewall. Un router può fare lo stesso, purché la porta abbia un indirizzo:
 
 ```ncl sample=office
 pixelcake> show nat Router-1
@@ -102,9 +102,9 @@ Tracing route to Web-Pubblico (172.16.0.10) from PC-Remoto as web:
 Trace failed (blocked): Internet does not carry private addresses: 172.16.0.10 is reached from outside at 203.0.113.1, where FW-Edge publishes it (port forward 1)
 ```
 
-Per nome il browser chiede Web-Pubblico e viene mandato a 203.0.113.1, dove il server web è pubblicato; la nota lo dice. Un ping allo stesso nome non trova un inoltro per il ping, e Internet rifiuta 172.16.0.10. Un indirizzo scritto nel comando è l'indirizzo a cui si mira, e non se ne prova nessun altro al suo posto: l'ultimo comando, con l'indirizzo interno scritto, viene rifiutato, e il motivo dice dove il server è pubblicato.
+Per nome il browser chiede Web-Pubblico e viene mandato a 203.0.113.1, dove il server web è pubblicato; la nota lo dice. Un ping allo stesso nome non trova un inoltro per il ping, e Internet rifiuta 172.16.0.10. Un indirizzo scritto nel comando è quello a cui va la domanda, e non se ne prova nessun altro al suo posto: l'ultimo comando, con l'indirizzo interno scritto, viene rifiutato, e il motivo dice dove il server è pubblicato.
 
-Gli inoltri si leggono dall'alto, come le regole: si prende il primo che corrisponde a servizio e porta. Un secondo inoltro per lo stesso servizio e la stessa porta è permesso, ma vale il primo, e il terminale avvisa:
+Gli inoltri si leggono dall'alto, come le regole: vale il primo che corrisponde per servizio e porta. Un secondo inoltro per lo stesso servizio e la stessa porta è permesso, ma conta il primo, e il terminale avvisa:
 
 ```ncl sample=site
 pixelcake> add forward web from interface 3 to 172.16.0.99 on FW-Edge
@@ -122,9 +122,9 @@ FORWARDS (the first that matches is taken)
 
 ## Con le regole di un firewall {#with-rules}
 
-Su un firewall l'inoltro dice dove va il traffico. Non dice che può passare. Serve anche una regola, e il firewall vede il pacchetto con la destinazione già tradotta: la regola nomina l'indirizzo interno, non quello pubblico. Anche l'origine non è ancora tradotta: una regola nomina sempre indirizzi veri, oppure una zona.
+Su un firewall l'inoltro dice dove va il traffico. Non dice che può passare. Serve anche una regola, e il firewall vede il pacchetto con la destinazione già tradotta: la regola nomina l'indirizzo interno, non quello pubblico. Nemmeno l'indirizzo di partenza è ancora tradotto: una regola nomina sempre indirizzi veri, oppure una zona.
 
-Nella rete di esempio la regola che fa entrare il web è la prima. Senza di essa la politica delle zone nega untrust → dmz. Riscrivendola per il server, con il suo nome (il terminale ne salva l'indirizzo), la pagina torna:
+Nella rete di esempio la regola che fa entrare il web è la prima. Senza di essa la politica delle zone nega untrust → dmz. Se la si riscrive per il server, con il suo nome (il terminale ne salva l'indirizzo), la pagina torna ad aprirsi:
 
 ```ncl sample=site
 pixelcake> remove rule 1 from FW-Edge
@@ -169,4 +169,4 @@ FW-Edge: forward 2 added — forward email from interface 3 to 192.168.20.10
 > - Un server raggiunto da dentro al suo indirizzo pubblicato non è trattato a parte rispetto a ogni altra richiesta a quell'indirizzo.
 > - Un dispositivo dietro due strati di NAT si trova per nome solo attraverso il primo.
 > - Non c'è una tabella delle traduzioni da leggere, né scadenze, né un limite ai flussi aperti.
-> - Internet non è simulata: un simbolo Cloud chiamato Internet rifiuta gli indirizzi privati e lascia passare tutto il resto.
+> - Internet non è simulato: un simbolo Cloud chiamato Internet rifiuta gli indirizzi privati e lascia passare tutto il resto.

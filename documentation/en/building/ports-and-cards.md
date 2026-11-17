@@ -19,7 +19,7 @@ The tab shows the ports as a row of boxes. Each shows its number, its name if it
 | “Port mode” | switch | “Access (end device)” or “Trunk (between switches)”. It decides how the VLAN of the port is read: see [VLANs](vlans.md#access-and-trunk) |
 | “VLAN (single)” or “VLANs (comma-separated)” | switch | The VLAN of an access port, the VLANs a trunk carries: see [VLANs](vlans.md) |
 | “IP address”, “Subnet mask” | router, firewall | The address of the port. It is the gateway of the devices cabled there, and its network is reached without a route. Without a mask `255.255.255.0` is used. See [Addresses and gateways](addresses.md#router-ports) |
-| “Security zone” | firewall | Trust, untrust, DMZ or none. The zone decides what the firewall lets through before its rules are read |
+| “Security zone” | firewall | Trust, untrust, DMZ or none. The firewall reads its rules first; when no rule matches, the zone policy decides what passes ([Firewall](../services/firewall.md#policy)) |
 | “NAT enabled” | router, firewall | What the device forwards out of this port leaves with the address of the port |
 | “DHCP server enabled” | router, firewall | The port hands addresses out to the cards of its network that are on DHCP |
 | “Link speed”, “PoE enabled (Power over Ethernet)”, “IPS/IDS enabled (intrusion prevention/detection)” | speed on all, PoE on a switch, IPS on a firewall | Nothing: they are kept with the drawing, and the engine does not read them |

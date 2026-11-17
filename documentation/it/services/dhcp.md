@@ -4,15 +4,15 @@ description: "Dispositivi che prendono l'indirizzo da soli, le porte e i server 
 order: 4
 ---
 
-Con il DHCP un dispositivo non ha l'indirizzo scritto addosso: lo chiede, e un server DHCP della sua rete glielo assegna insieme alla subnet mask e a un gateway, e a un server DNS quando l'intervallo ne indica uno. In PixelCake il motore non ha un orologio, quindi un'assegnazione non viene ricordata: gli indirizzi si calcolano dal disegno, sempre allo stesso modo.
+Con il DHCP un dispositivo non ha l'indirizzo scritto a mano: lo chiede, e un server DHCP della sua rete glielo assegna insieme alla subnet mask e a un gateway, e a un server DNS quando l'intervallo ne indica uno. In PixelCake il motore non ha un orologio, quindi un'assegnazione non viene ricordata: gli indirizzi si calcolano dal disegno, sempre allo stesso modo.
 
 Gli esempi usano la rete di esempio «Azienda: uffici, Wi-Fi, server e DMZ». Il suo router, Router-Core, assegna gli indirizzi agli uffici (porta 1) e al Wi-Fi (porta 2), e i due portatili prendono i loro da lui.
 
 ## Una scheda in DHCP {#clients}
 
-Il cliente è una scheda di rete. Nella finestra di un dispositivo finale (un PC, un portatile, una stampante, un server) apri la scheda «Schede di rete», scegli la scheda e, sotto «Indirizzo», scegli «Automatico (DHCP)» invece di «Manuale». Finché una scheda è in DHCP non ha un indirizzo suo. Prende indirizzo, subnet mask e gateway dal server che le risponde, e il server DNS quando l'intervallo ne indica uno; la scheda li mostra sotto «Indirizzo assegnato». Sul disegno l'indirizzo del dispositivo è seguito da «DHCP».
+Il client è una scheda di rete. Nella finestra di un dispositivo finale (un PC, un portatile, una stampante, un server) apri la scheda «Schede di rete», scegli la scheda e, sotto «Indirizzo», scegli «Automatico (DHCP)» invece di «Manuale». Finché una scheda è in DHCP non ha un indirizzo suo. Prende indirizzo, subnet mask e gateway dal server che le risponde, e il server DNS quando l'intervallo ne indica uno, e li mostra sotto «Indirizzo assegnato». Sul disegno l'indirizzo del dispositivo è seguito da «DHCP».
 
-Nel terminale è `interface <nome> dhcp on <dispositivo>` ([riferimento](../terminal/dhcp-and-dns.md#dhcp-client)), e la risposta dice che cosa è stato assegnato alla scheda:
+Nel terminale si fa con `interface <nome> dhcp on <dispositivo>` ([riferimento](../terminal/dhcp-and-dns.md#dhcp-client)), e la risposta dice che cosa è stato assegnato alla scheda:
 
 ```ncl sample=company
 pixelcake> interface eth0 dhcp on PC-Vendite
@@ -26,7 +26,7 @@ PC-Vendite — addressing
   eth0: 192.168.10.100 / 255.255.255.0 gw 192.168.10.1 dns 192.168.30.10 (dhcp from Router-Core port 1)
 ```
 
-`show ip` segna un indirizzo assegnato con `(dhcp)` e dice da quale intervallo viene. Scegli «Manuale» nella finestra, oppure scrivi un indirizzo con `set ip`, e la scheda esce dal DHCP.
+`show ip` indica un indirizzo assegnato con `(dhcp)` e dice da quale intervallo viene. Scegli «Manuale» nella finestra, oppure scrivi un indirizzo con `set ip`, e la scheda esce dal DHCP.
 
 Un router o un firewall non prende gli indirizzi dal DHCP: le sue porte si scrivono a mano.
 
@@ -34,7 +34,7 @@ Un router o un firewall non prende gli indirizzi dal DHCP: le sue porte si scriv
 
 Un server DHCP è un intervallo di indirizzi su un'interfaccia: una porta di un router o di un firewall, oppure una scheda di un server. Un intervallo assegna indirizzi della rete della sua interfaccia, quindi l'interfaccia deve prima avere un indirizzo suo.
 
-Nella finestra del router, del firewall o del server vai nella scheda «DHCP». Sotto «Intervalli di indirizzi» spunta la porta o la scheda della rete che deve ricevere gli indirizzi: l'intervallo viene proposto, e si cambia con «Primo indirizzo» e «Ultimo indirizzo». «Gateway consegnato» è il gateway che ricevono i clienti: vuoto vuol dire l'indirizzo della porta su un router o un firewall, e nessuno su un server. «Server DNS consegnato» è il server a cui chiederanno i nomi, e può stare in un'altra rete. È la stessa scelta di «Server DHCP attivo» nel pannello della porta o della scheda. Non cambia nulla finché non premi «Salva». Nella scheda, sotto «Indirizzi assegnati», c'è chi ha preso quale indirizzo, con «Indirizzo», «Dispositivo», «Scheda» e «Assegnato da», e «Avvisi» dice che cosa non va.
+Nella finestra del router, del firewall o del server apri la scheda «DHCP». Sotto «Intervalli di indirizzi» spunta la porta o la scheda della rete che deve ricevere gli indirizzi: l'intervallo viene proposto, e si cambia con «Primo indirizzo» e «Ultimo indirizzo». «Gateway consegnato» è il gateway che ricevono i client: vuoto vuol dire l'indirizzo della porta su un router o un firewall, e nessuno su un server. «Server DNS consegnato» è il server a cui faranno le domande sui nomi, e può stare in un'altra rete. È la stessa scelta di «Server DHCP attivo» nel pannello della porta o della scheda. Non cambia nulla finché non premi «Salva». Sotto «Indirizzi assegnati» la scheda elenca chi ha preso quale indirizzo, con «Indirizzo», «Dispositivo», «Scheda» e «Assegnato da», e «Avvisi» dice che cosa non va.
 
 Nel terminale: `interface <n> pool <primo> to <ultimo> on <dispositivo>` ([riferimento](../terminal/dhcp-and-dns.md#pool)), e `show dhcp` elenca gli intervalli e le assegnazioni di tutto il disegno, o di un dispositivo:
 
@@ -56,7 +56,7 @@ Portatile-1 — addressing
   eth0: 192.168.20.100 / 255.255.255.0 gw 192.168.20.1 dns 192.168.30.10 (dhcp from Router-Core port 2)
 ```
 
-Un intervallo è per una rete, e un dispositivo è servito dall'intervallo che sta sulla sua rete. Un router non gira la richiesta a un'altra rete, quindi un server della rete dei server non dà indirizzi agli uffici. Un server può invece assegnare indirizzi alla propria rete. Nella rete multinazionale lo fa il server DHCP-RM per una sede:
+Un intervallo è per una rete, e un dispositivo è servito dall'intervallo che sta sulla sua rete. Un router non inoltra la richiesta a un'altra rete, quindi un server della rete dei server non dà indirizzi agli uffici. Un server può invece assegnare indirizzi alla propria rete. Nella rete multinazionale lo fa il server DHCP-RM per una sede:
 
 ```ncl sample=multinational
 pixelcake> show dhcp DHCP-RM
@@ -75,7 +75,7 @@ LEASES
   leases are worked out from the drawing: nothing is renewed, nothing is relayed to another network
 ```
 
-Un intervallo scritto di nuovo sostituisce quello che l'interfaccia aveva, tutto intero: ciò che il nuovo non dice, il gateway e il server DNS, sparisce.
+Un intervallo scritto di nuovo sostituisce per intero quello che l'interfaccia aveva: ciò che il nuovo non indica, il gateway e il server DNS, sparisce.
 
 ```ncl sample=company
 pixelcake> interface 1 pool 192.168.10.100 to 192.168.10.149 gateway 192.168.10.1 on Router-Core
@@ -96,11 +96,11 @@ L'intervallo della porta 1 ha perso il server DNS, perché il comando non ne ind
 
 ## Quale indirizzo {#which-address}
 
-Il motore dà gli indirizzi alle schede nell'ordine del disegno: i dispositivi come compaiono, e le schede di ciascuno in ordine. Ogni scheda prende l'indirizzo più basso libero del suo intervallo. Un indirizzo non è libero quando:
+Il motore dà gli indirizzi alle schede nell'ordine del disegno: i dispositivi come compaiono, e le schede di ciascuno in ordine. Ogni scheda prende l'indirizzo libero più basso del suo intervallo. Un indirizzo non è libero quando:
 
 - è scritto a mano su una qualunque interfaccia del disegno, in qualunque rete;
 - è già stato dato a un'altra scheda;
-- è il gateway che l'intervallo distribuisce;
+- è il gateway che l'intervallo consegna;
 - è il primo o l'ultimo indirizzo della rete.
 
 Perciò un indirizzo scritto a mano dentro un intervallo sposta l'assegnazione che lo aveva. Qui alla stampante si dà a mano 192.168.20.100, e i due portatili scalano di uno:
@@ -128,14 +128,14 @@ Una scheda in DHCP che non trova un indirizzo ne resta senza, e ogni domanda che
 - nessun server DHCP risponde sulla sua rete: su quella rete non c'è un intervallo, oppure non arriva alla scheda;
 - l'intervallo è esaurito: tutti i suoi indirizzi sono presi (`the pool of Router-Core port 2 is used up`);
 - l'interfaccia della scheda è spenta (`interface eth0 is disabled`);
-- alla scheda non è attaccato nessun cavo;
+- alla scheda non è collegato nessun cavo;
 - l'intervallo che risponde non è utilizzabile, per esempio perché è fuori dalla rete della sua interfaccia;
-- il cavo verso il server non è attaccato a una delle sue porte, quindi non si sa quale intervallo risponde (su un firewall con le zone vedi [Le zone](firewall.md#zones));
+- il cavo verso il server non è assegnato a una delle sue porte, quindi non si sa quale intervallo risponde (su un firewall con le zone vedi [Le zone](firewall.md#zones));
 - il dispositivo è un router o un firewall.
 
-La finestra dice lo stesso. Nella scheda «Schede di rete» la scheda riporta `Nessun indirizzo:` seguito dal motivo, e sul disegno l'indirizzo del dispositivo è sostituito da «DHCP: nessun indirizzo» e la parte alta del disegno diventa gialla. `show dhcp` elenca queste schede sotto `WITHOUT AN ADDRESS`.
+La finestra dice lo stesso. Nella scheda «Schede di rete» la scheda di rete riporta `Nessun indirizzo:` seguito dal motivo, e sul disegno l'indirizzo del dispositivo è sostituito da «DHCP: nessun indirizzo» e la parte alta del disegno diventa gialla. `show dhcp` elenca queste schede sotto `WITHOUT AN ADDRESS`.
 
-Un intervallo con un solo indirizzo, preso da un portatile, ne lascia senza l'altro:
+Un intervallo con un solo indirizzo, preso da un portatile, lascia senza indirizzo l'altro:
 
 ```ncl sample=company
 pixelcake> interface 2 pool 192.168.20.100 to 192.168.20.100 on Router-Core
@@ -201,9 +201,9 @@ interface eth0 on Cliente-Remoto now takes its address from DHCP
 ## Limiti {#limits}
 
 > [!LIMITS]
-> - Niente relay. Un server assegna gli indirizzi alla rete su cui sta la sua interfaccia, e un router non gira una richiesta a un'altra rete.
+> - Niente relay. Un server assegna gli indirizzi alla rete su cui sta la sua interfaccia, e un router non inoltra una richiesta a un'altra rete.
 > - Niente prenotazioni: un intervallo non può dare sempre lo stesso indirizzo alla stessa scheda. Lo fa un indirizzo scritto a mano sulla scheda.
-> - Niente durata dell'assegnazione e niente rinnovo: l'assegnazione è una funzione del disegno. Non è salvata nel file del progetto e viene calcolata di nuovo a ogni domanda.
+> - Niente durata dell'assegnazione e niente rinnovo: l'assegnazione si ricava dal disegno. Non è salvata nel file del progetto e viene calcolata di nuovo a ogni domanda.
 > - Nessuno scambio di messaggi: la richiesta, l'offerta e la conferma non si vedono. L'assegnazione c'è, oppure c'è il motivo per cui manca.
 > - Un intervallo per ogni interfaccia, e insieme all'indirizzo si danno solo il gateway e il server DNS: niente nome di dominio, server dell'ora o altre opzioni.
 > - La porta di un router o di un firewall non può prendere il proprio indirizzo dal DHCP.

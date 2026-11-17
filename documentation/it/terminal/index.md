@@ -90,8 +90,8 @@ Un comando controlla ciò che può prima di scrivere, e non scrive nulla se rifi
 - [Interfacce e VLAN](interfaces-and-vlans.md): accendere o spegnere un'interfaccia, darle un indirizzo e un gateway, mettere la porta di uno switch in una VLAN, l'elenco delle VLAN di un dispositivo.
 - [Dispositivi e indirizzi](devices-and-addresses.md): indirizzo, maschera, gateway e nome di un dispositivo; `connect` e `disconnect`.
 - [Rotte](routes.md): `add route`, `add backup route`, `remove route`.
-- [Firewall e NAT](firewall-and-nat.md): zone, regole, NAT sorgente, inoltri.
-- [DHCP e DNS](dhcp-and-dns.md): una scheda sul DHCP, un intervallo da assegnare, il server DNS che una scheda interroga, i record di un server.
+- [Firewall e NAT](firewall-and-nat.md): zone, regole, NAT in uscita, inoltri.
+- [DHCP e DNS](dhcp-and-dns.md): una scheda in DHCP, un intervallo da assegnare, il server DNS che una scheda interroga, i record di un server.
 - [Interrogare](asking.md): `ping`, `trace`, `browse`, `mail`, `download`, `resolve`, e che cos'è una destinazione.
 - [Comandi show](show.md): tutto ciò che legge la rete.
 - [Aiuto e sessione](help.md): `help`, `use`, `exit`, `clear`, i tasti del terminale.
@@ -106,7 +106,7 @@ Il linguaggio ha una versione sua, ed è la prima riga di `help`: **NCL v0.5**. 
 
 - **0.5**: DNS. Un nome di host funziona come destinazione di `ping`, `trace`, `browse`, `mail` e `download`, e `resolve` lo cerca da solo. Un server ha dei record (`add record`, `remove record`), una scheda indica il suo server DNS (`interface <name> dns`), un server DHCP ne consegna uno, `show dns`. `dns` è un servizio per le regole e gli inoltri, e per `trace … as dns`.
 - **0.4**: DHCP. Una scheda prende l'indirizzo da un server (`interface <name> dhcp`), un'interfaccia assegna gli indirizzi di un intervallo (`interface <n> pool`), `show dhcp`. I comandi `show` distinguono un indirizzo assegnato da uno scritto a mano.
-- **0.3**: traduzione degli indirizzi. NAT sorgente (`interface <n> nat`), inoltri (`add forward`, `remove forward`), `show nat`. Il simbolo Internet non porta più gli indirizzi privati.
+- **0.3**: traduzione degli indirizzi. NAT in uscita (`interface <n> nat`), inoltri (`add forward`, `remove forward`), `show nat`. Il simbolo Internet non porta più gli indirizzi privati.
 - **0.2**: rotte statiche, regole di firewall, impostazioni di una sola interfaccia (indirizzo, VLAN, zona di sicurezza), scambi completi (`browse`, `mail`, `download`) e `trace … as <service>`.
 - **0.1**: `ping` e `trace`, `show` per dispositivi, interfacce, porte, VLAN, connessioni, configurazione, vicini e indirizzi, `set`, l'elenco delle VLAN di un dispositivo, `connect` e `disconnect`, `interface <n> up` e `down`, `use`, `clear` e `help`.
 

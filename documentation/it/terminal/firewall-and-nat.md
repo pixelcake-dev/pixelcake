@@ -1,10 +1,10 @@
 ---
 title: "Firewall e NAT"
-description: "I comandi per le zone di sicurezza e le regole di un firewall, per il NAT sorgente e per gli inoltri."
+description: "I comandi per le zone di sicurezza e le regole di un firewall, per il NAT in uscita e per gli inoltri."
 order: 5
 ---
 
-Un firewall mette ogni sua porta in una zona di sicurezza e filtra ciò che passa da una zona all'altra con un elenco ordinato di regole. Un router o un firewall può anche tradurre gli indirizzi: il NAT sorgente su una porta, e gli inoltri, che rendono raggiungibile da fuori un servizio interno. Questi comandi scrivono le stesse impostazioni delle schede «Porte», «Regole» e «NAT» della finestra del dispositivo. Che cosa significano, e che cosa ne fa il motore, è spiegato in [Zone e regole del firewall](../services/firewall.md) e in [NAT e inoltri](../services/nat.md); le pagine di questa sezione elencano i comandi. `show rules` e `show nat` rileggono il risultato ([Comandi show](show.md#show-rules)).
+Un firewall mette ogni sua porta in una zona di sicurezza e filtra ciò che passa da una zona all'altra con un elenco ordinato di regole. Un router o un firewall può anche tradurre gli indirizzi: il NAT in uscita su una porta, e gli inoltri, che rendono raggiungibile da fuori un servizio interno. Questi comandi scrivono le stesse impostazioni delle schede «Porte», «Regole» e «NAT» della finestra del dispositivo. Che cosa significano, e che cosa ne fa il motore, è spiegato in [Zone e regole del firewall](../services/firewall.md) e in [NAT e inoltri](../services/nat.md); le pagine di questa sezione elencano i comandi. `show rules` e `show nat` rileggono il risultato ([Comandi show](show.md#show-rules)).
 
 Nella sintassi qui sotto `<n>` è il numero di una porta, `<firewall>` un firewall e `<device>` un router o un firewall; `on <device>` si può tralasciare dentro `use <device>`. La notazione è spiegata nella [panoramica](index.md#conventions). I comandi sono in inglese, come tutto il terminale.
 
@@ -160,13 +160,13 @@ interface <n> nat [on] <device>
 interface <n> nat off [on] <device>
 ```
 
-Accende il NAT sorgente su una porta di un router o di un firewall: ciò che il dispositivo inoltra da quella porta esce con l'indirizzo della porta, e le risposte tornano al vero mittente. `nat off` lo spegne; `nat none` è uguale. Se la porta è già come richiesto, nessuno dei due fa nulla, e la risposta lo dice.
+Accende il NAT in uscita su una porta di un router o di un firewall: ciò che il dispositivo inoltra da quella porta esce con l'indirizzo della porta, e le risposte tornano al vero mittente. `nat off` lo spegne; `nat none` è uguale. Se la porta è già come richiesto, nessuno dei due fa nulla, e la risposta lo dice.
 
 | Parametro | Che cos'è |
 |---|---|
 | `<n>` | Il numero di una porta di un router o di un firewall |
 
-Una porta senza indirizzo viene accettata, e la risposta dice che non si traduce nulla finché non ne ha uno. Nel `trace`, la riga di quel dispositivo dice che cosa è stato tradotto (`NAT: source 192.168.10.12 → 203.0.113.1`, [NAT sorgente](../services/nat.md#source-nat)).
+Una porta senza indirizzo viene accettata, e la risposta dice che non si traduce nulla finché non ne ha uno. Nel `trace`, la riga di quel dispositivo dice che cosa è stato tradotto (`NAT: source 192.168.10.12 → 203.0.113.1`, [NAT in uscita](../services/nat.md#source-nat)).
 
 ```ncl sample=company
 pixelcake> show nat FW-Edge
