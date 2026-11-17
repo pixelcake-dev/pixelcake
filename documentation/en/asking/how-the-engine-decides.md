@@ -45,7 +45,7 @@ The way a packet takes is not chosen by a metric. At layer 3 the routing table s
 
 ## At layer 3 {#layer-3}
 
-A device that works at layer 3 decides in this order: whether the packet is for it, which route to take, what the firewall says, which addresses change. The sender is not filtered and does not translate what it sends itself, and a firewall does not filter a packet addressed to the firewall itself.
+A device that works at layer 3 decides in this order: whether the packet is for it or for a server it publishes, which route to take, what the firewall says, and with which source address the packet leaves. The sender is not filtered and does not translate what it sends itself, and a firewall does not filter a packet addressed to the firewall itself.
 
 ### The route {#route}
 
@@ -53,11 +53,11 @@ The device looks the destination up in its routing table. Three kinds of entry e
 
 - **connected**: a network one of its addressed ports or cards is in;
 - **static**: a route written on a router or firewall;
-- **default**: the gateway of a network card, or the gateway of a router.
+- **default**: the gateway of a network card, the gateway of a router, or a route written to `default`.
 
 The most specific entry wins. At equal length a connected network beats a static route, and a static route beats the default. Of two routes to the same network the first one written is used, and the others are [backup routes](../services/routes.md#backup). A route that leaves by a port that is switched off is not used. The table is explained in [the routing table](../services/routes.md#routing-table).
 
-When there is no entry the packet stops here, and the reason says which device and what is missing: `no default gateway configured on PC-1`, or `Router-1 has no route to 192.168.30.11`. A route whose next hop is on none of the device's own networks cannot be used either, and says so. When the only way leaves by a port that is switched off, the reason is that port: `port 2 on Router-1 is disabled`.
+When there is no entry the packet stops here, and the reason says which device and what is missing: `no default gateway configured on PC-1`, or `Router-1 has no route to 192.168.30.11`. A route whose next hop is on none of the device's own networks cannot be used either: the packet stops there, with that reason, even when a backup route or the default route would lead on. When the only way leaves by a port that is switched off, the reason is that port: `port 2 on Router-1 is disabled`.
 
 Having found the next address, the engine looks for the device that answers for it on the sender's own network. When there is none, the reason says what is there instead: `PC-1 uses gateway 192.168.10.99, but Router-1 port 1 on its network is 192.168.10.1`. See [the gateway](../building/addresses.md#gateway).
 
@@ -69,15 +69,15 @@ A route is withdrawn when the interface it leaves by has no working cable left: 
 note: R-HQ: the route 192.168.2.0/24 via 10.0.0.2 is unusable (link R-HQ–R-Branch is down), the route 192.168.2.0/24 via 10.0.1.2 is used instead
 ```
 
-Two cases keep the main route. A network the device is attached to is never looked for elsewhere: the broken link is the answer. And a next hop that dies behind a switch does not take the interface down, so the route stays and the packet is lost there, as with a plain static route.
+Two cases keep the main route. A network the device is attached to by a failed cable is not looked for elsewhere: the broken link is the answer. (A port that is switched off is not a failure: its network leaves the table, and a less specific route, the default one for instance, may take its traffic.) And a next hop that dies behind a switch does not take the interface down, so the route stays and the packet is lost there, as with a plain static route.
 
 ### The firewall {#firewall}
 
 A firewall that a packet crosses (not one that sends it, not one it is addressed to) decides before the packet goes on:
 
-1. **The rules**, top to bottom. The first rule that is enabled and matches the service, the source and the destination decides, to allow or to deny. A rule that names a zone needs the cable to be attached to a port, because the zone belongs to the port: without that the rule is skipped, with a note.
+1. **The rules**, top to bottom. The first rule that is enabled and matches the service, the source and the destination decides, to allow or to deny. A rule that names a zone needs the cable to be attached to a port that is in a zone, because the zone belongs to the port: without that the rule is skipped, with a note.
 2. **The zone policy**, when no rule matches. A new flow to a more trusted zone is denied: `untrust → trust`, `untrust → dmz` and `dmz → trust`. Anything else is allowed. A firewall that does not know the zone of both sides, because a cable is attached to no zoned port, allows, with a note.
-3. **Replies**. A firewall keeps state: the reply to a flow it allowed passes, whatever the rules say about a new flow in that direction.
+3. **Replies**. The reply to an allowed flow passes, whatever the rules say about a new flow in that direction. No table of flows is kept: every firewall on the way back lets the reply through, even one the request did not cross.
 
 ```ncl sample=site
 pixelcake> show rules FW-Edge
@@ -102,7 +102,7 @@ The rules and the policy are in [Firewall](../services/firewall.md): [zones](../
 
 A router or a firewall may change the addresses of a packet, in the order that makes its own rules meaningful. A packet addressed to the device is first sent on to the address a [port forward](../services/nat.md#forwards) names. The firewall then sees the real destination and the real source. Last, a new flow that leaves by a port with [source NAT](../services/nat.md#source-nat) takes the address of that port, and the device remembers the flow so that the reply is translated back.
 
-The Internet symbol named Internet does not carry private addresses. A packet that arrives there with a private source or destination stops, and the reason says which of the two and what should have translated it: [the Internet does not carry private addresses](../services/nat.md#private). When the Internet is in the way, a device behind NAT is aimed at its public address if it has one, else at the address a forward publishes it at, and a note says so.
+A Cloud symbol whose name contains Internet does not carry private addresses. A packet that arrives there with a private source or destination stops, and the reason says which of the two and what should have translated it: [the Internet does not carry private addresses](../services/nat.md#private). When the Internet is in the way, a device behind NAT is aimed at its public address if it has one, else at the address a forward publishes it at, and a note says so.
 
 ```ncl sample=site
 pixelcake> browse Web-Public from Remote-PC
@@ -132,13 +132,13 @@ At every cable the engine checks, in this order:
 1. **The cable and the device at its other end.** A cable cut by a simulated failure, or a device that is down, carries nothing.
 2. **The port it leaves by is up.** `port 1 on SW-Office is disabled`.
 3. **The VLAN may leave through that port.** On a switch that applies VLANs, an access port lets out only its own VLAN, and a trunk only the ones it carries: `VLAN 10 does not leave through port 2 on SW-Office: it is in the default VLAN 1`. See [VLANs](../building/vlans.md) and, for the rule about the ports nobody touched, [VLAN 1](../building/vlans.md#vlan-1).
-4. **A router or firewall without addresses on its ports** lets the packet through, and a firewall of that kind still applies its policy between the two ports crossed.
+4. **A router or firewall without addresses on its ports** lets the packet through, and a firewall of that kind still applies its rules and its zone policy between the two ports crossed.
 5. **The port it arrives at is up.**
-6. **The device it reaches.** A switch or an access point takes the frame if the VLAN is allowed in by that port, and the search goes on from it. A router with addresses on its ports never carries a frame for others: it answers if the address is one of its own, and otherwise the search does not go through it. An end device is the same.
+6. **The device it reaches.** A switch or an access point takes the frame if the VLAN is allowed in by that port, and the search goes on from it. A router with addresses on its ports never carries a frame for others: it answers if the address is the one of the port the cable arrives at (any of its own, when the cable end is attached to no port), and otherwise the search does not go through it. An end device is the same.
 
 The cable end is attached to a port or a network card of its device ([the two ends](../building/cables.md#ends)). Rules that belong to a port, such as the state of the port, its VLAN and its zone, are applied only when that is known. A cable end attached to nothing is accepted, and the answer carries a note: `link A–B has no port binding…: per-port rules skipped`.
 
-When nothing answers for the address, the reason is the first thing that stopped the packet on the shortest chain of cables to the device that should have answered. What stopped it on a side branch says nothing about the way there. When nothing stopped it, the reason is what is wrong with the network itself: the device is on another network and there is no router in between (`no router between subnets 192.168.10.0 and 192.168.20.0 — L2 devices cannot route`), or an end device sits in the way (`PC-2 is an end device: it does not forward traffic for others`), or nobody has the address.
+When nothing answers for the address, the reason is the first thing that stopped the packet on the shortest chain of cables to the device that should have answered. What stopped it on a side branch says nothing about the way there. When nothing stopped it, the reason is what is wrong with the network itself: the device is on another network and there is no router in between (`no router between subnets 192.168.10.0 and 192.168.20.0 — L2 devices cannot route`), or an end device sits in the way (`PC-2 is an end device: it does not forward traffic for others`), or a router sits between two devices addressed in one network (`… a router does not pass traffic within one network`), or nobody has the address.
 
 ## Who forwards what {#who-forwards}
 
@@ -148,11 +148,11 @@ What a device does with traffic that is not addressed to it depends on what it i
 |---|---|
 | Router, firewall with addresses on its ports | routes by its table, and never passes traffic inside one network |
 | Switch, access point, and any other device built with ports | bridges inside one network, VLAN by VLAN |
-| Router, firewall **without** addresses on its ports | transparent: lets traffic through (a firewall still applies its policy between the two ports); nothing is verified, and a note says so |
+| Router, firewall **without** addresses on its ports | transparent: lets traffic through (a firewall still applies its rules and its zone policy between the two ports); nothing is verified, and a note says so |
 | Internet or Cloud symbol, load balancer | not simulated: assumed to let traffic through, with a note |
 | PC, server and other end devices | nothing: an end device does not carry traffic for others |
 
-A Cloud symbol that is not named Internet (a carrier's network, a private line) carries whatever crosses it, private addresses included.
+A Cloud symbol whose name does not contain Internet (a carrier's network, a private line) carries whatever crosses it, private addresses included.
 
 ## Flows: more than one packet {#flows}
 
@@ -165,7 +165,7 @@ A question is rarely one packet. The engine turns each kind of traffic into **le
 | File download | download request, then download data | web |
 | Email | SMTP submit to the relay, then delivery from the relay | email |
 
-- **A reply is a packet of its own.** It starts only if the request arrived, goes back to the address the request seemed to come from, and takes the way its own routing tables give. It may take another way than the request, and may fail where the request did not. A firewall lets it through because it answers an allowed flow, and the NAT devices of the way translate it back.
+- **A reply is a packet of its own.** It starts only if the request arrived, goes back to the address the request seemed to come from, and takes the way its own routing tables give. It may take another way than the request, and may fail where the request did not. Every firewall on its way lets it through because it answers an allowed flow, even a firewall the request did not cross, and the NAT devices of the way translate it back.
 - **Email has no reply.** The relay depends on the email mode in Settings → Network, group “Simulation”, field “Email mode (SMTP)”. “Internal mail server” uses the mail server with the fewest cables from the sender, counted on the drawing. “Cloud (M365, Gmail…)” uses the nearest internet exit: a device whose type, template or name contains Internet, Cloud, WAN or ISP. “Auto (detect automatically)” prefers the mail server and falls back to the exit, with a note. When the recipient is the mail server there is one leg; when the sender is, the delivery alone.
 - **A page from a device that is not a server** is followed all the same, with a note.
 
@@ -219,7 +219,7 @@ An answer is one of four verdicts:
 | `success` | the destination answered (and, for a flow, every leg arrived) |
 | `blocked` | the packet was dropped on the way: the reason says why, and where |
 | `unreachable` | no chain of cables joins the two devices |
-| `error` | one end does not exist or has no usable address |
+| `error` | the question cannot be tried: one end does not exist or has no usable address, both ends of an exchange are the same device, or there is no mail server or internet exit for an email to go through |
 
 A stop says two things: the **reason**, in a sentence that names the device, the port, the route or the rule; and the **device where it stopped**, `dropped at:` in the terminal, the red box in the panel and in the presentation. It is the device that holds the packet when it stops. For a port, a rule or a route it is the device they belong to; for a cut cable or a device that is down it is the device in front, the last one that could still send. In a flow the reason begins with the name of the leg that failed.
 
@@ -272,7 +272,7 @@ The terminal prints the notes under the answer. The simulation panel shows only 
 > [!LIMITS]
 > - **It is not a packet simulator.** There is no ARP, no MAC table, no spanning tree, no dynamic routing (RIP, OSPF, BGP) and no gateway redundancy: a host has one gateway for each network card. Routes are the ones written.
 > - **A cable is not asked at the far end.** A route is withdrawn when the port it leaves by is switched off, when its cables are cut, or when the devices at their other ends are down. A port switched off at the far end of a working cable is not seen from this side, and the packet is lost there. A next hop that dies behind a switch is not seen either, as with a static route on real hardware.
-> - **There is no time and no load.** The time printed by `ping` is worked out from the number of hops (1 ms and 2 ms for each device in between). There is no cable speed, queue, congestion, packet loss or timeout.
+> - **There is no time and no load.** The time printed by `ping` is worked out from the number of hops of the request (1 ms, plus 2 ms for each device between the two ends). There is no cable speed, queue, congestion, packet loss or timeout.
 > - **Four services.** A flow is ping, web, email or DNS (a download is web to a firewall). There are no TCP or UDP ports, and traffic addressed to the firewall itself is not filtered.
 > - **NAT is by service, not by port number.** Two flows never compete for a translation. A server reached from inside at its published address is not treated apart, and a device behind two layers of NAT is found by name only through the first.
 > - **A DHCP lease is worked out, not negotiated.** No lease time, renewal or reservation, no relay through a router, and a port of a router cannot take its address from DHCP.

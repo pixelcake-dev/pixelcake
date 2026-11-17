@@ -10,7 +10,7 @@ Gli esempi usano la rete di esempio «Sede: VLAN, DMZ e firewall». Il suo firew
 
 ## Internet non trasporta indirizzi privati {#private}
 
-Un simbolo Cloud chiamato Internet rifiuta un pacchetto la cui origine o destinazione è in un intervallo privato: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 e 169.254.0.0/16. Il motivo dice quale dei due indirizzi è, e che cosa avrebbe dovuto tradurlo. Un simbolo Cloud con un altro nome, la rete di un operatore o una linea privata, lascia passare tutto.
+Un simbolo Cloud il cui nome contiene Internet (`Internet`, `Internet A`) rifiuta un pacchetto la cui origine o destinazione è in un intervallo privato: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 e 169.254.0.0/16. Il motivo dice quale dei due indirizzi è, e che cosa avrebbe dovuto tradurlo. Un simbolo Cloud con un altro nome, la rete di un operatore o una linea privata, lascia passare tutto.
 
 Perciò una rete ha bisogno del NAT per raggiungere Internet e per essere raggiunta. Qui il NAT è spento sulla porta 3 di FW-Edge. Un PC degli uffici non riesce a uscire, e Internet non riesce a raggiungere il PC:
 

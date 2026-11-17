@@ -100,6 +100,7 @@ The engine gives the cards their addresses in the order of the drawing: the devi
 
 - it is written by hand on any interface of the drawing, in any network;
 - another card has been given it already;
+- it is the gateway the range hands out;
 - it is the first or the last address of the network.
 
 So an address written by hand inside a range moves the lease that had it. Here the printer is given 192.168.20.100 by hand, and both laptops move up by one:

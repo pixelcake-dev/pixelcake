@@ -8,7 +8,7 @@ A router decides where to send a packet by looking its destination up in a table
 
 ## The routing table {#routing-table}
 
-Every router and every firewall has a routing table, and the engine reads it each time a packet reaches one of them. A PC has no table: it has a gateway on each network card ([Addresses and gateways](../building/addresses.md#end-devices)). The rows of a table are of three kinds:
+Every router and every firewall has a routing table, and the engine reads it each time a packet reaches one of them. A PC has one too, but no route can be written on it: its rows are the network and the gateway of each of its network cards ([Addresses and gateways](../building/addresses.md#end-devices)), and `show routes` prints them. The rows of a table are of three kinds:
 
 - **connected**: a network one of the ports of the device is in. It needs no route: giving a port an address is enough ([The ports of a router](../building/addresses.md#router-ports)).
 - **static**: a route you wrote, with a network and a next hop.
@@ -39,7 +39,7 @@ The first three rows are connected networks, each with the port it is on. The la
 
 A static route is a network and a next hop: the address of the router that is closer to that network. In the window of the router, in the “Routes” tab, press “Add route” under “Static routes”. Write the network and its mask in “Destination network”, for example `192.168.2.0/24`, the address in “Next hop”, and if you like a reminder in “Note”. Nothing changes until you press “Save”. A row left blank is not kept, and a destination that is not a network is refused: write it as `192.168.30.0/24`, or as `default`.
 
-The next hop has to be in a network the router is attached to. If it is not, the row stays in the table, marked as unusable, and the terminal warns when you write it:
+The next hop has to be in a network the router is attached to. If it is not, the row stays in the table, marked as unusable, and it still takes the traffic for its network: the packet stops at the router with that reason, and goes on neither by a backup route nor by the default route. The terminal warns when you write it:
 
 ```ncl sample=two-sites
 pixelcake> add route 192.168.9.0/24 via 10.0.9.9 on R-HQ

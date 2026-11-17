@@ -8,7 +8,7 @@ Un router decide dove mandare un pacchetto cercando la destinazione in una tabel
 
 ## La tabella di instradamento {#routing-table}
 
-Ogni router e ogni firewall ha una tabella di instradamento, e il motore la legge ogni volta che un pacchetto ci passa. Un PC non ha una tabella: ha un gateway su ogni scheda di rete ([Indirizzi e gateway](../building/addresses.md#end-devices)). Le righe sono di tre tipi:
+Ogni router e ogni firewall ha una tabella di instradamento, e il motore la legge ogni volta che un pacchetto ci passa. Ce l'ha anche un PC, ma non ci si possono scrivere rotte: le sue righe sono la rete e il gateway di ciascuna delle sue schede di rete ([Indirizzi e gateway](../building/addresses.md#end-devices)), e `show routes` le stampa. Le righe sono di tre tipi:
 
 - **collegata**: una rete in cui sta una porta del dispositivo. Non serve scriverla: basta dare un indirizzo alla porta ([Le porte di un router](../building/addresses.md#router-ports)).
 - **statica**: una rotta scritta da te, con una rete e un prossimo salto.
@@ -39,7 +39,7 @@ Le prime tre righe sono reti collegate, ciascuna con la porta da cui si raggiung
 
 Una rotta statica è una rete e un prossimo salto: l'indirizzo del router che sta più vicino a quella rete. Nella finestra del router, nella scheda «Rotte», premi «Aggiungi rotta» sotto «Rotte statiche». Scrivi la rete con la sua maschera in «Rete di destinazione», per esempio `192.168.2.0/24`, l'indirizzo in «Prossimo salto» e, se vuoi un promemoria, una «Nota». Non cambia nulla finché non premi «Salva». Una riga lasciata vuota non viene tenuta, e una destinazione che non è una rete viene rifiutata: scrivila come `192.168.30.0/24`, oppure come `default`.
 
-Il prossimo salto deve stare in una rete a cui il router è collegato. Se non ci sta, la riga resta nella tabella con il segno che non è utilizzabile, e il terminale avvisa quando la scrivi:
+Il prossimo salto deve stare in una rete a cui il router è collegato. Se non ci sta, la riga resta nella tabella con il segno che non è utilizzabile, e continua a prendere il traffico per la sua rete: il pacchetto si ferma sul router con quel motivo, e non prosegue né per una rotta di riserva né per la rotta predefinita. Il terminale avvisa quando la scrivi:
 
 ```ncl sample=two-sites
 pixelcake> add route 192.168.9.0/24 via 10.0.9.9 on R-Sede

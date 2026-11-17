@@ -100,6 +100,7 @@ Il motore dà gli indirizzi alle schede nell'ordine del disegno: i dispositivi c
 
 - è scritto a mano su una qualunque interfaccia del disegno, in qualunque rete;
 - è già stato dato a un'altra scheda;
+- è il gateway che l'intervallo distribuisce;
 - è il primo o l'ultimo indirizzo della rete.
 
 Perciò un indirizzo scritto a mano dentro un intervallo sposta l'assegnazione che lo aveva. Qui alla stampante si dà a mano 192.168.20.100, e i due portatili scalano di uno:
