@@ -7,15 +7,6 @@ getting-started/first-network
 getting-started/interface
 getting-started/languages-and-themes
 getting-started/saving-and-files
-building/devices
-building/ports-and-cards
-building/cables
-building/addresses
-building/areas
-building/notes
-building/bulk-add
-building/layout-and-connection
-building/templates
 services/routes
 services/firewall
 services/nat
