@@ -21,10 +21,6 @@ services/firewall
 services/nat
 services/dhcp
 services/dns
-asking/simulation-panel
-asking/how-the-engine-decides
-asking/presentation
-asking/exporting-an-image
 terminal/index
 terminal/devices-and-addresses
 terminal/routes
