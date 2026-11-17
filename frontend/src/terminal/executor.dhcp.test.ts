@@ -19,9 +19,6 @@ import type { ExecutionResult, TerminalContext } from './executor';
 import { useNetworkStore } from '@/store/networkStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
-import { createCompanySample } from '@/utils/sampleCompany';
-import { setLanguage } from '@/i18n';
-import languageReference from '../../../docs/terminal-commands.md?raw';
 import { resolveDhcp } from '@/engine';
 import type { NetworkDevice } from '@/types';
 
@@ -598,45 +595,6 @@ describe('help', () => {
 
 });
 
-describe('the DHCP session of docs/terminal-commands.md', () => {
-  /** The commands of the example, each with what the reference says it prints */
-  function documentedSession(): Array<{ command: string; printed: string[] }> {
-    const text = languageReference.replace(/\r\n/g, '\n');
-    const start = text.indexOf('DHCP on the same sample:');
-    const open = text.indexOf('```\n', start) + 4;
-    const block = text.slice(open, text.indexOf('\n```', open)).split('\n');
-    const session: Array<{ command: string; printed: string[] }> = [];
-    for (const row of block) {
-      const typed = /^pixelcake> (.+)$/.exec(row)?.[1];
-      if (typed) session.push({ command: typed, printed: [] });
-      else session[session.length - 1].printed.push(row);
-    }
-    return session;
-  }
-
-  it('is there, on the sample of the welcome screen loaded in English', () => {
-    expect(languageReference).toContain('DHCP on the same sample:');
-    expect(documentedSession().map(step => step.command)).toEqual([
-      'show dhcp',
-      'show ip Laptop-1',
-      'interface eth0 dhcp on PC-Sales',
-      'ping Web-ERP from PC-Sales',
-      'interface 1 pool none on Router-Core',
-      'ping Web-ERP from PC-Sales',
-      'interface 1 pool 192.168.10.100 to 192.168.10.149 dns 192.168.30.10 on Router-Core',
-      'show dhcp Router-Core',
-    ]);
-  });
-
-  it('prints, command after command, exactly what the reference shows', () => {
-    // The reference is in English, and so are the names of its sample
-    setLanguage('en');
-    const store = useNetworkStore.getState();
-    store.clearAllDevices();
-    const sample = createCompanySample();
-    store.loadTopology(sample.devices, sample.connections);
-    for (const { command, printed } of documentedSession()) {
-      expect(transcript(command), command).toEqual(printed);
-    }
-  });
-});
+// The DHCP session of docs/terminal-commands.md (a ```ncl block) is run by
+// src/docs/docs.examples.test.ts, as every terminal example of the
+// documentation is: what it prints must be what the page shows.

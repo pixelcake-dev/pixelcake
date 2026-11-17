@@ -25,8 +25,6 @@ import { useNetworkStore } from '@/store/networkStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
 import { createCompanySample } from '@/utils/sampleCompany';
-import { setLanguage } from '@/i18n';
-import languageReference from '../../../docs/terminal-commands.md?raw';
 import type { NetworkDevice, NetworkInterfaceCard } from '@/types';
 
 vi.mock('sonner', () => ({
@@ -925,52 +923,14 @@ describe('help', () => {
     ]);
     expect(output('help record').map(row => row.split('  ')[0])).toEqual(['add record <name> <address> on <server>']);
     expect(output('help resolve').map(row => row.split('  ')[0])).toEqual(['resolve <name> [from <device>]']);
-    expect(output('help').slice(-1)).toEqual([
+    expect(output('help').slice(-2)).toEqual([
       '  a host name (www.azienda.example) works as a target: the source asks its DNS server for the address first',
+      '  every command explained, with examples: https://app.pixelcake.dev/docs/terminal/',
     ]);
     for (const [syntax] of COMMAND_REFERENCE) expect(syntax.length, syntax).toBeLessThanOrEqual(58);
   });
 });
 
-describe('the DNS session of docs/terminal-commands.md', () => {
-  /** The commands of the example, each with what the reference says it prints */
-  function documentedSession(): Array<{ command: string; printed: string[] }> {
-    const text = languageReference.replace(/\r\n/g, '\n');
-    const start = text.indexOf('DNS on the same sample:');
-    const open = text.indexOf('```\n', start) + 4;
-    const block = text.slice(open, text.indexOf('\n```', open)).split('\n');
-    const session: Array<{ command: string; printed: string[] }> = [];
-    for (const row of block) {
-      const typed = /^pixelcake> (.+)$/.exec(row)?.[1];
-      if (typed) session.push({ command: typed, printed: [] });
-      else session[session.length - 1].printed.push(row);
-    }
-    return session;
-  }
-
-  it('is there, on the sample of the welcome screen loaded in English', () => {
-    expect(languageReference).toContain('DNS on the same sample:');
-    expect(documentedSession().map(step => step.command)).toEqual([
-      'show dns',
-      'resolve erp.company.example from PC-Sales',
-      'ping erp.company.example from PC-Sales',
-      'browse portal.company.example from Laptop-1',
-      'resolve intranet.company.example from PC-Sales',
-      'add record intranet.company.example Web-ERP on Srv-Auth',
-      'resolve intranet.company.example from PC-Sales',
-      'resolve portal.company.example from Remote-Customer',
-      'interface eth0 dns none on PC-Sales',
-      'ping erp.company.example from PC-Sales',
-      'show dns PC-Sales',
-    ]);
-  });
-
-  it('prints, command after command, exactly what the reference shows', () => {
-    // The reference is in English, and so are the names of its sample
-    setLanguage('en');
-    loadCompany();
-    for (const { command, printed } of documentedSession()) {
-      expect(transcript(command), command).toEqual(printed);
-    }
-  });
-});
+// The DNS session of docs/terminal-commands.md (a ```ncl block) is run by
+// src/docs/docs.examples.test.ts, as every terminal example of the
+// documentation is: what it prints must be what the page shows.

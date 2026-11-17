@@ -1,0 +1,11 @@
+{
+  "comment": "The sections of the documentation, in the order of the navigation. Each is a folder of en/ and it/; the pages inside are ordered by the `order` of their front matter. See WRITING.md.",
+  "sections": [
+    { "id": "getting-started", "en": "Getting started", "it": "Per cominciare" },
+    { "id": "building", "en": "Building a network", "it": "Costruire una rete" },
+    { "id": "services", "en": "Services and security", "it": "Servizi e sicurezza" },
+    { "id": "asking", "en": "Asking the network", "it": "Interrogare la rete" },
+    { "id": "terminal", "en": "Terminal reference (NCL)", "it": "Il terminale (NCL)" },
+    { "id": "reference", "en": "Reference", "it": "Riferimento" }
+  ]
+}

@@ -2108,6 +2108,9 @@ export const COMMAND_REFERENCE: Array<[string, string]> = [
 /** Width of the syntax column */
 const SYNTAX_WIDTH = 58;
 
+/** Where the reference of the language is explained, command by command: the last line of `help` */
+export const REFERENCE_URL = 'https://app.pixelcake.dev/docs/terminal/';
+
 function runHelp(topic?: string): TerminalLine[] {
   if (topic) {
     const match = COMMAND_REFERENCE.filter(([syntax]) => syntax.toLowerCase().includes(topic.toLowerCase()));
@@ -2121,6 +2124,7 @@ function runHelp(topic?: string): TerminalLine[] {
     ...COMMAND_REFERENCE.map(([syntax, desc]) => line(`  ${syntax.padEnd(SYNTAX_WIDTH)} ${desc}`)),
     muted('  device names are case-insensitive and may be multi-word; IPs work anywhere a device is expected'),
     muted('  a host name (www.azienda.example) works as a target: the source asks its DNS server for the address first'),
+    muted(`  every command explained, with examples: ${REFERENCE_URL}`),
   ];
 }
 

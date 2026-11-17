@@ -19,7 +19,15 @@ minor versions.
 The interface of the app is in Italian and in English; the terminal speaks
 English in both. A sample network names its devices in the language the
 interface has when it is loaded: the sessions of this document were recorded
-on the samples loaded in English.
+on the samples loaded in English. The sessions that show the whole output of
+every command (DHCP, DNS) are fenced as ```` ```ncl sample=company ````: the
+tests run them, as they run every example of the documentation
+(`frontend/src/docs/docs.examples.test.ts`), and they print exactly what is
+shown. The other sessions show only the lines that matter.
+
+The documentation of the app explains the language command by command, with
+examples: https://app.pixelcake.dev/docs/terminal/ (source in
+`documentation/`). This document stays its specification.
 
 **New in v0.5:** DNS. A host name works as the target of `ping`, `trace`,
 `browse`, `mail` and `download`: the source asks its DNS server first, and
@@ -523,7 +531,7 @@ Ping failed (blocked): request: firewall FW-1: no rule matches, zone policy untr
 DHCP on the same sample: the router hands out the offices and the Wi-Fi, and
 the two laptops take their address from it.
 
-```
+```ncl sample=company lang=en
 pixelcake> show dhcp
 DHCP — 2 pools, 2 leases
 POOLS
@@ -569,7 +577,7 @@ LEASES
 DNS on the same sample: Srv-Auth knows the names of the inside, the offices
 and the laptops ask it, and the customer outside has nobody to ask.
 
-```
+```ncl sample=company lang=en
 pixelcake> show dns
 DNS — 1 server, 3 records
 RECORDS of Srv-Auth (192.168.30.10)
