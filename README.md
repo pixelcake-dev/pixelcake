@@ -13,6 +13,8 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 
 **Status:** early prototype. It is good for exploring and explaining a small network. Do not use its answers to validate a real one: the [limits](#what-it-does-not-do) are listed below.
 
+**Documentation:** [app.pixelcake.dev/docs](https://app.pixelcake.dev/docs/), in Italian [app.pixelcake.dev/docs/it](https://app.pixelcake.dev/docs/it/): how to draw a network, configure it and ask it questions, and every command of the terminal, with examples.
+
 ## What it does
 
 - **Draw.** Devices, links, ports and network cards on an interactive canvas. 24 device types and 5 link types are built in and can be customised, each device type with a drawing of its own: PC, laptop, smartphone, tablet, IP phone, printer and IP camera; switch, router, firewall, access point, IoT gateway, load balancer and the Internet; a server and six kinds of it (mail, web, DNS, DHCP, proxy, VPS); database, NAS and S3 storage. The upper part of a drawing says the state of the device by its colour: selected, where an answer arrives or stops, waiting for an address, taken as broken. Labelled areas behind groups of devices (Core, Edge, Offices), auto-layout, multi-selection, copy and paste, and several boards per project.
@@ -75,7 +77,7 @@ Ping failed (blocked): request: firewall FW-1: no rule matches, zone policy untr
   dropped at: FW-1
 ```
 
-The full command reference is in [docs/terminal-commands.md](docs/terminal-commands.md).
+Every command is explained, with examples, in the [terminal reference](https://app.pixelcake.dev/docs/terminal/) of the documentation; the specification of the language is [docs/terminal-commands.md](docs/terminal-commands.md).
 
 ### How a packet is followed
 
@@ -183,13 +185,15 @@ The app's icons are bundled with it: nothing is fetched from the Iconify API.
 
 ```bash
 cd frontend
-pnpm test:run      # 3609 tests: engine, terminal, project files, import/export, images, screens, the two languages
+pnpm test:run      # 3692 tests: engine, terminal, project files, import/export, images, screens, the two languages, the documentation
 pnpm type-check
 pnpm lint
-pnpm build
+pnpm build         # the app, then its documentation into dist/docs
 ```
 
-GitHub Actions runs the same four steps on every push.
+GitHub Actions runs the same four steps on every push, and publishes the build of `main`, the documentation with it.
+
+The documentation is written in Markdown in [documentation/](documentation/), in English and in Italian; [documentation/WRITING.md](documentation/WRITING.md) says how. `pnpm docs:dev` shows it while writing, `pnpm docs:test` runs its checks, among them every terminal example on the sample it names.
 
 ```
 frontend/src/
@@ -198,7 +202,10 @@ frontend/src/
   components/   canvas, panels, windows
   store/        application state (Zustand, persisted in the browser)
   utils/        auto-layout, IP helpers, project files, import and export, images
-docs/           terminal command reference, project file format
+  docs/         the tests of the documentation
+frontend/scripts/build-docs.mjs   the generator of the documentation
+documentation/  the pages of the documentation, their pictures and videos
+docs/           specification of the terminal language, project file format
 ```
 
 Built with React 19, TypeScript, Vite, React Flow, Zustand and Tailwind CSS. More detail in [ARCHITECTURE.md](ARCHITECTURE.md).
