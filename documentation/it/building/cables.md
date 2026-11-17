@@ -42,7 +42,7 @@ pixelcake> disconnect FW-Edge from Router-Core
 disconnected FW-Edge ↔ Router-Core
 pixelcake> connect FW-Edge to Router-Core
 connected FW-Edge (unbound) ↔ Router-Core (port 4)
-  FW-Edge has no free interface: that end is not bound, per-port rules are skipped there
+  FW-Edge has security zones, so the port of a new link is chosen by hand (right click on the link, Edit link, Interfaces): until then that end is not bound, per-port rules are skipped there
 pixelcake> trace Portale-Clienti from PC-Vendite
 Tracing route to Portale-Clienti (172.16.0.10) from PC-Vendite:
   1  ○ PC-Vendite (PC)
@@ -57,7 +57,7 @@ Tracing route to Portale-Clienti (172.16.0.10) from PC-Vendite:
 Trace complete: destination reached.
 ```
 
-Prima, la stessa traccia diceva `no rule matches, zone policy trust → dmz allowed`. Il messaggio sulla "nessuna interfaccia libera" è la formula del terminale per un'estremità a cui non ha saputo scegliere una porta; qui la causa sono le zone. I comandi sono in [Dispositivi e indirizzi](../terminal/devices-and-addresses.md#connect).
+Prima, la stessa traccia diceva `no rule matches, zone policy trust → dmz allowed`. I comandi sono in [Dispositivi e indirizzi](../terminal/devices-and-addresses.md#connect).
 
 ## Modificare una connessione {#edit}
 
