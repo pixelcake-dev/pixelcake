@@ -2,11 +2,6 @@
 # A page listed here may hold [!TODO] boxes and empty sections; one that is not listed may not.
 # When a page is written in both languages, take its line away: the tests fail while a written page is still listed.
 
-getting-started/what-is-pixelcake
-getting-started/first-network
-getting-started/interface
-getting-started/languages-and-themes
-getting-started/saving-and-files
 building/devices
 building/ports-and-cards
 building/cables
