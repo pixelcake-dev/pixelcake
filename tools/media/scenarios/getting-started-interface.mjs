@@ -49,13 +49,13 @@ export default function scenario({ lang }) {
     // The frames of the strip, the panel and the board are drawn a little inside what they cover,
     // so that no two frames share a line and no badge lies across another part.
     const parts = [
-      [1, union([rect(bar.querySelector('a')), ...items]), 'bottom', 0.5],
-      [2, rect(document.querySelector('.topbar-project')), 'bottom', 0.5],
-      [3, rect(document.querySelector('.present-button')), 'bottom', 0.5],
-      [4, rect(document.querySelector('.language-switch')), 'bottom', 0.5],
-      [5, rect(theme), 'bottom', 0.5],
+      [1, union([rect(bar.querySelector('a')), ...items]), 'below', 0.85],
+      [2, rect(document.querySelector('.topbar-project')), 'below', 0.5],
+      [3, rect(document.querySelector('.present-button')), 'below', 0.5],
+      [4, rect(document.querySelector('.language-switch')), 'below', 0.5],
+      [5, rect(theme), 'below', 0.5],
       [6, [strip[0] + 2, barBottom + 6, strip[2] - 5, strip[3] - 10], 'right', 0.45],
-      [7, [panel[0] + 10, barBottom + 14, panel[2] - 18, panel[3] - 24], 'top', 0.5],
+      [7, [panel[0] + 10, barBottom + 30, panel[2] - 18, panel[3] - 40], 'top', 0.5],
       [8, [panel[0] + panel[2] + 8, barBottom + 22, window.innerWidth - panel[0] - panel[2] - 14, window.innerHeight - barBottom - 30], 'top', 0.5],
       [9, rect(document.querySelector('.react-flow__minimap')), 'top', 0.12],
       [10, rect(document.querySelector('[data-testid="terminal-window"]')), 'top', 0.6],
@@ -64,12 +64,14 @@ export default function scenario({ lang }) {
     layer.style.cssText = 'position:fixed;inset:0;z-index:99999;pointer-events:none';
     const accent = '#E8650A';
     const size = 22;
-    for (const [n, [x, y, width, height], edge, t] of parts) {
+    for (const [n, box0, edge, t] of parts) {
+      // a little room between a frame of the bar and what it surrounds, so that it never touches a letter
+      const [x, y, width, height] = edge === 'below' ? [box0[0] - 3, box0[1] - 3, box0[2] + 6, box0[3] + 6] : box0;
       const box = document.createElement('div');
       box.style.cssText = 'position:absolute;border:2px solid ' + accent + ';border-radius:3px;left:' + (x - 1) + 'px;top:' + (y - 1) + 'px;width:' + (width + 2) + 'px;height:' + (height + 2) + 'px';
       const badge = document.createElement('div');
       badge.textContent = String(n);
-      const centre = edge === 'bottom' ? [x + width * t, y + height] : edge === 'top' ? [x + width * t, y] : [x + width, y + height * t];
+      const centre = edge === 'below' ? [x + width * t, y + height + size / 2 + 1] : edge === 'bottom' ? [x + width * t, y + height] : edge === 'top' ? [x + width * t, y] : [x + width, y + height * t];
       badge.style.cssText = 'position:absolute;width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:' + accent + ';color:#fff;font:700 13px/22px Inter,system-ui,sans-serif;text-align:center;box-shadow:0 0 0 2px #fff;left:' + (centre[0] - size / 2) + 'px;top:' + (centre[1] - size / 2) + 'px';
       layer.append(box, badge);
     }
