@@ -4,30 +4,261 @@ description: "Come un router sceglie dove mandare un pacchetto, le rotte che scr
 order: 1
 ---
 
-> [!TODO]
-> Una pagina di concetti, con una figura ed esempi del terminale eseguiti dai test (modello: building/vlans.md). Fonti: README.md (How a packet is followed), docs/terminal-commands.md (Routing, Simulated failures), la guida (route).
+Un router decide dove mandare un pacchetto cercando la destinazione in una tabella. In PixelCake la tabella è fatta delle reti a cui il router è collegato, delle rotte che scrivi e di una rotta predefinita per tutto il resto. Quando due rotte portano alla stessa rete si usa la prima, e la seconda resta in attesa come riserva.
 
 ## La tabella di instradamento {#routing-table}
 
-> [!TODO]
-> Connesse, statiche, predefinita; vince la più specifica; la scheda Rotte la mostra.
+Ogni router e ogni firewall ha una tabella di instradamento, e il motore la legge ogni volta che un pacchetto ci passa. Un PC non ha una tabella: ha un gateway su ogni scheda di rete ([Indirizzi e gateway](../building/addresses.md#end-devices)). Le righe sono di tre tipi:
+
+- **collegata**: una rete in cui sta una porta del dispositivo. Non serve scriverla: basta dare un indirizzo alla porta ([Le porte di un router](../building/addresses.md#router-ports)).
+- **statica**: una rotta scritta da te, con una rete e un prossimo salto.
+- **predefinita**: la rotta per tutti gli indirizzi che nessun'altra riga contiene.
+
+Se più righe contengono la destinazione, vince la più specifica, cioè quella con la maschera più lunga: una /24 prima di una /16, e tutte e due prima della rotta predefinita, che è /0. A parità di maschera, la collegata viene prima della statica e la statica prima della predefinita.
+
+Per vedere la tabella apri con un doppio clic la finestra di un router o di un firewall e vai nella scheda «Rotte». Sotto «Tabella di instradamento» ci sono le righe che il motore legge: «Destinazione», «Prossimo salto», «Esce da» e «Tipo», comprese le modifiche non ancora salvate. Nel terminale `show routes` stampa la stessa tabella. La rete di esempio «Due sedi: linea principale e di riserva» ha il router della sede, R-Sede, unito alla filiale da una linea principale e, passando per un terzo router, da una linea di riserva:
+
+```ncl sample=two-sites
+pixelcake> show routes R-Sede
+ROUTES of R-Sede
+DESTINATION          VIA              OUT      KIND
+10.0.0.0/30          -                port 2   connected
+10.0.1.0/30          -                port 3   connected
+192.168.1.0/24       -                port 1   connected
+192.168.2.0/24       10.0.0.2         port 2   static
+192.168.2.0/24       10.0.1.2         port 3   static, backup
+```
+
+Le prime tre righe sono reti collegate, ciascuna con la porta da cui si raggiunge. Le ultime due portano alla rete della filiale, 192.168.2.0/24, con due prossimi salti diversi: la seconda è una riserva ([più avanti](#backup)).
 
 ## Scrivere una rotta {#static}
 
-> [!TODO]
-> Rete e prossimo salto; anche il ritorno vuole una rotta.
+Una rotta statica è una rete e un prossimo salto: l'indirizzo del router che sta più vicino a quella rete. Nella finestra del router, nella scheda «Rotte», premi «Aggiungi rotta» sotto «Rotte statiche». Scrivi la rete con la sua maschera in «Rete di destinazione», per esempio `192.168.2.0/24`, l'indirizzo in «Prossimo salto» e, se vuoi un promemoria, una «Nota». Non cambia nulla finché non premi «Salva». Una riga lasciata vuota non viene tenuta, e una destinazione che non è una rete viene rifiutata: scrivila come `192.168.30.0/24`, oppure come `default`.
+
+Il prossimo salto deve stare in una rete a cui il router è collegato. Se non ci sta, la riga resta nella tabella con il segno che non è utilizzabile, e il terminale avvisa quando la scrivi:
+
+```ncl sample=two-sites
+pixelcake> add route 192.168.9.0/24 via 10.0.9.9 on R-Sede
+R-Sede: route to 192.168.9.0/24 via 10.0.9.9 added
+  warning: 10.0.9.9 is on none of the networks of R-Sede: the route cannot be used yet
+pixelcake> show routes R-Sede
+ROUTES of R-Sede
+DESTINATION          VIA              OUT      KIND
+10.0.0.0/30          -                port 2   connected
+10.0.1.0/30          -                port 3   connected
+192.168.1.0/24       -                port 1   connected
+192.168.2.0/24       10.0.0.2         port 2   static
+192.168.2.0/24       10.0.1.2         port 3   static, backup
+192.168.9.0/24       10.0.9.9         ?        static  ✗ next hop on none of its networks
+```
+
+Le rotte stanno sui router e sui firewall. Il terminale rifiuta `add route` su un PC e spiega che un dispositivo finale ha una sola uscita, il suo gateway.
+
+Una seconda rotta verso una rete che ne ha già una non aggiunge una riga: cambia il prossimo salto della prima (per una seconda riga vedi [Rotte di riserva](#backup)). Qui la rotta verso la filiale viene tolta e riscritta, una volta per ciascun prossimo salto:
+
+```ncl sample=two-sites
+pixelcake> remove route 192.168.2.0/24 from R-Sede
+R-Sede: 2 routes to 192.168.2.0/24 removed
+pixelcake> ping PC-Filiale-1 from PC-Sede-1
+Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
+Ping failed (blocked): request: R-Sede has no route to 192.168.2.11
+  dropped at: R-Sede
+pixelcake> add route 192.168.2.0/24 via 10.0.0.2 on R-Sede
+R-Sede: route to 192.168.2.0/24 via 10.0.0.2 added
+pixelcake> ping PC-Filiale-1 from PC-Sede-1
+Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
+Reply from 192.168.2.11: hops=7 time=11ms
+pixelcake> add route 192.168.2.0/24 via 10.0.1.2 on R-Sede
+R-Sede: route to 192.168.2.0/24 now goes via 10.0.1.2 (was 10.0.0.2)
+pixelcake> trace PC-Filiale-1 from PC-Sede-1
+Tracing route to PC-Filiale-1 (192.168.2.11) from PC-Sede-1:
+  1  ○ PC-Sede-1 (PC)
+  2  ○ SW-Piano-1 (Switch)
+  3  ○ SW-Core (Switch)
+  4  ○ R-Sede (Router)  — routed: 192.168.2.0/24 via 10.0.1.2 (port 3)
+  5  ○ R-Riserva (Router)  — routed: 192.168.2.0/24 via 10.0.2.2 (port 2)
+  6  ○ R-Filiale (Router)  — routed: 192.168.2.0/24 is on port 1
+  7  ○ SW-Filiale (Switch)
+  8  ● PC-Filiale-1 (PC)
+Trace complete: destination reached.
+```
+
+### La strada del ritorno {#return-path}
+
+Una domanda è uno scambio: la richiesta va, la risposta torna, e la risposta è un pacchetto che ogni router lungo la strada deve saper instradare. Una rotta in un solo verso non basta.
+
+```ncl sample=two-sites
+pixelcake> remove route 192.168.1.0/24 from R-Filiale
+R-Filiale: 2 routes to 192.168.1.0/24 removed
+pixelcake> ping PC-Filiale-1 from PC-Sede-1
+Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
+Ping failed (blocked): reply: R-Filiale has no route to 192.168.1.11
+  dropped at: R-Filiale
+pixelcake> add route 192.168.1.0/24 via R-Sede on R-Filiale
+R-Filiale: route to 192.168.1.0/24 via 10.0.0.1 added
+  R-Sede → 10.0.0.1
+pixelcake> ping PC-Filiale-1 from PC-Sede-1
+Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
+Reply from 192.168.2.11: hops=7 time=11ms
+```
+
+La richiesta è arrivata alla filiale. La risposta non è riuscita a ripartire da R-Filiale, e il motivo dice quale router non aveva la rotta e per quale indirizzo.
 
 ## La rotta predefinita {#default-route}
 
-> [!TODO]
-> Il gateway di un router.
+Una rotta verso `default` prende tutte le destinazioni che nessun'altra riga contiene. Si dà a un router che ha una sola uscita e molte reti al di là. Su un router il gateway è la sua rotta predefinita: il campo «Gateway» della scheda «Generale», oppure `set gateway of <router> to <indirizzo>` nel terminale. La tabella lo segna `default (gateway)`. Anche una rotta scritta nella scheda «Rotte» con `default` come destinazione è una rotta predefinita, e la tabella la segna `default`.
+
+Nell'esempio R-Filiale raggiunge la sede passando da R-Sede. Le due rotte verso 192.168.1.0/24 vengono sostituite da una sola rotta predefinita:
+
+```ncl sample=two-sites
+pixelcake> remove route 192.168.1.0/24 from R-Filiale
+R-Filiale: 2 routes to 192.168.1.0/24 removed
+pixelcake> add route default via R-Sede on R-Filiale
+R-Filiale: route to default via 10.0.0.1 added
+  R-Sede → 10.0.0.1
+pixelcake> show routes R-Filiale
+ROUTES of R-Filiale
+DESTINATION          VIA              OUT      KIND
+10.0.0.0/30          -                port 2   connected
+10.0.2.0/30          -                port 3   connected
+192.168.2.0/24       -                port 1   connected
+default              10.0.0.1         port 2   default
+pixelcake> trace PC-Sede-1 from PC-Filiale-1
+Tracing route to PC-Sede-1 (192.168.1.11) from PC-Filiale-1:
+  1  ○ PC-Filiale-1 (PC)
+  2  ○ SW-Filiale (Switch)
+  3  ○ R-Filiale (Router)  — routed: default route via 10.0.0.1 (port 2)
+  4  ○ R-Sede (Router)  — routed: 192.168.1.0/24 is on port 1
+  5  ○ SW-Core (Switch)
+  6  ○ SW-Piano-1 (Switch)
+  7  ● PC-Sede-1 (PC)
+Trace complete: destination reached.
+```
+
+La rotta più specifica vince comunque su quella predefinita. Qui R-Sede riceve una rotta predefinita verso R-Riserva, e il traffico per la filiale tiene la rotta scritta apposta:
+
+```ncl sample=two-sites
+pixelcake> add route default via R-Riserva on R-Sede
+R-Sede: route to default via 10.0.1.2 added
+  R-Riserva → 10.0.1.2
+pixelcake> show routes R-Sede
+ROUTES of R-Sede
+DESTINATION          VIA              OUT      KIND
+10.0.0.0/30          -                port 2   connected
+10.0.1.0/30          -                port 3   connected
+192.168.1.0/24       -                port 1   connected
+192.168.2.0/24       10.0.0.2         port 2   static
+192.168.2.0/24       10.0.1.2         port 3   static, backup
+default              10.0.1.2         port 3   default
+pixelcake> trace PC-Filiale-1 from PC-Sede-1
+Tracing route to PC-Filiale-1 (192.168.2.11) from PC-Sede-1:
+  1  ○ PC-Sede-1 (PC)
+  2  ○ SW-Piano-1 (Switch)
+  3  ○ SW-Core (Switch)
+  4  ○ R-Sede (Router)  — routed: 192.168.2.0/24 via 10.0.0.2 (port 2)
+  5  ○ R-Filiale (Router)  — routed: 192.168.2.0/24 is on port 1
+  6  ○ SW-Filiale (Switch)
+  7  ● PC-Filiale-1 (PC)
+Trace complete: destination reached.
+```
 
 ## Rotte di riserva {#backup}
 
-> [!TODO]
-> Una seconda rotta per la stessa rete; quando subentra; la nota nella risposta.
+Scrivi due rotte verso la stessa rete e la prima è quella in uso. La seconda è di riserva: subentra quando l'interfaccia della prima non ha più un collegamento funzionante. Nella scheda «Rotte» premi di nuovo «Aggiungi rotta», con la stessa «Rete di destinazione» e un altro «Prossimo salto», sotto la prima riga. Nel terminale:
+
+```ncl sample=two-sites
+pixelcake> remove route 192.168.2.0/24 from R-Sede
+R-Sede: 2 routes to 192.168.2.0/24 removed
+pixelcake> add route 192.168.2.0/24 via 10.0.0.2 on R-Sede
+R-Sede: route to 192.168.2.0/24 via 10.0.0.2 added
+pixelcake> add backup route 192.168.2.0/24 via 10.0.1.2 on R-Sede
+R-Sede: backup route to 192.168.2.0/24 via 10.0.1.2 added
+  used when the interface of the route via 10.0.0.2 has no working link
+pixelcake> show routes R-Sede
+ROUTES of R-Sede
+DESTINATION          VIA              OUT      KIND
+10.0.0.0/30          -                port 2   connected
+10.0.1.0/30          -                port 3   connected
+192.168.1.0/24       -                port 1   connected
+192.168.2.0/24       10.0.0.2         port 2   static
+192.168.2.0/24       10.0.1.2         port 3   static, backup
+```
+
+`show routes` segna la seconda riga `static, backup`.
+
+La riserva si usa quando la porta della rotta principale è spenta, o quando la sua linea si è guastata. La linea è guasta quando il cavo è tagliato o il dispositivo all'altro capo è spento: tutte e due le cose si simulano in [modalità presentazione](../asking/presentation.md#failures), dove basta un clic sul cavo e «Simula un guasto». Il router si comporta allora come uno vero che perde il segnale: ritira la rotta che esce da quella porta e usa la successiva. Il trace lo dice in una nota, per esempio: `R-Sede: the route 192.168.2.0/24 via 10.0.0.2 is unusable (link R-Sede–R-Filiale is down), the route 192.168.2.0/24 via 10.0.1.2 is used instead`.
+
+Lo stesso vale per due rotte predefinite, e per un PC con un gateway su ciascuna di due schede di rete.
+
+Spegnere una porta è un'impostazione di quella porta soltanto. Il router all'altro capo non se ne accorge e continua a mandare i pacchetti da lì. Per vedere la riserva all'opera dal terminale spegni tutte e due le estremità della linea; con una sola estremità spenta la richiesta trova un'altra strada, e la risposta torna per la rotta principale contro una porta spenta:
+
+```ncl sample=two-sites
+pixelcake> interface 2 down on R-Sede
+port 2 on R-Sede is now down
+pixelcake> trace PC-Filiale-1 from PC-Sede-1
+Tracing route to PC-Filiale-1 (192.168.2.11) from PC-Sede-1:
+  1  ○ PC-Sede-1 (PC)
+  2  ○ SW-Piano-1 (Switch)
+  3  ○ SW-Core (Switch)
+  4  ○ R-Sede (Router)  — routed: 192.168.2.0/24 via 10.0.1.2 (port 3)
+  5  ○ R-Riserva (Router)  — routed: 192.168.2.0/24 via 10.0.2.2 (port 2)
+  6  ○ R-Filiale (Router)  — routed: 192.168.2.0/24 is on port 1
+  7  ○ SW-Filiale (Switch)
+  8  ● PC-Filiale-1 (PC)
+Trace complete: destination reached.
+pixelcake> ping PC-Filiale-1 from PC-Sede-1
+Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
+Ping failed (blocked): reply: port 2 on R-Sede is disabled
+  dropped at: R-Sede
+pixelcake> interface 2 down on R-Filiale
+port 2 on R-Filiale is now down
+pixelcake> ping PC-Filiale-1 from PC-Sede-1
+Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
+Reply from 192.168.2.11: hops=8 time=13ms
+pixelcake> show routes R-Sede
+ROUTES of R-Sede
+DESTINATION          VIA              OUT      KIND
+10.0.0.0/30          -                port 2   connected  (interface down)
+10.0.1.0/30          -                port 3   connected
+192.168.1.0/24       -                port 1   connected
+192.168.2.0/24       10.0.0.2         port 2   static  (interface down)
+192.168.2.0/24       10.0.1.2         port 3   static, backup
+```
+
+I guasti della presentazione non hanno questo problema: un cavo tagliato è giù per tutti e due i router.
+
+## Quando le rotte non concordano {#loops}
+
+Due router possono mandarsi il pacchetto a vicenda, ciascuno convinto che l'altro sia più vicino. Il motore se ne accorge quando un pacchetto torna a un router da cui era già passato, e lo ferma:
+
+```ncl sample=two-sites
+pixelcake> remove route 192.168.2.0/24 from R-Sede
+R-Sede: 2 routes to 192.168.2.0/24 removed
+pixelcake> remove route 192.168.2.0/24 from R-Riserva
+R-Riserva: route to 192.168.2.0/24 removed
+pixelcake> add route default via R-Riserva on R-Sede
+R-Sede: route to default via 10.0.1.2 added
+  R-Riserva → 10.0.1.2
+pixelcake> add route default via R-Sede on R-Riserva
+R-Riserva: route to default via 10.0.1.1 added
+  R-Sede → 10.0.1.1
+pixelcake> trace PC-Filiale-1 from PC-Sede-1
+Tracing route to PC-Filiale-1 (192.168.2.11) from PC-Sede-1:
+  1  ○ PC-Sede-1 (PC)
+  2  ○ SW-Piano-1 (Switch)
+  3  ○ SW-Core (Switch)
+  4  ○ R-Sede (Router)  — routed: default route via 10.0.1.2 (port 3)
+  5  ○ R-Riserva (Router)  — routed: default route via 10.0.1.1 (port 1)
+  6  ✗ R-Sede (Router)  — routing loop: the packet comes back to R-Sede
+Trace failed (blocked): routing loop: the packet comes back to R-Sede
+```
 
 ## Limiti {#limits}
 
-> [!TODO]
-> Un riquadro [!LIMITS]: niente routing dinamico; un prossimo salto che muore dietro uno switch non viene notato.
+> [!LIMITS]
+> - Non c'è il routing dinamico: né RIP, né OSPF, né BGP. Nessuna rotta viene imparata o annunciata; ogni rotta è scritta a mano.
+> - Due rotte verso la stessa rete non si dividono il traffico. Si usa la prima, e la seconda solo quando l'interfaccia della prima non ha un collegamento funzionante. Non ci sono metriche né distanze da confrontare.
+> - Conta solo ciò che è attaccato alla porta. Un prossimo salto che si spegne dietro uno switch non fa cadere l'interfaccia: la rotta resta e il traffico si perde lì, come con ogni rotta statica.
+> - Un prossimo salto è un indirizzo, non un'interfaccia. Non ci sono rotte attraverso una porta, né instradamento per criteri, né sottointerfacce su una porta.
+> - Una porta spenta non si vede dall'altro capo del suo cavo. Un cavo tagliato o un dispositivo spento, simulati in modalità presentazione, sì.
+> - Un guasto simulato in modalità presentazione non cambia nulla nel disegno.
