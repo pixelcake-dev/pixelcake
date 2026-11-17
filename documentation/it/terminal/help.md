@@ -4,7 +4,7 @@ description: "I comandi del terminale stesso: help, entrare e uscire da un dispo
 order: 9
 ---
 
-Questi comandi riguardano il terminale, non la rete: stampano l'elenco dei comandi, dicono di quale dispositivo parlano i comandi, e puliscono lo schermo. Non cambiano nulla nel disegno. La notazione dei blocchi di sintassi è spiegata nella [panoramica](index.md#conventions).
+Questi comandi riguardano il terminale, non la rete: stampano l'elenco dei comandi, stabiliscono di quale dispositivo parlano i comandi, e puliscono lo schermo. Non cambiano nulla nel disegno. La notazione dei blocchi di sintassi è spiegata nella [panoramica](index.md#conventions).
 
 ## help {#help}
 
@@ -13,7 +13,7 @@ help [<word>]
 ? [<word>]
 ```
 
-`help` stampa i comandi del terminale, una riga ciascuno: la sintassi e ciò che fa. `?` è lo stesso comando. L'elenco qui sotto è quello che il terminale stampa; è anche l'elenco di Aiuto → Comandi del terminale nella barra dei menu. L'ultima riga dà l'indirizzo di questo riferimento. Il testo è in inglese, come tutto il terminale.
+`help` stampa i comandi del terminale, una riga per comando: la sintassi e ciò che fa. `?` è lo stesso comando. L'elenco qui sotto è quello che il terminale stampa; è anche l'elenco di Aiuto → Comandi del terminale nella barra dei menu. L'ultima riga dà l'indirizzo di questo riferimento. Il testo è in inglese, come tutto il terminale.
 
 ```ncl sample=empty
 pixelcake> help
@@ -56,7 +56,7 @@ PixelCake terminal — NCL v0.5 (Network Command Language, vendor-neutral)
 |---|---|
 | `<word>` | Una parola da cercare. Può essere una parte di parola, e maiuscole e minuscole non contano |
 
-Con una parola, `help` stampa solo le righe la cui sintassi la contiene: `help route` dà le righe sulle rotte, `help ping` la riga di `ping`. La parola viene cercata nella colonna della sintassi e non nella descrizione. Quando nessuna riga la contiene la risposta lo dice.
+Con una parola, `help` stampa solo le righe la cui sintassi la contiene: `help route` mostra le righe sulle rotte, `help ping` la riga di `ping`. La parola viene cercata nella colonna della sintassi e non nella descrizione. Quando nessuna riga la contiene la risposta lo dice.
 
 ```ncl sample=empty
 pixelcake> help ping
@@ -73,7 +73,7 @@ pixelcake> help banana
 no help for "banana" — try "help" for the full list
 ```
 
-La tabella è più corta del linguaggio: dà una riga per più comandi e non elenca ogni sinonimo. I blocchi di sintassi delle pagine di questa sezione sono quelli completi.
+L'elenco non copre tutto il linguaggio: a volte riunisce più comandi in una riga, e non riporta ogni sinonimo. I blocchi di sintassi delle pagine di questa sezione sono completi.
 
 ## use ed exit {#use}
 
@@ -83,13 +83,13 @@ exit
 quit
 ```
 
-`use <device>` fa di un dispositivo quello di cui parlano tutti i comandi, fino a `exit`. Il prompt prende il nome del dispositivo (`PC-1>`), e in ogni comando `from` e `on` sono sottintesi: `ping Web-01` è un ping dal dispositivo, `show routes` è la sua tabella, `interface 3 down` riguarda una sua porta. Un comando che nomina un altro dispositivo va comunque a quello: dentro `PC-1>`, `show interfaces Router-1` riguarda Router-1. `quit` è uguale a `exit`.
+`use <device>` fa di un dispositivo quello di cui parlano tutti i comandi, fino a `exit`. Il prompt prende il nome del dispositivo (`PC-1>`), e in ogni comando `from` e `on` sono sottintesi: `ping Web-01` è un ping dal dispositivo, `show routes` è la sua tabella, `interface 3 down` riguarda una sua porta. Un comando che nomina un altro dispositivo vale comunque per quello: dentro `PC-1>`, `show interfaces Router-1` riguarda Router-1. `quit` è uguale a `exit`.
 
 | Parametro | Che cos'è |
 |---|---|
-| `<device>` | Un dispositivo, indicato come sul canvas o con uno dei suoi indirizzi. La parola `device` o `host` prima del nome viene scartata: `use device SW-Office` |
+| `<device>` | Un dispositivo, indicato con il nome che ha sul canvas o con uno dei suoi indirizzi. La parola `device` o `host` prima del nome viene ignorata: `use device SW-Office` |
 
-Un terminale aperto da un dispositivo (clic destro → «Console») parte già dentro di lui. `use` sostituisce il dispositivo in cui ci si trova: non li impila. `exit` risponde `left <device>`, e quando si è già fuori dice che si è già lì.
+Un terminale aperto da un dispositivo (clic destro → «Console») parte già dentro quel dispositivo. `use` sostituisce il dispositivo in cui ci si trova: non li accumula. `exit` risponde `left <device>`, e quando si è già fuori lo dice.
 
 ```ncl sample=office
 pixelcake> use PC-1
@@ -139,7 +139,7 @@ left SW-Office
 ```
 
 > [!NOTE]
-> Il terminale tiene il nome del dispositivo in cui si trova. Rinominare quel dispositivo, con `set name` o nella sua finestra, lascia il prompt sul vecchio nome: esci con `exit` ed entra di nuovo con il nuovo ([Dispositivi e indirizzi](devices-and-addresses.md#set)).
+> Il terminale ricorda il nome del dispositivo in cui si trova. Rinominare quel dispositivo, con `set name` o nella sua finestra, lascia il prompt sul vecchio nome: esci con `exit` ed entra di nuovo con il nome nuovo ([Dispositivi e indirizzi](devices-and-addresses.md#set)).
 
 ## clear {#clear}
 
@@ -157,21 +157,21 @@ pixelcake> cls
 
 ## Tasti {#keys}
 
-La riga del terminale usa questi tasti:
+Nella riga di comando valgono questi tasti:
 
 | Tasto | Che cosa fa |
 |---|---|
 | Invio | Esegue la riga. Una riga vuota porta solo a un nuovo prompt |
-| Su | Riporta l'ultima riga eseguita, e a ogni pressione quella prima |
-| Giù | Va avanti nella cronologia; dopo l'ultima riga ridà ciò che stavi scrivendo |
-| Ctrl+C | Ferma la domanda in corso: il pacchetto si ferma sul canvas e il terminale stampa `^C — interrupted`. Quando non c'è nulla in corso fa ciò che fa altrove, e copia il testo selezionato |
+| Su | Riporta l'ultima riga eseguita, e a ogni pressione quella precedente |
+| Giù | Va avanti nella cronologia; dopo l'ultima riga torna a ciò che stavi scrivendo |
+| Ctrl+C | Ferma la domanda in corso: il pacchetto si ferma sul canvas e il terminale stampa `^C — interrupted`. Quando non c'è nulla in corso fa ciò che fa ovunque: copia il testo selezionato |
 
-Scrivere una lettera esce dalla cronologia e modifica la riga su cui sei. La cronologia tiene ogni riga non vuota della sessione, errori compresi, finché la pagina resta aperta: non viene salvata con il progetto e si perde quando la pagina viene ricaricata. Esc e Tab non fanno nulla nel terminale: Esc non lo chiude, e un nome non viene completato.
+Scrivere una lettera esce dalla cronologia e modifica la riga su cui sei. La cronologia conserva ogni riga non vuota della sessione, errori compresi, finché la pagina resta aperta: non viene salvata con il progetto e si perde quando la pagina viene ricaricata. Esc e Tab non fanno nulla nel terminale: Esc non lo chiude, e un nome non viene completato.
 
-Una domanda che viaggia (`ping`, `trace`, `browse`, `mail`, `download`, `resolve`) trattiene il prompt finché il pacchetto non è arrivato o non si è fermato: la riga `▌ running… — press Ctrl+C to interrupt` sta dove starebbe il prompt. I comandi che solo leggono o solo scrivono rispondono subito.
+Mentre una domanda viaggia (`ping`, `trace`, `browse`, `mail`, `download`, `resolve`), il prompt non torna finché il pacchetto non è arrivato o non si è fermato: al suo posto c'è la riga `▌ running… — press Ctrl+C to interrupt`. I comandi che leggono o scrivono soltanto rispondono subito.
 
 ## Vedi anche {#see-also}
 
 - [Panoramica](index.md#open): aprire il terminale, la finestra e il prompt.
-- [Interrogare](asking.md): i comandi che trattengono il prompt mentre il pacchetto viaggia.
+- [Interrogare](asking.md): i comandi per cui il prompt aspetta che il pacchetto abbia finito il suo viaggio.
 - [La grammatica](grammar.md): che cosa sottintende `use <device>` per ogni comando.

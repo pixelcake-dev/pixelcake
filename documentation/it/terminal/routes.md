@@ -4,11 +4,11 @@ description: "I comandi che aggiungono e tolgono le rotte statiche, le rotte pre
 order: 4
 ---
 
-Una rotta dice a un router o a un firewall dove mandare ciò che non sta su una rete a cui è collegato. Questi comandi scrivono le stesse righe della scheda «Rotte» della finestra del dispositivo, e `show routes` rilegge la tabella intera ([Comandi show](show.md#show-routes)). Che cos'è una rotta, e come il motore ne sceglie una, è in [Rotte statiche e di riserva](../services/routes.md).
+Una rotta dice a un router o a un firewall dove mandare ciò che non sta su una rete a cui è collegato. Questi comandi scrivono le stesse righe della scheda «Rotte» della finestra del dispositivo, e `show routes` rilegge la tabella intera ([Comandi show](show.md#show-routes)). Che cos'è una rotta, e come il motore ne sceglie una, è spiegato in [Rotte statiche e di riserva](../services/routes.md).
 
 Una rete si scrive come un indirizzo e un prefisso, `192.168.30.0/24`, oppure con la parola `default`, che sta per ogni rete (`0.0.0.0/0`). I bit dell'host di un indirizzo vengono scartati: `192.168.30.7/24` è la rete `192.168.30.0/24`. La notazione dei blocchi di sintassi è spiegata nella [panoramica](index.md#conventions).
 
-Le rotte appartengono a router e firewall. Su ogni altro dispositivo i comandi rifiutano e rimandano a `set gateway` ([Dispositivi e indirizzi](devices-and-addresses.md#set)).
+Le rotte appartengono a router e firewall. Su ogni altro dispositivo i comandi vengono rifiutati, e la risposta rimanda a `set gateway` ([Dispositivi e indirizzi](devices-and-addresses.md#set)).
 
 ## add route {#add-route}
 
@@ -16,15 +16,15 @@ Le rotte appartengono a router e firewall. Su ogni altro dispositivo i comandi r
 add route <network>|default via <next hop> [on] <device>
 ```
 
-Aggiunge una rotta statica: ciò che è per `<network>` viene mandato a `<next hop>`.
+Aggiunge una rotta statica: ciò che è diretto a `<network>` viene mandato a `<next hop>`.
 
 | Parametro | Che cos'è |
 |---|---|
 | `<network>` | Una rete, `192.168.30.0/24`, oppure `default` |
-| `<next hop>` | L'indirizzo del router successivo, oppure il nome di un dispositivo che ha un indirizzo su una rete di questo: il comando scrive allora quell'indirizzo e dice quale (`Mail-01 → 192.168.20.20`) |
+| `<next hop>` | L'indirizzo del router successivo, oppure il nome di un dispositivo che ha un indirizzo su una delle reti di questo router: il comando scrive allora quell'indirizzo e dice quale (`Mail-01 → 192.168.20.20`) |
 | `<device>` | Il router o il firewall su cui si scrive la rotta. Dentro `use <device>` si tralascia |
 
-Una rotta verso una rete che ne ha già una non ne aggiunge una seconda: se ne cambia il prossimo salto, e la risposta dice qual era. Una seconda rotta verso la stessa rete è una rotta di riserva ([più avanti](#add-backup-route)). Il comando avvisa, e scrive la rotta lo stesso, quando il prossimo salto non sta su nessuna delle reti del dispositivo: la rotta non si può usare finché una delle sue porte non ha un indirizzo sulla rete del prossimo salto, e `show routes` la segna con `✗ next hop on none of its networks`. Un router le cui porte non hanno ancora un indirizzo riceve lo stesso avviso in un'altra forma: le sue rotte non vengono usate finché una porta non ne ha uno.
+Se la rete ha già una rotta, il comando non ne aggiunge una seconda: ne cambia il prossimo salto, e la risposta dice qual era. Una seconda rotta verso la stessa rete è una rotta di riserva ([più avanti](#add-backup-route)). Il comando avvisa, e scrive la rotta lo stesso, quando il prossimo salto non sta su nessuna delle reti del dispositivo: la rotta non si può usare finché una delle sue porte non ha un indirizzo sulla rete del prossimo salto, e `show routes` la segna con `✗ next hop on none of its networks`. Un router le cui porte non hanno ancora un indirizzo riceve lo stesso avviso in un'altra forma: le sue rotte non vengono usate finché una porta non ne ha uno.
 
 Il prossimo salto viene scritto come indirizzo; il motore lo legge alla domanda successiva. Su un router la rotta predefinita è anche il «Gateway (rotta predefinita)» della sua finestra, e `set gateway` scrive la stessa cosa ([Dispositivi e indirizzi](devices-and-addresses.md#set)).
 
@@ -83,7 +83,7 @@ default              10.0.0.2         port 3   default
 add backup route <network>|default via <next hop> [on] <device>
 ```
 
-Aggiunge una seconda rotta verso una rete che ne ha già una. Si usa quando l'interfaccia della prima rotta non ha un collegamento funzionante: una porta spenta, un cavo tagliato, o un guasto simulato in una presentazione. Vale lo stesso per due rotte predefinite. `show routes` la segna `backup`.
+Aggiunge una seconda rotta verso una rete che ne ha già una. Viene usata quando l'interfaccia della prima rotta non ha più un cavo che funzioni: una porta spenta, un cavo tagliato, o un guasto simulato in una presentazione. Vale lo stesso per due rotte predefinite. `show routes` la indica con `backup`.
 
 | Parametro | Che cos'è |
 |---|---|
@@ -91,7 +91,7 @@ Aggiunge una seconda rotta verso una rete che ne ha già una. Si usa quando l'in
 | `<next hop>` | Un indirizzo o un dispositivo, come per `add route`. Deve essere diverso dal prossimo salto delle rotte che la rete ha già |
 | `<device>` | Il router o il firewall |
 
-Se la rete non ha ancora una rotta, il comando scrive una rotta normale e dice che non c'è ancora nulla da coprire. Non esiste `remove backup route`: una rotta di riserva si toglie come ogni altra, con il suo prossimo salto ([più avanti](#remove-route)).
+Se la rete non ha ancora una rotta, il comando scrive una rotta normale e dice che non c'è ancora nulla di cui fare da riserva. Non esiste `remove backup route`: una rotta di riserva si toglie come ogni altra, con il suo prossimo salto ([più avanti](#remove-route)).
 
 ```ncl sample=two-sites
 pixelcake> remove route 192.168.2.0/24 via 10.0.1.2 from R-Sede
@@ -134,12 +134,12 @@ remove route <network>|default [via <next hop>] [from] <device>
 delete route <network>|default [via <next hop>] [from] <device>
 ```
 
-Toglie le rotte verso una rete. Senza `via` se ne vanno tutte quelle verso quella rete, anche le rotte di riserva; con `via`, solo quella che passa da quel prossimo salto. `delete` è uguale a `remove`.
+Toglie le rotte verso una rete. Senza `via` le toglie tutte, anche quelle di riserva; con `via`, solo quella che passa da quel prossimo salto. `delete` è uguale a `remove`.
 
 | Parametro | Che cos'è |
 |---|---|
 | `<network>` | Una rete, oppure `default` |
-| `<next hop>` | L'indirizzo del prossimo salto della rotta da togliere. Un nome di dispositivo qui non si legge: scrivi il suo indirizzo |
+| `<next hop>` | L'indirizzo del prossimo salto della rotta da togliere. Qui non si può usare il nome di un dispositivo: scrivi il suo indirizzo |
 | `<device>` | Il router o il firewall. Dopo il comando si può scrivere `on` al posto di `from` |
 
 ```ncl sample=two-sites
@@ -194,4 +194,4 @@ unknown command: "remove backup route 192.168.30.0/24 from Router-1"
 - [Rotte statiche e di riserva](../services/routes.md): la tabella di instradamento, la rotta predefinita, le rotte di riserva e ciò che il motore non fa.
 - [Comandi show](show.md#show-routes): `show routes`.
 - [Interfacce e VLAN](interfaces-and-vlans.md#ip): l'indirizzo di una porta, che rende raggiungibile la sua rete senza una rotta.
-- [Il terminale durante la presentazione](../asking/presentation.md#terminal): i guasti simulati in una presentazione, e la rotta di riserva che risponde.
+- [Il terminale durante la presentazione](../asking/presentation.md#terminal): i guasti simulati in una presentazione, e la rotta di riserva che subentra.

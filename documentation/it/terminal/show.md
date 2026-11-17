@@ -4,9 +4,9 @@ description: "I comandi che leggono la rete senza cambiarla: dispositivi, interf
 order: 8
 ---
 
-I comandi `show` stampano il disegno come lo legge il motore: le tabelle che gli altri comandi cambiano, nell'ordine in cui sono scritte nelle finestre dei dispositivi. Non cambiano nulla e non mandano nessun pacchetto. Un indirizzo che una scheda ha ricevuto dal DHCP è segnato `(dhcp)` ovunque compaia, per distinguerlo da uno scritto a mano ([DHCP](../services/dhcp.md)).
+I comandi `show` stampano il disegno come lo legge il motore: le tabelle che gli altri comandi cambiano, nell'ordine in cui sono scritte nelle finestre dei dispositivi. Non cambiano nulla e non mandano nessun pacchetto. Un indirizzo che una scheda ha ricevuto dal DHCP è indicato con `(dhcp)` ovunque compaia, per distinguerlo da uno scritto a mano ([DHCP](../services/dhcp.md)).
 
-La maggior parte riguarda un dispositivo solo: `show <what> [of] <device>`, dove il dispositivo si indica come sul canvas o con un indirizzo, e `of` si può tralasciare. Dentro `use <device>` il dispositivo è sottinteso. Un dispositivo che non può avere ciò che si chiede (una tabella di instradamento su uno switch, le regole di un PC) riceve una riga che lo dice. `show devices` e `show vlans` riguardano tutto il disegno, e lo stesso vale per `show connections`, `show dhcp` e `show dns` quando non si indica un dispositivo. La notazione è spiegata nella [panoramica](index.md#conventions). I comandi e le tabelle sono in inglese, come tutto il terminale.
+La maggior parte riguarda un dispositivo solo: `show <what> [of] <device>`, dove il dispositivo si indica con il nome che ha sul canvas o con un indirizzo, e `of` si può tralasciare. Dentro `use <device>` il dispositivo è sottinteso. Se un dispositivo non può avere ciò che si chiede (una tabella di instradamento su uno switch, le regole di un PC), una riga lo dice. `show devices` e `show vlans` riguardano tutto il disegno, e lo stesso vale per `show connections`, `show dhcp` e `show dns` quando non si indica un dispositivo. La notazione è spiegata nella [panoramica](index.md#conventions). I comandi e le tabelle sono in inglese, come tutto il terminale.
 
 Un `show` con una parola che non è nell'elenco viene rifiutato con l'elenco, o con la parola più vicina:
 
@@ -69,7 +69,7 @@ Le porte e le schede di rete di un dispositivo in una tabella sola, qualunque di
 | `STATE` | `up` o `down` |
 | `IP` | Il suo indirizzo, oppure `-` |
 | `VLAN` | Di una porta di uno switch: la sua VLAN, oppure `10,20` per un trunk con un elenco, oppure `all` per un trunk per tutte le VLAN; `1` per una porta che nessuno ha impostato su uno switch che applica le VLAN. Altrove `-` |
-| `MODE-ZONE` | Di una porta: la sua modalità, `access` o `trunk` su uno switch, `lan`, `wan` o `dmz` su un router o un firewall. È il tipo della porta: la zona di sicurezza della porta di un firewall è in `show ports`. Di una scheda: `dhcp` quando prende l'indirizzo dal DHCP, altrimenti `-` |
+| `MODE-ZONE` | Di una porta: la sua modalità, `access` o `trunk` su uno switch, `lan`, `wan` o `dmz` su un router o un firewall. È la modalità della porta: la zona di sicurezza della porta di un firewall è in `show ports`. Di una scheda: `dhcp` quando prende l'indirizzo dal DHCP, altrimenti `-` |
 | `LINK` | A che cosa è collegata: il dispositivo e la sua interfaccia, `SW-Office (port 8)`, oppure `-` |
 
 ```ncl sample=office
@@ -90,13 +90,13 @@ eth0       nic    up      192.168.10.11    -          -          SW-Office (port
 show ports [of] <device>
 ```
 
-Le sole porte, con più di ciò che una porta ha: stato, modalità, VLAN, zona di sicurezza e indirizzo. Un dispositivo senza porte (un PC, un server) lo dice.
+Solo le porte, con più dettagli: stato, modalità, VLAN, zona di sicurezza e indirizzo. Un dispositivo senza porte (un PC, un server) lo dice.
 
 | Colonna | Che cosa dice |
 |---|---|
 | `PORT` | Il numero della porta |
 | `STATE` | `up` o `down` |
-| `MODE` | Il tipo della porta |
+| `MODE` | La modalità della porta |
 | `VLAN` | Come in `show interfaces` |
 | `ZONE` | La zona di sicurezza della porta di un firewall, `-` per una porta che non ne ha |
 | `IP` | L'indirizzo della porta |
@@ -119,7 +119,7 @@ PC-Vendite has no configurable ports
 show vlans
 ```
 
-Ogni VLAN del disegno e dove sta: per uno switch che applica le VLAN porta per porta, le porte di accesso e i trunk che la portano; per ogni altro dispositivo, o per uno switch che non le applica, i dispositivi che la elencano nella propria lista. Un trunk per tutte le VLAN è nominato sotto la tabella. Un disegno senza VLAN lo dice.
+Ogni VLAN del disegno e dove sta: per uno switch che applica le VLAN porta per porta, le porte di accesso e i trunk che la trasportano; per ogni altro dispositivo, o per uno switch che non le applica, i dispositivi che la elencano nel proprio elenco di VLAN. Un trunk per tutte le VLAN è nominato sotto la tabella. Un disegno senza VLAN lo dice.
 
 ```ncl sample=company
 pixelcake> show vlans
@@ -136,7 +136,7 @@ VLAN   MEMBERS
 show connections [of <device>]
 ```
 
-Le connessioni del disegno, o quelle di un dispositivo, con l'interfaccia a ciascuna estremità: `[port 3 ↔ eth0]`. Un'estremità non attaccata a un'interfaccia compare come `?`. Dopo ogni connessione il suo tipo e la sua banda, come disegnati.
+Le connessioni del disegno, o quelle di un dispositivo, con l'interfaccia a ciascuna estremità: `[port 3 ↔ eth0]`. Un'estremità non assegnata a un'interfaccia compare come `?`. Dopo ogni connessione ci sono il suo tipo e la sua banda, come sono nel disegno.
 
 ```ncl sample=office
 pixelcake> show connections
@@ -191,7 +191,7 @@ Srv-Auth — Server
 show neighbors [of] <device>
 ```
 
-I dispositivi collegati a uno, con il loro tipo e indirizzo. Un dispositivo senza cavi lo dice.
+I dispositivi collegati a un dispositivo, con il loro tipo e indirizzo. Un dispositivo senza cavi lo dice.
 
 ```ncl sample=office
 pixelcake> show neighbors Router-1
@@ -208,7 +208,7 @@ ipconfig [<device>]
 ifconfig [<device>]
 ```
 
-L'indirizzamento di un dispositivo in poche righe: indirizzo, maschera e gateway con cui è conosciuto, poi ogni porta con indirizzo e ogni scheda. Una scheda che prende l'indirizzo dal DHCP mostra l'assegnazione e il pool da cui viene, oppure perché non ne ha. Una scheda che interroga un server DNS mostra quale. `ipconfig` e `ifconfig` sono lo stesso comando; prima del dispositivo si può scrivere `of` o `on`.
+L'indirizzamento di un dispositivo in poche righe: indirizzo, maschera e gateway con cui è conosciuto, poi ogni porta con indirizzo e ogni scheda. Una scheda che prende l'indirizzo dal DHCP mostra l'indirizzo assegnato e da quale interfaccia viene, oppure perché non ne ha uno. Una scheda che interroga un server DNS mostra quale. `ipconfig` e `ifconfig` sono lo stesso comando; prima del dispositivo si può scrivere `of` o `on`.
 
 ```ncl sample=office
 pixelcake> show ip Router-1
@@ -238,7 +238,7 @@ PC-2 — addressing
 show routes [of] <device>
 ```
 
-La tabella di instradamento come la legge il motore, una riga per ogni rotta: dove va, da quale prossimo salto, da quale interfaccia esce, e di che tipo è. I tipi sono `connected` (una rete in cui sta una delle sue interfacce con indirizzo), `static` (scritta con `add route`), `default` (una rotta verso ogni rete) e `default (gateway)` (il gateway di una scheda o il gateway di un router). Una rotta che aspetta la caduta di un'altra è segnata `backup`. Un dispositivo finale ha una tabella sua, con la sua rete e il suo gateway.
+La tabella di instradamento come la legge il motore, una riga per ogni rotta: dove va, da quale prossimo salto, da quale interfaccia esce, e di che tipo è. I tipi sono `connected` (una rete in cui sta una delle sue interfacce con indirizzo), `static` (scritta con `add route`), `default` (una rotta verso ogni rete) e `default (gateway)` (il gateway di una scheda o il gateway di un router). Una rotta che aspetta la caduta di un'altra è indicata con `backup`. Un dispositivo finale ha una tabella sua, con la sua rete e il suo gateway.
 
 Una rotta che non si può usare lo dice sulla sua riga: `(interface down)` quando la sua interfaccia è spenta, e `✗ next hop on none of its networks` quando il prossimo salto non sta su nessuna rete del dispositivo. Una rotta scritta come qualcosa che non è una rete e un indirizzo viene elencata sotto la tabella, come ignorata. Un router senza indirizzi di interfaccia dice che le sue rotte non vengono usate ([Rotte](routes.md)).
 
@@ -274,7 +274,7 @@ default              192.168.1.1      eth0     default (gateway)
 show rules [of] <device>
 ```
 
-Le regole di un firewall nell'ordine in cui si leggono, ciascuna con il suo numero, l'azione, il servizio, l'origine e la destinazione, e poi ciò che decide quando nessuna corrisponde: la politica delle zone. La risposta a un flusso permesso passa sempre. Un dispositivo che non è un firewall e non ha regole dice che non filtra nulla.
+Le regole di un firewall nell'ordine in cui si leggono, ciascuna con il suo numero, l'azione, il servizio, la partenza e la destinazione, e poi ciò che decide quando nessuna corrisponde: la politica delle zone. La risposta a un flusso permesso passa sempre. Un dispositivo che non è un firewall e non ha regole dice che non filtra nulla.
 
 ```ncl sample=company
 pixelcake> show rules FW-Edge
@@ -294,7 +294,7 @@ Router-Core is not a firewall and has no rules: it filters nothing
 show nat [of] <device>
 ```
 
-NAT sorgente e inoltri di porta: le interfacce che traducono ciò che esce da loro, con l'indirizzo che ciascuna dà, poi gli inoltri nell'ordine in cui si leggono, con l'indirizzo a cui ciascuno è pubblicato. Un dispositivo che non ha né l'uno né l'altro lo dice.
+NAT sorgente e inoltri: le interfacce che traducono ciò che esce da loro, con l'indirizzo che ciascuna dà, poi gli inoltri nell'ordine in cui si leggono, con l'indirizzo a cui ciascuno è pubblicato. Un dispositivo che non ha né l'uno né l'altro lo dice.
 
 ```ncl sample=company
 pixelcake> show nat FW-Edge
@@ -313,7 +313,7 @@ PC-Vendite is a PC: it translates no addresses
 show dhcp [[of] <device>]
 ```
 
-Di tutto il disegno: i pool (intervallo, gateway e server DNS consegnati, quanti indirizzi sono assegnati e quanti liberi), le assegnazioni (indirizzo, scheda, pool) e le schede rimaste senza indirizzo, ciascuna con il motivo. Di un dispositivo solo: ciò che assegna e ciò che riceve. Un disegno senza DHCP lo dice, e dice come cominciare.
+Di tutto il disegno: gli intervalli da assegnare (`POOLS`: intervallo, gateway e server DNS consegnati, quanti indirizzi sono assegnati e quanti liberi), le assegnazioni (`LEASES`: indirizzo, scheda, interfaccia da cui viene) e le schede rimaste senza indirizzo, ciascuna con il motivo. Di un dispositivo solo: ciò che assegna e ciò che riceve. Un disegno senza DHCP lo dice, e dice come cominciare.
 
 ```ncl sample=company
 pixelcake> show dhcp
@@ -370,7 +370,7 @@ DNS of Portatile-1
 sh <what> [[of] <device>]
 ```
 
-`sh` è `show`: ogni comando qui sopra si può scrivere con lui.
+`sh` è `show`: ogni comando qui sopra si può scrivere anche così.
 
 ```ncl sample=office
 pixelcake> sh vlans
