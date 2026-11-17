@@ -16,7 +16,3 @@ building/notes
 building/bulk-add
 building/layout-and-connection
 building/templates
-asking/simulation-panel
-asking/how-the-engine-decides
-asking/presentation
-asking/exporting-an-image
