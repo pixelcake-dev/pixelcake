@@ -1,0 +1,389 @@
+{
+  "format": "pixelcake-project",
+  "version": 1,
+  "name": "Office with notes",
+  "description": "",
+  "savedAt": "2026-11-17T00:00:00.000Z",
+  "settings": {
+    "ipClass": "192.168.10.0",
+    "subnet": "255.255.255.0",
+    "gateway": "192.168.10.1",
+    "emailMode": "auto"
+  },
+  "activeCanvasId": "canvas-1",
+  "canvases": [
+    {
+      "id": "canvas-1",
+      "name": "Canvas 1",
+      "devices": [
+        {
+          "id": "router-1",
+          "type": "Router",
+          "templateId": "tpl-router",
+          "label": "Router-1",
+          "ip": "192.168.10.1",
+          "subnet": "255.255.255.0",
+          "gateway": "",
+          "vendor": "",
+          "location": "Server room",
+          "position": {
+            "x": 400,
+            "y": 60
+          },
+          "portCount": 4,
+          "ports": [
+            {
+              "id": 1,
+              "name": "Office LAN",
+              "enabled": true,
+              "speed": "auto",
+              "portType": "lan",
+              "ip": "192.168.10.1",
+              "subnet": "255.255.255.0"
+            },
+            {
+              "id": 2,
+              "name": "Server LAN",
+              "enabled": true,
+              "speed": "auto",
+              "portType": "lan",
+              "ip": "192.168.20.1",
+              "subnet": "255.255.255.0"
+            },
+            {
+              "id": 3,
+              "enabled": true,
+              "speed": "auto",
+              "portType": "lan"
+            },
+            {
+              "id": 4,
+              "enabled": true,
+              "speed": "auto",
+              "portType": "lan"
+            }
+          ]
+        },
+        {
+          "id": "sw-office",
+          "type": "Switch",
+          "templateId": "tpl-switch",
+          "label": "SW-Office",
+          "ip": "192.168.10.2",
+          "subnet": "255.255.255.0",
+          "gateway": "192.168.10.1",
+          "vendor": "",
+          "location": "Offices",
+          "notes": "Rack 2, top shelf.\nUplink to Router-1 on port 8.",
+          "position": {
+            "x": 180,
+            "y": 260
+          },
+          "portCount": 8,
+          "ports": [
+            {
+              "id": 1,
+              "name": "PC-1",
+              "enabled": true,
+              "speed": "auto",
+              "portType": "access"
+            },
+            {
+              "id": 2,
+              "name": "PC-2",
+              "enabled": true,
+              "speed": "auto",
+              "portType": "access"
+            },
+            {
+              "id": 3,
+              "enabled": true,
+              "speed": "auto",
+              "portType": "access"
+            },
+            {
+              "id": 4,
+              "enabled": true,
+              "speed": "auto",
+              "portType": "access"
+            },
+            {
+              "id": 5,
+              "enabled": true,
+              "speed": "auto",
+              "portType": "access"
+            },
+            {
+              "id": 6,
+              "enabled": true,
+              "speed": "auto",
+              "portType": "access"
+            },
+            {
+              "id": 7,
+              "enabled": true,
+              "speed": "auto",
+              "portType": "access"
+            },
+            {
+              "id": 8,
+              "name": "Uplink",
+              "enabled": true,
+              "speed": "auto",
+              "portType": "access"
+            }
+          ]
+        },
+        {
+          "id": "sw-servers",
+          "type": "Switch",
+          "templateId": "tpl-switch",
+          "label": "SW-Servers",
+          "ip": "192.168.20.2",
+          "subnet": "255.255.255.0",
+          "gateway": "192.168.20.1",
+          "vendor": "",
+          "location": "Server room",
+          "position": {
+            "x": 620,
+            "y": 260
+          },
+          "portCount": 8,
+          "ports": [
+            {
+              "id": 1,
+              "name": "Web-01",
+              "enabled": true,
+              "speed": "auto",
+              "portType": "access"
+            },
+            {
+              "id": 2,
+              "name": "Mail-01",
+              "enabled": true,
+              "speed": "auto",
+              "portType": "access"
+            },
+            {
+              "id": 3,
+              "enabled": true,
+              "speed": "auto",
+              "portType": "access"
+            },
+            {
+              "id": 4,
+              "enabled": true,
+              "speed": "auto",
+              "portType": "access"
+            },
+            {
+              "id": 5,
+              "enabled": true,
+              "speed": "auto",
+              "portType": "access"
+            },
+            {
+              "id": 6,
+              "enabled": true,
+              "speed": "auto",
+              "portType": "access"
+            },
+            {
+              "id": 7,
+              "enabled": true,
+              "speed": "auto",
+              "portType": "access"
+            },
+            {
+              "id": 8,
+              "name": "Uplink",
+              "enabled": true,
+              "speed": "auto",
+              "portType": "access"
+            }
+          ]
+        },
+        {
+          "id": "pc-1",
+          "type": "PC",
+          "templateId": "tpl-pc",
+          "label": "PC-1",
+          "ip": "192.168.10.11",
+          "subnet": "255.255.255.0",
+          "gateway": "192.168.10.1",
+          "notes": "Front desk",
+          "position": {
+            "x": 80,
+            "y": 480
+          },
+          "nics": [
+            {
+              "id": "nic-1",
+              "name": "eth0",
+              "enabled": true,
+              "speed": "auto",
+              "ip": "192.168.10.11",
+              "subnet": "255.255.255.0",
+              "gateway": "192.168.10.1",
+              "mac": "02:00:C0:A8:0A:0B"
+            }
+          ]
+        },
+        {
+          "id": "pc-2",
+          "type": "PC",
+          "templateId": "tpl-pc",
+          "label": "PC-2",
+          "ip": "192.168.10.12",
+          "subnet": "255.255.255.0",
+          "gateway": "192.168.10.1",
+          "position": {
+            "x": 280,
+            "y": 480
+          },
+          "nics": [
+            {
+              "id": "nic-1",
+              "name": "eth0",
+              "enabled": true,
+              "speed": "auto",
+              "ip": "192.168.10.12",
+              "subnet": "255.255.255.0",
+              "gateway": "192.168.10.1",
+              "mac": "02:00:C0:A8:0A:0C"
+            }
+          ]
+        },
+        {
+          "id": "web-01",
+          "type": "Server",
+          "templateId": "tpl-webserver",
+          "label": "Web-01",
+          "ip": "192.168.20.10",
+          "subnet": "255.255.255.0",
+          "gateway": "192.168.20.1",
+          "position": {
+            "x": 520,
+            "y": 480
+          },
+          "nics": [
+            {
+              "id": "nic-1",
+              "name": "eth0",
+              "enabled": true,
+              "speed": "auto",
+              "ip": "192.168.20.10",
+              "subnet": "255.255.255.0",
+              "gateway": "192.168.20.1",
+              "mac": "02:00:C0:A8:14:0A"
+            }
+          ]
+        },
+        {
+          "id": "mail-01",
+          "type": "Server",
+          "templateId": "tpl-mailserver",
+          "label": "Mail-01",
+          "ip": "192.168.20.20",
+          "subnet": "255.255.255.0",
+          "gateway": "192.168.20.1",
+          "position": {
+            "x": 720,
+            "y": 480
+          },
+          "nics": [
+            {
+              "id": "nic-1",
+              "name": "eth0",
+              "enabled": true,
+              "speed": "auto",
+              "ip": "192.168.20.20",
+              "subnet": "255.255.255.0",
+              "gateway": "192.168.20.1",
+              "mac": "02:00:C0:A8:14:14"
+            }
+          ]
+        }
+      ],
+      "connections": [
+        {
+          "id": "link-pc-1",
+          "source": "pc-1",
+          "target": "sw-office",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "sourceNic": "nic-1",
+          "targetPort": 1,
+          "type": "access",
+          "bandwidth": "1 Gbps"
+        },
+        {
+          "id": "link-pc-2",
+          "source": "pc-2",
+          "target": "sw-office",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "sourceNic": "nic-1",
+          "targetPort": 2,
+          "type": "access",
+          "bandwidth": "1 Gbps"
+        },
+        {
+          "id": "link-office-uplink",
+          "source": "sw-office",
+          "target": "router-1",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "sourcePort": 8,
+          "targetPort": 1,
+          "type": "uplink",
+          "bandwidth": "1 Gbps"
+        },
+        {
+          "id": "link-servers-uplink",
+          "source": "router-1",
+          "target": "sw-servers",
+          "sourceHandle": "bottom",
+          "targetHandle": "top",
+          "sourcePort": 2,
+          "targetPort": 8,
+          "type": "uplink",
+          "bandwidth": "1 Gbps"
+        },
+        {
+          "id": "link-web-01",
+          "source": "web-01",
+          "target": "sw-servers",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "sourceNic": "nic-1",
+          "targetPort": 1,
+          "type": "access",
+          "bandwidth": "1 Gbps"
+        },
+        {
+          "id": "link-mail-01",
+          "source": "mail-01",
+          "target": "sw-servers",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "sourceNic": "nic-1",
+          "targetPort": 2,
+          "type": "access",
+          "bandwidth": "1 Gbps"
+        }
+      ],
+      "viewport": {
+        "x": 0,
+        "y": 0,
+        "zoom": 1
+      },
+      "deviceCounter": 7,
+      "connectionCounter": 6
+    }
+  ],
+  "templates": {
+    "devices": [],
+    "connections": []
+  }
+}
