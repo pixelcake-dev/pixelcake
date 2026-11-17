@@ -33,7 +33,7 @@ The “Port mode” of a port (LAN, WAN or DMZ) is a label and decides nothing: 
 
 The engine needs to know which port a cable is attached to, to know which zone a packet comes in by and goes out by. A link drawn to a firewall that has zones is not attached to a port by itself: you choose the port, and with it the zone, in the window of the link. Right-click the link, choose “Edit link”, and under “Interfaces” choose the port in the list headed `Interface on FW-Edge`. An end that is not attached has no zone: a rule that names a zone is skipped, and the trace says so in a note.
 
-A port with “None” as its zone is the same: no zone, no policy. What crosses it is allowed, and the trace says `no zone binding: allowed`:
+A port with “None” as its zone is the same: no zone, no policy. A rule that names a zone is skipped there, with the same note, and what no other rule decides is allowed; the trace says `no zone binding: allowed`:
 
 ```ncl sample=site
 pixelcake> interface 2 zone none on FW-Edge
@@ -151,7 +151,7 @@ The “Rules” tab warns when a rule names a zone that no port is in: such a ru
 
 ## Replies {#replies}
 
-A firewall keeps state. When it allowed a request, the reply to that request passes, whatever the rules and the policy say about new flows in the other direction. Without it the reply of a server on the Internet would be a new flow towards a more trusted zone, and the policy would deny it. The note says so:
+A firewall keeps state. When it allowed a request, the reply to that request passes, whatever the rules and the policy say about new flows in the other direction. Without it the reply of a server on the Internet would be a new flow towards a more trusted zone, and the policy would deny it. The engine keeps that state for the flow, not for each firewall: a reply passes every firewall on its way back, even one the request did not cross. The note says so:
 
 ```ncl sample=site
 pixelcake> ping Web-Public from PC-Office-1
@@ -198,7 +198,7 @@ Only what goes through is judged by the rules. The administration of the firewal
 > [!LIMITS]
 > - A rule has four services: ping, web, email and DNS, or any of them. There are no port numbers and no protocols: a rule cannot tell one web port from another, or allow SSH.
 > - Three zones, with names that are fixed: trust, untrust and dmz. There are no other zones and no custom policy between zones; the rules are the only exceptions.
-> - A reply passes because it is a reply to an allowed flow; there is no table of connections, no timeout and no limit on how many are open.
+> - A reply passes because it is a reply to an allowed flow; there is no table of connections, no timeout and no limit on how many are open. So a reply that comes back by another way passes a firewall that never saw the request.
 > - What is addressed to the firewall itself is not filtered.
 > - The packet is looked at by address and by zone only. There is no inspection of what it carries, no logging, no rate limit and no schedule. The IPS/IDS option of a port is documentation: the engine does not simulate it.
 > - A link end that is not attached to a port has no zone. The rules that name a zone are skipped there, and the trace says so; the traffic is not stopped for it.

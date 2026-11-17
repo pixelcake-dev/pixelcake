@@ -33,7 +33,7 @@ La «Modalità della porta» (LAN, WAN o DMZ) è un'etichetta e non decide nulla
 
 Il motore deve sapere a quale porta è attaccato un cavo, per sapere da quale zona entra un pacchetto e da quale esce. Una connessione tracciata verso un firewall che ha delle zone non viene attaccata a una porta da sola: la porta, e con essa la zona, si sceglie nella finestra della connessione. Fai clic con il tasto destro sulla connessione, scegli «Modifica connessione» e, sotto «Interfacce», scegli la porta nell'elenco intitolato `Interfaccia su FW-Edge`. Un'estremità non attaccata non ha una zona: una regola che nomina una zona viene saltata, e il trace lo dice in una nota.
 
-Una porta con «Nessuna» come zona è lo stesso: niente zona, niente politica. Ciò che l'attraversa è permesso, e il trace scrive `no zone binding: allowed`:
+Una porta con «Nessuna» come zona è lo stesso: niente zona, niente politica. Lì una regola che nomina una zona viene saltata, con la stessa nota, e ciò che nessun'altra regola decide è permesso; il trace scrive `no zone binding: allowed`:
 
 ```ncl sample=site
 pixelcake> interface 2 zone none on FW-Edge
@@ -151,7 +151,7 @@ La scheda «Regole» avvisa quando una regola nomina una zona in cui non c'è ne
 
 ## Le risposte {#replies}
 
-Un firewall tiene lo stato. Quando ha lasciato passare una richiesta, ne lascia passare la risposta, qualunque cosa dicano le regole e la politica sui flussi nuovi nell'altro verso. Senza questo la risposta di un server su Internet sarebbe un flusso nuovo verso una zona più fidata, e la politica la negherebbe. La nota lo dice:
+Un firewall tiene lo stato. Quando ha lasciato passare una richiesta, ne lascia passare la risposta, qualunque cosa dicano le regole e la politica sui flussi nuovi nell'altro verso. Senza questo la risposta di un server su Internet sarebbe un flusso nuovo verso una zona più fidata, e la politica la negherebbe. Il motore però tiene questo stato per il flusso, non per ciascun firewall: una risposta passa ogni firewall sulla strada del ritorno, anche uno che la richiesta non ha attraversato. La nota lo dice:
 
 ```ncl sample=site
 pixelcake> ping Web-Pubblico from PC-Uffici-1
@@ -198,7 +198,7 @@ Le regole giudicano solo ciò che attraversa il firewall. L'amministrazione del 
 > [!LIMITS]
 > - Una regola ha quattro servizi: ping, web, email e DNS, oppure tutti. Non ci sono numeri di porta né protocolli: una regola non distingue una porta web da un'altra, né permette SSH.
 > - Tre zone, con nomi fissi: trust, untrust e dmz. Non ci sono altre zone né una politica personalizzata tra le zone; le regole sono le sole eccezioni.
-> - Una risposta passa perché è la risposta a un flusso permesso; non c'è una tabella delle connessioni, né un tempo massimo, né un limite a quante possono essere aperte.
+> - Una risposta passa perché è la risposta a un flusso permesso; non c'è una tabella delle connessioni, né un tempo massimo, né un limite a quante possono essere aperte. Così una risposta che torna per un'altra strada passa un firewall che non ha mai visto la richiesta.
 > - Ciò che è diretto al firewall stesso non viene filtrato.
 > - Il pacchetto è guardato solo per indirizzo e per zona. Non c'è ispezione di ciò che trasporta, né registro degli eventi, né limite di frequenza, né orari. L'opzione IPS/IDS di una porta è solo documentazione: il motore non la simula.
 > - Un'estremità di connessione non attaccata a una porta non ha una zona. Le regole che nominano una zona vengono saltate lì, e il trace lo dice; il traffico non viene fermato per questo.
