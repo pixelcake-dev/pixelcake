@@ -20,9 +20,3 @@ asking/simulation-panel
 asking/how-the-engine-decides
 asking/presentation
 asking/exporting-an-image
-reference/project-file
-reference/yaml
-reference/shortcuts
-reference/samples
-reference/limits-and-faq
-reference/licences
