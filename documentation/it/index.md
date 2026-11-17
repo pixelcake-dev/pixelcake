@@ -1,9 +1,9 @@
 ---
 title: Documentazione di PixelCake
-description: Come disegnare una rete in PixelCake, configurarla, e chiederle se un dispositivo ne raggiunge un altro, con il riferimento del suo terminale e dei suoi file.
+description: Come disegnare una rete in PixelCake, configurarla e chiederle se un dispositivo ne raggiunge un altro, con il riferimento del terminale e dei file.
 ---
 
-PixelCake è un ambiente per progettare piccole reti, che funziona nel browser. Disegni la rete, la configuri, poi le fai una domanda: questo PC raggiunge quel server? Se non lo raggiunge, la risposta dice dove si ferma il pacchetto, e perché. Queste pagine ne spiegano ogni parte.
+PixelCake è un ambiente per progettare piccole reti, e funziona nel browser. Disegni la rete, la configuri, poi le fai una domanda: questo PC raggiunge quel server? Se non lo raggiunge, la risposta dice dove si ferma il pacchetto, e perché. Queste pagine ne spiegano ogni parte.
 
 ![Dal pannello a sinistra si aggiungono tre dispositivi, un PC, un server e un firewall, uniti da due cavi. Nel terminale un ping dal PC raggiunge il server; una regola aggiunta al firewall nega il ping, e lo stesso ping poi si ferma al firewall, con la regola che l'ha fermato.](../media/home/firewall-ping.it.mp4 "Tre dispositivi, due cavi, una domanda, poi una regola del firewall che cambia la risposta.")
 
@@ -11,7 +11,7 @@ PixelCake è un ambiente per progettare piccole reti, che funziona nel browser. 
 
 - **È la prima volta?** Leggi [Che cos'è PixelCake](getting-started/what-is-pixelcake.md), poi disegna [la prima rete in cinque minuti](getting-started/first-network.md).
 - **Cerchi un comando del terminale?** Il [riferimento del terminale](terminal/index.md) ha tutti i comandi, con esempi. Oppure premi `/` e cerca.
-- **Ti chiedi perché una risposta è quella?** Leggi [come decide il motore](asking/how-the-engine-decides.md).
+- **Ti chiedi perché la risposta è proprio quella?** Leggi [come decide il motore](asking/how-the-engine-decides.md).
 
 ## Le sezioni {#sections}
 
@@ -24,6 +24,6 @@ PixelCake è un ambiente per progettare piccole reti, che funziona nel browser. 
 
 ## Su queste pagine {#about}
 
-Ogni esempio del terminale di queste pagine è eseguito dai test di PixelCake, sulla rete di esempio che nomina, e stampa esattamente ciò che si vede qui: quando l'app cambia, le pagine che non corrispondono più falliscono prima di essere pubblicate. Ciò che l'app non simula è detto dove conta, in un riquadro a parte.
+Ogni esempio del terminale di queste pagine viene eseguito dai test di PixelCake, sulla rete di esempio che nomina, e stampa esattamente ciò che si vede qui: quando l'app cambia, una pagina che non corrisponde più non passa i test e non viene pubblicata. Ciò che l'app non simula è detto dove conta, a parte, sotto il titolo Limiti.
 
 La documentazione è open source, come l'app: ogni pagina rimanda in fondo al suo sorgente.
