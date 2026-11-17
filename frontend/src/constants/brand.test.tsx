@@ -29,7 +29,8 @@ vi.mock('sonner', () => ({
 const ENGLISH_MOTTO = /piece by piece/i;
 
 /** Every way the name is written in a text, whatever the capitals */
-const namesIn = (text: string) => text.match(/pixel\s?cake/gi) ?? [];
+/** The name as written in the text; a web address (app.pixelcake.dev) is lowercase by nature and is left out */
+const namesIn = (text: string) => text.replace(/https?:\/\/[^\s"'<>]+/g, '').match(/pixel\s?cake/gi) ?? [];
 
 describe('the name, the descriptor and the motto', () => {
   it('are these words', () => {

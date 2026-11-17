@@ -151,6 +151,9 @@ The first public version: the app at https://app.pixelcake.dev, its documentatio
   - Two-part processing: configurable devices (with ports) + standard devices (with NICs)
 
 ### Fixed
+- **The bar of the app on a phone.** Below 560 pixels the button of the presentation shows its drawing alone, and below 400 it gives its room to the language and the theme (the presentation stays in the View menu): the bar fits on one line down to 320 pixels, in both languages. Before, the language and the theme were cut off at the right edge.
+- **A shared link to the app showed no card.** The page of the app now has the title, the description and the picture of the site's card, and says it is in English until the app chooses the language. An address that does not exist on app.pixelcake.dev shows a page of PixelCake, with the way back to the app, the documentation and the site, instead of GitHub's.
+- **A deeply nested YAML file could overflow the stack while it was read.** The `yaml` library is updated to 2.9.1, past the version with that flaw.
 - **`connect` to a firewall with zones gave a wrong reason.** It said the firewall "has no free interface" when it has free ports: on a firewall with security zones the port of a new link is never chosen by the app, because it decides the zone. The terminal now says so, and where to choose it.
 - **An Italian example in the English terminal.** A name without a dot was refused with "as in www.azienda.example", and the last line of `help` named the same; both say www.company.example now, as the English guide does.
 - **The terminal took a VLAN that does not exist.** `add vlan 5000 to PC-1` was accepted and kept, while the window of a device and the commands of an interface refuse it: `add vlan` and `remove vlan` now take a number from 1 to 4094, as everywhere else, and say so otherwise.

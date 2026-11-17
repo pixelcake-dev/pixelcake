@@ -3519,6 +3519,57 @@ legend {
   color: var(--on-accent);
 }
 
+/* A phone: the bar keeps everything on one line, the menus, the button of
+   the presentation as its drawing alone, the language and the theme */
+@media (max-width: 560px) {
+  .top-menubar {
+    padding: 0 6px;
+  }
+
+  .top-menubar .topbar-logo {
+    margin-right: 4px;
+  }
+
+  .top-menubar .menu-item {
+    padding: 6px 6px;
+  }
+
+  .present-button {
+    padding: 5px 8px;
+  }
+
+  .present-button-label {
+    display: none;
+  }
+
+  .top-menubar .language-switch {
+    margin-left: 6px;
+  }
+
+  .top-menubar .theme-button {
+    margin-left: 2px;
+  }
+}
+
+/* A narrow phone: the presentation is also in the View menu, and the menus
+   draw closer */
+@media (max-width: 400px) {
+  .present-button {
+    display: none;
+  }
+
+  .top-menubar .language-switch {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 350px) {
+  .top-menubar .menu-item {
+    padding: 6px 4px;
+    font-size: 13px;
+  }
+}
+
 /* ============================================================
    Export image: the preview of the picture and the choices
    ============================================================ */

@@ -198,7 +198,7 @@ const TopMenuBar = () => {
         rel="noopener noreferrer"
         title={t.ui.logo.toSite(APP_NAME)}
         aria-label={t.ui.logo.toSite(APP_NAME)}
-        className="mr-4 flex-shrink-0"
+        className="topbar-logo mr-4 flex-shrink-0"
       >
         <img
           src={darkMode ? SymbolNegative : SymbolColour}
@@ -451,8 +451,10 @@ const TopMenuBar = () => {
         className="present-button"
         onClick={handlePresent}
         title={t.menu.presentHint}
+        aria-label={t.menu.present}
       >
-        <Presentation size={16} aria-hidden="true" /> {t.menu.present}
+        {/* on a phone the drawing alone says it: the word gives its room to the language and the theme */}
+        <Presentation size={16} aria-hidden="true" /> <span className="present-button-label">{t.menu.present}</span>
       </button>
 
       {/* The language of the interface, next to the theme */}
@@ -460,7 +462,7 @@ const TopMenuBar = () => {
 
       {/* Theme Toggle */}
       <button
-        className="ml-2 px-2 py-1 hover:text-[var(--accent-color)] cursor-pointer border-none bg-transparent"
+        className="theme-button ml-2 px-2 py-1 hover:text-[var(--accent-color)] cursor-pointer border-none bg-transparent"
         onClick={toggleDarkMode}
         title={darkMode ? t.menu.lightTheme : t.menu.darkTheme}
       >
