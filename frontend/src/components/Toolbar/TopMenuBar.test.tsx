@@ -166,6 +166,7 @@ describe('TopMenuBar', () => {
       expect(entriesOf('Modifica')).toEqual(['Copia', 'Incolla', 'Racchiudi in un riquadro']);
       expect(entriesOf('Aiuto')).toEqual([
         'Guida',
+        'Documentazione',
         'Comandi del terminale',
         'Mostra la schermata di benvenuto',
         'Informazioni',

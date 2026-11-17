@@ -292,6 +292,10 @@ export const help = {
       'distinguono maiuscole e minuscole e possono essere di più parole. Dove un comando chiede una ' +
       'destinazione si può scrivere anche un nome come `www.azienda.example`: il dispositivo di ' +
       "partenza ne chiede prima l'indirizzo al proprio server DNS.",
+    /** `<docs>` is the link to the terminal reference of the documentation, in a new tab of the browser */
+    reference:
+      'Ogni comando, con la sintassi completa ed esempi veri, è spiegato nel <docs>riferimento del ' +
+      'terminale</docs> della documentazione, che si apre in una nuova scheda del browser.',
     command: 'Comando',
     does: 'Cosa fa',
   },

@@ -12,3 +12,12 @@ export const GITHUB_ISSUES = `${GITHUB_REPO}/issues`;
 export function siteUrl(language: Language): string {
   return language === 'it' ? 'https://pixelcake.dev/it/' : 'https://pixelcake.dev/';
 }
+
+/**
+ * The documentation, in the language the interface is in: published with the
+ * app, under docs/ (docs/it/ in Italian), so the address is the app's own.
+ * `page` is the path of a page in it, `terminal` for the terminal reference.
+ */
+export function docsUrl(language: Language, page = ''): string {
+  return `${import.meta.env.BASE_URL}docs/${language === 'it' ? 'it/' : ''}${page ? `${page}/` : ''}`;
+}

@@ -31,7 +31,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { useLanguage, useT } from '@/i18n';
 import LanguageSwitch from '@/components/ui/LanguageSwitch';
 import { encloseDevices } from '@/utils/areaActions';
-import { siteUrl } from '@/constants/links';
+import { docsUrl, siteUrl } from '@/constants/links';
 
 type ConnectWords = ReturnType<typeof useT>['menu']['connectNotice'];
 
@@ -408,6 +408,10 @@ const TopMenuBar = () => {
         <div className="dropdown-content">
           <ul>
             <li onClick={() => openHelp('guide')}>{t.menu.help.guide}</li>
+            {/* The documentation, in a new tab: the drawing stays where it is */}
+            <li onClick={() => window.open(docsUrl(language), '_blank', 'noopener,noreferrer')}>
+              {t.menu.help.docs}
+            </li>
             <li onClick={() => openHelp('commands')}>{t.menu.help.commands}</li>
             <li onClick={handleShowWelcome}>{t.menu.help.welcome}</li>
             <li onClick={() => openHelp('about')}>{t.menu.help.about}</li>

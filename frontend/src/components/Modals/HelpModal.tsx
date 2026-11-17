@@ -20,7 +20,7 @@ import { Modal } from '@/components/ui/Modal';
 import Logo from '@/components/ui/Logo';
 import { useUIStore, type HelpTab } from '@/store/uiStore';
 import { COMMAND_REFERENCE } from '@/terminal/executor';
-import { GITHUB_REPO, siteUrl } from '@/constants/links';
+import { GITHUB_REPO, docsUrl, siteUrl } from '@/constants/links';
 import { APP_NAME, APP_VERSION } from '@/constants/brand';
 import { BUNDLED_FONTS } from '@/constants/thirdParty';
 import { BUNDLED_ICON_SET_INFO } from '@/data/bundledIcons';
@@ -68,10 +68,31 @@ const GuideTab = () => {
 
 const CommandsTab = () => {
   const t = useT();
+  const language = useLanguage();
   return (
     <div className="settings-panel text-sm">
       <p className="mb-4 leading-relaxed text-[var(--text-color-light)]">
         <Rich text={t.help.commands.intro} code={mono} />
+      </p>
+
+      {/* Where every command is explained, with examples: the documentation, in a new tab */}
+      <p className="mb-4 leading-relaxed text-[var(--text-color-light)]">
+        <Rich
+          text={t.help.commands.reference}
+          code={mono}
+          parts={{
+            docs: (words) => (
+              <a
+                href={docsUrl(language, 'terminal')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[var(--accent-text)] underline"
+              >
+                {words}
+              </a>
+            ),
+          }}
+        />
       </p>
 
       <table className="w-full border-collapse">

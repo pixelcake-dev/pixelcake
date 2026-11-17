@@ -289,6 +289,10 @@ export const help: Dictionary['help'] = {
       'case-sensitive and can be made of several words. Where a command asks for a target you ' +
       'can also write a name such as `www.company.example`: the source device first asks its own ' +
       'DNS server for the address.',
+    /** `<docs>` is the link to the terminal reference of the documentation, in a new tab of the browser */
+    reference:
+      'Every command, with its full syntax and real examples, is explained in the <docs>terminal ' +
+      'reference</docs> of the documentation, which opens in a new browser tab.',
     command: 'Command',
     does: 'What it does',
   },

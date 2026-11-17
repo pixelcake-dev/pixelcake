@@ -45,6 +45,7 @@ export const menu: Dictionary['menu'] = {
   help: {
     title: 'Help',
     guide: 'Guide',
+    docs: 'Documentation',
     commands: 'Terminal commands',
     welcome: 'Show the welcome screen',
     about: 'About',

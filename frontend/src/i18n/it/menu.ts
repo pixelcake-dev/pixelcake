@@ -44,6 +44,7 @@ export const menu = {
   help: {
     title: 'Aiuto',
     guide: 'Guida',
+    docs: 'Documentazione',
     commands: 'Comandi del terminale',
     welcome: 'Mostra la schermata di benvenuto',
     about: 'Informazioni',
