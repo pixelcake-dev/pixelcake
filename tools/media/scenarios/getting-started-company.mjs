@@ -68,6 +68,7 @@ export default function scenario({ lang }) {
       { do: 'click', to: `[aria-label="${w.closeTerminal}"]`, ms: 300 },
       { do: 'wait', ms: 600 },
       { do: 'hidePointer' },
+      { do: 'wait', ms: 500 },
       { do: 'poster' },
       { do: 'wait', ms: 300 },
     ],

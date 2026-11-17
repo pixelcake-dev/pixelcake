@@ -42,42 +42,37 @@ export default function scenario({ lang }) {
     const bar = document.querySelector('.top-menubar');
     const items = [...document.querySelectorAll('.top-menubar .menu-item')].map(rect);
     const theme = bar.lastElementChild;
-    // the board is what the panel leaves of the area under the bar
+    const barBottom = bar.getBoundingClientRect().bottom;
+    const strip = rect(document.querySelector('.sidebar'));
     const panel = rect(document.querySelector('.sidebar-panel'));
-    const board = [panel[0] + panel[2], bar.getBoundingClientRect().bottom, window.innerWidth - panel[0] - panel[2], window.innerHeight - bar.getBoundingClientRect().bottom];
+    // [number, frame, edge the badge sits on, where along that edge (0 to 1)]
+    // The frames of the strip, the panel and the board are drawn a little inside what they cover,
+    // so that no two frames share a line and no badge lies across another part.
     const parts = [
-      [1, union([rect(bar.querySelector('a')), ...items])],
-      [2, rect(document.querySelector('.topbar-project'))],
-      [3, rect(document.querySelector('.present-button'))],
-      [4, rect(document.querySelector('.language-switch'))],
-      [5, rect(theme)],
-      [6, rect(document.querySelector('.sidebar'))],
-      [7, rect(document.querySelector('.sidebar-panel'))],
-      [8, board],
-      [9, rect(document.querySelector('.react-flow__minimap'))],
-      [10, rect(document.querySelector('[data-testid="terminal-window"]'))],
+      [1, union([rect(bar.querySelector('a')), ...items]), 'below', 0.85],
+      [2, rect(document.querySelector('.topbar-project')), 'below', 0.5],
+      [3, rect(document.querySelector('.present-button')), 'below', 0.5],
+      [4, rect(document.querySelector('.language-switch')), 'below', 0.5],
+      [5, rect(theme), 'below', 0.5],
+      [6, [strip[0] + 2, barBottom + 6, strip[2] - 5, strip[3] - 10], 'right', 0.45],
+      [7, [panel[0] + 10, barBottom + 30, panel[2] - 18, panel[3] - 40], 'top', 0.5],
+      [8, [panel[0] + panel[2] + 8, barBottom + 22, window.innerWidth - panel[0] - panel[2] - 14, window.innerHeight - barBottom - 30], 'top', 0.5],
+      [9, rect(document.querySelector('.react-flow__minimap')), 'top', 0.12],
+      [10, rect(document.querySelector('[data-testid="terminal-window"]')), 'top', 0.6],
     ];
-    // where the number sits, from the box: below the middle of a part of the bar,
-    // at the top of a panel, beside the buttons and the small map
-    const place = (n, x, y, width, height, size) => {
-      if (n <= 5) return [x + width / 2 - size / 2, y + height - 3];
-      if (n === 6) return [x + width / 2 - size / 2, y + 300];
-      if (n === 7) return [x + width - size - 6, y + 54];
-      if (n === 8) return [x + width - size - 8, y + 250];
-      if (n === 9) return [x - size - 5, y + 2];
-      return [x + width - size - 40, y + 5];
-    };
     const layer = document.createElement('div');
     layer.style.cssText = 'position:fixed;inset:0;z-index:99999;pointer-events:none';
     const accent = '#E8650A';
     const size = 22;
-    for (const [n, [x, y, width, height]] of parts) {
+    for (const [n, box0, edge, t] of parts) {
+      // a little room between a frame of the bar and what it surrounds, so that it never touches a letter
+      const [x, y, width, height] = edge === 'below' ? [box0[0] - 3, box0[1] - 3, box0[2] + 6, box0[3] + 6] : box0;
       const box = document.createElement('div');
       box.style.cssText = 'position:absolute;border:2px solid ' + accent + ';border-radius:3px;left:' + (x - 1) + 'px;top:' + (y - 1) + 'px;width:' + (width + 2) + 'px;height:' + (height + 2) + 'px';
       const badge = document.createElement('div');
       badge.textContent = String(n);
-      const [left, top] = place(n, x, y, width, height, size);
-      badge.style.cssText = 'position:absolute;width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:' + accent + ';color:#fff;font:700 13px/22px Inter,system-ui,sans-serif;text-align:center;box-shadow:0 0 0 2px #fff;left:' + left + 'px;top:' + top + 'px';
+      const centre = edge === 'below' ? [x + width * t, y + height + size / 2 + 1] : edge === 'bottom' ? [x + width * t, y + height] : edge === 'top' ? [x + width * t, y] : [x + width, y + height * t];
+      badge.style.cssText = 'position:absolute;width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:' + accent + ';color:#fff;font:700 13px/22px Inter,system-ui,sans-serif;text-align:center;box-shadow:0 0 0 2px #fff;left:' + (centre[0] - size / 2) + 'px;top:' + (centre[1] - size / 2) + 'px';
       layer.append(box, badge);
     }
     document.body.append(layer);
@@ -97,8 +92,8 @@ export default function scenario({ lang }) {
     setup: [
       { do: 'click', to: `button[aria-label="${w.console}"]`, ms: 100 },
       { do: 'waitFor', until: `!!document.querySelector('${input}')` },
-      { do: 'drag', from: '[data-testid="terminal-resize-handle"]', to: (p) => p.where('[data-testid="terminal-resize-handle"]').then((h) => ({ x: h.x - 190, y: h.y - 310 })), ms: 200, approach: 100 },
-      { do: 'drag', from: { css: '[data-testid="terminal-drag-handle"]', at: [0.3, 0.5] }, to: (p) => p.where({ css: '[data-testid="terminal-drag-handle"]', at: [0.3, 0.5] }).then((h) => ({ x: h.x + 70, y: h.y + 340 })), ms: 200, approach: 100 },
+      { do: 'drag', from: '[data-testid="terminal-resize-handle"]', to: (p) => p.where('[data-testid="terminal-resize-handle"]').then((h) => ({ x: h.x - 220, y: h.y - 200 })), ms: 200, approach: 100 },
+      { do: 'drag', from: { css: '[data-testid="terminal-drag-handle"]', at: [0.3, 0.5] }, to: (p) => p.where({ css: '[data-testid="terminal-drag-handle"]', at: [0.3, 0.5] }).then((h) => ({ x: h.x + 145, y: h.y + 300 })), ms: 200, approach: 100 },
       { do: 'click', to: `[aria-label="${w.closeTerminal}"]`, ms: 100 },
     ],
     steps: [
@@ -115,13 +110,14 @@ export default function scenario({ lang }) {
       { do: 'click', to: `button[aria-label="${w.simulation}"]`, ms: 200 },
       // The panel lies over the left of the board: the view is zoomed out a little, about its right edge,
       // so that the whole drawing stays clear of the panel (one turn of the wheel, as a hand would give it)
-      { do: 'waitFor', until: `(() => { document.querySelector('.react-flow__pane').dispatchEvent(new WheelEvent('wheel', { deltaY: 330, clientX: 1060, clientY: 52, bubbles: true, cancelable: true })); return true; })()`, after: 900 },
+      { do: 'waitFor', until: `(() => { document.querySelector('.react-flow__pane').dispatchEvent(new WheelEvent('wheel', { deltaY: 450, clientX: 1060, clientY: 52, bubbles: true, cancelable: true })); return true; })()`, after: 900 },
       { do: 'click', to: `button[aria-label="${w.console}"]`, ms: 200 },
       { do: 'waitFor', until: `!!document.querySelector('${input}')`, after: 300 },
       ...typed('ping Web-01 from PC-1'),
       { do: 'waitFor', until: `document.querySelector('[data-testid="terminal-console"]').innerText.includes('Reply from')`, after: 1500 },
       { do: 'hidePointer' },
       { do: 'waitFor', until: `(() => { ${draw} })()`, after: 700 },
+      { do: 'wait', ms: 900 },
       { do: 'poster' },
       { do: 'wait', ms: 300 },
     ],
