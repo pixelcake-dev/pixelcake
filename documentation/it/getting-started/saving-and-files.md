@@ -4,13 +4,13 @@ description: "Dove resta il lavoro mentre disegni, come salvarlo in un file .pix
 order: 5
 ---
 
-PixelCake funziona interamente nel browser: non ci sono server né account, quindi il tuo lavoro sta in due posti soltanto. Mentre disegni resta nel browser. Per conservarlo, è un file sul tuo disco, che salvi e riapri tu.
+PixelCake funziona interamente nel browser: non ci sono server né account, quindi il tuo lavoro sta in due posti soltanto. Mentre disegni resta nel browser. Per conservarlo, lo salvi in un file sul tuo disco, che poi riapri tu.
 
 ## Nel browser {#in-the-browser}
 
 Ogni modifica viene scritta subito nella memoria del browser, mentre la fai. Chiudi la scheda, ricarichi la pagina, riavvii il computer: quando riapri PixelCake allo stesso indirizzo, nello stesso browser, il progetto è com'era. Non c'è niente da premere.
 
-Quella memoria appartiene a un solo browser, su un solo computer, a un solo indirizzo. Un altro browser, un altro computer o una finestra privata non la vedono. E può essere svuotata: cancellare i cookie e i dati del sito di PixelCake, un'impostazione del browser che li cancella alla chiusura, o la chiusura di una finestra privata eliminano quello che vi è conservato. **Un progetto che non è mai stato salvato su file va perso quando si cancellano i dati del browser.**
+Quella memoria appartiene a un solo browser, su un solo computer, a un solo indirizzo. Un altro browser, un altro computer o una finestra privata non la vedono. E può essere svuotata: cancellare i cookie e i dati del sito di PixelCake, un'impostazione del browser che li cancella quando lo chiudi, o la chiusura di una finestra privata eliminano quello che vi è conservato. **Un progetto che non è mai stato salvato su file va perso quando si cancellano i dati del browser.**
 
 Il puntino davanti al nome del progetto, al centro della barra dei menu, dice se può succedere: compare finché il progetto ha modifiche non salvate su file, e sparisce quando salvi. Se la memoria è piena, un avviso dice che le ultime modifiche non sono state conservate e chiede di salvare il progetto su file.
 

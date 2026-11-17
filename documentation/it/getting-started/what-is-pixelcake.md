@@ -10,7 +10,7 @@ Serve a ragionare su una rete, non a farla funzionare. Il disegno è un modello:
 
 ## Disegnare, configurare, chiedere, scrivere, presentare {#what-it-does}
 
-Il lavoro ha cinque parti. Si possono fare in qualunque ordine, e tornarci sopra quando serve.
+Il lavoro ha cinque parti. Si possono fare in qualunque ordine, tornando indietro quando serve.
 
 - **Disegnare.** Scegli i dispositivi da un pannello (un PC, uno switch, un router, un firewall, un server, un access point e altri, ognuno con il suo disegno) e li unisci con i cavi, trascinando da un dispositivo all'altro. I riquadri, rettangoli colorati con un nome, raggruppano ciò che sta insieme. Vedi [Dispositivi](../building/devices.md) e [Cavi](../building/cables.md).
 - **Configurare.** Dai gli indirizzi ai dispositivi, dividi le porte di uno switch in VLAN, scrivi le rotte, metti zone e regole su un firewall, traduci gli indirizzi con il NAT, assegni gli indirizzi con il DHCP e chiami i dispositivi per nome con il DNS. Ognuna di queste cose è una scheda della finestra del dispositivo, o un comando del terminale. Vedi [Indirizzi](../building/addresses.md), [VLAN](../building/vlans.md) e la sezione su [servizi e sicurezza](../services/routes.md).
