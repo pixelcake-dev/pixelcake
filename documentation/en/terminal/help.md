@@ -113,10 +113,10 @@ PC-1 — addressing
   eth0: 192.168.10.11 / 255.255.255.0 gw 192.168.10.1
 PC-1> show interfaces Router-1
 IFACE      KIND   STATE   IP               VLAN       MODE-ZONE  LINK
-1          port   up      192.168.10.1     -          lan        SW-Office (port 8)
-2          port   up      192.168.20.1     -          lan        SW-Servers (port 8)
-3          port   up      -                -          lan        -
-4          port   up      -                -          lan        -
+1          port   up      192.168.10.1     -          -          SW-Office (port 8)
+2          port   up      192.168.20.1     -          -          SW-Servers (port 8)
+3          port   up      -                -          -          -
+4          port   up      -                -          -          -
 PC-1> use Router-1
 context: Router-1 — "from" is now implied, "exit" to leave
 Router-1> show routes
@@ -139,7 +139,7 @@ left SW-Office
 ```
 
 > [!NOTE]
-> The terminal keeps the name of the device it is inside. Renaming that device, with `set name` or in its window, leaves the prompt on the old name: `exit` and `use` the new one ([Devices and addresses](devices-and-addresses.md#set)).
+> The terminal keeps the name of the device it is inside. Renaming that device with `set name` moves the prompt to the new name. Renaming it in its window leaves the prompt on the old name: `exit` and `use` the new one ([Devices and addresses](devices-and-addresses.md#set)).
 
 ## clear {#clear}
 
@@ -166,7 +166,7 @@ The line of the terminal takes these keys:
 | Down | Goes forward in the history; past the last line it gives back what you were typing |
 | Ctrl+C | Stops the question that is running: the packet stops on the board and the terminal prints `^C — interrupted`. When nothing is running it does what it does anywhere else, and copies the selected text |
 
-Typing a letter leaves the history and edits the line you are on. The history holds every non-empty line of the session, errors included, for as long as the page is open: it is not saved with the project, and it is lost when the page is reloaded. Esc and Tab do nothing in the terminal: Esc does not close it, and a name is not completed.
+Typing a letter leaves the history and edits the line you are on. The history holds every non-empty line of the session, errors included, for as long as the page is open: it is not saved with the project, and it is lost when the page is reloaded. Tab does nothing in the terminal: a name is not completed. Esc closes the terminal, as its cross does; a question that is still travelling is interrupted first, as Ctrl+C does.
 
 A question that travels (`ping`, `trace`, `browse`, `mail`, `download`, `resolve`) holds the prompt until the packet has arrived or stopped: the line `▌ running… — press Ctrl+C to interrupt` is where the prompt would be. The commands that only read or only write answer at once.
 

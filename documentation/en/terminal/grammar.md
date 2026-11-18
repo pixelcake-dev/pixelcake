@@ -92,9 +92,10 @@ The grammar names the form of each command. It leaves out, to stay short, the wo
 - **A device is a run of words.** Everything between two role keywords is one device name, joined with single spaces: `ping Core Switch HQ from PC Sales 1` has two devices of three and three words. The keywords are `from`, `to`, `of`, `on` and `via`, and, last in a `trace`, `as`.
 - **Double quotes keep a name whole.** A word in quotes is never a keyword and is never dropped: `ping "Gateway to HQ" from "PC-1"`. Quote a name that has a keyword inside it. A quote that is not closed runs to the end of the line, and a pair of quotes with nothing between is ignored.
 - **A name matches a device exactly** (spaces counted once, case ignored), or an address does: the address of the device, or of any of its ports or cards that is enabled. An address stands for the device, and where a question has a target it is the address aimed at ([Targets](asking.md#targets)). A name that does not match is never guessed: it is refused, with a suggestion.
+- **Two devices with one name** (a drawing made before the windows and the terminal refused it) are never told apart by guessing: a command that names them is refused with `2 devices are called "PC-1": rename one of them …`, and `use` does not enter either. An address of one of them still names that one.
 - **A host name is a name with at least one dot**, `www.company.example`: where a question has a target, and a device or an address does not match, it is looked up in a DNS server first ([Asking](asking.md#targets)). It is also the name of a record ([DHCP and DNS](dhcp-and-dns.md#add-record)). A word with no dot is not a host name.
 - **A number** is one or more digits: a port, a VLAN from 1 to 4094, a position in a list. **A network** is an address and a prefix, `192.168.30.0/24`, or `default`.
-- **Values are checked before they are written**: an address that is not an address, a network that is not a network, a VLAN out of 1–4094 are refused with the form that was expected. The mask of `set subnet` is the one value that is not checked.
+- **Values are checked before they are written**: an address that is not an address, a network that is not a network, a VLAN out of 1–4094 are refused with the form that was expected. A mask is a dotted mask, `255.255.255.0`, or a prefix, `/24`.
 
 ## Tolerances {#tolerances}
 

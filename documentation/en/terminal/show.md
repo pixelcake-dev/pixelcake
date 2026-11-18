@@ -69,19 +69,30 @@ The ports and the network cards of a device in one table, whatever the device is
 | `STATE` | `up` or `down` |
 | `IP` | Its address, or `-` |
 | `VLAN` | Of a port of a switch: its VLAN, or `10,20` for a trunk with a list, or `all` for a trunk for every VLAN; `1` for a port nobody set on a switch that applies VLANs. `-` elsewhere |
-| `MODE-ZONE` | Of a port: its mode, `access` or `trunk` on a switch, `lan`, `wan` or `dmz` on a router or a firewall. That is the type of the port: the security zone of a firewall port is in `show ports`. Of a card: `dhcp` when it takes its address from DHCP, else `-` |
+| `MODE-ZONE` | Of a port of a switch: its mode, `access` or `trunk`. Of any other port: its security zone, `trust`, `untrust` or `dmz`, or `-` when it has none (only a firewall has zones; the type of the port, `lan`, `wan` or `dmz`, is in `show ports`). Of a card: `dhcp` when it takes its address from DHCP, else `-` |
 | `LINK` | What it is connected to: the device and its interface, `SW-Office (port 8)`, or `-` |
 
 ```ncl sample=office
 pixelcake> show interfaces Router-1
 IFACE      KIND   STATE   IP               VLAN       MODE-ZONE  LINK
-1          port   up      192.168.10.1     -          lan        SW-Office (port 8)
-2          port   up      192.168.20.1     -          lan        SW-Servers (port 8)
-3          port   up      -                -          lan        -
-4          port   up      -                -          lan        -
+1          port   up      192.168.10.1     -          -          SW-Office (port 8)
+2          port   up      192.168.20.1     -          -          SW-Servers (port 8)
+3          port   up      -                -          -          -
+4          port   up      -                -          -          -
 pixelcake> show interfaces PC-1
 IFACE      KIND   STATE   IP               VLAN       MODE-ZONE  LINK
 eth0       nic    up      192.168.10.11    -          -          SW-Office (port 1)
+```
+
+A firewall says the zone of each port:
+
+```ncl sample=company
+pixelcake> show interfaces FW-Edge
+IFACE      KIND   STATE   IP               VLAN       MODE-ZONE  LINK
+1          port   up      10.0.0.2         -          trust      Router-Core (port 4)
+2          port   up      172.16.0.1       -          dmz        SW-DMZ (port 8)
+3          port   up      203.0.113.1      -          untrust    Internet (eth0)
+4          port   up      -                -          -          -
 ```
 
 ## show ports {#show-ports}
@@ -181,7 +192,7 @@ Srv-Auth — Server
   gateway:  192.168.30.1
   location: Server room
   vlans:    none (untagged)
-  nic eth0: 192.168.30.10 / 255.255.255.0 gw 192.168.30.1 
+  nic eth0: 192.168.30.10 / 255.255.255.0 gw 192.168.30.1
   dns:      answers for 3 names — "show dns Srv-Auth" for detail
 ```
 

@@ -27,6 +27,7 @@ import { useSimulationStore } from '@/store/simulationStore';
 import { executeCommand, type TerminalContext } from '@/terminal/executor';
 import type { TerminalLine } from '@/terminal/types';
 import { useT } from '@/i18n';
+import { useEscapeToClose } from '@/components/ui/useEscapeToClose';
 
 /** Live diagnostic session: hop lines printed as the packet travels */
 interface LiveSession {
@@ -78,9 +79,12 @@ const WELCOME_LINES: TerminalLine[] = [
 
 /* ── window geometry ──────────────────────────────────────────────────── */
 
-const DEFAULT_WIDTH = 720;
-const DEFAULT_HEIGHT = 480;
-const DEFAULT_TOP = 120;
+// It opens small and at the right edge, under the menu bar, so that the
+// drawing stays in view (the mini map, at the bottom right, stays free too)
+const DEFAULT_WIDTH = 560;
+const DEFAULT_HEIGHT = 340;
+const DEFAULT_TOP = 64;
+const DEFAULT_MARGIN = 16;
 const MIN_WIDTH = 480;
 const MIN_HEIGHT = 320;
 /** Approximate header height — used to keep the drag handle reachable */
@@ -115,7 +119,7 @@ const initialGeometry = (): WindowGeometry => {
   const width = Math.min(DEFAULT_WIDTH, window.innerWidth);
   const height = Math.min(DEFAULT_HEIGHT, window.innerHeight);
   return {
-    x: Math.max(0, Math.round((window.innerWidth - width) / 2)),
+    x: Math.max(0, window.innerWidth - width - DEFAULT_MARGIN),
     y: Math.min(DEFAULT_TOP, Math.max(0, window.innerHeight - height)),
     width,
     height,
@@ -253,18 +257,23 @@ const TerminalModal = () => {
     setIsBusy(false);
   };
 
+  /** Abort the running command (Ctrl+C, and Esc before it closes the window) */
+  const interrupt = () => {
+    // Drop the pending output BEFORE stopping: the flush in the store
+    // subscription must not print the remaining hops of an aborted run
+    liveRef.current = null;
+    setLines((prev) => [...prev, { text: '^C — interrupted', tone: 'muted' }]);
+    setIsBusy(false);
+    useSimulationStore.getState().stopSimulation();
+  };
+
   /** Ctrl+C: abort the running command, real-terminal style */
   useEffect(() => {
     if (!isBusy) return;
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
       if (e.ctrlKey && e.key.toLowerCase() === 'c') {
         e.preventDefault();
-        // Drop the pending output BEFORE stopping: the flush in the store
-        // subscription must not print the remaining hops of an aborted run
-        liveRef.current = null;
-        setLines((prev) => [...prev, { text: '^C — interrupted', tone: 'muted' }]);
-        setIsBusy(false);
-        useSimulationStore.getState().stopSimulation();
+        interrupt();
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -281,6 +290,15 @@ const TerminalModal = () => {
   const handleClose = () => {
     closeModal('codeTerminal');
   };
+
+  // Esc closes the window, as its cross does; a command that runs is
+  // interrupted first, as Ctrl+C does. It takes its place among the windows
+  // that Esc closes (the one opened last goes first), and the press is marked
+  // as used, so that nothing else in the app answers it too
+  useEscapeToClose(isOpen, () => {
+    if (liveRef.current || isBusy) interrupt();
+    handleClose();
+  });
 
   const focusInput = () => {
     // Don't steal focus while the user is selecting output text

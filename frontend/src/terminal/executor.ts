@@ -9,6 +9,7 @@
 import { useNetworkStore } from '@/store/networkStore';
 import type { SimulationOutcome } from '@/store/simulationStore';
 import { flowOutcome, traceOutcome } from '@/utils/answerOutcome';
+import { isNameTaken } from '@/utils/newDevice';
 import {
   resolveEndpoint,
   suggestEndpoint,
@@ -30,6 +31,7 @@ import {
   parseNetwork,
   networkContains,
   prefixToMask,
+  maskToPrefix,
   isL3Capable,
   isSwitchLike,
   isVlanAware,
@@ -168,11 +170,30 @@ function findDevice(query: string, topo: Topology): NetworkDevice | undefined {
   return found ? (topo.devices.find((d) => d.id === found.id) ?? found) : undefined;
 }
 
+/**
+ * How many devices a name stands for (a drawing from before the windows
+ * refused a second device of the same name may have two). An id is one device.
+ */
+function devicesCalled(query: string, topo: Topology): number {
+  if (topo.devices.some((d) => d.id === query.trim())) return 1;
+  return topo.devices.filter((d) => isNameTaken(query, [d])).length;
+}
+
 /** Resolve a raw name/IP to a device, with a "did you mean" error on miss */
 function resolveOrError(
   query: string,
   topo: Topology
 ): { device: NetworkDevice } | { errorLines: TerminalLine[] } {
+  const shared = devicesCalled(query, topo);
+  if (shared > 1) {
+    return {
+      errorLines: [
+        err(
+          `${shared} devices are called "${query.trim()}": rename one of them (set name of <device> to <name>) and ask again`
+        ),
+      ],
+    };
+  }
   const device = findDevice(query, topo);
   if (device) return { device };
   const suggestion = suggestEndpoint(query, topo);
@@ -713,7 +734,7 @@ function showConfig(topo: Topology, d: NetworkDevice): TerminalLine[] {
     lines.push(line(`  ports:    ${enabled}/${d.ports.length} enabled — "show ports ${d.label}" for detail`));
   }
   for (const nic of d.nics ?? []) {
-    lines.push(line(`  nic ${nic.name}: ${cardAddress(dhcp, d, nic)} ${nic.enabled ? '' : '(disabled)'}`));
+    lines.push(line(`  nic ${nic.name}: ${cardAddress(dhcp, d, nic)}${nic.enabled ? '' : ' (disabled)'}`));
   }
   if (d.routes && d.routes.length > 0) {
     lines.push(line(`  routes:   ${d.routes.length} static — "show routes ${d.label}" for the whole table`));
@@ -792,7 +813,8 @@ function showInterfaces(topo: Topology, d: NetworkDevice): TerminalLine[] {
     const link = linkText(links.get(iface.key));
     if (iface.kind === 'port') {
       const p = iface.port;
-      const modeZone = p.portType ?? p.securityZone ?? '-';
+      // A switch port says its mode; any other port says its security zone (the type of the port is in show ports)
+      const modeZone = (isSwitchLike(d) ? p.portType : p.securityZone) ?? '-';
       lines.push(
         line(
           `${String(p.id).padEnd(10)} ${'port'.padEnd(6)} ${state} ${ip} ${portVlanText(d, p).padEnd(10)} ${modeZone.padEnd(10)} ${link}`,
@@ -1152,18 +1174,55 @@ function duplicateAddressWarning(ip: string, device: NetworkDevice, topo: Topolo
   return other ? [muted(`  warning: ${ip} is also the address of ${other.label}`)] : [];
 }
 
-function runSet(property: 'ip' | 'gateway' | 'subnet' | 'name', deviceQuery: string | undefined, value: string, context: TerminalContext): TerminalLine[] {
+/** What `set` answers, and the context after it: a device renamed inside `use` is still the one used */
+function runSet(
+  property: 'ip' | 'gateway' | 'subnet' | 'name',
+  deviceQuery: string | undefined,
+  value: string,
+  context: TerminalContext
+): { lines: TerminalLine[]; context: TerminalContext } {
   const found = targetDevice(deviceQuery, context, `set ${property} of <device> to <value>`);
-  if ('errorLines' in found) return found.errorLines;
+  if ('errorLines' in found) return { lines: found.errorLines, context };
   const { device, topo } = found;
 
   if (property === 'name') {
+    if (isNameTaken(value, topo.devices, device.id)) {
+      return { lines: [err(`the name "${value}" is taken by another device: choose another one`)], context };
+    }
+    const inside = contextDevice(context, topo)?.id === device.id;
     useNetworkStore.getState().updateDevice(device.id, { label: value });
-    return [ok(`${device.label} renamed to "${value}"`)];
+    return {
+      lines: [ok(`${device.label} renamed to "${value}"`)],
+      context: inside ? { deviceLabel: value.trim() } : context,
+    };
   }
 
+  return { lines: setAddressing(property, value, device, topo), context };
+}
+
+/** A mask as text: dotted (255.255.255.0) or a prefix (/24), as the dotted one; undefined when it is neither */
+function asMask(text: string): string | undefined {
+  const value = text.trim();
+  const prefix = /^\/\d{1,2}$/.test(value) ? Number(value.slice(1)) : maskToPrefix(value);
+  return prefix !== undefined && prefix <= 32 ? prefixToMask(prefix) : undefined;
+}
+
+/** `set ip|gateway|subnet` on a device found */
+function setAddressing(
+  property: 'ip' | 'gateway' | 'subnet',
+  value: string,
+  device: NetworkDevice,
+  topo: Topology
+): TerminalLine[] {
   if ((property === 'ip' || property === 'gateway') && !isValidIP(value)) {
     return [err(`"${value}" is not a valid IPv4 address`)];
+  }
+  if (property === 'subnet') {
+    const mask = asMask(value);
+    if (mask === undefined) {
+      return [err(`"${value}" is not a valid subnet mask`), muted('  write it as 255.255.255.0 or as /24')];
+    }
+    value = mask;
   }
 
   // A device with NICs is addressed through them: the engine reads the NIC,
@@ -1733,6 +1792,9 @@ function runRoute(
       );
     }
   } else {
+    if (existing && existing.nextHop === hop) {
+      return [...lines, muted(`${device.label}: route to ${name} via ${hop} is already there, nothing changed`)];
+    }
     if (existing && twin && twin !== existing) {
       return [
         err(`${device.label} already has a backup route to ${name} via ${hop}`),
@@ -2176,7 +2238,7 @@ export function executeCommand(rawInput: string, context: TerminalContext): Exec
     case 'show':
       return { lines: runShow(command.what, command.device, context), context };
     case 'set':
-      return { lines: runSet(command.property, command.device, command.value, context), context };
+      return runSet(command.property, command.device, command.value, context);
     case 'vlan-add':
       return { lines: runVlan('add', command.vlanId, command.device, context), context };
     case 'vlan-remove':

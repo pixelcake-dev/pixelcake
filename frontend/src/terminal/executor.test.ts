@@ -191,10 +191,10 @@ describe('terminal executor — interfaces', () => {
 
       expect(cells(header)).toEqual(['IFACE', 'KIND', 'STATE', 'IP', 'VLAN', 'MODE-ZONE', 'LINK']);
       expect(rows.map(cells)).toEqual([
-        ['1', 'port', 'up', '192.168.10.1', '-', 'lan', 'SW-Office', '(port', '8)'],
-        ['2', 'port', 'up', '192.168.20.1', '-', 'lan', 'SW-Servers', '(port', '8)'],
-        ['3', 'port', 'up', '-', '-', 'lan', '-'],
-        ['4', 'port', 'up', '-', '-', 'lan', '-'],
+        ['1', 'port', 'up', '192.168.10.1', '-', '-', 'SW-Office', '(port', '8)'],
+        ['2', 'port', 'up', '192.168.20.1', '-', '-', 'SW-Servers', '(port', '8)'],
+        ['3', 'port', 'up', '-', '-', '-', '-'],
+        ['4', 'port', 'up', '-', '-', '-', '-'],
       ]);
       expect(rows[0].endsWith('SW-Office (port 8)')).toBe(true);
     });

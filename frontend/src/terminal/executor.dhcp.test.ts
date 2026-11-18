@@ -409,7 +409,7 @@ describe('a device on DHCP in the other commands', () => {
       '  subnet:   255.255.255.0',
       '  gateway:  192.168.10.1',
       '  vlans:    none (untagged)',
-      '  nic eth0: 192.168.10.100 / 255.255.255.0 gw 192.168.10.1 (dhcp from Router-1 port 1) ',
+      '  nic eth0: 192.168.10.100 / 255.255.255.0 gw 192.168.10.1 (dhcp from Router-1 port 1)',
     ]);
     // a card with its address written by hand reads as it always did
     expect(output('show ip PC-2')).toEqual([
@@ -431,7 +431,7 @@ describe('a device on DHCP in the other commands', () => {
       '  eth0: no address (dhcp: no DHCP server answers on its network)',
     ]);
     expect(output('show config Mail-01')).toContain(
-      '  nic eth0: no address (dhcp: no DHCP server answers on its network) '
+      '  nic eth0: no address (dhcp: no DHCP server answers on its network)'
     );
   });
 
