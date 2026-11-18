@@ -30,10 +30,16 @@
  *
  * Simulated failures (see ./failures) are part of the topology: a device that
  * is down sends and takes nothing, a cable that is cut carries nothing. A
- * route whose interface has no working cable left is withdrawn, as a device
- * does when it loses the carrier, and the next route for that destination is
- * taken — a backup route written after the main one. A network the device is
- * attached to is not looked for elsewhere: the broken link is the answer.
+ * route whose interface has no working cable left (cut, or switched off at
+ * its other end) is withdrawn, as a device does when it loses the carrier,
+ * and the next route for that destination is taken — a backup route written
+ * after the main one. A network the device is attached to is not looked for
+ * elsewhere: the broken link is the answer.
+ *
+ * A route whose next hop is on none of the device's networks is left out the
+ * same way, with a note: the next route for that destination, or the default
+ * one, takes the traffic. When no other route is left, it says why the
+ * packet stops there.
  *
  * Verdicts: 'error' (an endpoint does not exist or has no usable address),
  * 'unreachable' (no cables join the two devices), 'blocked' (dropped on the
@@ -101,8 +107,8 @@ export interface TraceOptions {
 
 /** What a device decides to do with a packet */
 type Decision =
-  | { kind: 'direct'; out: L3Interface; entry: RouteEntry; detour?: string }
-  | { kind: 'via'; out: L3Interface; nextHop: string; entry: RouteEntry; detour?: string }
+  | { kind: 'direct'; out: L3Interface; entry: RouteEntry; detours: string[] }
+  | { kind: 'via'; out: L3Interface; nextHop: string; entry: RouteEntry; detours: string[] }
   | { kind: 'assumed'; note: string }
   | { kind: 'blocked'; reason: string };
 
@@ -111,10 +117,21 @@ function outLabel(out: L3Interface): string {
   return out.iface ? out.iface.label : '';
 }
 
-/** `the default route via 10.0.0.2` / `the route 192.168.30.0/24 via 10.0.0.2` */
+/**
+ * `the default route via 10.0.0.2` / `the route 192.168.30.0/24 via 10.0.0.2`
+ * / `its own network 192.168.10.0/24`
+ */
 function routeName(entry: RouteEntry): string {
+  if (entry.kind === 'connected') return `its own network ${formatNetwork(entry.network)}`;
   return entry.network.prefix === 0
     ? `the default route via ${entry.nextHop}`
+    : `the route ${formatNetwork(entry.network)} via ${entry.nextHop}`;
+}
+
+/** `its default gateway 10.0.0.2` / `the route 192.168.30.0/24 via 10.0.0.2` (`the route default via …`) */
+function gatewayOrRoute(entry: RouteEntry): string {
+  return entry.kind === 'default' && !entry.route
+    ? `its default gateway ${entry.nextHop}`
     : `the route ${formatNetwork(entry.network)} via ${entry.nextHop}`;
 }
 
@@ -126,23 +143,38 @@ function exitKey(entry: RouteEntry): string | undefined {
 function decide(device: NetworkDevice, destinationIp: string, topo: Topology): Decision {
   const table = routingTable(device);
   const role = forwardingRole(device);
-  let entry = lookupRoute(table, destinationIp, { enabledOnly: true });
-  let detour: string | undefined;
+  const detours: string[] = [];
 
-  // A route that leaves by an interface with no working cable left is
-  // withdrawn: the next one for this destination takes over. With none, the
-  // route stays and layer 2 says what is broken on its way
+  // A route whose next hop is on none of the device's networks leads
+  // nowhere: the device leaves it out, as a real router does, and the next
+  // route for this destination takes the traffic. With none, that route is
+  // the answer
+  const reachable = table.filter(candidate => candidate.out !== undefined);
+  const stranded = lookupRoute(table, destinationIp, { enabledOnly: true });
+  let entry = lookupRoute(reachable, destinationIp, { enabledOnly: true });
+  if (stranded && !stranded.out && entry) {
+    detours.push(
+      `${device.label}: ${routeName(stranded)} is unusable (${stranded.nextHop} is on none of its networks), ` +
+        `${routeName(entry)} is used instead`
+    );
+  }
+
+  // A route that leaves by an interface with no working cable left (cut,
+  // or switched off at its other end) is withdrawn: the next one for this
+  // destination takes over. With none, the route stays and layer 2 says
+  // what is broken on its way
   const dead = deadInterfaces(device, topo);
   const deadReason = (candidate: RouteEntry) => dead.get(exitKey(candidate) ?? '');
   if (entry && entry.kind !== 'connected' && deadReason(entry) !== undefined) {
-    const alive = table.filter(
+    const alive = reachable.filter(
       candidate => candidate.kind === 'connected' || deadReason(candidate) === undefined
     );
     const backup = lookupRoute(alive, destinationIp, { enabledOnly: true });
     if (backup && backup.nextHop !== undefined) {
-      detour =
+      detours.push(
         `${device.label}: ${routeName(entry)} is unusable (${deadReason(entry)}), ` +
-        `${routeName(backup)} is used instead`;
+          `${routeName(backup)} is used instead`
+      );
       entry = backup;
     }
   }
@@ -159,7 +191,7 @@ function decide(device: NetworkDevice, destinationIp: string, topo: Topology): D
   }
 
   if (entry?.kind === 'connected' && entry.out) {
-    return { kind: 'direct', out: entry.out, entry, detour };
+    return { kind: 'direct', out: entry.out, entry, detours };
   }
 
   if (role === 'router' && !hasInterfaceAddresses(device)) {
@@ -172,7 +204,14 @@ function decide(device: NetworkDevice, destinationIp: string, topo: Topology): D
     return { kind: 'assumed', note: `${device.label} is not simulated: traffic assumed to pass` };
   }
 
-  if (!entry || entry.nextHop === undefined) {
+  if (!entry?.out || entry.nextHop === undefined) {
+    // (the only route there is one that leads nowhere: it says why)
+    if (stranded && !stranded.out && stranded.nextHop !== undefined) {
+      return {
+        kind: 'blocked',
+        reason: `${device.label} cannot use ${gatewayOrRoute(stranded)}: that address is on none of its networks`,
+      };
+    }
     return {
       kind: 'blocked',
       reason:
@@ -181,17 +220,7 @@ function decide(device: NetworkDevice, destinationIp: string, topo: Topology): D
           : `no default gateway configured on ${device.label}`,
     };
   }
-  if (!entry.out) {
-    const what =
-      entry.kind === 'default' && !entry.route
-        ? `its default gateway ${entry.nextHop}`
-        : `the route ${formatNetwork(entry.network)} via ${entry.nextHop}`;
-    return {
-      kind: 'blocked',
-      reason: `${device.label} cannot use ${what}: that address is on none of its networks`,
-    };
-  }
-  return { kind: 'via', out: entry.out, nextHop: entry.nextHop, entry, detour };
+  return { kind: 'via', out: entry.out, nextHop: entry.nextHop, entry, detours };
 }
 
 /** What a router's hop says about the way it sent the packet */
@@ -460,7 +489,7 @@ export function traceRoute(
     const isSource = step === 0;
     const decision = decide(current, targetIp, topo);
     if (decision.kind === 'blocked') return blocked(current, decision.reason);
-    if (decision.kind !== 'assumed' && decision.detour) addNotes([decision.detour]);
+    if (decision.kind !== 'assumed') addNotes(decision.detours);
 
     if (isSource && options.sourceIp === undefined && decision.kind !== 'assumed') {
       sourceIp = decision.out.ip;
