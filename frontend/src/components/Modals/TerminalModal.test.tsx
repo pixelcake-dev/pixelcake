@@ -6,7 +6,7 @@
  * hand-off via uiStore.terminalContextDevice).
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import type { ExecutionResult, TerminalContext } from './../../terminal/executor';
 import { useUIStore } from '@/store/uiStore';
@@ -567,5 +567,65 @@ describe('TerminalModal', () => {
     expect(screen.queryByTestId('terminal-busy')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Riga di comando del terminale')).toBeInTheDocument();
     expect(useSimulationStore.getState().isRunning).toBe(false);
+  });
+
+  describe('where it opens', () => {
+    const setViewport = (width: number, height: number) => {
+      vi.stubGlobal('innerWidth', width);
+      vi.stubGlobal('innerHeight', height);
+    };
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('opens small and at the side: the middle of the drawing stays visible', () => {
+      setViewport(1568, 779);
+      openTerminal();
+      const win = screen.getByTestId('terminal-window');
+      const left = parseInt(win.style.left, 10);
+      const width = parseInt(win.style.width, 10);
+      const height = parseInt(win.style.height, 10);
+      expect(width).toBeLessThanOrEqual(600);
+      expect(height).toBeLessThanOrEqual(360);
+      expect(left).toBeGreaterThanOrEqual(1568 / 2);
+      expect(left + width).toBeLessThanOrEqual(1568);
+      expect(parseInt(win.style.top, 10) + height).toBeLessThanOrEqual(779);
+    });
+
+    it('on a phone it takes the width of the screen and stays inside it', () => {
+      setViewport(390, 700);
+      openTerminal();
+      const win = screen.getByTestId('terminal-window');
+      expect(parseInt(win.style.left, 10)).toBeGreaterThanOrEqual(0);
+      expect(parseInt(win.style.left, 10) + parseInt(win.style.width, 10)).toBeLessThanOrEqual(390);
+      expect(parseInt(win.style.top, 10) + parseInt(win.style.height, 10)).toBeLessThanOrEqual(700);
+    });
+  });
+
+  describe('Esc', () => {
+    it('closes the window', () => {
+      const input = openTerminal();
+      fireEvent.keyDown(input, { key: 'Escape' });
+      expect(useUIStore.getState().modals.codeTerminal).toBe(false);
+    });
+
+    it('interrupts a running command first, as Ctrl+C does, then closes', () => {
+      const input = openTerminal();
+      executeCommandMock.mockImplementationOnce((_rawInput, context) => ({
+        lines: [{ text: 'Tracing route...', tone: 'muted' }],
+        context,
+        liveTrace: {
+          animationPath: ['dev-0', 'dev-1'],
+          flowModel: 'ping',
+          hopLines: [{ text: 'hop 1 A', tone: 'normal' }],
+          finalLines: [{ text: 'Trace complete.', tone: 'success' }],
+        },
+      }));
+      typeCommand(input, 'trace c from a');
+      expect(screen.getByTestId('terminal-busy')).toBeInTheDocument();
+
+      fireEvent.keyDown(window, { key: 'Escape' });
+
+      expect(useSimulationStore.getState().isRunning).toBe(false);
+      expect(useUIStore.getState().modals.codeTerminal).toBe(false);
+    });
   });
 });

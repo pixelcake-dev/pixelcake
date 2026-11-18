@@ -1,7 +1,8 @@
 /**
  * Esc in the whole app — every window closes with it, as with its X, one
- * window for each press. The terminal is not one of those windows and keeps
- * its own keys: Esc does nothing there.
+ * window for each press. The terminal is one of them: it closes with Esc too,
+ * after the windows opened over it, and a press that closes it does not also
+ * leave the presentation.
  *
  * (The export image window needs a browser that paints: its Esc, also while
  * presenting, is in ExportImageModal.test.tsx.)
@@ -184,18 +185,16 @@ describe('App — Esc closes the window on top', () => {
 });
 
 describe('App — Esc and the terminal', () => {
-  it('Esc does nothing in the terminal: it stays open, with what was typed', () => {
+  it('Esc closes the terminal, once, and nothing else answers it', () => {
     render(<App />);
     act(() => ui().openModal('codeTerminal'));
     const input = screen.getByLabelText<HTMLInputElement>('Riga di comando del terminale');
     fireEvent.change(input, { target: { value: 'show devices' } });
 
     fireEvent.keyDown(input, { key: 'Escape' });
-    esc();
 
-    expect(ui().modals.codeTerminal).toBe(true);
-    expect(screen.getByTestId('terminal-window')).toBeInTheDocument();
-    expect(input.value).toBe('show devices');
+    expect(ui().modals.codeTerminal).toBe(false);
+    expect(screen.queryByTestId('terminal-window')).toBeNull();
   });
 
   it('a window open over the terminal closes, the terminal stays', () => {
@@ -209,5 +208,21 @@ describe('App — Esc and the terminal', () => {
     expect(windows()).toBe(0);
     expect(ui().modals.settings).toBe(false);
     expect(ui().modals.codeTerminal).toBe(true);
+  });
+
+  it('while presenting: the first Esc closes the terminal, the second leaves the presentation', () => {
+    render(<App />);
+    act(() => {
+      usePresentationStore.getState().enter();
+      ui().openModal('codeTerminal');
+    });
+    const input = screen.getByLabelText('Riga di comando del terminale');
+
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(ui().modals.codeTerminal).toBe(false);
+    expect(usePresentationStore.getState().active).toBe(true);
+
+    esc();
+    expect(usePresentationStore.getState().active).toBe(false);
   });
 });
