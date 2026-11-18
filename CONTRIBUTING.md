@@ -12,7 +12,7 @@ For anything larger than a fix, **open an issue first** and describe what you wo
 
 ## Setting up
 
-You need Node 22 and pnpm 10.
+You need Node 22 or later and pnpm 10 (the checks on GitHub use Node 26).
 
 ```bash
 cd frontend

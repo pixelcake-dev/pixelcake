@@ -14,6 +14,10 @@ export default defineConfig({
     // not a failed test, so the limits are well above the default 5 s
     testTimeout: 30_000,
     hookTimeout: 30_000,
+    // Node 25 and later have a localStorage of their own, empty unless a file
+    // is given, and it hides the one of jsdom: the tests use jsdom's. (The
+    // flag has this name from Node 22 on, where it was still experimental.)
+    execArgv: ['--no-experimental-webstorage'],
   },
   resolve: {
     alias: {

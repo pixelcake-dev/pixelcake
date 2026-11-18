@@ -173,7 +173,7 @@ Opened from a presentation (the “Export image” button on its bar), it shows 
 
 ## Run it
 
-You need Node 22 with pnpm 10.
+You need Node 22 or later with pnpm 10 (the checks on GitHub use Node 26).
 
 ```bash
 cd frontend
