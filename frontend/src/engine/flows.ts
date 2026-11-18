@@ -470,7 +470,9 @@ export function planAndEvaluateFlow(
   topo: Topology,
   options?: { emailMode?: EmailMode; targetIp?: string }
 ): FlowResult {
-  if (sourceId === targetId) {
+  // A device that pings itself answers without the packet leaving it
+  // (loopback), as a trace to itself does; the other exchanges need two
+  if (sourceId === targetId && model !== 'ping') {
     return flowError('source and target are the same device');
   }
 

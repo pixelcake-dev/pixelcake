@@ -299,6 +299,26 @@ describe('terminal executor — interfaces', () => {
     });
   });
 
+  describe('from a device to itself', () => {
+    it('a ping is answered by the device itself, as a trace is (loopback)', () => {
+      const ping = run('ping PC-1 from PC-1');
+      expect(ping.liveTrace).toBeUndefined();
+      expect(ping.lines.map(l => l.text)).toEqual([
+        'Pinging PC-1 (192.168.10.11) from PC-1...',
+        'Reply from 192.168.10.11: hops=1 time=1ms',
+      ]);
+      expect(ping.outcome).toEqual({ arrives: true, deviceId: device('PC-1').id });
+
+      const trace = run('trace PC-1 from PC-1');
+      expect(trace.lines.map(l => l.text)).toEqual([
+        'Tracing route to PC-1 (192.168.10.11) from PC-1:',
+        '  1  ● PC-1 (PC)',
+        'Trace complete: destination reached.',
+      ]);
+      expect(trace.outcome).toEqual({ arrives: true, deviceId: device('PC-1').id });
+    });
+  });
+
   describe('trace', () => {
     it('names the disabled interface that dropped the packet', () => {
       const web = device('Web-01');

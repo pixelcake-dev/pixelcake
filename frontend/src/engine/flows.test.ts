@@ -80,12 +80,40 @@ function mailViaSwitch(): Topology {
 // ---------- common guards ----------
 
 describe('planAndEvaluateFlow guards', () => {
-  it('errors when source and target are the same device', () => {
+  it.each(['web', 'download', 'email'] as const)(
+    'errors on %s when source and target are the same device',
+    model => {
+      const result = planAndEvaluateFlow(model, 'pc1', 'pc1', sameSubnetViaSwitch());
+      expect(result.verdict).toBe('error');
+      expect(result.failureReason).toBe('source and target are the same device');
+      expect(result.legs).toEqual([]);
+      expect(result.animationPath).toEqual([]);
+    }
+  );
+
+  it('answers a ping from a device to itself without the packet leaving it (loopback)', () => {
     const result = planAndEvaluateFlow('ping', 'pc1', 'pc1', sameSubnetViaSwitch());
+    expect(result.verdict).toBe('success');
+    expect(result.legs.map(l => [l.purpose, l.trace.verdict, l.trace.hops.map(h => h.deviceId)])).toEqual([
+      ['request', 'success', ['pc1']],
+      ['reply', 'success', ['pc1']],
+    ]);
+    expect(result.animationPath).toEqual(['pc1']);
+    expect(result.animationLinks).toEqual([]);
+    // as a trace from the device to itself does
+    expect(traceRoute('pc1', 'pc1', sameSubnetViaSwitch()).verdict).toBe('success');
+  });
+
+  it('a ping from a device to itself still needs the device to have an address', () => {
+    const t = sameSubnetViaSwitch();
+    const bare: Topology = {
+      ...t,
+      devices: t.devices.map(d => (d.id === 'pc1' ? { ...d, ip: '' } : d)),
+    };
+    const result = planAndEvaluateFlow('ping', 'pc1', 'pc1', bare);
     expect(result.verdict).toBe('error');
-    expect(result.failureReason).toBe('source and target are the same device');
-    expect(result.legs).toEqual([]);
-    expect(result.animationPath).toEqual([]);
+    expect(result.failureReason).toBe('request: PC-1 has no IP address configured');
+    expect(traceRoute('pc1', 'pc1', bare).failureReason).toBe('PC-1 has no IP address configured');
   });
 
   it('stops after the first failing leg (legs.length === 1)', () => {

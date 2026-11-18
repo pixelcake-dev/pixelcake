@@ -32,6 +32,8 @@ export const simulation: Dictionary['simulation'] = {
     addTwoDevices: 'Add at least two devices to start a simulation',
     chooseBothEnds: 'Select a source and a destination device',
     sameDevice: 'The source and the destination cannot be the same device',
+    /** A device that pings itself: the packet never leaves it */
+    loopback: (name: string) => `${name} answers itself: the packet does not leave the device`,
     failed: (flow: FlowModelType) => `${flowNames[flow]} simulation failed`,
     /** In place of the reason, when the engine gives none */
     unknownReason: 'unknown reason',

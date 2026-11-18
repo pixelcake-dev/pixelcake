@@ -31,6 +31,8 @@ export const simulation = {
     addTwoDevices: 'Aggiungi almeno due dispositivi per avviare una simulazione',
     chooseBothEnds: 'Seleziona il dispositivo di partenza e quello di destinazione',
     sameDevice: 'Il dispositivo di partenza e quello di destinazione non possono coincidere',
+    /** A device that pings itself: the packet never leaves it */
+    loopback: (name: string) => `${name} risponde a se stesso: il pacchetto non esce dal dispositivo`,
     failed: (flow: FlowModelType) => `Simulazione ${flowNames[flow]} fallita`,
     /** In place of the reason, when the engine gives none */
     unknownReason: 'motivo sconosciuto',
