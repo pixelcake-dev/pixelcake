@@ -57,7 +57,7 @@ interface UIStore {
    * Whether the areas of the canvas are shown (Vista → «Mostra i riquadri»).
    * A preference of this browser, kept with the theme: not part of the
    * drawing, not in the project file. Hidden, the areas are not drawn, not
-   * in the small map and not in the exported image, and cannot be taken
+   * in the exported image, and cannot be taken
    */
   areasShown: boolean;
 

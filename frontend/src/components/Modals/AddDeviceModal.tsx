@@ -12,9 +12,8 @@ import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { findNextAvailableIP, generateMacAddress } from '@/utils/ipHelpers';
-import { firstFreePlace } from '@/utils/placeDevice';
-import { newDevicePlace } from '@/utils/viewPlace';
-import { newDeviceName, newDevicePorts } from '@/utils/newDevice';
+import { allOnScreen, newDeviceSpot } from '@/utils/viewPlace';
+import { isNameTaken, newDeviceName, newDevicePorts } from '@/utils/newDevice';
 import { nicProblems, tidyNic } from '@/utils/interfaceProblems';
 import { isEndDeviceKind } from '@/utils/defaultDns';
 import { isL3Type, withLeases } from '@/engine';
@@ -100,6 +99,10 @@ const AddDeviceModal = () => {
   // An end device is addressed through its card: what is typed here is the card
   const card = nics?.[0];
 
+  // A name another device has is refused: the terminal finds a device by its
+  // name, and could not tell the two apart (utils/newDevice)
+  const nameTaken = isNameTaken(name, devices);
+
   const handleSave = () => {
     if (!addDeviceType) return;
     // A card on DHCP needs no address; any other device is asked for one
@@ -108,21 +111,20 @@ const AddDeviceModal = () => {
       toast.error(t.addDevice.nameAndAddressRequired);
       return;
     }
+    // (said under the field: the window stays open until the name is changed)
+    if (isNameTaken(name, useNetworkStore.getState().devices)) return;
     const cardProblem = card ? nicProblems(card).dns : undefined;
     if (cardProblem) {
       toast.error(cardProblem);
       return;
     }
 
-    // The new device appears where the user is looking: at the centre of the
-    // visible part of the canvas, or in the nearest free place when another
-    // device is already there. Never at random: it is where one expects it
-    // (a batch added in bulk starts there too)
+    // The new device appears where the user is looking: in the first free
+    // place of the visible part of the canvas, row by row from its top left,
+    // out of the way of the panel and the small map. Never at random, and
+    // never on top of another: it is where one expects it
     const { devices: placed } = useNetworkStore.getState();
-    const place = firstFreePlace(
-      newDevicePlace(),
-      placed.map((device) => device.position)
-    );
+    const place = newDeviceSpot(placed.map((device) => device.position));
 
     // A router or firewall does not take the gateway of the end devices: its
     // gateway is its default route, set later by whoever configures it
@@ -153,7 +155,9 @@ const AddDeviceModal = () => {
       nics: keptCard ? [keptCard] : undefined,
     });
     // The new device is the selected one: it stands out, and is found at once
+    // (when no free place was left in view, the view is brought to it)
     useNetworkStore.getState().selectMultipleDevices([newId]);
+    if (!allOnScreen([place])) useNetworkStore.getState().triggerFitView([newId]);
 
     handleClose();
   };
@@ -216,6 +220,7 @@ const AddDeviceModal = () => {
               onChange={(e) => setName(e.target.value)}
               placeholder={t.addDevice.identity.namePlaceholder(addDeviceType)}
               required
+              error={nameTaken ? t.addDevice.identity.nameTaken : undefined}
             />
             {/* Who made it and where it is: not asked of a PC */}
             {!isPC && (

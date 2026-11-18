@@ -35,7 +35,7 @@ The names are those of the templates, and they are the same in both languages. W
 3. Check the window. Under “Identity” are the “Device name” (it is proposed, see [Names](#names)) and, for a switch, a router or a firewall, the “Number of ports”: 5, 8, 16, 24 or 48 for a switch, 2, 4, 8 or 16 for a router or a firewall. Vendor and location are free text, for the devices that are not a PC. Under “Network” are the “IP address”, the “Subnet mask” and the “Gateway”.
 4. Press “Add”.
 
-The device appears at the centre of the part of the board you are looking at, or in the nearest free place, and it is selected. The window of an end device is about its first network card, `eth0`: the address typed there is the card’s, and “Address” may be set to “Automatic (DHCP)” instead. A router or a firewall has no address field to fill in: its ports get theirs later, in its window ([Ports and network cards](ports-and-cards.md)).
+The device appears in the first free place of the part of the board you are looking at, row by row from the top left, clear of the open panel and of the small map, and it is selected. When no place is free in view, it goes to the nearest free one and the view moves to show it. The window of an end device is about its first network card, `eth0`: the address typed there is the card’s, and “Address” may be set to “Automatic (DHCP)” instead. A router or a firewall has no address field to fill in: its ports get theirs later, in its window ([Ports and network cards](ports-and-cards.md)).
 
 The address is the first free one of the network of the project, from `.2`, with the mask and gateway of that network, and the DNS server when the project has one. They are set in Settings → Network, and [Addresses and gateways](addresses.md#project-network) says what each does. A leased address (an address given by a DHCP server) is never proposed to a new device.
 
@@ -45,7 +45,7 @@ Two more ways to add many devices at once: [Bulk add](bulk-add.md), and the samp
 
 The name of a device is how a person, and the terminal, calls it: `ping PC-2 from PC-1`. A new device is named after its template, with a dash for each space, and a number: the lowest, from 1, that leaves the name free. The first PC is `PC-1`, the next `PC-2`, and a Web Server is `Web-Server-1`. Delete `PC-1` and the next PC is `PC-1` again. A name counts as taken whatever its case, and whatever the kind of the device that has it.
 
-You can change a name in the “General” tab of the window of the device, under “Device name”. It may not be empty, but PixelCake does not stop you giving two devices the same name, and it does not rename the ones that are there. The terminal finds a device by its name without telling `pc-1` from `PC-1`; when two devices have the same name it takes the first one in the order they were drawn. A name that is unique is a name that works.
+You can change a name in the “General” tab of the window of the device, under “Device name”. It may not be empty, and it may not be the name of another device, whatever its case: “Add device” and the window of a device then say “Another device already has this name” under the field, and add or save nothing until the name is changed. The devices that are there are never renamed. The terminal finds a device by its name without telling `pc-1` from `PC-1`; when two devices have the same name it takes the first one in the order they were drawn. A name that is unique is a name that works.
 
 ## The window of a device {#window}
 
@@ -59,9 +59,9 @@ Nothing changes on the board until you press “Save”; “Cancel” leaves the
 
 ## Copying and deleting {#copy-delete}
 
-- **Selecting.** A click on a device selects it. Ctrl + click adds a device to the selection or takes it away, and a drag on empty space draws a selection box.
-- **Copying.** Edit → “Copy” or Ctrl+C copies the selected devices, with the cables between them. Edit → “Paste” or Ctrl+V adds the copies, 50 units to the right and below. A copy keeps the name and the addresses of the device it was made from: rename it and give it an address before you ask anything of the network.
-- **Deleting.** Select and press the Delete key, which deletes at once, or right click → “Delete”, which asks first. The cables of the device go with it. A device removed from the board does not come back: the board has no undo.
+- **Selecting.** A click on a device selects it. Ctrl + click adds a device to the selection or takes it away, and a drag on empty space draws a selection box. Areas can be in the selection too ([Areas](areas.md#with-devices)), and with two devices selected or more “Enclose in an area” appears above them.
+- **Copying.** Edit → “Copy” or Ctrl+C copies the selected devices, with the cables between them and the selected areas. Edit → “Paste” or Ctrl+V adds the copies, 50 units to the right and below, or further when a copy pasted before is there. Each copy is a device of its own: it takes the first free name of its family (`PC-1` gives the first free `PC-n`, `Reception` gives `Reception-1`) and a new MAC address on every network card. A PC, a laptop, a printer and the other end devices that are not servers ask for their address: their cards are set to “Automatic (DHCP)”. With no DHCP server on their network they stay without one, the line under the name says “DHCP: no address”, and a notice names them. Servers, databases, routers, firewalls and switches keep the addresses of the original: give the copy its own before you ask anything of the network.
+- **Deleting.** Select and press the Delete key, or right click → “Delete”: both ask first, in a window of the app. The Delete key deletes everything selected, devices, cables and areas, and the question says how many of each. The cables of a device go with it. A device removed from the board does not come back: the board has no undo.
 
 ## The colour of a device {#lamp}
 
@@ -86,4 +86,5 @@ The answer stays on the board after a question asked from the simulation panel o
 > - The kind decides the role in the engine, and nothing else about the hardware: a device has no model, no firmware, no CPU or memory, and no limit on the traffic it carries.
 > - A Load Balancer does not balance and a Cloud does not carry anything: both are taken to let the traffic through.
 > - A Printer, an IP Camera and the other end devices answer only to what the engine asks of them; they do not run services of their own.
-> - Two devices may have the same name or the same address, and the board does not warn about it.
+> - Two devices may have the same address, and the board does not warn about it. A copy of a server, a router, a firewall or a switch has the addresses of the original until you change them.
+> - The windows refuse a name another device has, but a drawing made with an earlier version may still hold two devices with one name.

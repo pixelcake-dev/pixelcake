@@ -14,6 +14,7 @@ import { ReactFlowProvider } from 'reactflow';
 import { useNetworkStore } from '@/store/networkStore';
 import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
+import { answerConfirms, settled } from '@/test/confirm';
 import NetworkCanvas from './NetworkCanvas';
 
 /** MouseEvent.button values */
@@ -189,16 +190,19 @@ describe('NetworkCanvas — mouse and keyboard', () => {
   });
 
   describe('keyboard', () => {
-    it('Delete removes the selected devices', async () => {
+    it('Delete removes the selected devices, once the question is answered yes', async () => {
       addPc('PC-1');
       addPc('PC-2');
       addPc('PC-3');
       renderCanvas();
       await clickDevice('PC-1');
       await clickDevice('PC-3', { ctrl: true });
+      const answers = answerConfirms(true);
 
       press('Delete');
+      await settled();
 
+      expect(answers.asked.map(question => question.title)).toEqual(['Eliminare 2 dispositivi?']);
       expect(labels()).toEqual(['PC-2']);
     });
 
@@ -212,7 +216,24 @@ describe('NetworkCanvas — mouse and keyboard', () => {
       expect(useNetworkStore.getState().clipboard?.devices.map(d => d.label)).toEqual(['PC-1']);
 
       press('v', { ctrlKey: true });
-      expect(labels()).toEqual(['PC-1', 'PC-2', 'PC-1']);
+      // (the copy takes the first free name of its family)
+      expect(labels()).toEqual(['PC-1', 'PC-2', 'PC-3']);
+    });
+
+    it('with Caps Lock on (the keys come as capital letters) Ctrl+C and Ctrl+V work the same', async () => {
+      addPc('PC-1');
+      addPc('PC-2');
+      renderCanvas();
+      await clickDevice('PC-1');
+
+      fireEvent.keyDown(document.body, { key: 'C', code: 'KeyC', ctrlKey: true });
+      expect(useNetworkStore.getState().clipboard?.devices.map(d => d.label)).toEqual(['PC-1']);
+
+      fireEvent.keyDown(document.body, { key: 'V', code: 'KeyV', ctrlKey: true });
+      expect(labels()).toHaveLength(3);
+      // Ctrl+Shift+V is another shortcut of the browser: nothing is pasted
+      fireEvent.keyDown(document.body, { key: 'V', code: 'KeyV', ctrlKey: true, shiftKey: true });
+      expect(labels()).toHaveLength(3);
     });
 
     it('Ctrl+C with nothing selected and Ctrl+V with nothing copied are left to the browser', () => {

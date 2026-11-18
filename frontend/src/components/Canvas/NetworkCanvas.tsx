@@ -11,7 +11,10 @@ import ReactFlow, {
   ConnectionMode,
   ConnectionLineType,
   SelectionMode,
+  NodeToolbar,
+  Position,
 } from 'reactflow';
+import { SquareDashed } from 'lucide-react';
 import type {
   Node,
   Edge,
@@ -21,6 +24,7 @@ import type {
   NodeTypes,
   NodeChange,
   NodeMouseHandler,
+  MiniMapNodeProps,
   OnConnectStart,
   OnConnectEnd,
   EdgeMouseHandler,
@@ -30,7 +34,7 @@ import NetworkDevice from './NetworkDevice';
 import AreaNode from './AreaNode';
 import { useDhcp } from '@/utils/useDhcp';
 import { shownAddress } from '@/utils/dhcpLabels';
-import { miniMapAreaColour, miniMapColour } from '@/utils/miniMapColour';
+import { miniMapColour } from '@/utils/miniMapColour';
 import CustomEdge from './CustomEdge';
 import ParticleEdge from './ParticleEdge';
 import PacketAnimation from './PacketAnimation';
@@ -42,7 +46,12 @@ import { useUIStore } from '@/store/uiStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
 import type { CanvasArea, NetworkDevice as NetworkDeviceType } from '@/types/network';
-import { useLanguage } from '@/i18n';
+import { getT, useLanguage, useT } from '@/i18n';
+import { shortcutLetter } from '@/utils/shortcutKey';
+import { askConfirm, useConfirmStore, type ConfirmQuestion } from '@/store/confirmStore';
+import { hasClipboard } from '@/utils/pasteDevices';
+import { pasteAndTell } from '@/utils/pasteActions';
+import { encloseDevices } from '@/utils/areaActions';
 
 // Define node and edge types outside component to prevent re-renders
 const nodeTypes: NodeTypes = {
@@ -59,14 +68,62 @@ const edgeTypes = {
   particle: ParticleEdge, // Particle animations with CSS offset-path
 };
 
-/**
- * A device on the small map is drawn in the colour of its type; an area is
- * a faint rectangle of its own colour behind them
- */
+/** A device on the small map is drawn in the colour of its type */
 const miniMapNodeColour = (node: Node): string =>
-  node.type === AREA_NODE
-    ? miniMapAreaColour((node.data as CanvasArea | undefined)?.color)
-    : miniMapColour((node.data as NetworkDeviceType | undefined)?.type);
+  miniMapColour((node.data as NetworkDeviceType | undefined)?.type);
+
+/** What tells an area on the small map, where it is not drawn */
+const MINI_MAP_AREA = 'minimap-area';
+const miniMapNodeClass = (node: Node): string => (node.type === AREA_NODE ? MINI_MAP_AREA : '');
+
+/**
+ * A device on the small map: a plain square, without the rounded corners and
+ * the border React Flow gives it (drawn without smoothing, at a scale that is
+ * not a whole number, the corners left stray pixels). An area is not drawn:
+ * at the size of the map its faint rectangle showed as marks around and
+ * under the squares of its devices
+ */
+const MiniMapSquare = ({ x, y, width, height, color, className, shapeRendering }: MiniMapNodeProps) =>
+  className.includes(MINI_MAP_AREA) ? null : (
+    <rect
+      className="react-flow__minimap-node"
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      fill={color}
+      shapeRendering={shapeRendering}
+    />
+  );
+
+/**
+ * The question the Delete key asks: for one thing alone the one its menu
+ * asks, for more how many of each
+ */
+function deleteQuestion(
+  devices: readonly NetworkDeviceType[],
+  connectionCount: number,
+  areas: readonly CanvasArea[]
+): ConfirmQuestion {
+  const t = getT();
+  const yes = { confirmLabel: t.common.actions.delete, danger: true };
+  const alone = devices.length + connectionCount + areas.length === 1;
+  if (alone && devices.length === 1) {
+    const words = t.contextMenu.device.deleteQuestion;
+    return { title: words.title(devices[0].label), detail: words.detail, ...yes };
+  }
+  if (alone && areas.length === 1) {
+    const words = t.contextMenu.area.deleteQuestion;
+    return { title: words.title(areas[0].label), detail: words.detail, ...yes };
+  }
+  if (alone) return { title: t.contextMenu.connection.deleteQuestion.title, ...yes };
+  const words = t.canvas.deleteQuestion;
+  return {
+    title: words.title(devices.length, connectionCount, areas.length),
+    ...(devices.length > 0 ? { detail: words.detail } : {}),
+    ...yes,
+  };
+}
 
 /** How long the view has to stand still to be taken as come to rest (ms) */
 const VIEW_AT_REST_AFTER = 150;
@@ -85,6 +142,7 @@ const allNodesMeasured = (state: ReactFlowState): boolean => {
 };
 
 const NetworkCanvas = () => {
+  const t = useT();
   const devices = useNetworkStore((state) => state.devices);
   const connections = useNetworkStore((state) => state.connections);
   const areas = useNetworkStore((state) => state.areas);
@@ -94,15 +152,13 @@ const NetworkCanvas = () => {
   const viewport = useNetworkStore((state) => state.viewport);
   const fitViewRequest = useNetworkStore((state) => state.fitViewRequest);
   const updateDevice = useNetworkStore((state) => state.updateDevice);
-  const removeDevice = useNetworkStore((state) => state.removeDevice);
   const addConnection = useNetworkStore((state) => state.addConnection);
   const setViewport = useNetworkStore((state) => state.setViewport);
-  const removeConnection = useNetworkStore((state) => state.removeConnection);
   const getConnection = useNetworkStore((state) => state.getConnection);
   const selectedDeviceIds = useNetworkStore((state) => state.selectedDeviceIds);
+  const selectedAreaIds = useNetworkStore((state) => state.selectedAreaIds);
   const selectMultipleDevices = useNetworkStore((state) => state.selectMultipleDevices);
   const copySelection = useNetworkStore((state) => state.copySelection);
-  const paste = useNetworkStore((state) => state.paste);
   const clipboard = useNetworkStore((state) => state.clipboard);
   const setContextMenuDevice = useUIStore((state) => state.setContextMenuDevice);
   const setContextMenuConnection = useUIStore((state) => state.setContextMenuConnection);
@@ -210,7 +266,9 @@ const NetworkCanvas = () => {
 
       if (changed) {
         isUpdatingSelection.current = true;
-        selectMultipleDevices(selectedIds);
+        // (the areas of the selection are not React Flow's: they are kept,
+        // and let go where a press says so, see handlePressCapture)
+        selectMultipleDevices(selectedIds, { keepAreas: true });
         // Use queueMicrotask instead of setTimeout - more reliable and performant
         queueMicrotask(() => {
           isUpdatingSelection.current = false;
@@ -220,26 +278,23 @@ const NetworkCanvas = () => {
     [selectMultipleDevices]
   );
 
-  // Handle node deletion (Delete key)
-  const handleNodesDelete = useCallback(
-    (nodes: Node[]) => {
-      nodes.forEach((node) => {
-        removeDevice(node.id);
-      });
-    },
-    [removeDevice]
-  );
-
-  // A link deleted with the Delete key goes away from the network too, not
-  // only from the picture
-  const handleEdgesDelete = useCallback(
-    (deleted: Edge[]) => {
-      deleted.forEach((edge) => {
-        removeConnection(edge.id);
-      });
-    },
-    [removeConnection]
-  );
+  // A press of the left button without Ctrl on a device that is not
+  // selected, or on a cable, makes a new selection (React Flow's): the areas
+  // that were in the old one are let go. A press on a selected device keeps
+  // them, since it moves the whole selection; Ctrl+click adds to it
+  const handlePressCapture = useCallback((event: React.MouseEvent) => {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey) return;
+    if (usePresentationStore.getState().active) return;
+    const network = useNetworkStore.getState();
+    if (network.selectedAreaIds.length === 0) return;
+    const target = event.target instanceof Element ? event.target : null;
+    const device = target?.closest('.react-flow__node-device');
+    if (device) {
+      if (!network.selectedDeviceIds.includes(device.getAttribute('data-id') ?? '')) network.selectArea(null);
+      return;
+    }
+    if (target?.closest('.react-flow__edge')) network.selectArea(null);
+  }, []);
 
   // Handle context menu on edge (connection)
   const handleEdgeContextMenu: EdgeMouseHandler = useCallback(
@@ -297,7 +352,7 @@ const NetworkCanvas = () => {
   useEffect(() => {
     if (areasShown) return;
     const network = useNetworkStore.getState();
-    if (network.selectedAreaId !== null) network.selectArea(null);
+    if (network.selectedAreaIds.length > 0) network.selectArea(null);
     if (network.editingAreaId !== null) network.setEditingArea(null);
   }, [areasShown]);
 
@@ -436,10 +491,60 @@ const NetworkCanvas = () => {
     return () => clearTimeout(timer);
   }, [presenting, panelOpen, canvasRevision, nodesMeasured, reactFlowInstance]);
 
+  // The selected areas follow the selected devices React Flow moves (a
+  // device of the selection dragged, the rectangle around it, the arrow
+  // keys). Where each area was and where the device was when the move
+  // began: the areas are placed from there, so that no rounding piles up
+  const dragAnchor = useRef<{
+    deviceId: string;
+    from: { x: number; y: number };
+    areas: Array<[string, { x: number; y: number }]>;
+  } | null>(null);
+  const moveSelectedAreas = useCallback((changes: NodeChange[]) => {
+    const network = useNetworkStore.getState();
+    if (network.selectedAreaIds.length === 0) {
+      dragAnchor.current = null;
+      return;
+    }
+    for (const change of changes) {
+      if (change.type !== 'position' || !network.selectedDeviceIds.includes(change.id)) continue;
+      // (the end of a drag: the next move starts from where things are)
+      if (!change.position) {
+        if (change.dragging === false) dragAnchor.current = null;
+        continue;
+      }
+      if (dragAnchor.current?.deviceId !== change.id) {
+        const device = network.devices.find((entry) => entry.id === change.id);
+        if (!device) continue;
+        dragAnchor.current = {
+          deviceId: change.id,
+          from: device.position,
+          areas: network.areas
+            .filter((area) => network.selectedAreaIds.includes(area.id))
+            .map((area) => [area.id, area.position]),
+        };
+      }
+      const anchor = dragAnchor.current;
+      const dx = change.position.x - anchor.from.x;
+      const dy = change.position.y - anchor.from.y;
+      network.moveTogether(
+        {},
+        Object.fromEntries(
+          anchor.areas.map(([id, at]) => [id, { x: Math.round(at.x + dx), y: Math.round(at.y + dy) }])
+        )
+      );
+      // (a step of the arrow keys is a move of its own)
+      if (!change.dragging) dragAnchor.current = null;
+      return;
+    }
+  }, []);
+
   // Handle node position changes (drag)
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
       onNodesChange(changes);
+      // (before the devices are written: where the dragged one was is read from the store)
+      moveSelectedAreas(changes);
 
       // Update Zustand store when node position changes (while it is dragged too)
       changes.forEach((change) => {
@@ -450,7 +555,7 @@ const NetworkCanvas = () => {
         }
       });
     },
-    [onNodesChange, updateDevice]
+    [onNodesChange, updateDevice, moveSelectedAreas]
   );
 
   // Handle connection start (drag begins)
@@ -480,11 +585,15 @@ const NetworkCanvas = () => {
     [addConnection]
   );
 
-  // An area that is selected: the devices and the cables React Flow had
+  // An area selected by itself: the devices and the cables React Flow had
   // selected are let go (the store has emptied its own list already), so
-  // that the Delete key deletes the area and nothing else
+  // that the Delete key deletes the area and nothing else. Not while a
+  // selection box is drawn: what it takes is passed to the store a moment
+  // apart, the areas before the devices
   useEffect(() => {
-    if (selectedAreaId !== null) reactFlowStore.getState().unselectNodesAndEdges();
+    if (selectedAreaId === null) return;
+    if (reactFlowStore.getState().userSelectionActive) return;
+    reactFlowStore.getState().unselectNodesAndEdges();
   }, [selectedAreaId, reactFlowStore]);
 
   // A press on the empty canvas (a click there, or a selection box begun
@@ -493,8 +602,41 @@ const NetworkCanvas = () => {
     useNetworkStore.getState().selectArea(null);
   }, []);
 
-  // The Delete key deletes the area that is selected, as it deletes the
-  // devices that are. Not while typing, and not while presenting
+  // A selection box takes the areas it wholly holds, as it takes the
+  // devices (SelectionMode.Full). The box is React Flow's: it is read from
+  // its store while it is drawn, in the measure of the screen
+  useEffect(() => {
+    if (presenting) return;
+    return reactFlowStore.subscribe((state) => {
+      if (!state.userSelectionActive || !state.userSelectionRect) return;
+      // (hidden areas are out of its reach)
+      if (!useUIStore.getState().areasShown) return;
+      const { x, y, width, height } = state.userSelectionRect;
+      const [tx, ty, zoom] = state.transform;
+      const box = {
+        left: (x - tx) / zoom,
+        top: (y - ty) / zoom,
+        right: (x + width - tx) / zoom,
+        bottom: (y + height - ty) / zoom,
+      };
+      const network = useNetworkStore.getState();
+      network.setSelectedAreas(
+        network.areas
+          .filter(
+            (area) =>
+              area.position.x >= box.left &&
+              area.position.y >= box.top &&
+              area.position.x + area.size.width <= box.right &&
+              area.position.y + area.size.height <= box.bottom
+          )
+          .map((area) => area.id)
+      );
+    });
+  }, [presenting, reactFlowStore]);
+
+  // The Delete key deletes what is selected: devices (with their cables),
+  // cables and areas, after the question the menu of the right button asks.
+  // Not while typing, not while a window is open, not while presenting
   useEffect(() => {
     const handleDeleteKey = (e: KeyboardEvent) => {
       if (e.key !== 'Delete') return;
@@ -504,14 +646,37 @@ const NetworkCanvas = () => {
         target instanceof HTMLElement &&
         (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
       if (isTyping) return;
-      // (hidden areas are out of its reach)
-      if (!useUIStore.getState().areasShown) return;
+      // (the key belongs to a window open over the drawing, the question
+      // included; the terminal floats beside the drawing and is not one)
+      if (useConfirmStore.getState().pending) return;
+      const { codeTerminal, ...windows } = useUIStore.getState().modals;
+      void codeTerminal;
+      if (Object.values(windows).some(Boolean)) return;
+
+      const flow = reactFlowStore.getState();
       const network = useNetworkStore.getState();
-      if (network.selectedAreaId !== null) network.removeArea(network.selectedAreaId);
+      const devices = network.devices.filter((device) =>
+        flow.getNodes().some((node) => node.selected && node.id === device.id && node.type !== AREA_NODE)
+      );
+      const connections = flow.edges.filter((edge) => edge.selected).map((edge) => edge.id);
+      // (hidden areas are out of its reach)
+      const areas = useUIStore.getState().areasShown
+        ? network.areas.filter((area) => network.selectedAreaIds.includes(area.id))
+        : [];
+      if (devices.length + connections.length + areas.length === 0) return;
+      e.preventDefault();
+      void (async () => {
+        if (!(await askConfirm(deleteQuestion(devices, connections.length, areas)))) return;
+        useNetworkStore.getState().removeElements({
+          devices: devices.map((device) => device.id),
+          connections,
+          areas: areas.map((area) => area.id),
+        });
+      })();
     };
     window.addEventListener('keydown', handleDeleteKey);
     return () => window.removeEventListener('keydown', handleDeleteKey);
-  }, []);
+  }, [reactFlowStore]);
 
   // Close the context menu when clicking on the canvas
   // Note: React Flow handles selection clearing automatically
@@ -544,12 +709,12 @@ const NetworkCanvas = () => {
   );
   useEffect(() => () => clearTimeout(viewAtRest.current), []);
 
-  // Keyboard shortcuts: Ctrl+C (copy), Ctrl+V (paste)
+  // Keyboard shortcuts: Ctrl+C (copy), Ctrl+V (paste), Cmd on a Mac. The
+  // letter is read whatever Caps Lock says (utils/shortcutKey)
   useEffect(() => {
     const handleKeyboardShortcuts = (e: KeyboardEvent) => {
-      // Check if Ctrl (Windows/Linux) or Cmd (Mac) is pressed
-      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-      if (!isCtrlOrCmd) return;
+      const letter = shortcutLetter(e);
+      if (letter === null) return;
       // Nothing is copied or pasted into a drawing that is being presented
       if (usePresentationStore.getState().active) return;
 
@@ -562,22 +727,22 @@ const NetworkCanvas = () => {
         (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
       if (isTyping || (window.getSelection()?.toString() ?? '') !== '') return;
 
-      // Ctrl+C - Copy selection
-      if (isCtrlOrCmd && e.key === 'c' && selectedDeviceIds.length > 0) {
+      // Ctrl+C - Copy selection: devices, the cables among them, areas
+      if (letter === 'c' && selectedDeviceIds.length + selectedAreaIds.length > 0) {
         e.preventDefault();
         copySelection();
       }
 
       // Ctrl+V - Paste from clipboard
-      if (isCtrlOrCmd && e.key === 'v' && clipboard && clipboard.devices.length > 0) {
+      if (letter === 'v' && hasClipboard(clipboard)) {
         e.preventDefault();
-        paste();
+        pasteAndTell();
       }
     };
 
     window.addEventListener('keydown', handleKeyboardShortcuts);
     return () => window.removeEventListener('keydown', handleKeyboardShortcuts);
-  }, [selectedDeviceIds, clipboard, copySelection, paste]);
+  }, [selectedDeviceIds, selectedAreaIds, clipboard, copySelection]);
 
   // Suppress React Flow development warnings
   // These are false positives caused by React Strict Mode
@@ -608,6 +773,7 @@ const NetworkCanvas = () => {
         ref={canvasRef}
         className="w-full h-full"
         onClick={handleCanvasClick}
+        onMouseDownCapture={handlePressCapture}
       >
         <ReactFlow
         nodes={nodes}
@@ -615,8 +781,6 @@ const NetworkCanvas = () => {
         onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         onSelectionChange={handleSelectionChange}
-        onNodesDelete={handleNodesDelete}
-        onEdgesDelete={handleEdgesDelete}
         onConnect={onConnect}
         onConnectStart={onConnectStart}
         onConnectEnd={onConnectEnd}
@@ -655,7 +819,8 @@ const NetworkCanvas = () => {
         panOnDrag={presenting ? true : [2]}
         selectionMode={SelectionMode.Full}
         multiSelectionKeyCode={presenting ? null : 'Control'}
-        deleteKeyCode={presenting ? null : 'Delete'}
+        // The Delete key is the canvas's own: it asks first (handleDeleteKey)
+        deleteKeyCode={null}
         nodesDraggable={!presenting}
         nodesConnectable={!presenting}
         elementsSelectable={!presenting}
@@ -668,7 +833,29 @@ const NetworkCanvas = () => {
             background and the veil outside the view follow the theme: they
             are in index.css, like those of the zoom buttons and the credit */}
         {/* (the devices on the small map take their one colour from the style sheet) */}
-        {!presenting && <MiniMap nodeColor={miniMapNodeColour} />}
+        {!presenting && (
+          <MiniMap nodeColor={miniMapNodeColour} nodeClassName={miniMapNodeClass} nodeComponent={MiniMapSquare} />
+        )}
+        {/* Two devices selected or more: a button over them encloses them
+            in an area, as Modifica → «Racchiudi in un riquadro» does */}
+        {!presenting && selectedDeviceIds.length >= 2 && (
+          <NodeToolbar
+            nodeId={selectedDeviceIds}
+            isVisible
+            position={Position.Top}
+            offset={8}
+            className="selection-toolbar nopan nodrag"
+          >
+            <button
+              type="button"
+              className="selection-toolbar-button"
+              onClick={() => encloseDevices(useNetworkStore.getState().selectedDeviceIds)}
+            >
+              <SquareDashed size={14} strokeWidth={1.75} aria-hidden="true" />
+              {t.menu.edit.enclose}
+            </button>
+          </NodeToolbar>
+        )}
         {/* Packet Animation Logic */}
         <PacketAnimation />
         <DeviceNote />

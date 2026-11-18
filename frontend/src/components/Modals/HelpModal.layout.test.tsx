@@ -67,10 +67,12 @@ afterEach(() => {
 });
 
 describe('the guide — the automatic layout', () => {
-  it('names the entries of Vista as the menu shows them', () => {
-    expect(quotedIt(step('Spostali e selezionali'))).toEqual(['Disposizione automatica', 'Verticale', 'Orizzontale']);
+  it('names the entries of the menus as the menu shows them', () => {
+    // (the first is the button over two selected devices, the entry of Modifica too)
+    const names = ['Racchiudi in un riquadro', 'Disposizione automatica', 'Verticale', 'Orizzontale'];
+    expect(quotedIt(step('Spostali e selezionali'))).toEqual(names);
     render(<TopMenuBar />);
-    for (const name of ['Disposizione automatica', 'Verticale', 'Orizzontale']) expect(screen.getByText(name)).toBeInTheDocument();
+    for (const name of names) expect(screen.getByText(name)).toBeInTheDocument();
   });
 
   it('on top what the traffic leaves through, a level for each cable; and it asks first', async () => {
@@ -93,9 +95,10 @@ describe('the guide — the automatic layout', () => {
 
   it('in English too', () => {
     act(() => setLanguage('en'));
-    expect(quotedEn(step('Move and select them'))).toEqual(['Auto-layout', 'Vertical', 'Horizontal']);
+    const names = ['Enclose in an area', 'Auto-layout', 'Vertical', 'Horizontal'];
+    expect(quotedEn(step('Move and select them'))).toEqual(names);
     render(<TopMenuBar />);
-    for (const name of ['Auto-layout', 'Vertical', 'Horizontal']) expect(screen.getByText(name)).toBeInTheDocument();
+    for (const name of names) expect(screen.getByText(name)).toBeInTheDocument();
   });
 });
 

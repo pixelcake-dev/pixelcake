@@ -92,10 +92,13 @@ describe('bulk add — where the new devices go', () => {
     const [first] = addInBulk({ PC: 3 });
 
     expect(first.position).toEqual(alone.position);
-    // which is in the middle of what is on screen
+    // which is the first free place of what is on screen, from its top left
     const view = onScreen();
-    expect(first.position.x + DEVICE_METRICS.width / 2).toBeCloseTo((view.left + view.right) / 2, 0);
-    expect(first.position.y + deviceHeight(true) / 2).toBeCloseTo((view.top + view.bottom) / 2, 0);
+    expect(first.position.x).toBeGreaterThanOrEqual(view.left);
+    expect(first.position.y).toBeGreaterThanOrEqual(view.top);
+    // (the place before it on the grid is too close to the border: 24 pixels, here 48 units)
+    expect(first.position.x - NEW_DEVICE_STEP.x).toBeLessThan(view.left + 48);
+    expect(first.position.y - NEW_DEVICE_STEP.y).toBeLessThan(view.top + 48);
   });
 
   it('the others follow in rows and columns, spaced for a device and its name, with nothing left to chance', () => {

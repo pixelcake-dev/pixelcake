@@ -17,6 +17,7 @@ import { useProjectStore, type NewProjectInput } from '@/store/projectStore';
 import { useUIStore } from '@/store/uiStore';
 import { askConfirm, type ConfirmQuestion } from '@/store/confirmStore';
 import { parseProjectFile, projectFileName, serializeProject } from './projectFile';
+import { shortcutLetter } from './shortcutKey';
 import { getT } from '@/i18n';
 
 // ---------- File System Access API: only what is used here ----------
@@ -313,8 +314,8 @@ export function createNewProject(input: NewProjectInput): void {
 /** Ctrl+S (Cmd+S) anywhere in the app saves the project; returns the cleanup */
 export function registerSaveShortcut(): () => void {
   const onKeyDown = (event: KeyboardEvent) => {
-    if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
-    if (event.key.toLowerCase() !== 's') return;
+    // (with Caps Lock on too, and on a keyboard whose letters are not Latin)
+    if (shortcutLetter(event) !== 's') return;
     // Never the browser's own "save page as"
     event.preventDefault();
     if (event.repeat) return;

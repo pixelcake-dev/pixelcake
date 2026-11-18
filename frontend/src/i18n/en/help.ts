@@ -27,8 +27,9 @@ export const help: Dictionary['help'] = {
       text:
         'In the bar on the left open “Add device” (the + button) and choose a type from the ' +
         'list: check the name and confirm; the IP address is suggested automatically and can be ' +
-        'changed, or left to DHCP. The device appears at the centre of the part of the board you ' +
-        'are looking at (or in the first free place next to it) and is already selected. “Bulk ' +
+        'changed, or left to DHCP; a name another device already has is not accepted. The device ' +
+        'appears in the first free place of the part of the board you are looking at, row by row ' +
+        'from the top left, and is already selected. “Bulk ' +
         'add” creates many at once. In the “Samples” tab of the same panel there are five sample ' +
         'networks ready to use: that of a small company (the same as on the welcome screen), a ' +
         'simple one, one with VLANs, a DMZ and a firewall, one with two sites and a backup ' +
@@ -41,7 +42,12 @@ export const help: Dictionary['help'] = {
       title: 'Move and select them',
       text:
         'Drag a device to move it. With Ctrl + click you select more than one; dragging on empty ' +
-        'space draws a selection box. Dragging with the right button on empty space moves the ' +
+        'space draws a selection box, which also takes the areas wholly inside it. With two ' +
+        'devices selected or more, “Enclose in an area” appears above them. Ctrl + C and Ctrl + V ' +
+        'copy and paste the selection: the copy takes the first free name (PC-1 gives the first ' +
+        'free PC-n), each network card a new MAC, and the PCs and the other end devices that are ' +
+        'not servers ask DHCP for their address. The Delete key deletes the selection, after ' +
+        'asking. Dragging with the right button on empty space moves the ' +
         'view, and the wheel zooms. All the shortcuts are in Settings → Advanced. View → ' +
         '“Auto-layout” → “Vertical” or “Horizontal” lays them out again: on top what the traffic ' +
         'leaves the network through (the Internet, else the firewall, else the router), below it ' +
@@ -72,9 +78,11 @@ export const help: Dictionary['help'] = {
         'one at the centre of the view; or select the devices and choose Edit → “Enclose in an ' +
         'area” (it is also in the right-click menu of a device): the area is drawn around them. ' +
         'Type the name and press Enter. Grab an area by its name or its border: dragging it ' +
-        'moves it, and the devices stay where they are; when it is selected it shows eight ' +
-        'handles to resize it. A double click on the name renames it, a right click opens a menu ' +
-        'with “Rename”, the colours and “Delete”, and the Delete key deletes the selected area. ' +
+        'moves it, and the devices stay where they are; when it is selected alone it shows eight ' +
+        'handles to resize it. Ctrl + click on its name adds it to the selection of the devices, ' +
+        'and it is moved, copied and deleted with them. A double click on the name renames it, a ' +
+        'right click opens a menu with “Rename”, the colours and “Delete”, and the Delete key, ' +
+        'after asking, deletes the selected area. ' +
         'The inside of an area does not get in the way: devices inside it are selected, ' +
         'connected and moved as usual. Areas also show in a presentation and in the exported ' +
         'image, and are saved with the project. View → “Show areas” hides them and shows them ' +
@@ -248,8 +256,9 @@ export const help: Dictionary['help'] = {
       title: 'Split the project into boards',
       text:
         'A project can have several boards. In “Explorer”, the first button of the bar on the ' +
-        'left, you add one with “New board”, rename them, delete them (at least one always stays) ' +
-        'and move from one to another with a click. The name and the description of the project ' +
+        'left, you add one with “New board”, rename them, duplicate them with “Duplicate board” ' +
+        '(the copy, with everything on it, comes right after), delete them (at least one always ' +
+        'stays) and move from one to another with a click. The name and the description of the project ' +
         'are changed there too.',
     },
     save: {

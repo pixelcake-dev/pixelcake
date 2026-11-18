@@ -1,4 +1,16 @@
 import type { Dictionary } from '../dictionary';
+import { formatCount } from '../numbers';
+
+/** A number of things as English writes it ("14,891") */
+const amount = (value: number) => formatCount('en', value);
+
+/** `A`, `A and B`, `A, B and C` */
+const list = (items: string[]) =>
+  items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+
+/** Of a long list of names, the first three and "N more" */
+const shortList = (names: string[]) =>
+  list(names.length > 4 ? [...names.slice(0, 3), `${amount(names.length - 3)} more`] : names);
 
 /** What is written on the board itself: devices, cables, areas */
 export const canvas: Dictionary['canvas'] = {
@@ -28,5 +40,27 @@ export const canvas: Dictionary['canvas'] = {
     labelHint: 'Drag to move the area, double-click to rename it',
     /** Said when a new area is made while they were hidden from the View menu */
     shownAgain: 'The areas were hidden: they are shown again',
+  },
+
+  /** After a paste: the pasted end devices that asked DHCP for an address and got none */
+  paste: {
+    noAddress: (names: string[]) =>
+      names.length === 1
+        ? `${names[0]} asks DHCP for its address, and no DHCP server gave it one`
+        : `${shortList(names)} ask DHCP for their address, and no DHCP server gave them one`,
+  },
+
+  /** The Delete key, with more than one thing selected (one alone is asked about as in its menu) */
+  deleteQuestion: {
+    title: (deviceCount: number, connectionCount: number, areaCount: number) =>
+      `Delete ${list(
+        [
+          deviceCount === 0 ? '' : deviceCount === 1 ? '1 device' : `${amount(deviceCount)} devices`,
+          connectionCount === 0 ? '' : connectionCount === 1 ? '1 link' : `${amount(connectionCount)} links`,
+          areaCount === 0 ? '' : areaCount === 1 ? '1 area' : `${amount(areaCount)} areas`,
+        ].filter(Boolean)
+      )}?`,
+    /** When devices are among them */
+    detail: 'The links of the devices go with them.',
   },
 };

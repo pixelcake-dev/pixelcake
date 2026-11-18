@@ -98,7 +98,7 @@ export const menu: Dictionary['menu'] = {
     nothingToExport: 'The board is empty: there is nothing to export',
     nothingToPresent: 'The board is empty: there is nothing to present',
     nothingToFit: 'No devices on the board: there is nothing to bring into view',
-    selectBeforeCopy: 'Select at least one device before copying',
-    nothingToPaste: 'There is nothing to paste: copy one or more devices first',
+    selectBeforeCopy: 'Select at least one device or area before copying',
+    nothingToPaste: 'There is nothing to paste: copy devices or areas first',
   },
 };

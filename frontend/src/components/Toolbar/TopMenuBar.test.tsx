@@ -208,7 +208,8 @@ describe('TopMenuBar', () => {
       expect(disabled()).toEqual([]);
 
       click('Incolla');
-      expect(labels()).toEqual(['PC-1', 'PC-2', 'PC-1']);
+      // (the copy takes the first free name of its family)
+      expect(labels()).toEqual(['PC-1', 'PC-2', 'PC-3']);
     });
   });
 

@@ -19,7 +19,7 @@ If the welcome screen does not appear (you asked not to see it again), choose Fi
 ## Draw three devices {#draw}
 
 1. In the bar on the left click “Add device”, the button with a plus. The panel “Add” opens, with the list of device types.
-2. Click “PC”. A window suggests the name PC-1 and an address, 192.168.1.2, with the mask 255.255.255.0 and the gateway 192.168.1.1. Click “Add”. PC-1 appears at the centre of the board.
+2. Click “PC”. A window suggests the name PC-1 and an address, 192.168.1.2, with the mask 255.255.255.0 and the gateway 192.168.1.1. Click “Add”. PC-1 appears at the top left of the board, beside the panel.
 3. Click “Server”, then “Add”. The window suggests Server-1 and 192.168.1.3.
 4. Click “Firewall” (scroll the list if it is not in view), then “Add”. The window suggests Firewall-1 and 192.168.1.4.
 5. Close the panel with the cross at its top right. Drag each device by its drawing to put them in a row: PC-1 on the left, Firewall-1 in the middle, Server-1 on the right.

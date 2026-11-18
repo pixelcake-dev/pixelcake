@@ -5,9 +5,6 @@
  * orange of the look stays the mark of a state.
  */
 
-import type { AreaColour } from '@/types/network';
-import { AREA_PALETTE } from '@/utils/canvasAreas';
-
 export const MINI_MAP_COLOURS: Readonly<Record<string, string>> = {
   PC: '#3b82f6', // blue
   Switch: '#10b981', // green
@@ -27,15 +24,7 @@ export function miniMapColour(type: string | undefined): string {
   return (type && MINI_MAP_COLOURS[type]) || MINI_MAP_FALLBACK;
 }
 
-/** How much of its colour an area shows on the small map, as the last two digits of the colour */
-export const MINI_MAP_AREA_ALPHA = '38';
-
-/**
- * An area («riquadro») on the small map: its own colour, faint, so that the
- * devices drawn over it keep theirs. (The colour is the one of the light
- * theme in both: on the map it is a tint, not a text to read.)
+/*
+ * An area («riquadro») is not drawn on the small map: at that size its faint
+ * rectangle read as marks around and under the squares of its devices.
  */
-export function miniMapAreaColour(colour: AreaColour | undefined): string {
-  const palette = AREA_PALETTE.light;
-  return `${(colour && palette[colour]) || palette.slate}${MINI_MAP_AREA_ALPHA}`;
-}

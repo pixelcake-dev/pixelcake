@@ -35,7 +35,7 @@ import {
 } from './canvasAreas';
 import type { AreaBox } from './canvasAreas';
 import { DEVICE_METRICS, ROLE_TAG } from './drawingImage';
-import { MINI_MAP_AREA_ALPHA, MINI_MAP_COLOURS, miniMapAreaColour } from './miniMapColour';
+import { MINI_MAP_COLOURS } from './miniMapColour';
 
 const area = (overrides: Partial<CanvasArea> = {}): CanvasArea => ({
   id: 'area-1',
@@ -484,17 +484,11 @@ describe('the palette', () => {
     }
   });
 
-  it('on the small map an area is a faint rectangle of its colour, which is no colour of a device', () => {
-    for (const colour of AREA_COLOURS) {
-      expect(miniMapAreaColour(colour)).toBe(`${AREA_PALETTE.light[colour]}${MINI_MAP_AREA_ALPHA}`);
-      expect(miniMapAreaColour(colour)).toMatch(/^#[0-9a-f]{8}$/);
-      expect(Object.values(MINI_MAP_COLOURS)).not.toContain(miniMapAreaColour(colour));
-    }
-    // faint: less than a third of its colour
-    expect(parseInt(MINI_MAP_AREA_ALPHA, 16) / 255).toBeLessThan(0.33);
-    expect(miniMapAreaColour(undefined)).toBe(miniMapAreaColour('slate'));
-    // and the canvas hands that colour to the map for an area, the colour of its type for a device
-    expect(canvasSource).toMatch(/node\.type === AREA_NODE\s*\? miniMapAreaColour\(/);
+  it('an area is not drawn on the small map: the canvas hands the map a plain square for a device alone', () => {
+    // (at the size of the map its rectangle read as marks around the squares)
+    expect(canvasSource).toMatch(/node\.type === AREA_NODE \? MINI_MAP_AREA/);
+    expect(canvasSource).toMatch(/className\.includes\(MINI_MAP_AREA\) \? null/);
+    expect(Object.keys(MINI_MAP_COLOURS)).not.toContain('area');
   });
 
   it('the inside of an area lets the pointer through; its label, its border and its handles take it', () => {

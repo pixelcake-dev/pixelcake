@@ -56,7 +56,7 @@ Finché un pannello è aperto copre la parte sinistra del canvas, e con essa i p
 Il canvas è dove sta il disegno. Con il mouse:
 
 - trascina un dispositivo per spostarlo; trascina dal bordo di un dispositivo a un altro per collegarli;
-- trascina su un punto vuoto per disegnare un riquadro di selezione; con Ctrl + clic aggiungi un dispositivo alla selezione;
+- trascina su un punto vuoto per disegnare un riquadro di selezione; con Ctrl + clic aggiungi un dispositivo o un riquadro alla selezione; con due o più dispositivi selezionati, sopra di loro compare «Racchiudi in un riquadro»;
 - trascina con il tasto destro su un punto vuoto per spostare la vista, e usa la rotellina per lo zoom;
 - un clic destro su un dispositivo apre il suo menu: «Dettagli (modifica)», «Console», «Racchiudi in un riquadro» ed «Elimina»; un clic destro su un cavo offre «Modifica connessione» ed «Elimina connessione»;
 - un clic su un punto vuoto toglie i colori lasciati dall'ultima domanda.

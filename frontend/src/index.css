@@ -355,6 +355,37 @@ input[type='radio'] {
   color: var(--text-color-light);
 }
 
+/* Over two devices selected or more, the button that encloses them in an
+   area (NetworkCanvas, a NodeToolbar of React Flow): small and flat, square
+   corners, the colours of a menu, the shadow of what floats over the page;
+   the accent only for the focus of the keyboard */
+.selection-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--text-color);
+  background: var(--bg-menu);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-small);
+  box-shadow: 0 2px 8px var(--shadow-color);
+  cursor: pointer;
+}
+
+.selection-toolbar-button:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-color);
+}
+
+.selection-toolbar-button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
 /* An area of the canvas («riquadro»): a light tint of its colour, a thin
    border of the same colour and a label in small capitals in a corner. It
    lies behind the devices and the cables and is not in their way: its

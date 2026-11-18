@@ -56,7 +56,7 @@ A panel covers the left of the board, and the zoom buttons that sit there, while
 The board is where the drawing is. What the mouse does on it:
 
 - drag a device to move it; drag from the edge of a device to another to join them;
-- drag on empty space to draw a selection box, and Ctrl + click to add a device to the selection;
+- drag on empty space to draw a selection box, and Ctrl + click to add a device or an area to the selection; with two devices selected or more, “Enclose in an area” appears above them;
 - drag with the right button on empty space to move the view, and use the wheel to zoom;
 - right-click a device for its menu: “Details (edit)”, “Console”, “Enclose in an area” and “Delete”; right-click a cable for “Edit link” and “Delete link”;
 - click an empty spot to clear the colours left by the last question.

@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { NEW_DEVICE_STEP, firstFreePlace, gridPlaces, type Place } from './placeDevice';
+import { NEW_DEVICE_STEP, firstFreePlace, gridPlaces, placeInView, type Place } from './placeDevice';
 import { DEVICE_METRICS, deviceHeight } from './deviceGeometry';
 
 const CENTRE: Place = { x: 400, y: 300 };
@@ -131,5 +131,78 @@ describe('gridPlaces', () => {
 
   it('nothing for nothing', () => {
     expect(gridPlaces(0, START, [])).toEqual([]);
+  });
+});
+
+describe('placeInView', () => {
+  // the part of the board on screen: 1000 by 600 from (35, 20)
+  const VIEW = { left: 35, top: 20, right: 1035, bottom: 620 };
+  const SIZE = { width: DEVICE_METRICS.width, height: deviceHeight(true) };
+  const STEP = NEW_DEVICE_STEP;
+
+  /** Add `count` devices one after the other, each where placeInView says */
+  function addMany(count: number, blocked = [] as Array<typeof VIEW>, start: Place[] = []): Place[] {
+    const placed = [...start];
+    for (let i = 0; i < count; i++) {
+      const place = placeInView(VIEW, placed, blocked, SIZE);
+      if (!place) break;
+      placed.push(place);
+    }
+    return placed.slice(start.length);
+  }
+
+  it('the first device goes to the first place at the top left of the view, on the grid of the board', () => {
+    const place = placeInView(VIEW, [], [], SIZE)!;
+    expect(place).toEqual({ x: 160, y: 130 });
+    expect(place.x % STEP.x).toBe(0);
+    expect(place.y % STEP.y).toBe(0);
+  });
+
+  it('the next ones go on along the row, then to the next row: never on top of each other, all in view', () => {
+    const places = addMany(8);
+    expect(places.slice(0, 6)).toEqual([160, 320, 480, 640, 800].map((x) => ({ x, y: 130 })).concat([{ x: 160, y: 260 }]));
+    for (const place of places) {
+      expect(place.x).toBeGreaterThanOrEqual(VIEW.left);
+      expect(place.y).toBeGreaterThanOrEqual(VIEW.top);
+      expect(place.x + SIZE.width).toBeLessThanOrEqual(VIEW.right);
+      expect(place.y + SIZE.height).toBeLessThanOrEqual(VIEW.bottom);
+    }
+    for (let i = 0; i < places.length; i++) {
+      for (let j = i + 1; j < places.length; j++) expect(overlap(places[i], places[j])).toBe(false);
+    }
+  });
+
+  it('a place a device was moved away from is taken again; a device near a place takes it', () => {
+    const [first, second] = addMany(2);
+    // the first is moved down a little, out of its place but not far
+    const moved = { x: first.x + 40, y: first.y + 30 };
+    expect(placeInView(VIEW, [moved, second], [], SIZE)).toEqual({ x: 480, y: 130 });
+    // moved far away, its place is free again
+    expect(placeInView(VIEW, [{ x: 900, y: 500 }, second], [], SIZE)).toEqual(first);
+  });
+
+  it('leaves out what covers the board: a panel open on the left, the small map at the bottom right', () => {
+    const panel = { left: 35, top: 20, right: 330, bottom: 620 };
+    const map = { left: 830, top: 460, right: 1035, bottom: 620 };
+    const places = addMany(40, [panel, map]);
+    expect(places[0]).toEqual({ x: 480, y: 130 });
+    const inside = (place: Place, area: typeof VIEW) =>
+      place.x < area.right && place.x + SIZE.width > area.left && place.y < area.bottom && place.y + SIZE.height > area.top;
+    for (const place of places) {
+      expect(inside(place, panel)).toBe(false);
+      expect(inside(place, map)).toBe(false);
+    }
+  });
+
+  it('a view with no free place left gives none', () => {
+    const places = addMany(100);
+    expect(places.length).toBeGreaterThan(5);
+    expect(placeInView(VIEW, places, [], SIZE)).toBeNull();
+    // and a view too small for a device has none either
+    expect(placeInView({ left: 0, top: 0, right: 90, bottom: 60 }, [], [], SIZE)).toBeNull();
+  });
+
+  it('is the same every time for the same board and view: nothing is left to chance', () => {
+    expect(addMany(7)).toEqual(addMany(7));
   });
 });

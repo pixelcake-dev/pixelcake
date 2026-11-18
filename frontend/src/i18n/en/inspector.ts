@@ -20,6 +20,8 @@ export const inspector: Dictionary['inspector'] = {
       legend: 'Identity',
       type: 'Type',
       name: 'Device name',
+      /** Under the name, when another device of the board has it (whatever its case) */
+      nameTaken: 'Another device already has this name',
       vendor: 'Vendor',
       vendorPlaceholder: 'e.g. Cisco, HP, Dell…',
       location: 'Location',

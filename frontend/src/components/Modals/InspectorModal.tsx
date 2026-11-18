@@ -30,6 +30,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { generateMacAddress } from '@/utils/ipHelpers';
+import { isNameTaken } from '@/utils/newDevice';
 import {
   interfaceLinks,
   isL3Capable,
@@ -234,6 +235,11 @@ const InspectorModal = () => {
     const viaCards = nics.length > 0 && (templateOf(inspectorDevice, templates)?.supportsNICs ?? false);
     if (!name.trim() || (!viaCards && !ip.trim())) {
       toast.error(viaCards ? t.inspector.toasts.nameRequired : t.inspector.toasts.nameAndIpRequired);
+      return;
+    }
+    // A name another device has: said under the field, nothing saved until it changes
+    if (isNameTaken(name, useNetworkStore.getState().devices, inspectorDevice.id)) {
+      setActiveTab('general');
       return;
     }
 
@@ -492,6 +498,7 @@ const InspectorModal = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                error={isNameTaken(name, devices, inspectorDevice.id) ? general.identity.nameTaken : undefined}
               />
               {!isPC && (
                 <TextField

@@ -25,8 +25,9 @@ export const help = {
       text:
         'Nella barra a sinistra apri «Aggiungi dispositivo» (il pulsante +) e scegli un tipo ' +
         "dall'elenco: controlla il nome e conferma, l'indirizzo IP viene proposto in automatico " +
-        'e si può cambiare, o lasciare al DHCP. Il dispositivo compare al centro della parte di ' +
-        'canvas che stai guardando (o nel primo posto libero lì accanto) ed è già selezionato. ' +
+        'e si può cambiare, o lasciare al DHCP; un nome che ha già un altro dispositivo non viene ' +
+        'accettato. Il dispositivo compare nel primo posto libero della parte di canvas che stai ' +
+        'guardando, riga per riga da in alto a sinistra, ed è già selezionato. ' +
         '«Aggiungi in blocco» ne crea molti in una volta. Nella scheda «Esempi» dello stesso ' +
         'pannello ci sono cinque reti di esempio già pronte: quella di una piccola azienda (la ' +
         'stessa della schermata di benvenuto), una semplice, una con VLAN, DMZ e firewall, una ' +
@@ -39,7 +40,12 @@ export const help = {
       title: 'Spostali e selezionali',
       text:
         'Trascina un dispositivo per spostarlo. Con Ctrl + clic ne selezioni più di uno, trascinando ' +
-        "su un'area vuota disegni un riquadro di selezione. Trascinando con il tasto destro su " +
+        "su un'area vuota disegni un riquadro di selezione, che prende anche i riquadri che contiene " +
+        'per intero. Con due o più dispositivi selezionati, sopra di loro compare «Racchiudi in un ' +
+        'riquadro». Ctrl + C e Ctrl + V copiano e incollano la selezione: la copia prende il primo ' +
+        'nome libero (da PC-1 il primo PC-n libero), ogni scheda di rete un MAC nuovo, e i PC e gli ' +
+        "altri dispositivi finali che non sono server chiedono l'indirizzo al DHCP. Il tasto Canc " +
+        'elimina la selezione, dopo averlo chiesto. Trascinando con il tasto destro su ' +
         "un'area vuota sposti la vista, con la rotellina fai lo zoom. Tutte le scorciatoie sono in " +
         'Impostazioni → Avanzate. Vista → «Disposizione automatica» → «Verticale» o «Orizzontale» ' +
         'li dispone di nuovo: in cima ciò da cui il traffico esce dalla rete (Internet, se no il ' +
@@ -71,9 +77,11 @@ export const help = {
         "scegli Modifica → «Racchiudi in un riquadro» (c'è anche nel clic destro su un " +
         'dispositivo): il riquadro nasce intorno a loro. Scrivi il nome e premi Invio. Un ' +
         'riquadro si prende dal nome o dal bordo: trascinandolo si sposta, e i dispositivi ' +
-        'restano dove sono; quando è selezionato mostra otto maniglie per ridimensionarlo. Un ' +
+        'restano dove sono; quando è selezionato da solo mostra otto maniglie per ridimensionarlo. ' +
+        'Con Ctrl + clic sul nome entra nella selezione insieme ai dispositivi, e si sposta, si ' +
+        'copia e si elimina con loro. Un ' +
         'doppio clic sul nome lo rinomina, il clic destro apre un menu con «Rinomina», i colori ' +
-        "ed «Elimina», e il tasto Canc elimina il riquadro selezionato. L'interno di un riquadro " +
+        "ed «Elimina», e il tasto Canc, dopo averlo chiesto, elimina il riquadro selezionato. L'interno di un riquadro " +
         'non intralcia: lì dentro i dispositivi si selezionano, si collegano e si spostano come ' +
         "sempre. I riquadri si vedono anche in presentazione e nell'immagine esportata, e " +
         'vengono salvati con il progetto. Vista → «Mostra i riquadri» li nasconde e li mostra ' +
@@ -253,8 +261,9 @@ export const help = {
       title: 'Dividi il progetto in canvas',
       text:
         'Un progetto può avere più canvas. In «Explorer», il primo pulsante della barra a ' +
-        'sinistra, ne aggiungi con «Nuovo canvas», li rinomini, li elimini (ne resta sempre ' +
-        "almeno uno) e passi dall'uno all'altro con un clic. Lì si cambiano anche il nome e la " +
+        'sinistra, ne aggiungi con «Nuovo canvas», li rinomini, li duplichi con «Duplica il ' +
+        "canvas» (la copia, con tutto quello che c'è sopra, compare subito dopo), li elimini (ne " +
+        "resta sempre almeno uno) e passi dall'uno all'altro con un clic. Lì si cambiano anche il nome e la " +
         'descrizione del progetto.',
     },
     save: {

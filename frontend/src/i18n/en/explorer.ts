@@ -23,6 +23,9 @@ export const explorer: Dictionary['explorer'] = {
   canvasName: (name: string) => `Name of the board ${name}`,
   renameCanvas: 'Rename board',
   renameCanvasNamed: (name: string) => `Rename board ${name}`,
+  /** A copy of the board, right after it */
+  duplicateCanvas: 'Duplicate board',
+  duplicateCanvasNamed: (name: string) => `Duplicate board ${name}`,
   deleteCanvas: 'Delete board',
   deleteCanvasNamed: (name: string) => `Delete board ${name}`,
   deleteCanvasQuestion: {

@@ -17,6 +17,8 @@ export const addDevice = {
     legend: 'Identità',
     name: 'Nome del dispositivo',
     namePlaceholder: (type: string) => `es. ${type}-Ufficio-01`,
+    /** Under the name, when another device of the canvas has it (whatever its case) */
+    nameTaken: 'Un altro dispositivo ha già questo nome',
     vendor: 'Vendor',
     vendorPlaceholder: 'es. Cisco, HP…',
     location: 'Posizione',
