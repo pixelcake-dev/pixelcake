@@ -263,8 +263,12 @@ Modules:
   none has one); the routing table (`routingTable`: connected networks, static
   routes, default gateway) and its lookup, longest prefix first.
 - `firewall.ts` — `evaluateFirewall`: ordered rules (first match decides), then
-  the zone policy, with the reply to an allowed flow always passing. A rule
-  naming a zone is skipped, with a note, when the link is not on a port.
+  the zone policy. A firewall lets through the reply to a flow it saw itself
+  (the reply carries the devices of its request, `Packet.requestPath`); to any
+  other firewall it is a new packet. A router with rules filters the same
+  way, without zones: what no rule matches passes. A rule naming a zone is
+  skipped, with a note saying why, when the link is not on a port or the
+  port is in no zone.
 - `nat.ts` — address translation. Source NAT on a port (`doesNat`,
   `natAddress`), port forwards (`matchForward`, `publications`), which
   addresses are private (`isPrivateAddress`), and what a NAT device
@@ -301,7 +305,11 @@ Modules:
   (`seenSourceIp`, `reachedIp`) and the translations made on the way.
 - `flows.ts` — request/reply plans per flow model (ping, web, download, email)
   and the service each leg is to a firewall. A reply leg is the return traffic
-  of an allowed flow, sent back to the address the request came from. The
+  of an allowed flow, sent back to the address the request came from, with
+  the devices the request crossed (for the firewalls). A device pings itself
+  without the packet leaving it. Cloud email leaves by the nearest internet
+  exit: an Internet or Cloud symbol, or a device named with one of the words
+  Internet, Cloud, WAN, ISP on its own. The
   result carries the devices to animate and the cable of each stretch
   (`animationPath`, `animationLinks`).
 - `dns.ts` — a name in place of an address (`lookup`). Nothing is
@@ -319,7 +327,11 @@ Modules:
   (devices that are down, cables that are cut). `l2.ts` finds nothing
   travelling through them and goes round when the drawing offers another path;
   `trace.ts` withdraws a route whose interface has no working cable left
-  (`deadInterfaces`) and takes the next one for that destination, with a note.
+  (`deadInterfaces`: cut, the device at the other end down, or the interface
+  at the other end switched off, which is not a failure but takes the line
+  down for both ends) and takes the next one for that destination, with a
+  note. A route whose next hop is on none of the device's networks is passed
+  over the same way.
   A network the device is attached to is not looked for elsewhere: the broken
   link is the answer.
 - `impact.ts` — every exchange between two end devices evaluated with and

@@ -4,7 +4,7 @@ description: "The commands for the security zones and rules of a firewall, for s
 order: 5
 ---
 
-A firewall puts each of its ports in a security zone and filters what goes from one zone to another with an ordered list of rules. A router or a firewall can also translate addresses: source NAT on a port, and port forwards that publish a service inside. These commands write the same settings as the “Ports”, “Rules” and “NAT” tabs of the window of the device. What the settings mean, and what the engine does with them, is in [Firewall](../services/firewall.md) and [NAT](../services/nat.md); the pages of this section list the commands. `show rules` and `show nat` read the result back ([Show commands](show.md#show-rules)).
+A firewall puts each of its ports in a security zone and filters what goes from one zone to another with an ordered list of rules. A router can carry rules too, its access list, without zones. A router or a firewall can also translate addresses: source NAT on a port, and port forwards that publish a service inside. These commands write the same settings as the “Ports”, “Rules” and “NAT” tabs of the window of the device. What the settings mean, and what the engine does with them, is in [Firewall](../services/firewall.md) and [NAT](../services/nat.md); the pages of this section list the commands. `show rules` and `show nat` read the result back ([Show commands](show.md#show-rules)).
 
 In the syntax below, `<n>` is a port number, `<firewall>` a firewall and `<device>` a router or a firewall; `on <device>` may be left out inside `use <device>`. The notation is explained in the [overview](index.md#conventions).
 
@@ -45,11 +45,11 @@ security zones are set on the ports of a firewall: Router-Core is a Router
 ## add rule {#add-rule}
 
 ```text
-add rule [<position>] allow|deny [<service>|any] from <source> to <destination> [on] <firewall>
+add rule [<position>] allow|deny [<service>|any] from <source> to <destination> [on] <device>
   allow may be written permit, deny block
 ```
 
-Adds a rule to the list of a firewall. Rules are read from the top, and the first one that matches the service, the source and the destination decides; when none matches, the zone policy decides ([rules](../services/firewall.md#rules)).
+Adds a rule to the list of a router or a firewall. Rules are read from the top, and the first one that matches the service, the source and the destination decides; when none matches, the zone policy of a firewall decides ([rules](../services/firewall.md#rules)), and a router lets the packet through ([rules on a router](../services/firewall.md#router)).
 
 | Parameter | What it is |
 |---|---|
@@ -57,11 +57,11 @@ Adds a rule to the list of a firewall. Rules are read from the top, and the firs
 | `allow`, `deny` | What the rule does. `permit` and `block` are the same |
 | `<service>` | One of the [services](#services), or `any`. Without it the rule is for any service |
 | `<source>`, `<destination>` | `any`, a zone (`trust`, `untrust`, `dmz`), an address, a network (`192.168.30.0/24`) or a device |
-| `<firewall>` | The device the rule goes on. Inside `use <device>` it is left out |
+| `<device>` | The router or the firewall the rule goes on. Inside `use <device>` it is left out |
 
-A device given as source or destination is written into the rule as its address, and the answer says which (`Srv-Auth → 192.168.30.10`): the rule keeps that address if the device changes it later. A device that is leased its address says so too. A device with no address is refused. If a rule names a zone that no port of the firewall is in, the rule is added and the answer says so.
+A device given as source or destination is written into the rule as its address, and the answer says which (`Srv-Auth → 192.168.30.10`): the rule keeps that address if the device changes it later. A device that is leased its address says so too. A device with no address is refused. If a rule names a zone that no port of the firewall is in, the rule is added and the answer says so; on a router, which has no zones, the answer says that the rule never matches.
 
-A router takes rules as well, though the refusal that names firewalls does not say it: the engine filters on a router that has at least one rule, as it does on a firewall.
+An end device or a switch takes no rules: the answer says that rules belong on routers and firewalls.
 
 ```ncl sample=company
 pixelcake> add rule 1 deny web from 203.0.113.50 to Customer-Portal on FW-Edge
@@ -100,14 +100,14 @@ RULES of FW-Edge (the first that matches decides)
    6  deny  any    from dmz                to trust
    7  allow ping   from 203.0.113.50       to dmz
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
-  the reply to an allowed flow always passes
+  the reply to a flow it allowed passes
 ```
 
 ## remove rule {#remove-rule}
 
 ```text
-remove rule <n> [from] <firewall>
-delete rule <n> [from] <firewall>
+remove rule <n> [from] <device>
+delete rule <n> [from] <device>
 ```
 
 Takes the rule number `<n>` out of the list, as `show rules` numbers them; the rules after it move up by one. `delete` is the same as `remove`, and after the number `on` may be written in place of `from`.
@@ -115,7 +115,7 @@ Takes the rule number `<n>` out of the list, as `show rules` numbers them; the r
 | Parameter | What it is |
 |---|---|
 | `<n>` | The number of a rule, from 1 |
-| `<firewall>` | The device whose rule it is |
+| `<device>` | The router or the firewall whose rule it is |
 
 ```ncl sample=company
 pixelcake> remove rule 2 from FW-Edge
@@ -125,7 +125,7 @@ RULES of FW-Edge (the first that matches decides)
    1  allow web    from untrust            to 172.16.0.10
    2  allow web    from 172.16.0.10        to 192.168.30.20
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
-  the reply to an allowed flow always passes
+  the reply to a flow it allowed passes
 pixelcake> delete rule 1 on FW-Edge
 FW-Edge: rule 1 removed — allow web from untrust to 172.16.0.10
 pixelcake> remove rule 5 from FW-Edge
@@ -292,7 +292,7 @@ pixelcake> add rule allow web from moon to any on FW-Edge
 pixelcake> add rule allow web from any to Internet on FW-Edge
 Internet has no address to write in a rule
 pixelcake> add rule allow web from any to any on PC-Sales
-PC-Sales is a PC: rules belong on firewalls
+PC-Sales is a PC: rules belong on routers and firewalls
 pixelcake> remove rule 12 from FW-Edge
 FW-Edge has no rule 12 (it has 3)
 pixelcake> add forward web from interface 9 to 172.16.0.10 on FW-Edge

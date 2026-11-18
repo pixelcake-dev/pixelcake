@@ -175,8 +175,11 @@ At every device that handles the packet at layer 3:
    first enabled rule whose service, source and destination match decides.
    When none matches, the zone policy decides: a new flow towards a more
    trusted zone is denied (`untrust→trust`, `untrust→dmz`, `dmz→trust`), the
-   rest is allowed. The reply to an allowed flow always passes. Traffic
-   addressed to the firewall itself is not filtered.
+   rest is allowed. A firewall lets through the reply to a flow it allowed
+   itself; to a firewall the request did not cross, a reply is a new flow.
+   A router with rules (its access list) filters the same way, without
+   zones: what no rule matches passes. Traffic addressed to the firewall
+   itself is not filtered.
 
    A router or a firewall may also change the addresses of the packet: see
    *Address translation* below. A firewall filters between the two changes,
@@ -303,9 +306,10 @@ the terminal see the same failures for as long as the presentation lasts.
   nothing: `SW-Core is down`, `link R-HQ–R-Branch is down`.
 - Delivery goes round them when the drawing offers another path (a ring of
   switches, a second cable between two devices).
-- A route whose interface has no working cable left is withdrawn, as a device
-  does when it loses the carrier, and the next route for that destination is
-  taken. Write a backup route after the main one (in the Inspector: a second
+- A route whose interface has no working cable left (cut, the device at the
+  other end down, or the interface at the other end switched off) is
+  withdrawn, as a device does when it loses the carrier, and the next route
+  for that destination is taken. Write a backup route after the main one (in the Inspector: a second
   row for the same network):
 
   ```text
@@ -386,8 +390,8 @@ condition into a silent success; it adds a note to the result instead:
 | `show config [of] <device>` | IP/subnet/gateway, location and note, VLANs, STP, ports, NICs, number of routes and rules, NAT, DHCP, DNS |
 | `show neighbors [of] <device>` | Directly connected devices |
 | `show ip [of] <device>` | Compact addressing summary: primary ip/mask/gateway + each NIC + each addressed port. A card on DHCP shows its lease and the pool it comes from, or why it has none. A card that asks a DNS server shows which |
-| `show routes [of] <device>` | The routing table exactly as the engine reads it: destination, next hop, interface it leaves from, kind. A route whose next hop is on none of the device's networks is flagged |
-| `show rules [of] <device>` | The firewall rules in order, then what decides when none matches |
+| `show routes [of] <device>` | The routing table exactly as the engine reads it: destination, next hop, interface it leaves from, kind. A route whose interface is down, whose line carries nothing (`no link`), or whose next hop is on none of the device's networks is flagged |
+| `show rules [of] <device>` | The rules of a router or a firewall in order, then what decides when none matches |
 | `show nat [of] <device>` | The interfaces that do source NAT with the address each gives, then the port forwards in order |
 | `show dhcp [[of] <device>]` | The pools (range, gateway and DNS server handed out, how many addresses are leased and free), the leases (address, card, pool) and the cards left without an address, each with the reason. Of the whole drawing, or of what one device hands out and is given |
 | `show dns [[of] <device>]` | Of the whole drawing: the records of every server, and every device that asks a DNS server, with the card it asks through. Of one device: its records if it is a server, and for each of its cards the server it asks, which device that is, and whether it came with the lease |
@@ -412,10 +416,10 @@ Aliases: `sh` → `show` · `ls`, `list` → `show devices` ·
 | `interface <id> pool <first> to <last> [gateway <address>] [dns <address>] [on] <device>` | DHCP server on a port of a router or firewall, or on a card of a server: the range it hands out to its network, replacing the one it had, with the gateway and the DNS server it names. `pool none` stops it. `to` may be left out or written `-`; `interface <id> dhcp pool …` is an accepted variant |
 | `interface <name> dns <address> [on] <device>` | The DNS server a network card asks (`dns none`: nobody). Refused on a card on DHCP, where it comes with the lease |
 | `add route <network>\|default via <next hop> [on] <device>` | Static route on a router or firewall. The network is written `192.168.30.0/24`; the next hop is an address, or a device with an address on a network the two share. Adding a route to a network that has one replaces its next hop |
-| `add backup route <network>\|default via <next hop> [on] <device>` | A second route to a network that has one. It is used when the interface of the first has no working link (a port switched off, or a failure simulated in presentation mode). `show routes` marks it `backup` |
+| `add backup route <network>\|default via <next hop> [on] <device>` | A second route to a network that has one. It is used when the interface of the first has no working link (a port switched off at either end, or a failure simulated in presentation mode). `show routes` marks it `backup` |
 | `remove route <network>\|default [via <next hop>] [from] <device>` | Without `via`, every route to that network; with it, the one through that next hop |
-| `add rule [<position>] allow\|deny [<service>\|any] from <source> to <destination> on <firewall>` | Firewall rule, added last or at the given position. Source and destination are `any`, a zone, an address, a network, or a device (stored as its address). No service means any |
-| `remove rule <n> [from] <firewall>` | |
+| `add rule [<position>] allow\|deny [<service>\|any] from <source> to <destination> on <device>` | Rule of a router or a firewall, added last or at the given position. Source and destination are `any`, a zone, an address, a network, or a device (stored as its address). No service means any |
+| `remove rule <n> [from] <device>` | |
 | `add forward [<service>\|any] from interface <n> to <address> on <device>` | Port forward on a router or firewall: what arrives for the address of interface `<n>`, for the service, is sent on to the address, which may be given as a device. No service means any. `interface` may be left out |
 | `remove forward <n> [from] <device>` | |
 | `add record <name> [to] <address> on <server>` | A name a server answers for as a DNS server. The address may be given as a device, and is stored as the address it has. A name that is already there takes the new address: one name, one address |
@@ -450,7 +454,8 @@ Email relays depend on the configured **email mode**:
 
 - `internal` — nearest internal mail server (hops from the source); legs
   `SMTP submit` + `delivery`. No mail server → error.
-- `cloud` — nearest internet exit (Internet/Cloud/WAN/ISP device); legs
+- `cloud` — nearest internet exit (an Internet or Cloud symbol, or a device
+  whose name has Internet, Cloud, WAN or ISP as a word of its own); legs
   `SMTP to cloud provider` + `cloud delivery`. No internet exit → error.
 - `auto` (default) — prefers internal, falls back to cloud with a note
   (`no internal mail server: using cloud email via <relay>`).

@@ -57,13 +57,13 @@ Il dispositivo cerca la destinazione nella sua tabella di instradamento. Le voci
 
 Vince la voce più specifica. A parità di lunghezza una rete collegata batte una rotta statica, e una rotta statica batte la predefinita. Di due rotte verso la stessa rete si usa la prima scritta, e le altre sono [rotte di riserva](../services/routes.md#backup). Una rotta che esce da una porta spenta non si usa. La tabella è spiegata in [la tabella di instradamento](../services/routes.md#routing-table).
 
-Quando non c'è nessuna voce, il pacchetto si ferma qui e il motivo dice quale dispositivo e che cosa manca: `no default gateway configured on PC-1`, oppure `Router-1 has no route to 192.168.30.11`. Nemmeno una rotta il cui prossimo salto non sta in nessuna rete del dispositivo si può usare: il pacchetto si ferma lì, con quel motivo, anche quando una rotta di riserva o la rotta predefinita lo porterebbero avanti. Quando l'unica strada esce da una porta spenta, il motivo è quella porta: `port 2 on Router-1 is disabled`.
+Quando non c'è nessuna voce, il pacchetto si ferma qui e il motivo dice quale dispositivo e che cosa manca: `no default gateway configured on PC-1`, oppure `Router-1 has no route to 192.168.30.11`. Una rotta il cui prossimo salto non sta in nessuna rete del dispositivo non porta da nessuna parte: viene saltata, come fa un router vero, e decide la voce successiva, una rotta di riserva o la rotta predefinita, con una nota. Se era l'unica strada, il pacchetto si ferma lì con quel motivo: `Router-1 cannot use the route 192.168.30.0/24 via 172.16.0.1: that address is on none of its networks`. Quando l'unica strada esce da una porta spenta, il motivo è quella porta: `port 2 on Router-1 is disabled`.
 
 Trovato l'indirizzo successivo, il motore cerca il dispositivo che risponde per quell'indirizzo sulla rete del mittente. Se non c'è, il motivo dice che cosa c'è al suo posto: `PC-1 uses gateway 192.168.10.99, but Router-1 port 1 on its network is 192.168.10.1`. Vedi [il gateway](../building/addresses.md#gateway).
 
 ### Le rotte di riserva {#backup-route}
 
-Una rotta viene ritirata quando l'interfaccia da cui esce non ha più nessun cavo che funzioni: ogni cavo è tagliato, o il dispositivo all'altro capo di ciascuno è spento (i due [guasti simulati](#failures)), oppure la porta stessa è spenta. La rotta successiva verso quella destinazione prende il suo posto. Quando la causa è un guasto simulato, la risposta porta una nota:
+Una rotta viene ritirata quando l'interfaccia da cui esce non ha più nessun cavo che funzioni: ogni cavo è tagliato, o il dispositivo all'altro capo di ciascuno è spento (i due [guasti simulati](#failures)), o l'interfaccia all'altro capo è spenta; oppure quando è spenta la porta stessa. La rotta successiva verso quella destinazione prende il suo posto. Una linea che cade è caduta per i dispositivi a tutti e due i suoi capi, come un collegamento vero perde il segnale da entrambe le parti. Quando a essere caduta è la linea, e non la porta stessa spenta, la risposta porta una nota:
 
 ```text
 note: R-HQ: the route 192.168.2.0/24 via 10.0.0.2 is unusable (link R-HQ–R-Branch is down), the route 192.168.2.0/24 via 10.0.1.2 is used instead
@@ -73,18 +73,18 @@ Due casi tengono la rotta principale. Una rete a cui il dispositivo è collegato
 
 ### Il firewall {#firewall}
 
-Un firewall che un pacchetto attraversa (non uno che lo manda, non uno a cui è indirizzato) decide prima che il pacchetto prosegua:
+Un firewall che un pacchetto attraversa (non uno che lo manda, non uno a cui è indirizzato) decide prima che il pacchetto prosegua. Lo stesso fa un router che ha delle regole, la sua lista di accesso: le legge allo stesso modo, e non ha zone.
 
 1. **Le regole**, dall'alto in basso. La prima regola attiva che corrisponde per servizio, partenza e destinazione decide se permettere o negare. Una regola che nomina una zona ha bisogno che il cavo sia assegnato a una porta che sta in una zona, perché la zona appartiene alla porta: altrimenti la regola viene saltata, con una nota.
-2. **La politica delle zone**, quando nessuna regola corrisponde. Un nuovo flusso verso una zona più fidata viene negato: `untrust → trust`, `untrust → dmz` e `dmz → trust`. Tutto il resto è permesso. Un firewall che non conosce la zona di entrambi i lati, perché un cavo non è assegnato a nessuna porta con una zona, permette, con una nota.
-3. **Le risposte.** La risposta a un flusso permesso passa, qualunque cosa dicano le regole su un nuovo flusso in quel verso. Non si tiene una tabella dei flussi: ogni firewall sulla strada del ritorno lascia passare la risposta, anche uno che la richiesta non ha attraversato.
+2. **La politica delle zone**, quando nessuna regola corrisponde. Un nuovo flusso verso una zona più fidata viene negato: `untrust → trust`, `untrust → dmz` e `dmz → trust`. Tutto il resto è permesso. Un firewall che non conosce la zona di entrambi i lati, perché un cavo non è assegnato a nessuna porta o è assegnato a una porta senza zona, permette, con una nota. Un router non ha zone: ciò che nessuna regola indica passa.
+3. **Le risposte.** Un firewall ricorda i flussi che ha lasciato passare lui stesso. La risposta a uno di questi flussi lo attraversa, qualunque cosa dicano le regole su un nuovo flusso in quel verso. Una risposta che torna per un'altra strada, attraverso un firewall che la richiesta non ha attraversato, per quel firewall è un pacchetto nuovo: decidono le sue regole e le sue zone, e quando la negano il motivo finisce con `and it never saw the request`.
 
 ```ncl sample=site
 pixelcake> show rules FW-Edge
 RULES of FW-Edge (the first that matches decides)
    1  allow web    from untrust            to 172.16.0.10
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
-  the reply to an allowed flow always passes
+  the reply to a flow it allowed passes
 pixelcake> ping Srv-Interno from Web-Pubblico
 Pinging Srv-Interno (192.168.20.10) from Web-Pubblico...
 Ping failed (blocked): request: firewall FW-Edge: no rule matches, zone policy dmz → trust denied
@@ -165,8 +165,8 @@ Una domanda è raramente un pacchetto solo. Il motore trasforma ogni tipo di tra
 | Download di un file | richiesta del file, poi dati del file | web |
 | Email | invio SMTP al relay, poi consegna dal relay | email |
 
-- **Una risposta è un pacchetto a sé.** Parte solo se la richiesta è arrivata, torna all'indirizzo da cui la richiesta sembrava venire, e prende la strada che le dicono le sue tabelle. Può prendere un'altra strada rispetto alla richiesta, e può fallire dove la richiesta non ha fallito. Ogni firewall sulla sua strada la lascia passare perché risponde a un flusso permesso, anche un firewall che la richiesta non ha attraversato, e i dispositivi NAT lungo la strada la traducono indietro.
-- **L'email non ha risposta.** Il relay dipende dalla modalità email in Impostazioni → Rete, gruppo «Simulazione», campo «Modalità email (SMTP)». «Server di posta interno» usa il server di posta con meno cavi dal mittente, contati sul disegno. «Cloud (M365, Gmail…)» usa l'uscita verso Internet più vicina: un dispositivo il cui tipo, template o nome contiene Internet, Cloud, WAN o ISP. «Auto (rileva automaticamente)» preferisce il server di posta e ripiega sull'uscita, con una nota. Quando il destinatario è il server di posta c'è un tratto solo; quando lo è il mittente, la sola consegna.
+- **Una risposta è un pacchetto a sé.** Parte solo se la richiesta è arrivata, torna all'indirizzo da cui la richiesta sembrava venire, e prende la strada che le dicono le sue tabelle. Può prendere un'altra strada rispetto alla richiesta, e può fallire dove la richiesta non ha fallito. Un firewall che ha visto la richiesta la lascia passare perché risponde a un flusso che ha permesso; un firewall che la richiesta non ha attraversato la giudica come un pacchetto nuovo. I dispositivi NAT lungo la strada la traducono indietro.
+- **L'email non ha risposta.** Il relay dipende dalla modalità email in Impostazioni → Rete, gruppo «Simulazione», campo «Modalità email (SMTP)». «Server di posta interno» usa il server di posta con meno cavi dal mittente, contati sul disegno. «Cloud (M365, Gmail…)» usa l'uscita verso Internet più vicina: un simbolo Internet o Cloud, oppure un dispositivo che nel nome ha Internet, Cloud, WAN o ISP come parola a sé (`ISP-Router`, `R-WAN`, `WAN1`, ma non `Display-1`). «Auto (rileva automaticamente)» preferisce il server di posta e ripiega sull'uscita, con una nota. Quando il destinatario è il server di posta c'è un tratto solo; quando lo è il mittente, la sola consegna.
 - **Una pagina da un dispositivo che non è un server** si segue lo stesso, con una nota.
 
 ```ncl sample=office
@@ -177,26 +177,25 @@ Mailing PC-2 (192.168.10.12) from PC-1...
 Mail delivered to PC-2
 ```
 
-Siccome una risposta si valuta a parte, un ping può fallire dove un `trace` verso lo stesso dispositivo riesce. Nella rete delle due sedi, spegni la linea principale dalla parte della sede: la richiesta trova un'altra strada con la linea di riserva, ma il router della filiale non ne sa nulla e manda la risposta sulla linea principale, dove viene scartata.
+Siccome una risposta si valuta a parte, un ping può fallire dove un `trace` verso lo stesso dispositivo riesce. Nella rete delle due sedi, togli al router della filiale le rotte che tornano alla sede: la richiesta arriva, e la risposta non trova la strada del ritorno.
 
 ```ncl sample=two-sites
-pixelcake> interface 2 down on R-Sede
-port 2 on R-Sede is now down
+pixelcake> remove route 192.168.1.0/24 from R-Filiale
+R-Filiale: 2 routes to 192.168.1.0/24 removed
 pixelcake> trace PC-Filiale-1 from PC-Sede-1
 Tracing route to PC-Filiale-1 (192.168.2.11) from PC-Sede-1:
   1  ○ PC-Sede-1 (PC)
   2  ○ SW-Piano-1 (Switch)
   3  ○ SW-Core (Switch)
-  4  ○ R-Sede (Router)  — routed: 192.168.2.0/24 via 10.0.1.2 (port 3)
-  5  ○ R-Riserva (Router)  — routed: 192.168.2.0/24 via 10.0.2.2 (port 2)
-  6  ○ R-Filiale (Router)  — routed: 192.168.2.0/24 is on port 1
-  7  ○ SW-Filiale (Switch)
-  8  ● PC-Filiale-1 (PC)
+  4  ○ R-Sede (Router)  — routed: 192.168.2.0/24 via 10.0.0.2 (port 2)
+  5  ○ R-Filiale (Router)  — routed: 192.168.2.0/24 is on port 1
+  6  ○ SW-Filiale (Switch)
+  7  ● PC-Filiale-1 (PC)
 Trace complete: destination reached.
 pixelcake> ping PC-Filiale-1 from PC-Sede-1
 Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
-Ping failed (blocked): reply: port 2 on R-Sede is disabled
-  dropped at: R-Sede
+Ping failed (blocked): reply: R-Filiale has no route to 192.168.1.11
+  dropped at: R-Filiale
 ```
 
 ## I guasti simulati {#failures}
@@ -219,7 +218,7 @@ Una risposta è uno di quattro verdetti:
 | `success` | la destinazione ha risposto (e, per un flusso, ogni tratto è arrivato) |
 | `blocked` | il pacchetto è stato scartato per strada: il motivo dice perché, e dove |
 | `unreachable` | nessuna catena di cavi unisce i due dispositivi |
-| `error` | la domanda non si può provare: un'estremità non esiste o non ha un indirizzo utilizzabile, le due estremità di uno scambio sono lo stesso dispositivo, oppure non c'è un server di posta o un'uscita verso Internet da cui far passare un'email |
+| `error` | la domanda non si può provare: un'estremità non esiste o non ha un indirizzo utilizzabile, le due estremità di una pagina, di un download o di un'email sono lo stesso dispositivo, oppure non c'è un server di posta o un'uscita verso Internet da cui far passare un'email. (Un dispositivo che fa il ping a se stesso risponde, senza che il pacchetto esca, come fa un `trace` verso se stesso.) |
 
 Quando il pacchetto si ferma, la risposta dice due cose: il **motivo**, in una frase che nomina il dispositivo, la porta, la rotta o la regola; e il **dispositivo dove si è fermato**, `dropped at:` nel terminale, la cornice rossa nel pannello e nella presentazione. È il dispositivo che ha in mano il pacchetto quando si ferma. Per una porta, una regola o una rotta è il dispositivo a cui appartengono; per un cavo tagliato o un dispositivo spento è il dispositivo davanti, l'ultimo che poteva ancora mandare. In un flusso il motivo comincia con il nome del tratto che è fallito.
 
@@ -262,8 +261,8 @@ Ciò che il motore non può verificare **non passa mai in silenzio come un succe
 - `Router-1 has no interface addresses: gateway and routing not verified`: le porte del router non hanno indirizzo, quindi si assume che faccia passare il pacchetto.
 - `Internet is not simulated: traffic assumed to pass`: il simbolo Internet è un segnaposto. `203.0.113.1 is not in the drawing: Internet assumed to take the traffic` dice che un gateway appartiene al mondo esterno.
 - `link A–B has no port binding…: per-port rules skipped`: un'estremità di un cavo non è assegnata a nessuna porta o scheda.
-- `firewall FW-1 has no zone binding: allowed`, oppure una regola che `names a zone and the link is not attached to a port: skipped`.
-- `firewall FW-1: allowed by rule 1 (…)`, `NAT: source … → …`, e la riga su una rotta di riserva, che dicono che cosa ha fatto il dispositivo e sono lì per essere lette.
+- `firewall FW-1 has no zone binding: allowed`, oppure una regola che `names a zone and the link is not attached to a port: skipped`, o che `names a zone and port 4 is in no zone: skipped`.
+- `firewall FW-1: allowed by rule 1 (…)`, `router R-1: denied by rule 1 (…)`, `NAT: source … → …`, e la riga su una rotta che non si può usare e su quella usata al suo posto, che dicono che cosa ha fatto il dispositivo e sono lì per essere lette.
 
 Il terminale stampa le note sotto la risposta. Il pannello della simulazione mostra solo il motivo per cui il pacchetto si è fermato; la [presentazione](presentation.md#ask) mostra il percorso salto per salto con le note di ogni salto, e `trace` le stampa nel terminale.
 
@@ -271,7 +270,7 @@ Il terminale stampa le note sotto la risposta. Il pannello della simulazione mos
 
 > [!LIMITS]
 > - **Non è un simulatore di pacchetti.** Non ci sono ARP, tabelle MAC, spanning tree, instradamento dinamico (RIP, OSPF, BGP) né ridondanza del gateway: un host ha un gateway per ogni scheda di rete. Le rotte sono quelle scritte.
-> - **Un cavo non viene interrogato all'altro capo.** Una rotta viene ritirata quando la porta da cui esce è spenta, quando i suoi cavi sono tagliati, o quando i dispositivi all'altro capo sono spenti. Una porta spenta all'altro capo di un cavo che funziona non si vede da questa parte, e il pacchetto si perde lì. Nemmeno un prossimo salto che si spegne dietro uno switch si vede, come con una rotta statica su un apparato vero.
+> - **Si guarda solo la linea.** Una rotta viene ritirata quando la porta da cui esce è spenta, o quando la sua linea non porta nulla: i cavi sono tagliati, i dispositivi all'altro capo sono spenti, o lì le interfacce sono spente. Un prossimo salto che si spegne dietro uno switch non si vede, come con una rotta statica su un apparato vero, e il pacchetto si perde lì.
 > - **Non ci sono tempo e carico.** Il tempo che stampa `ping` è ricavato dal numero di salti della richiesta (1 ms più 2 ms per ogni dispositivo tra le due estremità). Non ci sono velocità dei cavi, code, congestione, perdita di pacchetti o timeout.
 > - **Quattro servizi.** Un flusso è ping, web, email o DNS (un download è web per un firewall). Non ci sono porte TCP o UDP, e il traffico indirizzato al firewall stesso non viene filtrato.
 > - **Il NAT è per servizio, non per numero di porta.** Due flussi non si contendono mai una traduzione. Un server raggiunto da dentro al suo indirizzo pubblicato non è trattato a parte, e un dispositivo dietro due livelli di NAT si trova per nome solo attraverso il primo.

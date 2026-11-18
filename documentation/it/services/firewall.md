@@ -107,7 +107,7 @@ pixelcake> show rules FW-Edge
 RULES of FW-Edge (the first that matches decides)
    1  allow web    from untrust            to 172.16.0.10
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
-  the reply to an allowed flow always passes
+  the reply to a flow it allowed passes
 pixelcake> add rule deny web from 192.168.10.12 to dmz on FW-Edge
 FW-Edge: rule 2 added — deny web from 192.168.10.12 to dmz
 pixelcake> browse Web-Pubblico from PC-Uffici-2
@@ -135,7 +135,7 @@ RULES of FW-Edge (the first that matches decides)
    2  allow web    from untrust            to 172.16.0.10
    3  deny  web    from 192.168.10.12      to dmz
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
-  the reply to an allowed flow always passes
+  the reply to a flow it allowed passes
 pixelcake> browse Web-Pubblico from PC-Uffici-2
 Browsing Web-Pubblico (172.16.0.10) from PC-Uffici-2...
   ✓ HTTP request: PC-Uffici-2 → Web-Pubblico
@@ -151,7 +151,7 @@ La scheda «Regole» avvisa quando una regola nomina una zona in cui non c'è ne
 
 ## Le risposte {#replies}
 
-Un firewall tiene lo stato. Quando ha lasciato passare una richiesta, ne lascia passare la risposta, qualunque cosa dicano le regole e la politica sui flussi nuovi nell'altro verso. Altrimenti la risposta di un server su Internet sarebbe un flusso nuovo verso una zona più fidata, e la politica la negherebbe. Il motore però tiene questo stato per il flusso, non per ciascun firewall: una risposta attraversa ogni firewall sulla strada del ritorno, anche uno che la richiesta non ha attraversato. La nota lo dice:
+Un firewall tiene lo stato. Quando ha lasciato passare una richiesta, ne lascia passare la risposta, qualunque cosa dicano le regole e la politica sui flussi nuovi nell'altro verso. Altrimenti la risposta di un server su Internet sarebbe un flusso nuovo verso una zona più fidata, e la politica la negherebbe. La nota lo dice:
 
 ```ncl sample=site
 pixelcake> ping Web-Pubblico from PC-Uffici-1
@@ -177,6 +177,8 @@ Page received from Web-Pubblico
 
 La regola vale per i flussi nuovi che cominciano nella DMZ. La risposta a un flusso cominciato negli uffici non lo è.
 
+Ogni firewall ricorda solo i flussi che ha visto lui stesso. Una risposta che torna per una strada diversa da quella della sua richiesta, attraverso un firewall che la richiesta non ha attraversato, per quel firewall è un flusso nuovo: decidono le sue regole e la sua politica delle zone, come per ogni pacchetto. Quando la negano, il motivo finisce con `and it never saw the request`, per esempio `reply: firewall FW-B: no rule matches, zone policy untrust → trust denied, and it never saw the request`. Con due firewall affiancati servono rotte che rimandino la risposta per la strada da cui è venuta la richiesta.
+
 ## Il firewall stesso {#itself}
 
 Ciò che è diretto al firewall stesso non viene filtrato. Qui una regola nega tutto da Internet, e il firewall risponde comunque a un ping sul suo indirizzo esterno:
@@ -193,12 +195,32 @@ Reply from 203.0.113.1: hops=3 time=3ms
 
 Le regole giudicano solo ciò che attraversa il firewall. L'amministrazione del firewall non è simulata.
 
+## Regole su un router {#router}
+
+Anche un router può avere delle regole: la sua lista di accesso. La finestra di un router ha la stessa scheda «Regole», con lo stesso editor, e il terminale accetta `add rule` e `show rules` su un router come su un firewall. Le regole si leggono allo stesso modo, dall'alto in basso, su ciò che il router instrada. Un router non ha zone, quindi una regola nomina indirizzi e reti, e ciò che nessuna regola indica passa. La risposta nomina il router come tale:
+
+```ncl sample=site
+pixelcake> add rule deny ping from any to Srv-Interno on Router-Core
+Router-Core: rule 1 added — deny ping from any to 192.168.20.10
+  Srv-Interno → 192.168.20.10
+pixelcake> ping Srv-Interno from PC-Uffici-1
+Pinging Srv-Interno (192.168.20.10) from PC-Uffici-1...
+Ping failed (blocked): request: router Router-Core: denied by rule 1 (deny ping from any to 192.168.20.10)
+  dropped at: Router-Core
+pixelcake> show rules Router-Core
+RULES of Router-Core (the first that matches decides)
+   1  deny  ping   from any                to 192.168.20.10
+  then anything else is allowed
+  the reply to a flow it allowed passes
+```
+
 ## Limiti {#limits}
 
 > [!LIMITS]
 > - Una regola conosce quattro servizi: ping, web, email e DNS, oppure tutti. Non ci sono numeri di porta né protocolli: una regola non distingue una porta web da un'altra, né permette SSH.
 > - Tre zone, con nomi fissi: trust, untrust e dmz. Non ci sono altre zone né una politica personalizzata tra le zone; le regole sono le sole eccezioni.
-> - Una risposta passa perché è la risposta a un flusso permesso; non c'è una tabella delle connessioni, né un tempo massimo, né un limite a quante possono essere aperte. Così una risposta che torna per un'altra strada attraversa un firewall che non ha mai visto la richiesta.
+> - Un firewall ricorda i flussi che ha lasciato passare per il tempo di una sola domanda: non c'è una tabella delle connessioni da consultare, né un tempo massimo, né un limite a quante possono essere aperte.
 > - Ciò che è diretto al firewall stesso non viene filtrato.
 > - Il pacchetto è guardato solo per indirizzo e per zona. Non c'è ispezione di ciò che trasporta, né registro degli eventi, né limite di frequenza, né orari. L'opzione IPS/IDS di una porta è solo documentazione: il motore non la simula.
-> - Un'estremità di connessione non assegnata a una porta non ha una zona. Le regole che nominano una zona vengono saltate lì, e il `trace` lo dice; il traffico non viene fermato per questo.
+> - Un'estremità di connessione non assegnata a una porta non ha una zona, e nemmeno una porta la cui zona è «Nessuna». Le regole che nominano una zona vengono saltate lì, e il `trace` dice quale dei due casi è; il traffico non viene fermato per questo.
+> - Le regole di un router non hanno un divieto implicito in fondo, a differenza di molte liste di accesso vere: ciò che nessuna regola indica passa. Per averlo, scrivi `deny any from any to any` come ultima regola.

@@ -107,7 +107,7 @@ pixelcake> show rules FW-Edge
 RULES of FW-Edge (the first that matches decides)
    1  allow web    from untrust            to 172.16.0.10
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
-  the reply to an allowed flow always passes
+  the reply to a flow it allowed passes
 pixelcake> add rule deny web from 192.168.10.12 to dmz on FW-Edge
 FW-Edge: rule 2 added — deny web from 192.168.10.12 to dmz
 pixelcake> browse Web-Public from PC-Office-2
@@ -135,7 +135,7 @@ RULES of FW-Edge (the first that matches decides)
    2  allow web    from untrust            to 172.16.0.10
    3  deny  web    from 192.168.10.12      to dmz
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
-  the reply to an allowed flow always passes
+  the reply to a flow it allowed passes
 pixelcake> browse Web-Public from PC-Office-2
 Browsing Web-Public (172.16.0.10) from PC-Office-2...
   ✓ HTTP request: PC-Office-2 → Web-Public
@@ -151,7 +151,7 @@ The “Rules” tab warns when a rule names a zone that no port is in: such a ru
 
 ## Replies {#replies}
 
-A firewall keeps state. When it allowed a request, the reply to that request passes, whatever the rules and the policy say about new flows in the other direction. Without it the reply of a server on the Internet would be a new flow towards a more trusted zone, and the policy would deny it. The engine keeps that state for the flow, not for each firewall: a reply passes every firewall on its way back, even one the request did not cross. The note says so:
+A firewall keeps state. When it allowed a request, the reply to that request passes, whatever the rules and the policy say about new flows in the other direction. Without it the reply of a server on the Internet would be a new flow towards a more trusted zone, and the policy would deny it. The note says so:
 
 ```ncl sample=site
 pixelcake> ping Web-Public from PC-Office-1
@@ -177,6 +177,8 @@ Page received from Web-Public
 
 The rule is for new flows that start in the DMZ. The reply to a flow that started in the offices is not one.
 
+Each firewall remembers only the flows it has seen itself. A reply that comes back by another way than its request, through a firewall the request did not cross, is a new flow to that firewall: its rules and its zone policy decide, as for any packet. When they deny it, the reason ends with `and it never saw the request`, for example `reply: firewall FW-B: no rule matches, zone policy untrust → trust denied, and it never saw the request`. Two firewalls side by side need the routes to send a reply back the way its request came.
+
 ## The firewall itself {#itself}
 
 What is addressed to the firewall itself is not filtered. Here a rule denies everything from the Internet, and the firewall still answers a ping on its outside address:
@@ -193,12 +195,32 @@ Reply from 203.0.113.1: hops=3 time=3ms
 
 Only what goes through is judged by the rules. The administration of the firewall is not simulated.
 
+## Rules on a router {#router}
+
+A router can carry rules too: its access list. The window of a router has the same “Rules” tab, with the same editor, and the terminal takes `add rule` and `show rules` on a router as on a firewall. The rules are read the same way, top to bottom, on what the router routes. A router has no zones, so a rule names addresses and networks, and what no rule matches passes. The answer names the router as such:
+
+```ncl sample=site
+pixelcake> add rule deny ping from any to Srv-Internal on Router-Core
+Router-Core: rule 1 added — deny ping from any to 192.168.20.10
+  Srv-Internal → 192.168.20.10
+pixelcake> ping Srv-Internal from PC-Office-1
+Pinging Srv-Internal (192.168.20.10) from PC-Office-1...
+Ping failed (blocked): request: router Router-Core: denied by rule 1 (deny ping from any to 192.168.20.10)
+  dropped at: Router-Core
+pixelcake> show rules Router-Core
+RULES of Router-Core (the first that matches decides)
+   1  deny  ping   from any                to 192.168.20.10
+  then anything else is allowed
+  the reply to a flow it allowed passes
+```
+
 ## Limits {#limits}
 
 > [!LIMITS]
 > - A rule has four services: ping, web, email and DNS, or any of them. There are no port numbers and no protocols: a rule cannot tell one web port from another, or allow SSH.
 > - Three zones, with names that are fixed: trust, untrust and dmz. There are no other zones and no custom policy between zones; the rules are the only exceptions.
-> - A reply passes because it is a reply to an allowed flow; there is no table of connections, no timeout and no limit on how many are open. So a reply that comes back by another way passes a firewall that never saw the request.
+> - A firewall remembers the flows it let through for as long as one question lasts: there is no table of connections to look at, no timeout and no limit on how many are open.
 > - What is addressed to the firewall itself is not filtered.
 > - The packet is looked at by address and by zone only. There is no inspection of what it carries, no logging, no rate limit and no schedule. The IPS/IDS option of a port is documentation: the engine does not simulate it.
-> - A link end that is not attached to a port has no zone. The rules that name a zone are skipped there, and the trace says so; the traffic is not stopped for it.
+> - A link end that is not attached to a port has no zone, and neither has a port whose zone is “None”. The rules that name a zone are skipped there, and the trace says which of the two it is; the traffic is not stopped for it.
+> - The rules of a router have no implicit deny at the end, unlike many real access lists: what no rule matches passes. To have one, write `deny any from any to any` as the last rule.

@@ -53,7 +53,7 @@ A double click on a device opens its window, as does right click → “Details 
 
 - “General”: the kind, the “Device name”, vendor and location, the “Notes” ([Notes](notes.md)), the address and what the device is attached to. A switch, a router and a firewall also show how their ports are used there.
 - “Ports” for a switch, a router and a firewall; “Network cards” for the other kinds. The page [Ports and network cards](ports-and-cards.md) is about these two.
-- “Routes” for a router and a firewall, “Rules” for a firewall, “NAT” for the ports of a router or a firewall, “DHCP” for a router, a firewall and a server, “DNS” for a server.
+- “Routes” for a router and a firewall, “Rules” for a router and a firewall, “NAT” for the ports of a router or a firewall, “DHCP” for a router, a firewall and a server, “DNS” for a server.
 
 Nothing changes on the board until you press “Save”; “Cancel” leaves the device as it was.
 

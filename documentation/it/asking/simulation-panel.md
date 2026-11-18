@@ -23,7 +23,7 @@ Non si parte da un modulo vuoto. Il pannello propone una domanda: dal primo PC d
 
 Mentre il pacchetto viaggia il pulsante dice **«Ferma simulazione»**: premerlo ferma il pacchetto dove si trova, e non lascia nessuna risposta. Una nuova domanda si può fare quando il pacchetto è arrivato, oppure dopo averlo fermato.
 
-Finché sul canvas non ci sono due dispositivi il pulsante è disattivato e il pannello dice «Servono almeno due dispositivi sul canvas.». Se i due campi nominano lo stesso dispositivo, un avviso dice «Il dispositivo di partenza e quello di destinazione non possono coincidere».
+Finché sul canvas non ci sono due dispositivi il pulsante è disattivato e il pannello dice «Servono almeno due dispositivi sul canvas.». Se i due campi nominano lo stesso dispositivo, a un ping risponde il dispositivo stesso, come uno vero risponde al proprio indirizzo: non viaggia nessun pacchetto, il dispositivo diventa subito verde, e un avviso dice che risponde a se stesso. Una pagina web, un download o un'email hanno bisogno di due dispositivi: per loro un avviso dice «Il dispositivo di partenza e quello di destinazione non possono coincidere».
 
 La velocità del pacchetto è quella impostata nella presentazione («Lenta», «Normale», «Veloce», nella barra in alto). È normale finché non la cambi, e torna normale quando la pagina viene caricata di nuovo.
 

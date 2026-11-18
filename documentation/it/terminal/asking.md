@@ -32,7 +32,9 @@ Una risposta che non arriva dice `Ping failed (<verdict>): <reason>`, e sotto `d
 | `success` | La domanda è arrivata e ha avuto risposta |
 | `blocked` | Un dispositivo ha scartato il pacchetto: il motivo lo nomina |
 | `unreachable` | Nessun percorso di cavi funzionante unisce i due dispositivi |
-| `error` | La domanda non si può nemmeno fare: un dispositivo non ha indirizzo, oppure partenza e destinazione sono lo stesso dispositivo |
+| `error` | La domanda non si può nemmeno fare: un dispositivo non ha indirizzo, oppure partenza e destinazione di `browse`, `mail` o `download` sono lo stesso dispositivo |
+
+Un dispositivo può fare il ping a se stesso: risponde senza che il pacchetto esca, in un salto solo, come mostra un `trace` verso se stesso.
 
 Le righe che cominciano con `note:` vengono dopo la risposta. Dicono che cosa il motore ha supposto o fatto lungo la strada senza verificarlo: un firewall che ha deciso, un indirizzo che è stato tradotto, il simbolo Internet considerato come se lasciasse passare tutto.
 
@@ -53,7 +55,7 @@ Ping failed (blocked): request: Internet does not carry private addresses: 192.1
   dropped at: Internet
 pixelcake> ping Web-Gestionale from Web-Gestionale
 Pinging Web-Gestionale (192.168.30.30) from Web-Gestionale...
-Ping failed (error): source and target are the same device
+Reply from 192.168.30.30: hops=1 time=1ms
 pixelcake> ping Internet from PC-Vendite
 Pinging Internet (no ip) from PC-Vendite...
 Ping failed (error): request: Internet has no IP address configured

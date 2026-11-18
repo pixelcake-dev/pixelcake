@@ -23,7 +23,7 @@ You do not start from an empty form. The panel proposes a question: from the fir
 
 While the packet travels the button reads **“Stop simulation”**: pressing it stops the packet where it is, and leaves no answer. A new question can be asked when the packet has arrived, or when it has been stopped.
 
-The button is dimmed, and the panel says “The board needs at least two devices.”, until there are two devices. If both fields name the same device a notice says “The source and the destination cannot be the same device”.
+The button is dimmed, and the panel says “The board needs at least two devices.”, until there are two devices. If both fields name the same device, a ping is answered by the device itself, as a real one answers its own address: no packet travels, the device turns green at once, and a notice says that it answers itself. A web page, a download or an email needs two devices: for them a notice says “The source and the destination cannot be the same device”.
 
 The pace of the packet is the one set in presentation mode (“Slow”, “Normal”, “Fast”, in the bar at the top). It is normal until you change it, and it goes back to normal when the page is loaded again.
 

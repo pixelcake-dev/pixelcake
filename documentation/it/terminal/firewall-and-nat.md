@@ -4,7 +4,7 @@ description: "I comandi per le zone di sicurezza e le regole di un firewall, per
 order: 5
 ---
 
-Un firewall mette ogni sua porta in una zona di sicurezza e filtra ciò che passa da una zona all'altra con un elenco ordinato di regole. Un router o un firewall può anche tradurre gli indirizzi: il NAT in uscita su una porta, e gli inoltri, che rendono raggiungibile da fuori un servizio interno. Questi comandi scrivono le stesse impostazioni delle schede «Porte», «Regole» e «NAT» della finestra del dispositivo. Che cosa significano, e che cosa ne fa il motore, è spiegato in [Zone e regole del firewall](../services/firewall.md) e in [NAT e inoltri](../services/nat.md); le pagine di questa sezione elencano i comandi. `show rules` e `show nat` rileggono il risultato ([Comandi show](show.md#show-rules)).
+Un firewall mette ogni sua porta in una zona di sicurezza e filtra ciò che passa da una zona all'altra con un elenco ordinato di regole. Anche un router può avere delle regole, la sua lista di accesso, senza zone. Un router o un firewall può anche tradurre gli indirizzi: il NAT in uscita su una porta, e gli inoltri, che rendono raggiungibile da fuori un servizio interno. Questi comandi scrivono le stesse impostazioni delle schede «Porte», «Regole» e «NAT» della finestra del dispositivo. Che cosa significano, e che cosa ne fa il motore, è spiegato in [Zone e regole del firewall](../services/firewall.md) e in [NAT e inoltri](../services/nat.md); le pagine di questa sezione elencano i comandi. `show rules` e `show nat` rileggono il risultato ([Comandi show](show.md#show-rules)).
 
 Nella sintassi qui sotto `<n>` è il numero di una porta, `<firewall>` un firewall e `<device>` un router o un firewall; `on <device>` si può tralasciare dentro `use <device>`. La notazione è spiegata nella [panoramica](index.md#conventions). I comandi sono in inglese, come tutto il terminale.
 
@@ -45,11 +45,11 @@ security zones are set on the ports of a firewall: Router-Core is a Router
 ## add rule {#add-rule}
 
 ```text
-add rule [<position>] allow|deny [<service>|any] from <source> to <destination> [on] <firewall>
+add rule [<position>] allow|deny [<service>|any] from <source> to <destination> [on] <device>
   allow may be written permit, deny block
 ```
 
-Aggiunge una regola all'elenco di un firewall. Le regole si leggono dall'alto, e la prima che corrisponde per servizio, partenza e destinazione decide; quando nessuna corrisponde, decide la politica delle zone ([regole](../services/firewall.md#rules)).
+Aggiunge una regola all'elenco di un router o di un firewall. Le regole si leggono dall'alto, e la prima che corrisponde per servizio, partenza e destinazione decide; quando nessuna corrisponde, su un firewall decide la politica delle zone ([regole](../services/firewall.md#rules)), e un router lascia passare il pacchetto ([regole su un router](../services/firewall.md#router)).
 
 | Parametro | Che cos'è |
 |---|---|
@@ -57,11 +57,11 @@ Aggiunge una regola all'elenco di un firewall. Le regole si leggono dall'alto, e
 | `allow`, `deny` | Che cosa fa la regola. `permit` e `block` sono uguali |
 | `<service>` | Uno dei [servizi](#services), oppure `any`. Senza, la regola vale per ogni servizio |
 | `<source>`, `<destination>` | `any`, una zona (`trust`, `untrust`, `dmz`), un indirizzo, una rete (`192.168.30.0/24`) o un dispositivo |
-| `<firewall>` | Il dispositivo su cui va la regola. Dentro `use <device>` si tralascia |
+| `<device>` | Il router o il firewall su cui va la regola. Dentro `use <device>` si tralascia |
 
-Un dispositivo indicato come partenza o destinazione viene scritto nella regola con il suo indirizzo, e la risposta dice quale (`Srv-Auth → 192.168.30.10`): la regola tiene quell'indirizzo anche se poi il dispositivo lo cambia. Se l'indirizzo gli è stato assegnato dal DHCP, la risposta dice anche questo. Un dispositivo senza indirizzo viene rifiutato. Se una regola nomina una zona in cui non sta nessuna porta del firewall, la regola viene aggiunta e la risposta lo dice.
+Un dispositivo indicato come partenza o destinazione viene scritto nella regola con il suo indirizzo, e la risposta dice quale (`Srv-Auth → 192.168.30.10`): la regola tiene quell'indirizzo anche se poi il dispositivo lo cambia. Se l'indirizzo gli è stato assegnato dal DHCP, la risposta dice anche questo. Un dispositivo senza indirizzo viene rifiutato. Se una regola nomina una zona in cui non sta nessuna porta del firewall, la regola viene aggiunta e la risposta lo dice; su un router, che non ha zone, la risposta dice che la regola non corrisponde mai.
 
-Anche un router accetta regole, benché il messaggio di rifiuto parli solo di firewall: il motore filtra su un router che ha almeno una regola, come fa su un firewall.
+Un dispositivo finale o uno switch non accettano regole: la risposta dice che le regole vanno sui router e sui firewall.
 
 ```ncl sample=company
 pixelcake> add rule 1 deny web from 203.0.113.50 to Portale-Clienti on FW-Edge
@@ -100,14 +100,14 @@ RULES of FW-Edge (the first that matches decides)
    6  deny  any    from dmz                to trust
    7  allow ping   from 203.0.113.50       to dmz
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
-  the reply to an allowed flow always passes
+  the reply to a flow it allowed passes
 ```
 
 ## remove rule {#remove-rule}
 
 ```text
-remove rule <n> [from] <firewall>
-delete rule <n> [from] <firewall>
+remove rule <n> [from] <device>
+delete rule <n> [from] <device>
 ```
 
 Toglie dall'elenco la regola numero `<n>`, con il numero che le dà `show rules`; le regole successive salgono di un posto. `delete` è uguale a `remove`, e dopo il numero si può scrivere `on` al posto di `from`.
@@ -115,7 +115,7 @@ Toglie dall'elenco la regola numero `<n>`, con il numero che le dà `show rules`
 | Parametro | Che cos'è |
 |---|---|
 | `<n>` | Il numero di una regola, da 1 |
-| `<firewall>` | Il dispositivo di cui è la regola |
+| `<device>` | Il router o il firewall di cui è la regola |
 
 ```ncl sample=company
 pixelcake> remove rule 2 from FW-Edge
@@ -125,7 +125,7 @@ RULES of FW-Edge (the first that matches decides)
    1  allow web    from untrust            to 172.16.0.10
    2  allow web    from 172.16.0.10        to 192.168.30.20
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
-  the reply to an allowed flow always passes
+  the reply to a flow it allowed passes
 pixelcake> delete rule 1 on FW-Edge
 FW-Edge: rule 1 removed — allow web from untrust to 172.16.0.10
 pixelcake> remove rule 5 from FW-Edge
@@ -292,7 +292,7 @@ pixelcake> add rule allow web from moon to any on FW-Edge
 pixelcake> add rule allow web from any to Internet on FW-Edge
 Internet has no address to write in a rule
 pixelcake> add rule allow web from any to any on PC-Vendite
-PC-Vendite is a PC: rules belong on firewalls
+PC-Vendite is a PC: rules belong on routers and firewalls
 pixelcake> remove rule 12 from FW-Edge
 FW-Edge has no rule 12 (it has 3)
 pixelcake> add forward web from interface 9 to 172.16.0.10 on FW-Edge
