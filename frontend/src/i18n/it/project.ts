@@ -6,6 +6,9 @@ export const project = {
   /** A canvas nobody named: the first of a project, one added without a name, one of a file */
   canvasName: (number: number) => `Canvas ${number}`,
 
+  /** A copy of a canvas: the first «Rete (copia)», the next «Rete (copia 2)» */
+  copyName: (name: string, number: number) => (number === 1 ? `${name} (copia)` : `${name} (copia ${number})`),
+
   /** A drawing found in the browser that no canvas of the project owns */
   recoveredCanvas: 'Canvas recuperato',
 

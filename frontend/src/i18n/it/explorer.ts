@@ -22,6 +22,9 @@ export const explorer = {
   canvasName: (name: string) => `Nome del canvas ${name}`,
   renameCanvas: 'Rinomina canvas',
   renameCanvasNamed: (name: string) => `Rinomina canvas ${name}`,
+  /** A copy of the canvas, right after it */
+  duplicateCanvas: 'Duplica il canvas',
+  duplicateCanvasNamed: (name: string) => `Duplica il canvas ${name}`,
   deleteCanvas: 'Elimina canvas',
   deleteCanvasNamed: (name: string) => `Elimina canvas ${name}`,
   deleteCanvasQuestion: {

@@ -599,6 +599,62 @@ describe('project in the browser', () => {
       expect(app.simulation.getState().path).toEqual([]);
     });
 
+    it('duplicateCanvas: a copy right after the original, «<name> (copia)», with everything on it, without switching', async () => {
+      const app = await loadApp();
+      const network = () => app.network.getState();
+      const pc = network().addDevice({ ...makePc('PC-1'), notes: 'Reception' });
+      const sw = network().addDevice(makeSwitch('SW-1'));
+      network().addConnection({ source: pc, target: sw });
+      network().addArea({ label: 'Uffici', color: 'green', position: { x: -20, y: -40 }, size: { width: 300, height: 200 } });
+      network().setViewport({ x: 12, y: 34, zoom: 0.8 });
+      app.project.getState().addCanvas('Altro');
+      network().markSaved();
+
+      const copy = app.project.getState().duplicateCanvas('canvas-1');
+
+      expect(copy).toBe('canvas-3');
+      expect(app.project.getState().canvases.map(c => [c.id, c.name])).toEqual([
+        ['canvas-1', 'Canvas 1'],
+        ['canvas-3', 'Canvas 1 (copia)'],
+        ['canvas-2', 'Altro'],
+      ]);
+      // the original is still the one on screen, and the copy is an edit of the project
+      expect(app.project.getState().activeCanvasId).toBe('canvas-1');
+      expect(network().hasUnsavedChanges).toBe(true);
+      const original = canvasOf(app, 'canvas-1');
+      const duplicate = canvasOf(app, 'canvas-3');
+      expect({ ...duplicate, id: 'x', name: 'x' }).toEqual({ ...original, id: 'x', name: 'x' });
+      expect(duplicate.devices[0].notes).toBe('Reception');
+      expect(duplicate.areas?.[0].label).toBe('Uffici');
+      expect(duplicate.viewport).toEqual({ x: 12, y: 34, zoom: 0.8 });
+
+      // a copy of its own: what is done on one does not touch the other
+      app.project.getState().switchCanvas('canvas-3');
+      network().updateDevice(network().devices[0].id, { label: 'PC-Copia' });
+      network().removeArea(network().areas[0].id);
+      app.project.getState().switchCanvas('canvas-1');
+      expect(labels(network().devices)).toEqual(['PC-1', 'SW-1']);
+      expect(network().areas).toHaveLength(1);
+    });
+
+    it('duplicateCanvas: a second copy is numbered; a canvas that is not there is not copied', async () => {
+      const app = await loadApp();
+      const project = () => app.project.getState();
+      project().duplicateCanvas('canvas-1');
+      project().duplicateCanvas('canvas-1');
+      // the copy of a copy is named after it
+      project().duplicateCanvas('canvas-2');
+
+      expect(project().canvases.map(c => c.name)).toEqual([
+        'Canvas 1',
+        'Canvas 1 (copia 2)',
+        'Canvas 1 (copia)',
+        'Canvas 1 (copia) (copia)',
+      ]);
+      expect(project().duplicateCanvas('canvas-99')).toBeNull();
+      expect(project().canvases).toHaveLength(4);
+    });
+
     it('the last canvas cannot be deleted', async () => {
       const app = await loadApp();
       app.network.getState().addDevice(makePc('A-1'));

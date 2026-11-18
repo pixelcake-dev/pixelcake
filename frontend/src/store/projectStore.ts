@@ -50,6 +50,13 @@ interface ProjectStore {
   /** Add an empty canvas (without switching to it) and return its id */
   addCanvas: (name?: string) => string;
   renameCanvas: (canvasId: string, name: string) => void;
+  /**
+   * A copy of a canvas, right after it, named «<name> (copia)»: everything on
+   * it (devices, cables, areas, notes, the view), and nothing shared with the
+   * original. It does not switch to it. The id of the new canvas, or null
+   * when there is no such canvas
+   */
+  duplicateCanvas: (canvasId: string) => string | null;
   /** False when refused: the last canvas of a project cannot be deleted */
   deleteCanvas: (canvasId: string) => boolean;
   switchCanvas: (canvasId: string) => void;
@@ -199,6 +206,27 @@ export const useProjectStore = create<ProjectStore>()(
           canvases: state.canvases.map(c => (c.id === canvasId ? { ...c, name: next } : c)),
         }));
         useNetworkStore.getState().markChanged();
+      },
+
+      duplicateCanvas: canvasId => {
+        // (the canvas on screen is copied as it is now, not as it was last committed)
+        if (canvasId === get().activeCanvasId) get().commitActiveCanvas();
+        const { canvases } = get();
+        const index = canvases.findIndex(canvas => canvas.id === canvasId);
+        if (index === -1) return null;
+        const id = nextCanvasId(canvases.map(canvas => canvas.id));
+        const names = new Set(canvases.map(canvas => canvas.name));
+        let copies = 1;
+        while (names.has(getT().project.copyName(canvases[index].name, copies))) copies++;
+        // (a deep copy: an edit of one never reaches the other)
+        const copy: StoredCanvas = {
+          ...(JSON.parse(JSON.stringify(canvases[index])) as StoredCanvas),
+          id,
+          name: getT().project.copyName(canvases[index].name, copies),
+        };
+        set({ canvases: [...canvases.slice(0, index + 1), copy, ...canvases.slice(index + 1)] });
+        useNetworkStore.getState().markChanged();
+        return id;
       },
 
       deleteCanvas: canvasId => {

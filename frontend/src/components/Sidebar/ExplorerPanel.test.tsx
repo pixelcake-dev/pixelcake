@@ -284,6 +284,29 @@ describe('ExplorerPanel', () => {
       expect(screen.queryByRole('button', { name: /Elimina canvas/ })).toBeNull();
       expect(screen.getByRole('button', { name: 'Rinomina canvas Canvas 1' })).toBeInTheDocument();
     });
+
+    it('duplicates a canvas: the copy comes right after it, named «(copia)», with its devices, without switching', () => {
+      twoCanvases();
+      render(<ExplorerPanel />);
+
+      const button = screen.getByRole('button', { name: 'Duplica il canvas Canvas 1' });
+      expect(button).toHaveAttribute('title', 'Duplica il canvas');
+      fireEvent.click(button);
+
+      expect(canvasNames()).toEqual(['Canvas 1', 'Canvas 1 (copia)', 'DMZ']);
+      expect(within(card('Canvas 1 (copia)')).getByText('2 dispositivi')).toBeInTheDocument();
+      // (the click on the button is not a click on the card)
+      expect(project().activeCanvasId).toBe('canvas-1');
+      expect(network().hasUnsavedChanges).toBe(true);
+    });
+
+    it('the only canvas can be duplicated too', () => {
+      render(<ExplorerPanel />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Duplica il canvas Canvas 1' }));
+
+      expect(canvasNames()).toEqual(['Canvas 1', 'Canvas 1 (copia)']);
+    });
   });
 
   describe('file', () => {

@@ -1,12 +1,13 @@
 /**
  * Explorer Panel
  * VS Code-style explorer of the open project: its name and description, its
- * canvases (switch, add, rename, delete) and the file actions. Everything is
+ * canvases (switch, add, rename, duplicate, delete) and the file actions. Everything is
  * local and immediate; the project reaches the disk only through "Salva su file".
  */
 
 import { useState } from 'react';
 import { Icon } from '@iconify/react';
+import { Copy } from 'lucide-react';
 import { InlineEdit } from '@/components/ui/InlineEdit';
 import { useProjectStore } from '@/store/projectStore';
 import { useNetworkStore } from '@/store/networkStore';
@@ -32,6 +33,7 @@ const ExplorerPanel = () => {
   const addCanvas = useProjectStore(state => state.addCanvas);
   const renameCanvas = useProjectStore(state => state.renameCanvas);
   const deleteCanvas = useProjectStore(state => state.deleteCanvas);
+  const duplicateCanvas = useProjectStore(state => state.duplicateCanvas);
   const switchCanvas = useProjectStore(state => state.switchCanvas);
 
   // The entry of the active canvas in `canvases` is only refreshed when it is
@@ -219,6 +221,20 @@ const ExplorerPanel = () => {
                     }}
                   >
                     <Icon icon="lucide:pencil" width={14} />
+                  </button>
+                )}
+                {/* A copy of the canvas, right after it: «<name> (copia)» */}
+                {!isRenaming && (
+                  <button
+                    className="explorer-icon-button"
+                    title={t.explorer.duplicateCanvas}
+                    aria-label={t.explorer.duplicateCanvasNamed(canvas.name)}
+                    onClick={e => {
+                      e.stopPropagation();
+                      duplicateCanvas(canvas.id);
+                    }}
+                  >
+                    <Copy size={14} strokeWidth={2} aria-hidden="true" />
                   </button>
                 )}
                 {canvases.length > 1 && !isRenaming && (
