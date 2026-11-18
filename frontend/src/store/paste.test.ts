@@ -258,6 +258,13 @@ describe('areas copied and pasted with the devices', () => {
 
     expect(store().areas.map((area) => area.label)).toEqual(['Uffici', 'Uffici']);
     expect(new Set(store().areas.map((area) => area.id)).size).toBe(2);
+    // pasted again, it goes past the copy that is there
+    store().paste();
+    expect(store().areas.map((area) => area.position)).toEqual([
+      { x: 0, y: 0 },
+      { x: 50, y: 50 },
+      { x: 100, y: 100 },
+    ]);
   });
 
   it('an area that is not selected stays out of the copy', () => {

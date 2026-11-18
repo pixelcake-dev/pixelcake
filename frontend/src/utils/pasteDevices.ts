@@ -12,8 +12,8 @@
  *    and the board says so under its name. Servers, routers, firewalls and
  *    switches keep the addresses of the original.
  *  - The copy goes one step down and to the right of the original, or as
- *    many steps as it takes not to land on a device that is there (a copy
- *    pasted before).
+ *    many steps as it takes not to land on a device, or an area on an
+ *    area, that is there (a copy pasted before).
  *
  * Pure but for the random MAC addresses, which can be handed in.
  */
@@ -85,13 +85,23 @@ export interface PasteTarget {
   connectionCounter: number;
 }
 
-/** The first number of steps for which no pasted device lands on a device that is there */
-function stepsAway(clipboard: Clipboard, devices: readonly NetworkDevice[]): number {
-  const onTop = (x: number, y: number) =>
-    devices.some((other) => Math.abs(other.position.x - x) < ON_TOP && Math.abs(other.position.y - y) < ON_TOP);
+/**
+ * The first number of steps for which nothing pasted lands on what is there:
+ * a device on a device, an area on an area
+ */
+function stepsAway(clipboard: Clipboard, board: PasteTarget): number {
+  type Placed = { position: { x: number; y: number } };
+  const onTop = (things: readonly Placed[], others: readonly Placed[], shift: number) =>
+    things.some((thing) =>
+      others.some(
+        (other) =>
+          Math.abs(other.position.x - (thing.position.x + shift)) < ON_TOP &&
+          Math.abs(other.position.y - (thing.position.y + shift)) < ON_TOP
+      )
+    );
   for (let steps = 1; steps < 100; steps++) {
     const shift = steps * PASTE_STEP;
-    if (!clipboard.devices.some((device) => onTop(device.position.x + shift, device.position.y + shift))) {
+    if (!onTop(clipboard.devices, board.devices, shift) && !onTop(clipboard.areas, board.areas, shift)) {
       return steps;
     }
   }
@@ -115,7 +125,7 @@ export function pasteClipboard(
   board: PasteTarget,
   newMac: () => string = generateMacAddress
 ): Pasted {
-  const shift = stepsAway(clipboard, board.devices) * PASTE_STEP;
+  const shift = stepsAway(clipboard, board) * PASTE_STEP;
   const moved = (place: { x: number; y: number }) => ({ x: place.x + shift, y: place.y + shift });
 
   const macs = new Set(
