@@ -19,6 +19,7 @@ import { connectLooseDevices, type ConnectionSummary } from '@/utils/autoConnect
 import { cleanupConnections } from '@/utils/cleanupConnections';
 import { safeJSONStorage } from '@/utils/safeStorage';
 import type { SampleNetwork } from '@/utils/sampleNetwork';
+import { hasClipboard, pasteClipboard, type Clipboard } from '@/utils/pasteDevices';
 import { bindConnection, normalizeAddressing, normalizeBindings, sanitizeBindings } from '@/engine';
 
 export { cleanupConnections };
@@ -38,13 +39,18 @@ interface NetworkStore {
 
   // Multi-selection & Clipboard
   selectedDeviceIds: string[];
-  clipboard: { devices: NetworkDevice[]; connections: NetworkConnection[] } | null;
+  clipboard: Clipboard | null;
 
-  // The area that is selected (it can then be resized, and the Delete key
-  // deletes it), and the one whose label is being typed. Kept apart from the
-  // selection of the devices, which is React Flow's: an area is never part
-  // of it. Selecting one empties the other. Not persisted
+  // The areas that are in the selection, with the devices or alone (taken
+  // with a click, Ctrl+click or a selection box): they are moved, copied and
+  // deleted with the devices. Kept apart from the selection of the devices,
+  // which is React Flow's: an area is never part of it. Not persisted
+  selectedAreaIds: string[];
+  // The area selected by itself, nothing else with it: it can then be
+  // resized and renamed. Always the one of `selectedAreaIds` when it is the
+  // whole selection, null otherwise
   selectedAreaId: string | null;
+  // The area whose label is being typed. Not persisted
   editingAreaId: string | null;
 
   // Canvas viewport state (persisted)
@@ -86,9 +92,16 @@ interface NetworkStore {
   // Actions - Multi-selection & Clipboard
   toggleDeviceSelection: (id: string) => void;
   clearSelection: () => void;
-  selectMultipleDevices: (ids: string[]) => void;
+  /**
+   * The devices that are selected. A selection of devices lets go of the
+   * areas that were in it, unless `keepAreas`: the canvas passes on React
+   * Flow's selection so, and lets go of the areas itself where it has to
+   */
+  selectMultipleDevices: (ids: string[], options?: { keepAreas?: boolean }) => void;
+  /** The selected devices, the cables among them and the selected areas go to the clipboard */
   copySelection: () => void;
-  paste: () => void;
+  /** The clipboard comes on the board as new things (utils/pasteDevices): what was pasted */
+  paste: () => { pasted: string[]; onDhcp: string[] };
 
   // Actions - Areas
   /** Adds the area and gives the id it got */
@@ -97,6 +110,20 @@ interface NetworkStore {
   removeArea: (id: string) => void;
   /** Select an area (and no device), or none */
   selectArea: (id: string | null) => void;
+  /** The areas in the selection, the devices of the selection kept (a selection box) */
+  setSelectedAreas: (ids: string[]) => void;
+  /** Ctrl+click: the area joins the selection, or leaves it; the devices stay */
+  toggleAreaSelection: (id: string) => void;
+  /**
+   * Devices and areas moved together, to these places (the selection
+   * dragged): one edit
+   */
+  moveTogether: (
+    devicePlaces: Record<string, { x: number; y: number }>,
+    areaPlaces: Record<string, { x: number; y: number }>
+  ) => void;
+  /** Devices (with their cables), cables and areas deleted together: one edit */
+  removeElements: (ids: { devices?: string[]; connections?: string[]; areas?: string[] }) => void;
   /** The area whose label is being typed in place, or none */
   setEditingArea: (id: string | null) => void;
 
@@ -184,6 +211,20 @@ type PersistedNetworkState = Pick<
 /** Counts edits; see getChangeToken / markSaved */
 let changeSeq = 0;
 
+/**
+ * The selection of areas, with the area selected by itself that follows
+ * from it: the one area of the selection when nothing else is in it
+ */
+function areaSelection(areaIds: string[], deviceIds: readonly string[]) {
+  return {
+    selectedAreaIds: areaIds,
+    selectedAreaId: areaIds.length === 1 && deviceIds.length === 0 ? areaIds[0] : null,
+  };
+}
+
+/** No area selected */
+const NO_AREA_SELECTED = { selectedAreaIds: [] as string[], selectedAreaId: null };
+
 export const useNetworkStore = create<NetworkStore>()(
   persist(
     (set, get) => ({
@@ -191,6 +232,7 @@ export const useNetworkStore = create<NetworkStore>()(
       devices: [],
       connections: [],
       areas: [],
+      selectedAreaIds: [],
       selectedAreaId: null,
       editingAreaId: null,
       globalNetworkSettings: {
@@ -298,15 +340,18 @@ export const useNetworkStore = create<NetworkStore>()(
         set({ selectedDeviceIds: [] });
       },
 
-      selectMultipleDevices: (ids) => {
-        // (devices selected: the area that was is no longer)
-        set(ids.length > 0 ? { selectedDeviceIds: ids, selectedAreaId: null } : { selectedDeviceIds: ids });
+      selectMultipleDevices: (ids, options) => {
+        // (devices selected: the areas that were are no longer, unless the
+        // canvas keeps them: Ctrl+click, a selection box)
+        const areaIds = ids.length > 0 && !options?.keepAreas ? [] : get().selectedAreaIds;
+        set({ selectedDeviceIds: ids, ...areaSelection(areaIds, ids) });
       },
 
       copySelection: () => {
         const state = get();
         const selectedIds = state.selectedDeviceIds;
-        if (selectedIds.length === 0) return;
+        const areas = state.areas.filter((area) => state.selectedAreaIds.includes(area.id));
+        if (selectedIds.length === 0 && areas.length === 0) return;
 
         // Copy selected devices
         const devicesCopy = state.devices.filter((dev) => selectedIds.includes(dev.id));
@@ -316,58 +361,27 @@ export const useNetworkStore = create<NetworkStore>()(
           (conn) => selectedIds.includes(conn.source) && selectedIds.includes(conn.target)
         );
 
-        set({ clipboard: { devices: devicesCopy, connections: connectionsCopy } });
+        set({ clipboard: { devices: devicesCopy, connections: connectionsCopy, areas } });
       },
 
       paste: () => {
         const state = get();
-        if (!state.clipboard || state.clipboard.devices.length === 0) return;
+        if (!hasClipboard(state.clipboard)) return { pasted: [], onDhcp: [] };
 
-        // Create ID mapping: old ID -> new ID
-        const idMap = new Map<string, string>();
-        state.clipboard.devices.forEach((device, index) => {
-          const newId = `dev-${state.deviceCounter + index}`;
-          idMap.set(device.id, newId);
-        });
-
-        // Paste devices with new IDs and offset position
-        const pastedDevices: NetworkDevice[] = state.clipboard.devices.map((device) => {
-          const newId = idMap.get(device.id)!;
-          return {
-            ...device,
-            id: newId,
-            position: {
-              x: device.position.x + 50,
-              y: device.position.y + 50,
-            },
-          };
-        });
-
-        // Paste connections with updated IDs
-        const pastedConnections: NetworkConnection[] = state.clipboard.connections.map(
-          (conn, index) => {
-            const newId = `conn-${state.connectionCounter + index}`;
-            return {
-              ...conn,
-              id: newId,
-              source: idMap.get(conn.source)!,
-              target: idMap.get(conn.target)!,
-            };
-          }
-        );
-
-        // Pasted links keep the interfaces of the links they were copied from
-        // (pasted devices carry the same ports/NICs); unbound ends are bound
-        const boundPastedConnections = normalizeBindings(pastedDevices, pastedConnections);
+        // New names, new MAC addresses, end devices on DHCP, the areas with
+        // them (utils/pasteDevices)
+        const pasted = pasteClipboard(state.clipboard, state);
 
         set((state) => ({
-          devices: [...state.devices, ...pastedDevices],
-          connections: [...state.connections, ...boundPastedConnections],
-          deviceCounter: state.deviceCounter + pastedDevices.length,
-          connectionCounter: state.connectionCounter + pastedConnections.length,
+          devices: [...state.devices, ...pasted.devices],
+          connections: [...state.connections, ...pasted.connections],
+          areas: [...state.areas, ...pasted.areas],
+          deviceCounter: state.deviceCounter + pasted.devices.length,
+          connectionCounter: state.connectionCounter + pasted.connections.length,
           // Note: Don't update selectedDeviceIds here to avoid loop with onSelectionChange
         }));
         get().markChanged();
+        return { pasted: pasted.devices.map((device) => device.id), onDhcp: pasted.onDhcp };
       },
 
       // Area Actions
@@ -404,7 +418,10 @@ export const useNetworkStore = create<NetworkStore>()(
         if (!get().areas.some((area) => area.id === id)) return;
         set((state) => ({
           areas: state.areas.filter((area) => area.id !== id),
-          selectedAreaId: state.selectedAreaId === id ? null : state.selectedAreaId,
+          ...areaSelection(
+            state.selectedAreaIds.filter((selected) => selected !== id),
+            state.selectedDeviceIds
+          ),
           editingAreaId: state.editingAreaId === id ? null : state.editingAreaId,
         }));
         get().markChanged();
@@ -412,11 +429,86 @@ export const useNetworkStore = create<NetworkStore>()(
 
       selectArea: (id) => {
         if (id === null) {
-          if (get().selectedAreaId !== null) set({ selectedAreaId: null });
+          if (get().selectedAreaIds.length > 0 || get().selectedAreaId !== null) set(NO_AREA_SELECTED);
           return;
         }
         if (!get().areas.some((area) => area.id === id)) return;
-        set({ selectedAreaId: id, selectedDeviceIds: [] });
+        set({ selectedAreaIds: [id], selectedAreaId: id, selectedDeviceIds: [] });
+      },
+
+      setSelectedAreas: (ids) => {
+        const { areas, selectedAreaIds, selectedDeviceIds } = get();
+        const known = areas.filter((area) => ids.includes(area.id)).map((area) => area.id);
+        // (the same areas: nothing to tell)
+        if (known.length === selectedAreaIds.length && known.every((id) => selectedAreaIds.includes(id))) return;
+        set(areaSelection(known, selectedDeviceIds));
+      },
+
+      toggleAreaSelection: (id) => {
+        const { areas, selectedAreaIds, selectedDeviceIds } = get();
+        if (!areas.some((area) => area.id === id)) return;
+        const next = selectedAreaIds.includes(id)
+          ? selectedAreaIds.filter((selected) => selected !== id)
+          : [...selectedAreaIds, id];
+        set(areaSelection(next, selectedDeviceIds));
+      },
+
+      moveTogether: (devicePlaces, areaPlaces) => {
+        const { devices, areas } = get();
+        const movesDevice = devices.some((device) => {
+          const place = devicePlaces[device.id];
+          return place && (place.x !== device.position.x || place.y !== device.position.y);
+        });
+        const movesArea = areas.some((area) => {
+          const place = areaPlaces[area.id];
+          return place && (place.x !== area.position.x || place.y !== area.position.y);
+        });
+        if (!movesDevice && !movesArea) return;
+        set((state) => ({
+          ...(movesDevice
+            ? {
+                devices: state.devices.map((device) =>
+                  devicePlaces[device.id] ? { ...device, position: devicePlaces[device.id] } : device
+                ),
+              }
+            : {}),
+          ...(movesArea
+            ? {
+                areas: state.areas.map((area) =>
+                  areaPlaces[area.id] ? { ...area, position: areaPlaces[area.id] } : area
+                ),
+              }
+            : {}),
+        }));
+        get().markChanged();
+      },
+
+      removeElements: ({ devices = [], connections = [], areas = [] }) => {
+        const state = get();
+        const goneDevices = new Set(devices.filter((id) => state.devices.some((device) => device.id === id)));
+        const goneConnections = new Set(connections);
+        const goneAreas = new Set(areas.filter((id) => state.areas.some((area) => area.id === id)));
+        const cablesGo = state.connections.some(
+          (conn) => goneConnections.has(conn.id) || goneDevices.has(conn.source) || goneDevices.has(conn.target)
+        );
+        if (goneDevices.size === 0 && goneAreas.size === 0 && !cablesGo) return;
+        const deviceIds = state.selectedDeviceIds.filter((id) => !goneDevices.has(id));
+        set({
+          devices: state.devices.filter((device) => !goneDevices.has(device.id)),
+          // (the cables of a device go with it)
+          connections: state.connections.filter(
+            (conn) => !goneConnections.has(conn.id) && !goneDevices.has(conn.source) && !goneDevices.has(conn.target)
+          ),
+          areas: state.areas.filter((area) => !goneAreas.has(area.id)),
+          selectedDeviceIds: deviceIds,
+          ...areaSelection(
+            state.selectedAreaIds.filter((id) => !goneAreas.has(id)),
+            deviceIds
+          ),
+          selectedDeviceId: state.selectedDeviceId && goneDevices.has(state.selectedDeviceId) ? null : state.selectedDeviceId,
+          editingAreaId: state.editingAreaId && goneAreas.has(state.editingAreaId) ? null : state.editingAreaId,
+        });
+        get().markChanged();
       },
 
       setEditingArea: (id) => {
@@ -567,6 +659,7 @@ export const useNetworkStore = create<NetworkStore>()(
           connections: [],
           // (the areas were drawn for the devices that are going)
           areas: [],
+          selectedAreaIds: [],
           selectedAreaId: null,
           editingAreaId: null,
           selectedDeviceId: null,
@@ -606,6 +699,7 @@ export const useNetworkStore = create<NetworkStore>()(
             // A drawing loaded as a whole takes the place of the one on the
             // canvas: the areas drawn around the old devices go with them
             areas: [],
+            selectedAreaIds: [],
             selectedAreaId: null,
             editingAreaId: null,
             selectedDeviceId: null,
@@ -655,6 +749,7 @@ export const useNetworkStore = create<NetworkStore>()(
           devices,
           connections: normalizeBindings(devices, canvas.connections),
           areas: readAreas(canvas.areas).areas,
+          selectedAreaIds: [],
           selectedAreaId: null,
           editingAreaId: null,
           viewport: canvas.viewport,

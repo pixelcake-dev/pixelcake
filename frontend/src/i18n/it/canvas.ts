@@ -1,3 +1,16 @@
+import { formatCount } from '../numbers';
+
+/** A number of things as Italian writes it («14.891») */
+const amount = (value: number) => formatCount('it', value);
+
+/** `A`, `A e B`, `A, B e C` */
+const list = (items: string[]) =>
+  items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`;
+
+/** Of a long list of names, the first three and «altri N» */
+const shortList = (names: string[]) =>
+  list(names.length > 4 ? [...names.slice(0, 3), `altri ${amount(names.length - 3)}`] : names);
+
 /** What is written on the board itself: devices, cables, areas */
 export const canvas = {
   /** Presentation mode: the marks on a device (the two ends of the question, a failure) */
@@ -26,5 +39,31 @@ export const canvas = {
     labelHint: 'Trascina per spostare il riquadro, doppio clic per rinominarlo',
     /** Said when a new area is made while they were hidden from the View menu */
     shownAgain: 'I riquadri erano nascosti: ora si vedono di nuovo',
+  },
+
+  /** After a paste: the pasted end devices that asked DHCP for an address and got none */
+  paste: {
+    noAddress: (names: string[]) =>
+      names.length === 1
+        ? `${names[0]} chiede l'indirizzo al DHCP, e nessun server DHCP gliene ha dato uno`
+        : `${shortList(names)} chiedono l'indirizzo al DHCP, e nessun server DHCP ne ha dato loro uno`,
+  },
+
+  /** The Delete key, with more than one thing selected (one alone is asked about as in its menu) */
+  deleteQuestion: {
+    title: (deviceCount: number, connectionCount: number, areaCount: number) =>
+      `Eliminare ${list(
+        [
+          deviceCount === 0 ? '' : deviceCount === 1 ? '1 dispositivo' : `${amount(deviceCount)} dispositivi`,
+          connectionCount === 0
+            ? ''
+            : connectionCount === 1
+              ? '1 connessione'
+              : `${amount(connectionCount)} connessioni`,
+          areaCount === 0 ? '' : areaCount === 1 ? '1 riquadro' : `${amount(areaCount)} riquadri`,
+        ].filter(Boolean)
+      )}?`,
+    /** When devices are among them */
+    detail: 'Con i dispositivi vengono tolte anche le loro connessioni.',
   },
 };

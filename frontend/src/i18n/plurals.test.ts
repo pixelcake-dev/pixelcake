@@ -21,6 +21,7 @@ const COUNTS = new Set([
   'count',
   'deviceCount',
   'connectionCount',
+  'areaCount',
   'portCount',
   'vlanCount',
   'total',

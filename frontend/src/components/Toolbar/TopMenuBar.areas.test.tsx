@@ -16,6 +16,7 @@ import { usePresentationStore } from '@/store/presentationStore';
 import { createNewProject } from '@/utils/projectFileAccess';
 import { addAreaInView, encloseDevices } from '@/utils/areaActions';
 import { setLanguage } from '@/i18n';
+import { answerConfirms, settled } from '@/test/confirm';
 import NetworkCanvas from '@/components/Canvas/NetworkCanvas';
 import TopMenuBar from './TopMenuBar';
 
@@ -44,9 +45,12 @@ function renderAll() {
   );
 }
 
-function pressDelete() {
+/** The Delete key, and yes to the question it asks */
+async function pressDelete() {
+  answerConfirms(true);
   fireEvent.keyDown(document.body, { key: 'Delete', code: 'Delete' });
   fireEvent.keyUp(document.body, { key: 'Delete', code: 'Delete' });
+  await settled();
 }
 
 beforeEach(() => {
@@ -104,7 +108,7 @@ describe('Vista → «Mostra i riquadri»', () => {
     }
   });
 
-  it('hidden, the area that was selected is let go, and the Delete key does not reach it', () => {
+  it('hidden, the area that was selected is let go, and the Delete key does not reach it', async () => {
     const id = network().addArea(CORE);
     renderAll();
     act(() => network().selectArea(id));
@@ -113,13 +117,13 @@ describe('Vista → «Mostra i riquadri»', () => {
     expect(network().selectedAreaId).toBeNull();
     // even one selected behind the board's back stays: Delete does not reach hidden areas
     act(() => network().selectArea(id));
-    pressDelete();
+    await pressDelete();
     expect(network().areas).toHaveLength(1);
 
     // shown again, Delete deletes the selected area as before
     fireEvent.click(entry());
     act(() => network().selectArea(id));
-    pressDelete();
+    await pressDelete();
     expect(network().areas).toHaveLength(0);
   });
 

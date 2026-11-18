@@ -2,7 +2,8 @@
  * The areas of the canvas («riquadri»): drawn behind the devices, taken by
  * their label or their border, and never in the way of the drawing: the
  * selection of the devices, copy and paste, Delete and the selection box
- * behave with an area on the canvas as they do without.
+ * behave with an area on the canvas as they do without, and take the area
+ * only when it is in the selection (NetworkCanvas.selectionWithAreas.test).
  *
  * The canvas is the real one (React Flow included), driven with pointer,
  * mouse and keyboard events; only what jsdom lacks is stubbed. What needs a
@@ -142,7 +143,7 @@ describe('an area on the canvas', () => {
     expect(labelOf(id)).toHaveTextContent('Core');
   });
 
-  it('is not React Flow\'s to select, drag or join: a selection box takes the devices alone', () => {
+  it('is not React Flow\'s to select, drag or join: the selection of React Flow is of the devices alone', () => {
     addPc('PC-1');
     const id = store().addArea(CORE);
     renderCanvas();
@@ -491,24 +492,28 @@ describe('the menu of an area', () => {
 });
 
 describe('the keyboard and the mouse, with an area on the canvas', () => {
-  it('Delete deletes the area that is selected, and no device', async () => {
+  it('Delete deletes the area that is selected, after the question of its menu, and no device', async () => {
     addPc('PC-1');
     addPc('PC-2');
     const id = store().addArea(CORE);
     renderCanvas();
     await clickDevice('PC-1');
+    const answers = answerConfirms(true);
 
     act(() => store().selectArea(id));
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     press('Delete');
+    await settled();
 
+    expect(answers.asked.map((question) => question.title)).toEqual(['Eliminare il riquadro «Core»?']);
     expect(store().areas).toEqual([]);
     expect(labels()).toEqual(['PC-1', 'PC-2']);
     // and with no area selected it deletes nothing of the kind
     const again = store().addArea(CORE);
     press('Delete');
+    await settled();
     expect(store().areas.map((entry) => entry.id)).toEqual([again]);
   });
 
@@ -518,14 +523,16 @@ describe('the keyboard and the mouse, with an area on the canvas', () => {
     store().addArea(CORE);
     renderCanvas();
     await clickDevice('PC-1');
+    answerConfirms(true);
 
     press('Delete');
+    await settled();
 
     expect(labels()).toEqual(['PC-2']);
     expect(store().areas).toHaveLength(1);
   });
 
-  it('Ctrl+C and Ctrl+V copy and paste the selected devices as before, and no area', async () => {
+  it('Ctrl+C and Ctrl+V copy and paste the selected devices, and no area that is not selected', async () => {
     addPc('PC-1');
     addPc('PC-2');
     store().addArea(CORE);
@@ -535,13 +542,15 @@ describe('the keyboard and the mouse, with an area on the canvas', () => {
     fireEvent.keyDown(document.body, { key: 'c', ctrlKey: true });
     fireEvent.keyDown(document.body, { key: 'v', ctrlKey: true });
 
-    expect(labels()).toEqual(['PC-1', 'PC-2', 'PC-1']);
+    expect(labels()).toEqual(['PC-1', 'PC-2', 'PC-3']);
     expect(store().areas).toHaveLength(1);
-    // with an area selected there is no device to copy: the keys are left to the browser
+    // an area selected by itself is copied, and pasted as a new one
     act(() => store().selectArea(store().areas[0].id));
-    useNetworkStore.setState({ clipboard: null });
     fireEvent.keyDown(document.body, { key: 'c', ctrlKey: true });
-    expect(store().clipboard).toBeNull();
+    expect(store().clipboard).toMatchObject({ devices: [], areas: [{ label: 'Core' }] });
+    fireEvent.keyDown(document.body, { key: 'v', ctrlKey: true });
+    expect(store().areas.map((entry) => entry.label)).toEqual(['Core', 'Core']);
+    expect(labels()).toEqual(['PC-1', 'PC-2', 'PC-3']);
   });
 
   it('selecting an area lets go of the cable React Flow holds selected: Delete then deletes the area alone', async () => {
@@ -571,7 +580,9 @@ describe('the keyboard and the mouse, with an area on the canvas', () => {
     });
 
     expect(cable()?.selected).toBeFalsy();
+    answerConfirms(true);
     press('Delete');
+    await settled();
     expect(store().connections).toHaveLength(1);
     expect(labels()).toEqual(['PC-1', 'PC-2']);
     expect(store().areas).toEqual([]);

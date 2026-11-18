@@ -56,7 +56,10 @@ const RESIZE_HANDLES = [
  */
 const AreaNode = memo(({ id, data }: NodeProps<CanvasArea>) => {
   const t = useT();
-  const selected = useNetworkStore((state) => state.selectedAreaId === id);
+  // In the selection (with devices, or with other areas, or alone), and
+  // selected by itself: only then it can be resized
+  const selected = useNetworkStore((state) => state.selectedAreaIds.includes(id));
+  const alone = useNetworkStore((state) => state.selectedAreaId === id);
   const editing = useNetworkStore((state) => state.editingAreaId === id);
   // While presenting an area is shown and nothing else
   const presenting = usePresentationStore((state) => state.active);
@@ -102,18 +105,41 @@ const AreaNode = memo(({ id, data }: NodeProps<CanvasArea>) => {
    * follows the pointer until the button is let go. The pointer is followed
    * on the window, as React Flow follows the drag of a device: inside the
    * canvas an element cannot keep the pointer to itself.
+   *
+   * With Ctrl (Cmd) the press adds the area to the selection, or takes it
+   * away, as Ctrl+click does with a device. An area that is part of a
+   * larger selection moves the whole of it: the devices and the areas
+   * selected with it.
    */
   const handlePointerDown = (event: React.PointerEvent<HTMLElement>) => {
     if (event.button !== 0) return;
     event.stopPropagation();
-    select();
-    const area = useNetworkStore.getState().areas.find((entry) => entry.id === id);
-    if (!area) return;
+    const network = useNetworkStore.getState();
+    if (event.ctrlKey || event.metaKey) {
+      network.toggleAreaSelection(id);
+      useUIStore.getState().closeContextMenu();
+      return;
+    }
+    const inGroup =
+      network.selectedAreaIds.includes(id) && network.selectedAreaIds.length + network.selectedDeviceIds.length > 1;
+    if (inGroup) useUIStore.getState().closeContextMenu();
+    else select();
+    const now = useNetworkStore.getState();
+    if (!now.areas.some((entry) => entry.id === id)) return;
     endMove.current?.();
+
+    // Where each thing that moves was when the press began
+    const areasFrom = now.areas
+      .filter((entry) => (inGroup ? now.selectedAreaIds.includes(entry.id) : entry.id === id))
+      .map((entry) => [entry.id, entry.position] as const);
+    const devicesFrom = inGroup
+      ? now.devices
+          .filter((device) => now.selectedDeviceIds.includes(device.id))
+          .map((device) => [device.id, device.position] as const)
+      : [];
 
     const pointerId = event.pointerId;
     const start = { x: event.clientX, y: event.clientY };
-    const from = area.position;
     const zoom = flow.getState().transform[2] || 1;
     let moved = false;
 
@@ -123,9 +149,14 @@ const AreaNode = memo(({ id, data }: NodeProps<CanvasArea>) => {
       const dy = moveEvent.clientY - start.y;
       if (!moved && Math.hypot(dx, dy) < MOVE_THRESHOLD) return;
       moved = true;
-      useNetworkStore.getState().updateArea(id, {
-        position: { x: Math.round(from.x + dx / zoom), y: Math.round(from.y + dy / zoom) },
+      const by = (at: { x: number; y: number }) => ({
+        x: Math.round(at.x + dx / zoom),
+        y: Math.round(at.y + dy / zoom),
       });
+      useNetworkStore.getState().moveTogether(
+        Object.fromEntries(devicesFrom.map(([key, at]) => [key, by(at)])),
+        Object.fromEntries(areasFrom.map(([key, at]) => [key, by(at)]))
+      );
     };
     const stop = (endEvent?: PointerEvent) => {
       if (endEvent && endEvent.pointerId !== pointerId) return;
@@ -190,7 +221,7 @@ const AreaNode = memo(({ id, data }: NodeProps<CanvasArea>) => {
         })}
 
       {/* (after the sides of the border, so that a handle is over them) */}
-      {selected &&
+      {alone &&
         !presenting &&
         RESIZE_HANDLES.map((position) => (
           <NodeResizeControl

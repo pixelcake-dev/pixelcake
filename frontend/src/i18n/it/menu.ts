@@ -99,7 +99,7 @@ export const menu = {
     nothingToExport: "Il canvas è vuoto: non c'è nulla da esportare",
     nothingToPresent: "Il canvas è vuoto: non c'è nulla da presentare",
     nothingToFit: "Nessun dispositivo sul canvas: non c'è nulla da inquadrare",
-    selectBeforeCopy: 'Seleziona almeno un dispositivo prima di copiare',
-    nothingToPaste: "Non c'è nulla da incollare: copia prima uno o più dispositivi",
+    selectBeforeCopy: 'Seleziona almeno un dispositivo o un riquadro prima di copiare',
+    nothingToPaste: "Non c'è nulla da incollare: copia prima dispositivi o riquadri",
   },
 };

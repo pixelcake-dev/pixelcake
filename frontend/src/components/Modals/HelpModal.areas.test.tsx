@@ -14,6 +14,7 @@ import { renderDrawingImage } from '@/utils/drawingImage';
 import { DEVICE_METRICS, deviceHeight } from '@/utils/deviceGeometry';
 import { serializeProject } from '@/utils/projectFile';
 import { useProjectStore } from '@/store/projectStore';
+import { answerConfirms, settled } from '@/test/confirm';
 import NetworkCanvas from '@/components/Canvas/NetworkCanvas';
 import Sidebar from '@/components/Sidebar/Sidebar';
 import DevicePanel from '@/components/Sidebar/DevicePanel';
@@ -190,7 +191,7 @@ describe('the guide — the areas of the canvas', () => {
 
   it('it is taken by its name or its border, moving it leaves the devices where they are, and selected it has eight handles', () => {
     expect(step(TITLE)).toContain(
-      'Un riquadro si prende dal nome o dal bordo: trascinandolo si sposta, e i dispositivi restano dove sono; quando è selezionato mostra otto maniglie per ridimensionarlo.'
+      'Un riquadro si prende dal nome o dal bordo: trascinandolo si sposta, e i dispositivi restano dove sono; quando è selezionato da solo mostra otto maniglie per ridimensionarlo.'
     );
     const device = addPc('PC-1', { x: 150, y: 120 });
     const id = store().addArea({ label: 'Core', color: 'slate', position: { x: 100, y: 50 }, size: { width: 300, height: 200 } });
@@ -209,9 +210,9 @@ describe('the guide — the areas of the canvas', () => {
     expect(drawn.querySelectorAll('.area-resize-handle')).toHaveLength(8);
   });
 
-  it('the right button opens the menu it describes, and the key it names deletes the selected area', () => {
+  it('the right button opens the menu it describes, and the key it names deletes the selected area', async () => {
     expect(step(TITLE)).toContain(
-      'il clic destro apre un menu con «Rinomina», i colori ed «Elimina», e il tasto Canc elimina il riquadro selezionato.'
+      'il clic destro apre un menu con «Rinomina», i colori ed «Elimina», e il tasto Canc, dopo averlo chiesto, elimina il riquadro selezionato.'
     );
     addPc('PC-1', { x: 0, y: 0 });
     const id = store().addArea({ label: 'Core', color: 'slate', position: { x: 100, y: 50 }, size: { width: 300, height: 200 } });
@@ -226,7 +227,10 @@ describe('the guide — the areas of the canvas', () => {
     act(() => ui().closeContextMenu());
 
     expect(store().selectedAreaId).toBe(id);
+    const answers = answerConfirms(true);
     fireEvent.keyDown(document.body, { key: 'Delete', code: 'Delete' });
+    await settled();
+    expect(answers.asked).toHaveLength(1);
     expect(store().areas).toEqual([]);
     expect(store().devices).toHaveLength(1);
 

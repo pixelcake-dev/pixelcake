@@ -31,6 +31,8 @@ import { useProjectStore } from '@/store/projectStore';
 import { useLanguage, useT } from '@/i18n';
 import LanguageSwitch from '@/components/ui/LanguageSwitch';
 import { encloseDevices } from '@/utils/areaActions';
+import { hasClipboard } from '@/utils/pasteDevices';
+import { pasteAndTell } from '@/utils/pasteActions';
 import { docsUrl, siteUrl } from '@/constants/links';
 
 type ConnectWords = ReturnType<typeof useT>['menu']['connectNotice'];
@@ -76,9 +78,12 @@ const TopMenuBar = () => {
   const autoConnectDevices = useNetworkStore((state) => state.autoConnectDevices);
   const triggerFitView = useNetworkStore((state) => state.triggerFitView);
   const selectedDeviceIds = useNetworkStore((state) => state.selectedDeviceIds);
-  const clipboard = useNetworkStore((state) => state.clipboard);
+  // (areas in the selection are copied with the devices, or alone)
+  const nothingToCopy = useNetworkStore(
+    (state) => state.selectedDeviceIds.length + state.selectedAreaIds.length === 0
+  );
+  const somethingToPaste = useNetworkStore((state) => hasClipboard(state.clipboard));
   const copySelection = useNetworkStore((state) => state.copySelection);
-  const paste = useNetworkStore((state) => state.paste);
   const connectionTemplates = useTemplateStore((state) => state.connectionTemplates);
   const projectName = useProjectStore((state) => state.name);
   const canvases = useProjectStore((state) => state.canvases);
@@ -169,19 +174,20 @@ const TopMenuBar = () => {
   };
 
   const handleCopy = () => {
-    if (selectedDeviceIds.length === 0) {
+    if (nothingToCopy) {
       toast.info(t.menu.notices.selectBeforeCopy);
       return;
     }
     copySelection();
   };
 
+  // (new names, new MAC addresses, end devices on DHCP: utils/pasteActions)
   const handlePaste = () => {
-    if (!clipboard || clipboard.devices.length === 0) {
+    if (!somethingToPaste) {
       toast.info(t.menu.notices.nothingToPaste);
       return;
     }
-    paste();
+    pasteAndTell();
   };
 
   // Modifica → Racchiudi in un riquadro: an area around the devices that are selected
@@ -233,14 +239,14 @@ const TopMenuBar = () => {
         <div className="dropdown-content">
           <ul>
             <li
-              onClick={selectedDeviceIds.length === 0 ? undefined : handleCopy}
-              className={selectedDeviceIds.length === 0 ? 'disabled' : ''}
+              onClick={nothingToCopy ? undefined : handleCopy}
+              className={nothingToCopy ? 'disabled' : ''}
             >
               {t.menu.edit.copy}
             </li>
             <li
-              onClick={!clipboard || clipboard.devices.length === 0 ? undefined : handlePaste}
-              className={!clipboard || clipboard.devices.length === 0 ? 'disabled' : ''}
+              onClick={somethingToPaste ? handlePaste : undefined}
+              className={somethingToPaste ? '' : 'disabled'}
             >
               {t.menu.edit.paste}
             </li>
