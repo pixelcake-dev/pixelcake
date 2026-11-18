@@ -29,14 +29,15 @@ interface TemplateEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   template: DeviceTemplate | null; // null = create mode, non-null = edit mode
+  /** A template was made (the list it is in is the one of the custom ones) */
+  onCreated?: () => void;
 }
 
-const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps) => {
+const TemplateEditModal = ({ isOpen, onClose, template, onCreated }: TemplateEditModalProps) => {
   const t = useT();
   const words = t.templates.devices.editor;
   const addTemplate = useTemplateStore((state) => state.addTemplate);
   const updateTemplate = useTemplateStore((state) => state.updateTemplate);
-  const templates = useTemplateStore((state) => state.templates);
 
   const isEditMode = template !== null;
 
@@ -72,14 +73,6 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
 
     if (!formData.type || !formData.type.trim()) {
       newErrors.type = 'typeRequired';
-    } else if (!isEditMode) {
-      // Check for duplicate type only in create mode
-      const existingTemplate = templates.find(
-        (existing) => existing.type === formData.type && !existing.isCustom
-      );
-      if (existingTemplate) {
-        newErrors.type = 'typeExists';
-      }
     }
 
     setErrors(newErrors);
@@ -97,7 +90,9 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
         icon: drawing,
       });
     } else {
-      // Create new template
+      // Create new template: a variant of a kind the app covers already, or a
+      // kind of its own. It is a custom one: it is kept with the project, and
+      // restoring the built-in templates leaves it alone
       // Auto-set VLAN/STP support based on device type
       const supportsVLAN = ['Switch', 'Router', 'Firewall'].includes(formData.type);
       const supportsSTP = ['Switch', 'Router', 'Firewall'].includes(formData.type);
@@ -122,7 +117,7 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
         type: formData.type,
         icon: drawing,
         color: '#5E8096',
-        isCustom: false,
+        isCustom: true,
         supportsVLAN,
         supportsSTP,
         supportsPorts,
@@ -130,6 +125,7 @@ const TemplateEditModal = ({ isOpen, onClose, template }: TemplateEditModalProps
         portOptions,
         defaultPortCount,
       });
+      onCreated?.();
     }
 
     onClose();

@@ -4,7 +4,7 @@ description: "Ogni scorciatoia di tastiera e ogni gesto del mouse, sul canvas, n
 order: 3
 ---
 
-Questi sono tutti i tasti e i gesti dell'app. Otto sono elencati anche in Impostazioni → Avanzate, sotto «Scorciatoie da tastiera e mouse»; gli altri sono solo qui. Dove i tasti cambiano da un computer all'altro, la prima colonna è per Windows e Linux e la seconda per un Mac. I menu non hanno scorciatoie.
+Questi sono tutti i tasti e i gesti dell'app. Sono tutti elencati anche in Impostazioni → Avanzate, sotto «Scorciatoie da tastiera e mouse», con i tasti di Windows e Linux; i tasti del Mac sono solo qui. Dove i tasti cambiano da un computer all'altro, la prima colonna è per Windows e Linux e la seconda per un Mac. I menu non hanno scorciatoie.
 
 ## Sul canvas {#board}
 
@@ -23,12 +23,14 @@ Questi sono tutti i tasti e i gesti dell'app. Otto sono elencati anche in Impost
 | Spostare di poco il dispositivo selezionato | Tasti freccia | Tasti freccia |
 | Spostarlo di più | Maiusc + tasti freccia | Maiusc + tasti freccia |
 | Togliere la selezione | Esc | Esc |
+| Spostare il focus della tastiera tra i cavi e i dispositivi | Tab | Tab |
+| Selezionare il dispositivo che ha il focus | Invio | Invio |
 
 Qualche precisazione:
 
 - **Salvare** funziona da qualunque punto dell'app, anche mentre scrivi in un campo. Non si apre mai il "salva pagina" del browser.
 - **Copia e incolla** agiscono sul disegno solo quando nessun testo è selezionato e non si sta scrivendo in un campo. Con del testo selezionato (l'output del terminale, per esempio) Ctrl + C copia quel testo, come ovunque. I dispositivi incollati compaiono 50 unità più in basso e a destra degli originali, con le connessioni che c'erano tra loro. I due tasti sono letti come lettere minuscole: con il blocco maiuscole acceso, Ctrl + C e Ctrl + V sul canvas non fanno nulla.
-- **Eliminare** è il tasto Canc. Backspace non fa nulla. Elimina senza chiedere; il menu del clic destro chiede prima conferma.
+- **Eliminare** è il tasto Canc. Backspace non fa nulla. Chiede prima conferma, come il menu del clic destro.
 - **Selezionare più di uno**: un clic su un dispositivo lo seleziona da solo; Ctrl + clic ne aggiunge o ne toglie uno; un riquadro di selezione tracciato su un'area vuota seleziona i dispositivi che ci stanno interamente dentro. Un clic su un'area vuota toglie la selezione.
 - **La vista** si sposta solo tenendo premuto il tasto destro: la rotellina fa zoom, non scorre. Lo zoom va dal 10 % al 400 %. I quattro pulsanti in basso a sinistra del canvas ingrandiscono, riducono, adattano il disegno alla finestra e lo bloccano, perché nulla si possa spostare; Vista → Adatta alla finestra fa lo stesso del terzo.
 - **Spostare un dispositivo con le frecce** richiede che il dispositivo sia selezionato o abbia il focus della tastiera: un passo di 5 unità, 20 con Maiusc.
@@ -67,8 +69,9 @@ Le finestre dell'app non salvano con Invio: una finestra con dei campi ha il suo
 | Invio | Esegue il comando. |
 | Freccia su, freccia giù | Scorrono i comandi di questa sessione. Freccia giù oltre l'ultimo riporta ciò che si stava scrivendo. L'elenco si perde quando la pagina viene ricaricata. |
 | Ctrl + C (anche su un Mac, Control + C) | Mentre è in corso un `ping`, un `trace` o un'altra domanda, la ferma: il terminale stampa `^C — interrupted` e il pacchetto si ferma sul canvas. Quando non c'è nulla in corso, copia il testo selezionato come ovunque. |
+| Esc | Chiude il terminale. Un `ping`, un `trace` o un'altra domanda in corso viene fermata prima, come con Ctrl + C. |
 
-Il terminale è una finestra mobile sopra il canvas: si sposta trascinandola dalla barra in alto, si ridimensiona trascinando la maniglia in basso a destra. Si chiude con il suo pulsante di chiusura, non con Esc, e Tab non completa un comando: esce dal campo. Si apre da «Console», nella barra a sinistra, oppure dal menu del clic destro di un dispositivo, che lo apre già dentro quel dispositivo.
+Il terminale è una finestra mobile sopra il canvas: si sposta trascinandola dalla barra in alto, si ridimensiona trascinando la maniglia in basso a destra. Si chiude con il suo pulsante di chiusura o con Esc, e Tab non completa un comando: esce dal campo. Si apre da «Console», nella barra a sinistra, oppure dal menu del clic destro di un dispositivo, che lo apre già dentro quel dispositivo.
 
 ## Durante la presentazione {#presenting}
 

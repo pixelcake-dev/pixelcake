@@ -166,3 +166,56 @@ describe('what a browser kept from an older version', () => {
     expect(written.state.templates).toHaveLength(25);
   });
 });
+
+describe('putting the built-in templates back', () => {
+  const mine: DeviceTemplate = {
+    id: 'tpl-1700000000001',
+    name: 'Centralino',
+    type: 'Server',
+    icon: 'server',
+    color: '#aa5500',
+    isCustom: true,
+    supportsVLAN: false,
+    supportsSTP: false,
+    supportsPorts: false,
+    supportsNICs: true,
+  };
+
+  it('puts back the ones that were deleted, in their place, and says how many', () => {
+    store().deleteTemplate('tpl-pc');
+    store().deleteTemplate('tpl-nas');
+    expect(byId('tpl-pc')).toBeUndefined();
+
+    expect(store().restoreDefaultTemplates()).toBe(2);
+    expect(store().templates.map((template) => template.id)).toEqual(DEFAULTS.map((template) => template.id));
+  });
+
+  it('does not touch what the user made, nor what the user changed in a built-in one', () => {
+    store().addTemplate({ ...mine, id: undefined } as never);
+    const variant = store().templates[store().templates.length - 1];
+    store().updateTemplate('tpl-router', { name: 'Core router' });
+    store().deleteTemplate('tpl-switch');
+
+    expect(store().restoreDefaultTemplates()).toBe(1);
+
+    expect(byId('tpl-router')?.name).toBe('Core router');
+    expect(byId('tpl-switch')?.name).toBe('Switch');
+    expect(store().templates.filter((template) => template.isCustom)).toEqual([variant]);
+    expect(store().templates).toHaveLength(DEFAULTS.length + 1);
+  });
+
+  it('with nothing missing it changes nothing and says 0', () => {
+    const before = store().templates;
+    expect(store().restoreDefaultTemplates()).toBe(0);
+    expect(store().templates).toBe(before);
+  });
+
+  it('is kept in the browser under the same key and version, and the migration does not undo it', () => {
+    store().deleteTemplate('tpl-pc');
+    store().restoreDefaultTemplates();
+    const kept = JSON.parse(localStorage.getItem(KEY) ?? '{}');
+    expect(kept.version).toBe(TEMPLATE_STORAGE_VERSION);
+    expect(kept.state.templates.map((template: DeviceTemplate) => template.id)).toContain('tpl-pc');
+    expect(migrateTemplateStorage(kept.state, kept.version).templates).toEqual(kept.state.templates);
+  });
+});

@@ -6,31 +6,8 @@
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { Icon } from '@iconify/react';
-import { useT, type Dictionary } from '@/i18n';
-
-/**
- * The shortcuts, in the order they are listed; what each does and its keys
- * are in the dictionary (`advanced.shortcuts.rows`), read when the list is
- * drawn. Every line here is something the application really does; keep it
- * that way when adding one.
- * - Ctrl+S: registerSaveShortcut (utils/projectFileAccess.ts), tested in
- *   App.test.tsx
- * - the others: NetworkCanvas, each one exercised in NetworkCanvas.test.tsx.
- *   Ctrl+C / Ctrl+V are its keydown handler, the rest are ReactFlow props:
- *   deleteKeyCode="Delete", multiSelectionKeyCode="Control", selectionOnDrag,
- *   panOnDrag={[2]} (the numbers are MouseEvent.button values: 2 is the right
- *   button) and the wheel zoom React Flow has on by default
- */
-const SHORTCUTS: Array<keyof Dictionary['advanced']['shortcuts']['rows']> = [
-  'save',
-  'copy',
-  'paste',
-  'delete',
-  'toggleSelection',
-  'selectionBox',
-  'pan',
-  'zoom',
-];
+import { useT } from '@/i18n';
+import { SHORTCUT_GROUPS } from '@/data/shortcuts';
 
 const AdvancedSettingsTab = () => {
   const t = useT();
@@ -100,19 +77,26 @@ const AdvancedSettingsTab = () => {
       <h3>{shortcuts.title}</h3>
       <p className="text-sm text-[var(--text-color-light)] mb-4">{shortcuts.intro}</p>
 
-      <div className="space-y-2">
-        {SHORTCUTS.map((id) => (
-          <div
-            key={id}
-            className="flex items-center justify-between gap-4 p-3 bg-[var(--bg-canvas)] rounded border border-[var(--border-color)]"
-          >
-            <span className="text-sm">{shortcuts.rows[id].action}</span>
-            <kbd className="px-2 py-1 bg-[var(--bg-component)] border border-[var(--border-color)] rounded text-xs font-mono whitespace-nowrap">
-              {shortcuts.rows[id].keys}
-            </kbd>
+      {SHORTCUT_GROUPS.map((group) => (
+        <section key={group.id} className="mb-6" aria-labelledby={`shortcuts-${group.id}`}>
+          <h4 id={`shortcuts-${group.id}`} className="font-semibold mb-2">
+            {shortcuts.groups[group.id]}
+          </h4>
+          <div className="space-y-2">
+            {group.rows.map((id) => (
+              <div
+                key={id}
+                className="flex items-center justify-between gap-4 p-3 bg-[var(--bg-canvas)] rounded border border-[var(--border-color)]"
+              >
+                <span className="text-sm">{shortcuts.rows[id].action}</span>
+                <kbd className="px-2 py-1 bg-[var(--bg-component)] border border-[var(--border-color)] rounded text-xs font-mono text-right">
+                  {shortcuts.rows[id].keys}
+                </kbd>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </section>
+      ))}
 
       {/* Extra spacing at bottom for scrolling */}
       <div className="pb-64"></div>

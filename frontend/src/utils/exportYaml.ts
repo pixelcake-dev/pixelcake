@@ -5,6 +5,7 @@
  */
 
 import type {
+  CanvasArea,
   DhcpPool,
   DnsRecord,
   FirewallRule,
@@ -18,14 +19,19 @@ import type {
 import { boundInterface } from '@/engine/interfaces';
 import type { ConnectionEnd } from '@/engine/interfaces';
 
+/** Plain text that YAML reads as a number, a boolean or null: it needs its quotes to stay text */
+const READ_AS_NOT_TEXT =
+  /^(?:true|false|null|~|[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?|0x[0-9a-f]+|0o[0-7]+|[-+]?\.(?:inf|nan))$/i;
+
 /** Escape a YAML string value (wrap in quotes if needed) */
 function yamlValue(val: string | number | boolean | undefined | null): string {
   if (val === undefined || val === null) return '""';
   if (typeof val === 'boolean') return val ? 'true' : 'false';
   if (typeof val === 'number') return String(val);
-  // Wrap in quotes if string contains special chars or is empty
+  // Wrap in quotes if string contains special chars or is empty, or if YAML
+  // would read it as something else than text (10, 1.50, 0x1F, true, null)
   const s = String(val);
-  if (s === '' || /[:#[\]{}&*!|>'"%@`,?]/.test(s) || s.trim() !== s) {
+  if (s === '' || /[:#[\]{}&*!|>'"%@`,?]/.test(s) || s.trim() !== s || READ_AS_NOT_TEXT.test(s)) {
     return `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
   }
   return s;
@@ -42,6 +48,11 @@ function yamlText(text: string): string {
     .replace(/"/g, '\\"')
     .replace(/\r\n?|\n/g, '\\n');
   return `"${escaped}"`;
+}
+
+/** A coordinate, to two decimals at most */
+function yamlNumber(value: number): string {
+  return String(Math.round(value * 100) / 100);
 }
 
 /** Indent a line */
@@ -235,6 +246,12 @@ function serializeDevice(device: NetworkDevice, level: number): string[] {
     }
   }
 
+  // Where it is drawn (last: the lists above are what one reads): it is what an area is drawn around
+  if (device.position) {
+    lines.push(
+      `${indent(level)}  position: {x: ${yamlNumber(device.position.x)}, y: ${yamlNumber(device.position.y)}}`
+    );
+  }
   return lines;
 }
 
@@ -289,6 +306,7 @@ export function generateYaml(
   devices: NetworkDevice[],
   connections: NetworkConnection[],
   projectName?: string,
+  areas: readonly CanvasArea[] = [],
 ): string {
   const now = new Date().toISOString().split('T')[0];
   const lines: string[] = [];
@@ -327,6 +345,18 @@ export function generateYaml(
       if (connLines.length > 0) {
         lines.push(...connLines);
       }
+    }
+  }
+
+  // Areas, first drawn first
+  if (areas.length > 0) {
+    lines.push('');
+    lines.push('  areas:');
+    for (const area of areas) {
+      lines.push(`    - label: ${yamlValue(area.label)}`);
+      lines.push(`      color: ${yamlValue(area.color)}`);
+      lines.push(`      position: {x: ${yamlNumber(area.position.x)}, y: ${yamlNumber(area.position.y)}}`);
+      lines.push(`      size: {width: ${yamlNumber(area.size.width)}, height: ${yamlNumber(area.size.height)}}`);
     }
   }
 

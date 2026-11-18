@@ -1,6 +1,7 @@
 /** Device and link templates: lists and editors */
 
 import type { DeviceDrawingGroup, DeviceDrawingId } from '@/data/deviceDrawings';
+import { formatCount } from '../numbers';
 
 /** The button that adds a link type: the empty list names it */
 const newLinkType = 'Nuovo tipo di connessione';
@@ -64,6 +65,10 @@ export const templates = {
       add: 'Nuovo template',
       edit: 'Modifica template',
       delete: 'Elimina template',
+      restore: 'Ripristina i template predefiniti',
+      restored: (count: number) =>
+        count === 1 ? 'Ripristinato 1 template predefinito' : `Ripristinati ${formatCount('it', count)} template predefiniti`,
+      nothingToRestore: 'I template predefiniti ci sono già tutti',
       deleteQuestion: {
         title: (name: string) => `Eliminare il template «${name}»?`,
         detail: 'I dispositivi esistenti di questo tipo potrebbero non essere più disegnati come prima.',
@@ -72,7 +77,7 @@ export const templates = {
 
     editor: {
       titleEdit: 'Modifica template generico',
-      titleNew: 'Nuovo template generico',
+      titleNew: 'Nuovo template',
       saveChanges: 'Salva modifiche',
       create: 'Crea template',
       name: 'Nome',
@@ -83,12 +88,11 @@ export const templates = {
       errors: {
         nameRequired: 'Il nome è obbligatorio',
         typeRequired: 'Il tipo di base è obbligatorio',
-        typeExists: 'Questo tipo esiste già tra i template generici',
       },
     },
 
     custom: {
-      intro: 'Template personalizzati con campi Terraform',
+      intro: 'Template personalizzati: un nome, un tipo di base e un disegno',
       add: 'Nuovo template',
       formTitle: 'Crea nuovo template',
       name: 'Nome del template',

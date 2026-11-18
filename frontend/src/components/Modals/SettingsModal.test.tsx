@@ -14,6 +14,8 @@ import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
 import { answerConfirms, settled } from '@/test/confirm';
 import { device, host, nic, port, switchWith } from '@/test/networkFixtures';
+import { getT } from '@/i18n';
+import { SHORTCUT_GROUPS } from '@/data/shortcuts';
 import SettingsModal from './SettingsModal';
 
 vi.mock('sonner', () => ({
@@ -101,16 +103,20 @@ describe('SettingsModal', () => {
       render(<SettingsModal />);
       openTab('Avanzate');
 
-      expect(shortcuts()).toEqual([
-        ['Salva il progetto su file', 'Ctrl + S'],
-        ['Copia i dispositivi selezionati', 'Ctrl + C'],
-        ['Incolla i dispositivi copiati', 'Ctrl + V'],
-        ['Elimina i dispositivi selezionati, o il riquadro selezionato', 'Canc'],
-        ['Aggiungi o togli un dispositivo dalla selezione', 'Ctrl + clic'],
-        ['Seleziona più dispositivi con un riquadro di selezione', "Trascina su un'area vuota"],
-        ['Sposta la vista', 'Tasto destro + trascina'],
-        ['Zoom', 'Rotellina del mouse'],
-      ]);
+      // (the list of the program: every group, every line, in its order, as the dictionary says it)
+      const { rows, groups } = getT().advanced.shortcuts;
+      expect(shortcuts()).toEqual(
+        SHORTCUT_GROUPS.flatMap(group => group.rows).map(id => [rows[id].action, rows[id].keys])
+      );
+      expect(shortcuts().length).toBeGreaterThan(30);
+      expect(Array.from(document.querySelectorAll('h4')).map(heading => heading.textContent)).toEqual(
+        SHORTCUT_GROUPS.map(group => groups[group.id])
+      );
+      // the keys that were missing: the arrows, Tab, Enter, Esc, the ones of the terminal and of the presentation
+      const said = shortcuts().map(([, combination]) => combination);
+      for (const key of ['Tasti freccia', 'Tab', 'Invio', 'Esc', 'Freccia su, freccia giù', 'Ctrl + C']) {
+        expect(said).toContain(key);
+      }
       const keys = shortcuts().map(([, combination]) => combination);
       // no auto-layout shortcut exists; selection is with Ctrl, panning with the right button
       expect(keys.join(' | ')).not.toMatch(/Ctrl \+ L|Shift|Middle|centrale/i);

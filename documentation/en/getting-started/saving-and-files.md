@@ -48,7 +48,7 @@ Every board of the project goes in the one file. A new project starts with one b
 
 ## The network as YAML {#yaml}
 
-“Import/Export”, the fifth button on the left, is for the network of the open board only, as text: the devices and the links. Its first tab shows the network as YAML, to copy or to download. Its second tab loads a `.yaml` or `.yml` file, in place of what is on the board (“Replace the topology”) or in addition to it (“Add to the topology”). It is a way to read the drawing in a text editor, or to build one from a script; it is not a way to keep a project, because the name, the boards, the areas and the settings are not in it. See [YAML import and export](../reference/yaml.md).
+“Import/Export”, the fifth button on the left, is for the network of the open board only, as text: the devices, the links and the areas. Its first tab shows the network as YAML, to copy or to download. Its second tab loads a `.yaml` or `.yml` file, in place of what is on the board (“Replace the topology”) or in addition to it (“Add to the topology”). It is a way to read the drawing in a text editor, or to build one from a script; it is not a way to keep a project, because the name, the other boards and the settings are not in it. See [YAML import and export](../reference/yaml.md).
 
 ## Two tabs on one project {#two-tabs}
 

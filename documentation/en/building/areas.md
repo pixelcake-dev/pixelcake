@@ -32,7 +32,7 @@ Either way the new area is selected and its name is open for typing. Type the na
 - **Colour**: right click → “Colour”, and pick one of six: Slate, Green, Ochre, Red, Purple, Teal.
 - **Delete**: the Delete key, or right click → “Delete”, which asks first. The devices it encloses stay where they are.
 
-Areas belong to their board: they stay with it when you go to another board of the project and back, and they are saved in the project file. The YAML export has no places, and it does not carry them. A presentation shows the areas and lets nothing be done to them; the small map shows them as faint rectangles, and the exported image draws them, in light and in dark.
+Areas belong to their board: they stay with it when you go to another board of the project and back, and they are saved in the project file. The YAML export carries them, with the place of each device. A presentation shows the areas and lets nothing be done to them; the small map shows them as faint rectangles, and the exported image draws them, in light and in dark.
 
 ## Showing and hiding them {#show-hide}
 
@@ -43,4 +43,3 @@ View → “Show areas” hides the areas and shows them again. It is marked whe
 > [!LIMITS]
 > - An area is not a network, a site or a VLAN: it has no address and no settings, and the engine does not read it.
 > - One area may be drawn inside another, and the automatic layout keeps it there; that is all it means.
-> - The YAML export does not carry areas.

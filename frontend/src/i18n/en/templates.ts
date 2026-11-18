@@ -1,4 +1,5 @@
 import type { Dictionary } from '../dictionary';
+import { formatCount } from '../numbers';
 
 /** Device and link templates: lists and editors */
 
@@ -64,6 +65,10 @@ export const templates: Dictionary['templates'] = {
       add: 'New template',
       edit: 'Edit template',
       delete: 'Delete template',
+      restore: 'Restore built-in templates',
+      restored: (count: number) =>
+        count === 1 ? '1 built-in template restored' : `${formatCount('en', count)} built-in templates restored`,
+      nothingToRestore: 'All the built-in templates are there already',
       deleteQuestion: {
         title: (name: string) => `Delete the template “${name}”?`,
         detail: 'Existing devices of this type may no longer be drawn as before.',
@@ -72,7 +77,7 @@ export const templates: Dictionary['templates'] = {
 
     editor: {
       titleEdit: 'Edit generic template',
-      titleNew: 'New generic template',
+      titleNew: 'New template',
       saveChanges: 'Save changes',
       create: 'Create template',
       name: 'Name',
@@ -82,12 +87,11 @@ export const templates: Dictionary['templates'] = {
       errors: {
         nameRequired: 'The name is required',
         typeRequired: 'The base type is required',
-        typeExists: 'This type already exists among the generic templates',
       },
     },
 
     custom: {
-      intro: 'Custom templates with Terraform fields',
+      intro: 'Custom templates: a name, a base type and a drawing',
       add: 'New template',
       formTitle: 'Create new template',
       name: 'Template name',

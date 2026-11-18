@@ -18,6 +18,9 @@ import { parseYamlTopology } from '@/utils/importYaml';
 import type { ImportResult } from '@/utils/importYaml';
 import { useLanguage, useT } from '@/i18n';
 import { Rich } from '@/i18n/Rich';
+import { askConfirm } from '@/store/confirmStore';
+import { isNameTaken, newDeviceName } from '@/utils/newDevice';
+import { placeBesideDrawing } from '@/utils/importPlacement';
 
 type ExportFormat = 'terraform' | 'yaml';
 type ActiveTab = 'export' | 'import';
@@ -30,6 +33,8 @@ const ImportExportModal = () => {
   const closeModal = useUIStore((state) => state.closeModal);
   const devices = useNetworkStore((state) => state.devices);
   const connections = useNetworkStore((state) => state.connections);
+  const areas = useNetworkStore((state) => state.areas);
+  const addArea = useNetworkStore((state) => state.addArea);
   const loadTopology = useNetworkStore((state) => state.loadTopology);
   const addDevice = useNetworkStore((state) => state.addDevice);
   const addConnection = useNetworkStore((state) => state.addConnection);
@@ -69,8 +74,8 @@ const ImportExportModal = () => {
     if (exportFormat === 'terraform') {
       return generateTerraform(devices, connections, projectName);
     }
-    return generateYaml(devices, connections, projectName);
-  }, [exportFormat, devices, connections, projectName]);
+    return generateYaml(devices, connections, projectName, areas);
+  }, [exportFormat, devices, connections, areas, projectName]);
 
   const getFileName = (): string => {
     const safeName = projectName.toLowerCase().replace(/[^a-z0-9-_]/g, '-');
@@ -153,15 +158,31 @@ const ImportExportModal = () => {
     if (file) processFile(file);
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (!importResult || importResult.devices.length === 0) {
       toast.error(t.importExport.importTab.nothingToImport);
       return;
     }
 
     if (importMode === 'replace') {
+      // (the canvas is emptied, areas included, and there is no undo: say what goes)
+      const current = useNetworkStore.getState();
+      if (current.devices.length + current.connections.length + current.areas.length > 0) {
+        const confirmed = await askConfirm({
+          title: t.importExport.importTab.replaceTitle,
+          detail: t.importExport.importTab.replaceDetail(
+            current.devices.length,
+            current.connections.length,
+            current.areas.length
+          ),
+          confirmLabel: t.importExport.importTab.replaceConfirm,
+          danger: true,
+        });
+        if (!confirmed) return;
+      }
       clearAllDevices();
       loadTopology(importResult.devices, importResult.connections);
+      for (const { label, color, position, size } of importResult.areas) addArea({ label, color, position, size });
       toast.success(
         t.importExport.importTab.replacedNotice(
           importResult.devices.length,
@@ -172,18 +193,29 @@ const ImportExportModal = () => {
       // Append mode — add devices and connections individually
       // loadTopology replaces, so we use addDevice/addConnection for append
       const idMapping = new Map<string, string>();
+      // The group goes beside the drawing that is there, with its own layout
+      // (one shift for the devices and the areas)
+      const { dx, dy } = placeBesideDrawing(
+        { devices: importResult.devices, areas: importResult.areas },
+        { devices, areas }
+      );
+      const renamed: string[] = [];
 
       for (const device of importResult.devices) {
         const oldId = device.id;
+        // A name the board has already is given a free one (the terminal could not tell the two apart)
+        const present = useNetworkStore.getState().devices;
+        const label = isNameTaken(device.label, present) ? newDeviceName(device.label, present) : device.label;
+        if (label !== device.label) renamed.push(`“${device.label}” → “${label}”`);
         // addDevice generates a new ID internally — pass device without id
         addDevice({
           type: device.type,
           templateId: device.templateId,
-          label: device.label,
+          label,
           ip: device.ip,
           subnet: device.subnet,
           gateway: device.gateway,
-          position: device.position,
+          position: { x: device.position.x + dx, y: device.position.y + dy },
           vendor: device.vendor,
           location: device.location,
           notes: device.notes,
@@ -201,6 +233,10 @@ const ImportExportModal = () => {
         const newDevices = useNetworkStore.getState().devices;
         const newDevice = newDevices[newDevices.length - 1];
         idMapping.set(oldId, newDevice.id);
+      }
+
+      for (const { label, color, position, size } of importResult.areas) {
+        addArea({ label, color, size, position: { x: position.x + dx, y: position.y + dy } });
       }
 
       for (const conn of importResult.connections) {
@@ -236,6 +272,7 @@ const ImportExportModal = () => {
           importResult.connections.length
         )
       );
+      if (renamed.length > 0) toast.info(t.importExport.importTab.renamedNotice(renamed.join(', ')));
     }
 
     handleClose();
@@ -557,6 +594,7 @@ const ImportTab = ({
             <div style={{ display: 'flex', gap: '20px', fontSize: '0.85em', color: 'var(--text-color-light)' }}>
               <span>{t.importExport.devices(importResult.devices.length)}</span>
               <span>{t.importExport.connections(importResult.connections.length)}</span>
+              {importResult.areas.length > 0 && <span>{t.importExport.areas(importResult.areas.length)}</span>}
               {importResult.warnings.length > 0 && (
                 <span style={{ color: '#f59e0b' }}>
                   {t.importExport.importTab.warningCount(importResult.warnings.length)}

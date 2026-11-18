@@ -8,10 +8,13 @@ const amount = (value: number) => formatCount('it', value);
 const devices = (count: number) => (count === 1 ? '1 dispositivo' : `${amount(count)} dispositivi`);
 const connections = (count: number) => (count === 1 ? '1 connessione' : `${amount(count)} connessioni`);
 
+const areas = (count: number) => (count === 1 ? '1 riquadro' : `${amount(count)} riquadri`);
+
 export const importExport = {
-  /** How many devices and connections: of the canvas, of a file */
+  /** How many devices, connections and areas: of the canvas, of a file */
   devices,
   connections,
+  areas,
 
   exportTab: {
     format: 'Formato:',
@@ -50,6 +53,14 @@ export const importExport = {
     unsupportedFormat: 'Formato non supportato. Usa un file .yaml o .yml.',
     cannotRead: 'Errore durante la lettura del file',
     nothingToImport: 'Nessun dispositivo da importare',
+    /** The question before «Sostituisci topologia» empties the canvas: what will be removed */
+    replaceTitle: 'Sostituire la topologia?',
+    replaceDetail: (deviceCount: number, connectionCount: number, areaCount: number) =>
+      `Sul canvas ci sono ${devices(deviceCount)}, ${connections(connectionCount)} e ${areas(areaCount)}: verranno tolti e sostituiti dal contenuto del file. Non si può annullare.`,
+    replaceConfirm: 'Sostituisci',
+    /** After «Aggiungi alla topologia»: devices of the file that had a name already on the canvas */
+    renamedNotice: (renamed: string) =>
+      `Nomi già presenti sul canvas, ai dispositivi aggiunti è stato dato un nome libero: ${renamed}`,
     replacedNotice: (deviceCount: number, connectionCount: number) =>
       `Topologia importata: ${devices(deviceCount)}, ${connections(connectionCount)}`,
     appendedNotice: (deviceCount: number, connectionCount: number) =>
@@ -69,7 +80,16 @@ export const importExport = {
     deviceAddressNotValid: (deviceName: string, address: string) =>
       `${deviceName}: IP "${address}" non valido`,
     portAddressNotValid: (portId: number, address: string) => `Porta ${portId}: IP "${address}" non valido`,
-    portVlanOutOfRange: (portId: number) => `Porta ${portId}: VLAN fuori intervallo (1–4094)`,
+    portVlanOutOfRange: (portId: number, values: string) =>
+      `Porta ${portId}: VLAN ${values} fuori intervallo (1–4094), non importata`,
+    deviceVlanOutOfRange: (deviceName: string, values: string) =>
+      `${deviceName}: VLAN ${values} fuori intervallo (1–4094), non importata`,
+    connectionVlanOutOfRange: (number: number, values: string) =>
+      `Connessione ${number}: VLAN ${values} fuori intervallo (1–4094), non importata`,
+    /** `renamed` is the list of the new names, each written «old» → «new» */
+    namesRepeated: (renamed: string) =>
+      `Nomi usati più volte, ai dispositivi successivi è stato dato un nome libero: ${renamed}. Le connessioni che citano il nome vanno al primo dispositivo che lo ha`,
+    areaNotValid: (number: number) => `Riquadro ${number}: senza posizione o dimensioni, ignorato`,
     portPoolIncomplete: (portId: number) =>
       `Porta ${portId}: server DHCP senza primo o ultimo indirizzo, ignorato`,
     cardPoolIncomplete: (deviceName: string, cardName: string) =>

@@ -5,7 +5,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { answerConfirms } from '@/test/confirm';
 import { useNetworkStore } from '@/store/networkStore';
 import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
@@ -219,9 +220,11 @@ describe('ImportExportModal — importing a YAML file', () => {
   });
 
   it('replacing the drawing keeps routes, rules, forwards, DHCP and DNS', async () => {
+    // (the board has a device: replacing asks first)
+    answerConfirms(true);
     await chooseFile();
     fireEvent.click(screen.getByRole('button', { name: 'Importa' }));
-    expect(devices().map(d => d.label)).toEqual(['FW', 'Portatile', 'NS']);
+    await waitFor(() => expect(devices().map(d => d.label)).toEqual(['FW', 'Portatile', 'NS']));
     expect(named('FW')).toMatchObject({
       routes: [{ destination: '10.0.0.0/8', nextHop: '192.168.50.254' }],
       firewallRules: [{ action: 'allow', service: 'web', destination: '192.168.50.20' }],

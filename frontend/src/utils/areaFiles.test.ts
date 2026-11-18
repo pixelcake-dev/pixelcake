@@ -167,10 +167,11 @@ describe('the areas of a canvas in a project file', () => {
 });
 
 describe('the areas and the YAML export', () => {
-  it('are not part of it: the file is of the network, which has no places', () => {
-    // (devices are placed again on a grid when a YAML file is loaded: an area
-    // drawn around them would be around nothing)
-    const text = generateYaml([host('dev-0', '192.168.1.10')], [], 'Lab');
-    expect(text).not.toMatch(/area|riquadr/i);
+  it('are written with the places of the devices, and a canvas without areas writes none', () => {
+    const device = host('dev-0', '192.168.1.10');
+    expect(generateYaml([device], [], 'Lab')).not.toMatch(/areas:/);
+    const text = generateYaml([device], [], 'Lab', AREAS);
+    expect(text).toMatch(/areas:/);
+    expect(text).toContain('label: Core');
   });
 });

@@ -6,7 +6,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { act, render, screen, fireEvent, within, cleanup } from '@testing-library/react';
+import { act, render, screen, fireEvent, within, cleanup, waitFor } from '@testing-library/react';
+import { answerConfirms } from '@/test/confirm';
 import { ReactFlowProvider } from 'reactflow';
 import { toast } from 'sonner';
 import { useUIStore } from '@/store/uiStore';
@@ -226,6 +227,7 @@ describe('the note of a device — a YAML file added to the drawing', () => {
   ].join('\n');
 
   async function importFile(mode: 'replace' | 'append') {
+    answerConfirms(true);
     useUIStore.getState().openModal('importExport');
     render(<ImportExportModal />);
     fireEvent.click(screen.getByRole('button', { name: /Import$/ }));
@@ -235,6 +237,8 @@ describe('the note of a device — a YAML file added to the drawing', () => {
     await screen.findByText('Dispositivi trovati');
     if (mode === 'append') fireEvent.click(screen.getByLabelText('Aggiungi alla topologia'));
     fireEvent.click(screen.getByRole('button', { name: 'Importa' }));
+    // (replacing a board that has devices asks first: the answer is yes)
+    await waitFor(() => expect(store().devices.some((d) => d.label === 'Stampante')).toBe(true));
   }
 
   it.each([['replace'], ['append']] as const)('keeps the notes of its devices (%s)', async (mode) => {
