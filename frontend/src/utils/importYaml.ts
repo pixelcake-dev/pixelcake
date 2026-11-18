@@ -6,8 +6,9 @@
  * language of the moment the file is parsed in.
  */
 
-import YAML from 'yaml';
+import YAML, { isScalar, Scalar } from 'yaml';
 import type {
+  CanvasArea,
   DhcpPool,
   DnsRecord,
   FirewallRule,
@@ -21,11 +22,45 @@ import type {
 import type { ConnectionBinding, ConnectionEnd } from '@/engine/interfaces';
 import { tidyNotes } from '@/utils/deviceNotes';
 import { getT } from '@/i18n';
+import { isNameTaken, newDeviceName } from '@/utils/newDevice';
+import { readAreas } from '@/utils/canvasAreas';
 
 export interface ImportResult {
   devices: NetworkDevice[];
   connections: NetworkConnection[];
+  /** The areas the file draws, with the places of its devices; none when it has none */
+  areas: CanvasArea[];
   warnings: string[];
+}
+
+/**
+ * The keys whose value is a name: a device, and the two ends of a link. A
+ * name that YAML reads as a number or as true/false (`10`, `1.50`, `true`)
+ * is the text it was written as.
+ */
+const NAME_KEYS = new Set(['name', 'source', 'target']);
+
+function keepNamesAsText(doc: YAML.Document.Parsed): void {
+  YAML.visit(doc, {
+    Pair(_key, pair) {
+      if (!isScalar(pair.key) || typeof pair.key.value !== 'string' || !NAME_KEYS.has(pair.key.value)) return;
+      const value = pair.value;
+      if (
+        isScalar(value) &&
+        (typeof value.value === 'number' || typeof value.value === 'boolean') &&
+        typeof value.source === 'string'
+      ) {
+        pair.value = new Scalar(value.source);
+      }
+    },
+  });
+}
+
+/** The VLANs inside 1–4094, and what was outside, as the text of a warning */
+function splitVlans(values: unknown[]): { valid: number[]; outside: string } {
+  const numbers = values.filter((v): v is number => typeof v === 'number');
+  const valid = numbers.filter((v) => Number.isInteger(v) && v >= 1 && v <= 4094);
+  return { valid, outside: numbers.filter((v) => !valid.includes(v)).join(', ') };
 }
 
 /** The words of the warnings, in the language of the moment */
@@ -90,13 +125,15 @@ function parsePort(data: Record<string, unknown>, warnings: string[]): Port {
   if (typeof data.description === 'string') port.description = data.description;
 
   // VLAN - can be number or array
-  if (typeof data.vlan === 'number') {
-    port.vlan = data.vlan;
-  } else if (Array.isArray(data.vlan)) {
-    const vlans = data.vlan.filter((v): v is number => typeof v === 'number');
-    const invalid = vlans.some((v) => v < 1 || v > 4094);
-    if (invalid) warnings.push(words().portVlanOutOfRange(port.id));
-    port.vlan = vlans;
+  // (a VLAN outside 1–4094 is left out, and the warning says so)
+  if (typeof data.vlan === 'number' || Array.isArray(data.vlan)) {
+    const { valid, outside } = splitVlans(Array.isArray(data.vlan) ? data.vlan : [data.vlan]);
+    if (outside) warnings.push(words().portVlanOutOfRange(port.id, outside));
+    if (Array.isArray(data.vlan)) {
+      if (valid.length > 0 || outside === '') port.vlan = valid;
+    } else if (valid.length > 0) {
+      port.vlan = valid[0];
+    }
   }
 
   return port;
@@ -286,6 +323,15 @@ function parseBinding(
   return {};
 }
 
+/** Where the file says a device is drawn (`position: {x, y}`), when it says it */
+function placeOf(value: unknown): { x: number; y: number } | undefined {
+  if (value === null || typeof value !== 'object') return undefined;
+  const { x, y } = value as Record<string, unknown>;
+  return typeof x === 'number' && typeof y === 'number' && Number.isFinite(x) && Number.isFinite(y)
+    ? { x, y }
+    : undefined;
+}
+
 /** Calculate grid positions for imported devices */
 function calculatePositions(count: number): { x: number; y: number }[] {
   const cols = Math.ceil(Math.sqrt(count));
@@ -317,20 +363,23 @@ export function parseYamlTopology(content: string): ImportResult {
   // Parse YAML
   let parsed: unknown;
   try {
-    parsed = YAML.parse(content);
+    const doc = YAML.parseDocument(content);
+    if (doc.errors.length > 0) throw doc.errors[0];
+    keepNamesAsText(doc);
+    parsed = doc.toJS();
   } catch (e) {
     const reason = e instanceof Error ? e.message : undefined;
-    return { devices: [], connections: [], warnings: [words().yamlError(reason)] };
+    return { devices: [], connections: [], areas: [], warnings: [words().yamlError(reason)] };
   }
 
   if (!parsed || typeof parsed !== 'object') {
-    return { devices: [], connections: [], warnings: [words().noData] };
+    return { devices: [], connections: [], areas: [], warnings: [words().noData] };
   }
 
   // Extract root — support both { pixelcake: { ... } } and flat { devices: [...] }
   const root = (parsed as Record<string, unknown>).pixelcake || parsed;
   if (typeof root !== 'object' || root === null) {
-    return { devices: [], connections: [], warnings: [words().unknownStructure] };
+    return { devices: [], connections: [], areas: [], warnings: [words().unknownStructure] };
   }
 
   const data = root as Record<string, unknown>;
@@ -342,7 +391,16 @@ export function parseYamlTopology(content: string): ImportResult {
   }
 
   const positions = calculatePositions(rawDevices.length);
-  const nameToId = new Map<string, string>();
+  // The devices as the file names them, to find the one a link names: the
+  // first that has the name (the others of that name were renamed)
+  const declared: { id: string; name: string }[] = [];
+  // The name each entry asks for, to give a repeated one a name no later entry has
+  const askedNames = rawDevices.map((raw, index) =>
+    raw && typeof raw === 'object' && typeof (raw as Record<string, unknown>).name === 'string'
+      ? ((raw as Record<string, unknown>).name as string)
+      : `Device-${index + 1}`
+  );
+  const renamed: string[] = [];
 
   for (let i = 0; i < rawDevices.length; i++) {
     const raw = rawDevices[i];
@@ -352,7 +410,16 @@ export function parseYamlTopology(content: string): ImportResult {
     }
 
     const d = raw as Record<string, unknown>;
-    const name = typeof d.name === 'string' ? d.name : `Device-${i + 1}`;
+    const asked = askedNames[i];
+    // A name already taken (as the terminal compares names) goes to the first
+    // device that has it; this one gets the first free name of the app's rule
+    const name = isNameTaken(asked, devices)
+      ? newDeviceName(asked, [
+          ...devices,
+          ...askedNames.slice(i + 1).map((label) => ({ label })),
+        ])
+      : asked;
+    if (name !== asked) renamed.push(`“${asked}” → “${name}”`);
     const type = typeof d.type === 'string' ? d.type : 'PC';
     const id = `dev-${i}`;
 
@@ -368,7 +435,7 @@ export function parseYamlTopology(content: string): ImportResult {
       ip: typeof d.ip === 'string' ? d.ip : '',
       subnet: typeof d.subnet === 'string' ? d.subnet : '',
       gateway: typeof d.gateway === 'string' ? d.gateway : '',
-      position: positions[i],
+      position: placeOf(d.position) ?? positions[i],
     };
 
     if (typeof d.template_id === 'string' && d.template_id) device.templateId = d.template_id;
@@ -378,9 +445,11 @@ export function parseYamlTopology(content: string): ImportResult {
     const notes = tidyNotes(typeof d.notes === 'number' ? String(d.notes) : d.notes);
     if (notes) device.notes = notes;
 
-    // VLAN
+    // VLAN (those outside 1–4094 are left out, and the warning says so)
     if (Array.isArray(d.vlan)) {
-      device.vlan = d.vlan.filter((v): v is number => typeof v === 'number');
+      const { valid, outside } = splitVlans(d.vlan);
+      if (outside) warnings.push(words().deviceVlanOutOfRange(name, outside));
+      device.vlan = valid;
     }
 
     // STP
@@ -433,8 +502,13 @@ export function parseYamlTopology(content: string): ImportResult {
     }
 
     devices.push(device);
-    nameToId.set(name, id);
+    declared.push({ id, name: asked });
   }
+  if (renamed.length > 0) warnings.push(words().namesRepeated(renamed.join(', ')));
+
+  /** The device a link names: the first one of the file that had this name */
+  const findByName = (name: string): string | undefined =>
+    declared.find((entry) => isNameTaken(name, [{ id: entry.id, label: entry.name }]))?.id;
 
   // Parse connections
   const rawConnections = Array.isArray(data.connections) ? data.connections : [];
@@ -452,8 +526,8 @@ export function parseYamlTopology(content: string): ImportResult {
     const sourceName = typeof c.source === 'string' ? c.source : '';
     const targetName = typeof c.target === 'string' ? c.target : '';
 
-    const sourceId = nameToId.get(sourceName);
-    const targetId = nameToId.get(targetName);
+    const sourceId = findByName(sourceName);
+    const targetId = findByName(targetName);
 
     if (!sourceId) {
       warnings.push(words().sourceNotFound(i + 1, sourceName));
@@ -486,11 +560,21 @@ export function parseYamlTopology(content: string): ImportResult {
     if (typeof c.stp_state === 'string') conn.stpPortState = c.stp_state as NetworkConnection['stpPortState'];
 
     if (Array.isArray(c.vlan)) {
-      conn.vlan = c.vlan.filter((v): v is number => typeof v === 'number');
+      const { valid, outside } = splitVlans(c.vlan);
+      if (outside) warnings.push(words().connectionVlanOutOfRange(i + 1, outside));
+      conn.vlan = valid;
     }
 
     connections.push(conn);
   }
 
-  return { devices, connections, warnings };
+  // Areas: one that cannot be drawn is left out, with a warning
+  const drawable: unknown[] = [];
+  (Array.isArray(data.areas) ? data.areas : []).forEach((entry: unknown, index: number) => {
+    if (readAreas([entry]).dropped > 0) warnings.push(words().areaNotValid(index + 1));
+    else drawable.push(entry);
+  });
+  const { areas } = readAreas(drawable);
+
+  return { devices, connections, areas, warnings };
 }

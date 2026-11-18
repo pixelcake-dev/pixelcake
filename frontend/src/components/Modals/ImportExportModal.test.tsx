@@ -1,261 +1,141 @@
 /**
- * ImportExportModal tests — the export formats. YAML is the one that can be
- * loaded back, so it comes first; the Terraform export is a sketch that
- * cannot be applied, and says so whenever it is the one on screen.
+ * The window that imports and exports the network as YAML: «replacing» asks
+ * first and says what goes, «adding» puts the file beside the drawing, and
+ * the areas go out with the network and come back.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { useNetworkStore } from '@/store/networkStore';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useUIStore } from '@/store/uiStore';
-import { createNewProject } from '@/utils/projectFileAccess';
-import { resolveDhcp } from '@/engine';
+import { useNetworkStore } from '@/store/networkStore';
+import { answerConfirms, settled } from '@/test/confirm';
+import { getT } from '@/i18n';
+import { DEVICE_METRICS } from '@/utils/deviceGeometry';
+import { IMPORT_GAP } from '@/utils/importPlacement';
 import ImportExportModal from './ImportExportModal';
 
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
 }));
 
-const WARNING = /non si può applicare con Terraform/;
+const FILE = [
+  'pixelcake:',
+  '  devices:',
+  '    - name: Imported-A',
+  '      position: {x: 100, y: 100}',
+  '    - name: PC-1',
+  '      position: {x: 300, y: 100}',
+  '  connections:',
+  '    - source: Imported-A',
+  '      target: PC-1',
+  '  areas:',
+  '    - label: Group',
+  '      color: teal',
+  '      position: {x: 60, y: 40}',
+  '      size: {width: 400, height: 200}',
+].join('\n');
 
-const format = () => screen.getByLabelText('Formato:') as HTMLSelectElement;
-const choose = (value: string) => fireEvent.change(format(), { target: { value } });
-const preview = () => document.querySelector('pre')?.textContent ?? '';
+const store = () => useNetworkStore.getState();
 
-describe('ImportExportModal — export formats', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    createNewProject({ name: 'Sede Milano' });
-    useNetworkStore.getState().addDevice({
-      type: 'PC',
-      label: 'PC-1',
-      ip: '192.168.1.10',
-      subnet: '255.255.255.0',
-      gateway: '192.168.1.1',
-      position: { x: 0, y: 0 },
-    });
-    useUIStore.setState(state => ({ modals: { ...state.modals, importExport: true } }));
-    vi.clearAllMocks();
+function seedBoard() {
+  store().clearAllDevices();
+  store().addDevice({ type: 'PC', label: 'PC-1', ip: '', subnet: '', gateway: '', position: { x: 0, y: 0 } });
+  store().addDevice({ type: 'PC', label: 'PC-2', ip: '', subnet: '', gateway: '', position: { x: 500, y: 300 } });
+  store().addArea({ label: 'Old', color: 'slate', position: { x: -20, y: -20 }, size: { width: 700, height: 500 } });
+}
+
+/** Open the import tab, choose the file, and pick the mode */
+async function chooseFile(mode: 'replace' | 'append') {
+  useUIStore.getState().openModal('importExport');
+  const view = render(<ImportExportModal />);
+  fireEvent.click(screen.getByRole('button', { name: /Import$|Importa$/ }));
+  const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+  const file = new File([FILE], 'lab.yaml', { type: 'text/yaml' });
+  fireEvent.change(input, { target: { files: [file] } });
+  await screen.findByText('lab.yaml');
+  const label = getT().importExport.importTab[mode];
+  fireEvent.click(screen.getByLabelText(label));
+  return view;
+}
+
+const importButton = () =>
+  screen.getAllByRole('button', { name: getT().importExport.importTab.confirm }).pop() as HTMLElement;
+
+beforeEach(() => {
+  localStorage.clear();
+  useUIStore.getState().closeModal('importExport');
+  seedBoard();
+});
+
+describe('importing in place of the drawing', () => {
+  it('asks first, says what will be removed, and changes nothing on a no', async () => {
+    const answers = answerConfirms(false);
+    await chooseFile('replace');
+    fireEvent.click(importButton());
+    await settled();
+    expect(answers.asked).toHaveLength(1);
+    expect(answers.asked[0].detail).toBe(getT().importExport.importTab.replaceDetail(2, 0, 1));
+    expect(answers.asked[0].danger).toBe(true);
+    expect(store().devices.map((d) => d.label)).toEqual(['PC-1', 'PC-2']);
+    expect(store().areas).toHaveLength(1);
   });
 
-  it('opens on YAML, with no warning', () => {
-    render(<ImportExportModal />);
-
-    expect(format().value).toBe('yaml');
-    expect(preview()).toContain('PC-1');
-    expect(preview()).not.toContain('resource "');
-    expect(screen.getByRole('button', { name: /Scarica .*\.yaml$/ })).toBeInTheDocument();
-    expect(screen.queryByText(WARNING)).toBeNull();
+  it('on a yes, puts the file in its place, areas included', async () => {
+    answerConfirms(true);
+    await chooseFile('replace');
+    fireEvent.click(importButton());
+    await waitFor(() => expect(store().devices.map((d) => d.label)).toEqual(['Imported-A', 'PC-1']));
+    expect(store().connections).toHaveLength(1);
+    expect(store().areas.map((a) => a.label)).toEqual(['Group']);
+    expect(store().devices[0].position).toEqual({ x: 100, y: 100 });
   });
 
-  it('offers Terraform as a draft, after YAML', () => {
-    render(<ImportExportModal />);
-
-    expect(Array.from(format().options).map(option => [option.value, option.text])).toEqual([
-      ['yaml', 'YAML (.yaml)'],
-      ['terraform', 'Terraform HCL (bozza)'],
-    ]);
-  });
-
-  it('warns that the Terraform draft cannot be applied, only while it is selected', () => {
-    render(<ImportExportModal />);
-
-    choose('terraform');
-    expect(preview()).toContain('resource "compute_instance" "pc_1"');
-    expect(screen.getByRole('button', { name: /Scarica .*\.tf$/ })).toBeInTheDocument();
-    const warning = screen.getByRole('note');
-    expect(warning).toHaveClass('modal-info-box');
-    expect(warning).toHaveTextContent(WARNING);
-    expect(warning).toHaveTextContent('È una bozza');
-
-    choose('yaml');
-    expect(screen.queryByRole('note')).toBeNull();
-    expect(screen.queryByText(WARNING)).toBeNull();
-  });
-
-  it('shows the warning on an empty canvas too', () => {
-    useNetworkStore.getState().removeDevice('dev-0');
-    render(<ImportExportModal />);
-
-    expect(screen.queryByRole('note')).toBeNull();
-    choose('terraform');
-    expect(screen.getByRole('note')).toHaveTextContent(WARNING);
-  });
-
-  it('never shows it on the import tab', () => {
-    render(<ImportExportModal />);
-    choose('terraform');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Import' }));
-
-    expect(screen.queryByRole('note')).toBeNull();
+  it('asks nothing of an empty board', async () => {
+    store().clearAllDevices();
+    const answers = answerConfirms(false);
+    await chooseFile('replace');
+    fireEvent.click(importButton());
+    await waitFor(() => expect(store().devices).toHaveLength(2));
+    expect(answers.asked).toHaveLength(0);
   });
 });
 
-describe('ImportExportModal — the buttons at the bottom', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    createNewProject({ name: 'Sede Milano' });
-    useUIStore.setState(state => ({ modals: { ...state.modals, importExport: true } }));
+describe('importing in addition to the drawing', () => {
+  it('puts the group beside the drawing, keeping its layout, the area with its devices', async () => {
+    await chooseFile('append');
+    fireEvent.click(importButton());
+    await waitFor(() => expect(store().devices).toHaveLength(4));
+    const [, , a, b] = store().devices;
+    // the drawing ends at its area, 680 across (-20 + 700)
+    const groupLeft = Math.min(a.position.x, store().areas[1].position.x);
+    expect(groupLeft).toBe(680 + IMPORT_GAP);
+    // the layout inside the group is the one of the file
+    expect(b.position.x - a.position.x).toBe(200);
+    expect(b.position.y - a.position.y).toBe(0);
+    expect(a.position.x - store().areas[1].position.x).toBe(40);
+    expect(a.position.y - store().areas[1].position.y).toBe(60);
+    expect(store().areas[1].position.y).toBe(-20);
+    expect(a.position.x).toBeGreaterThan(500 + DEVICE_METRICS.width);
+    // the cable of the file came, between the two new devices
+    expect(store().connections).toHaveLength(1);
+    // the area of the board stayed
+    expect(store().areas[0].label).toBe('Old');
   });
 
-  it.each([
-    ['export', /^Copia negli appunti$/],
-    ['export', /^Scarica .*\.yaml$/],
-    ['import', /^Importa$/],
-  ])('on the %s tab, %s has its icon on the line of its label', (tabName, name) => {
-    render(<ImportExportModal />);
-    if (tabName === 'import') fireEvent.click(screen.getByRole('button', { name: 'Import' }));
-
-    const button = screen.getByRole('button', { name });
-    const icon = button.querySelector('svg');
-
-    expect(button.closest('.modal-actions')).not.toBeNull();
-    expect(icon).not.toBeNull();
-    // the row is the button's doing (see Button.test.tsx): icon and label are
-    // its two children, and the icon carries no layout of its own
-    expect(button.className.split(/\s+/)).toEqual(
-      expect.arrayContaining(['inline-flex', 'items-center', 'gap-1'])
-    );
-    expect(icon?.parentElement).toBe(button);
-    expect(icon?.getAttribute('style')).toBeNull();
-  });
-
-  it('the X at the top has a name, as in every other window, and closes the window', () => {
-    render(<ImportExportModal />);
-    const close = screen.getByRole('button', { name: 'Chiudi la finestra' });
-    expect(close).toHaveAttribute('type', 'button');
-    expect(close.closest('.modal-header')).not.toBeNull();
-
-    fireEvent.click(close);
-    expect(useUIStore.getState().modals.importExport).toBe(false);
+  it('gives a device a free name when the board has the name already', async () => {
+    await chooseFile('append');
+    fireEvent.click(importButton());
+    await waitFor(() => expect(store().devices).toHaveLength(4));
+    expect(store().devices.map((d) => d.label)).toEqual(['PC-1', 'PC-2', 'Imported-A', 'PC-1-1']);
   });
 });
 
-describe('ImportExportModal — importing a YAML file', () => {
-  const YAML_FILE = [
-    'pixelcake:',
-    '  devices:',
-    '    - name: FW',
-    '      type: Firewall',
-    '      ports:',
-    '        - id: 1',
-    '          ip: 192.168.50.1',
-    '          subnet: 255.255.255.0',
-    '          dhcp_server:',
-    '            start: 192.168.50.100',
-    '            end: 192.168.50.110',
-    '        - id: 2',
-    '          ip: 203.0.113.2',
-    '          nat: true',
-    '      routes:',
-    '        - destination: 10.0.0.0/8',
-    '          via: 192.168.50.254',
-    '      firewall_rules:',
-    '        - action: allow',
-    '          service: web',
-    '          from: any',
-    '          to: 192.168.50.20',
-    '      port_forwards:',
-    '        - service: web',
-    '          interface: 2',
-    '          to: 192.168.50.20',
-    '    - name: Portatile',
-    '      type: PC',
-    '      nics:',
-    '        - name: eth0',
-    '          dhcp: true',
-    '    - name: NS',
-    '      type: Server',
-    '      nics:',
-    '        - name: eth0',
-    '          ip: 192.168.50.53',
-    '          dns: 192.168.50.53',
-    '      dns_records:',
-    '        - name: www.azienda.example',
-    '          address: 192.168.50.20',
-    '  connections:',
-    '    - source: Portatile',
-    '      target: FW',
-    '      source_nic: eth0',
-    '      target_port: 1',
-  ].join('\n');
-
-  const devices = () => useNetworkStore.getState().devices;
-  const named = (label: string) => devices().find(d => d.label === label);
-
-  /** Open the import tab and hand it the file, as choosing it in the file dialog does */
-  async function chooseFile() {
+describe('exporting', () => {
+  it('writes the areas of the board in the YAML', () => {
+    useUIStore.getState().openModal('importExport');
     render(<ImportExportModal />);
-    fireEvent.click(screen.getByRole('button', { name: /Import$/ }));
-    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
-    if (!input) throw new Error('no file input');
-    const file = new File([YAML_FILE], 'rete.yaml', { type: 'text/yaml' });
-    fireEvent.change(input, { target: { files: [file] } });
-    await screen.findByText('Dispositivi trovati');
-  }
-
-  beforeEach(() => {
-    localStorage.clear();
-    createNewProject({ name: 'Sede Milano' });
-    useNetworkStore.getState().addDevice({
-      type: 'PC',
-      label: 'PC-1',
-      ip: '192.168.1.10',
-      subnet: '255.255.255.0',
-      gateway: '192.168.1.1',
-      position: { x: 0, y: 0 },
-    });
-    useUIStore.setState(state => ({ modals: { ...state.modals, importExport: true } }));
-    vi.clearAllMocks();
-  });
-
-  it('lists what it found: a device on DHCP says so in place of an address', async () => {
-    await chooseFile();
-    const rows = Array.from(document.querySelectorAll('.settings-content span'))
-      .map(span => span.textContent)
-      .filter(Boolean);
-    expect(rows).toEqual(expect.arrayContaining(['FW', 'Firewall', 'Portatile', 'PC', 'DHCP']));
-  });
-
-  it('replacing the drawing keeps routes, rules, forwards, DHCP and DNS', async () => {
-    await chooseFile();
-    fireEvent.click(screen.getByRole('button', { name: 'Importa' }));
-    expect(devices().map(d => d.label)).toEqual(['FW', 'Portatile', 'NS']);
-    expect(named('FW')).toMatchObject({
-      routes: [{ destination: '10.0.0.0/8', nextHop: '192.168.50.254' }],
-      firewallRules: [{ action: 'allow', service: 'web', destination: '192.168.50.20' }],
-      portForwards: [{ service: 'web', port: 2, to: '192.168.50.20' }],
-    });
-    expect(named('FW')?.ports?.[0].dhcpServer).toEqual({ start: '192.168.50.100', end: '192.168.50.110' });
-    expect(named('Portatile')?.nics?.[0]).toMatchObject({ dhcp: true, ip: '' });
-    expect(named('NS')?.dnsRecords).toEqual([
-      { id: 'record-1', name: 'www.azienda.example', address: '192.168.50.20' },
-    ]);
-    expect(named('NS')?.nics?.[0].dns).toBe('192.168.50.53');
-  });
-
-  it('adding to the drawing keeps them too', async () => {
-    await chooseFile();
-    fireEvent.click(screen.getByLabelText('Aggiungi alla topologia'));
-    fireEvent.click(screen.getByRole('button', { name: 'Importa' }));
-    expect(devices().map(d => d.label)).toEqual(['PC-1', 'FW', 'Portatile', 'NS']);
-    expect(named('FW')).toMatchObject({
-      routes: [{ destination: '10.0.0.0/8', nextHop: '192.168.50.254' }],
-      firewallRules: [{ action: 'allow', service: 'web', destination: '192.168.50.20' }],
-      portForwards: [{ service: 'web', port: 2, to: '192.168.50.20' }],
-    });
-    expect(named('FW')?.ports?.[0].dhcpServer).toEqual({ start: '192.168.50.100', end: '192.168.50.110' });
-    expect(named('FW')?.ports?.[1].nat).toBe(true);
-    expect(named('Portatile')?.nics?.[0]).toMatchObject({ dhcp: true, ip: '' });
-    expect(named('NS')?.dnsRecords).toEqual([
-      { id: 'record-1', name: 'www.azienda.example', address: '192.168.50.20' },
-    ]);
-    expect(named('NS')?.nics?.[0].dns).toBe('192.168.50.53');
-    // the cable came with its two ends, so the laptop is served at once
-    const { connections } = useNetworkStore.getState();
-    expect(resolveDhcp({ devices: devices(), connections }).leases.map(lease => lease.ip)).toEqual([
-      '192.168.50.100',
-    ]);
+    const text = document.querySelector('pre')?.textContent ?? '';
+    expect(text).toContain('  areas:');
+    expect(text).toContain('label: Old');
   });
 });

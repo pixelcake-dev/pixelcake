@@ -9,10 +9,13 @@ const amount = (value: number) => formatCount('en', value);
 const devices = (count: number) => (count === 1 ? '1 device' : `${amount(count)} devices`);
 const connections = (count: number) => (count === 1 ? '1 link' : `${amount(count)} links`);
 
+const areas = (count: number) => (count === 1 ? '1 area' : `${amount(count)} areas`);
+
 export const importExport: Dictionary['importExport'] = {
-  /** How many devices and links: of the board, of a file */
+  /** How many devices, links and areas: of the board, of a file */
   devices,
   connections,
+  areas,
 
   exportTab: {
     format: 'Format:',
@@ -51,6 +54,14 @@ export const importExport: Dictionary['importExport'] = {
     unsupportedFormat: 'Format not supported. Use a .yaml or .yml file.',
     cannotRead: 'Could not read the file',
     nothingToImport: 'No devices to import',
+    /** The question before “Replace the topology” empties the board: what will be removed */
+    replaceTitle: 'Replace the topology?',
+    replaceDetail: (deviceCount: number, connectionCount: number, areaCount: number) =>
+      `The board holds ${devices(deviceCount)}, ${connections(connectionCount)} and ${areas(areaCount)}: they will be removed and replaced by the contents of the file. This cannot be undone.`,
+    replaceConfirm: 'Replace',
+    /** After “Add to the topology”: devices of the file that had a name already on the board */
+    renamedNotice: (renamed: string) =>
+      `Names already on the board, the devices added were given a free name: ${renamed}`,
     replacedNotice: (deviceCount: number, connectionCount: number) =>
       `Topology imported: ${devices(deviceCount)}, ${connections(connectionCount)}`,
     appendedNotice: (deviceCount: number, connectionCount: number) =>
@@ -71,7 +82,16 @@ export const importExport: Dictionary['importExport'] = {
       `${deviceName}: invalid IP address "${address}"`,
     portAddressNotValid: (portId: number, address: string) =>
       `Port ${portId}: invalid IP address "${address}"`,
-    portVlanOutOfRange: (portId: number) => `Port ${portId}: VLAN out of range (1–4094)`,
+    portVlanOutOfRange: (portId: number, values: string) =>
+      `Port ${portId}: VLAN ${values} out of range (1–4094), left out`,
+    deviceVlanOutOfRange: (deviceName: string, values: string) =>
+      `${deviceName}: VLAN ${values} out of range (1–4094), left out`,
+    connectionVlanOutOfRange: (number: number, values: string) =>
+      `Link ${number}: VLAN ${values} out of range (1–4094), left out`,
+    /** `renamed` is the list of the new names, each written “old” → “new” */
+    namesRepeated: (renamed: string) =>
+      `Names used more than once, the later devices were given a free name: ${renamed}. Links that name it go to the first device that has it`,
+    areaNotValid: (number: number) => `Area ${number}: no position or size, ignored`,
     portPoolIncomplete: (portId: number) =>
       `Port ${portId}: DHCP server without a first or a last address, ignored`,
     cardPoolIncomplete: (deviceName: string, cardName: string) =>

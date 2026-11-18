@@ -21,6 +21,7 @@ const COUNTS = new Set([
   'count',
   'deviceCount',
   'connectionCount',
+  'areaCount',
   'portCount',
   'vlanCount',
   'total',
@@ -98,6 +99,7 @@ const NEITHER: Record<string, unknown> = {
       'projectName',
       'query',
       'range',
+      'renamed',
       'reason',
       'record',
       'row',
@@ -114,6 +116,7 @@ const NEITHER: Record<string, unknown> = {
       'typeName',
       'typed',
       'value',
+      'values',
       'version',
       'vlan',
     ].map((name) => [name, undefined])

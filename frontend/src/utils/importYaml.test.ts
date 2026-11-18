@@ -180,25 +180,10 @@ describe('parseYamlTopology', () => {
       });
     });
 
-    it('does NOT preserve positions: import re-lays out devices on a grid (current design)', () => {
-      // generateYaml never serializes device.position, and parseYamlTopology
-      // assigns fresh grid positions (250x200 spacing starting at 100,100).
+    it('preserves positions: the file says where each device is drawn', () => {
       const { devices, connections } = buildTopology();
       const result = parseYamlTopology(generateYaml(devices, connections));
-
-      // 4 devices -> ceil(sqrt(4)) = 2 columns
-      expect(result.devices.map((d) => d.position)).toEqual([
-        { x: 100, y: 100 },
-        { x: 350, y: 100 },
-        { x: 100, y: 300 },
-        { x: 350, y: 300 },
-      ]);
-
-      // None of the original positions survive
-      const originals = devices.map((d) => d.position);
-      for (const imported of result.devices) {
-        expect(originals).not.toContainEqual(imported.position);
-      }
+      expect(result.devices.map((d) => d.position)).toEqual(devices.map((d) => d.position));
     });
   });
 
@@ -443,43 +428,6 @@ describe('parseYamlTopology', () => {
       expect(result.connections[1].sourceNic).toBe('nic-1');
       expect(result.connections[1].targetPort).toBeUndefined();
     });
-  });
-
-  describe('duplicate device labels', () => {
-    // KNOWN BUG / design note: connections are resolved through a name->id Map.
-    // When two devices share the same name, Map.set overwrites the earlier entry,
-    // so connection endpoints resolve to the LAST device with that name and no
-    // warning is emitted. This test pins the current behavior.
-    it('resolves connections to the last device with a duplicated name (last-one-wins)', () => {
-      const yaml = [
-        'pixelcake:',
-        '  devices:',
-        '    - name: Dup',
-        '      type: Switch',
-        '    - name: Dup',
-        '      type: Router',
-        '    - name: Other',
-        '      type: PC',
-        '  connections:',
-        '    - source: Dup',
-        '      target: Other',
-      ].join('\n');
-
-      const result = parseYamlTopology(yaml);
-
-      expect(result.devices).toHaveLength(3);
-      expect(result.devices.map((d) => d.id)).toEqual(['dev-0', 'dev-1', 'dev-2']);
-      expect(result.warnings).toEqual([]); // no duplicate-name warning is produced
-
-      expect(result.connections).toHaveLength(1);
-      // "Dup" resolves to dev-1 (the Router, defined last) — NOT dev-0 (the Switch)
-      expect(result.connections[0].source).toBe('dev-1');
-      expect(result.connections[0].target).toBe('dev-2');
-    });
-
-    it.todo(
-      'desired behavior: warn about duplicate device names (or disambiguate) instead of silently binding connections to the last duplicate',
-    );
   });
 
   describe('malformed input', () => {
