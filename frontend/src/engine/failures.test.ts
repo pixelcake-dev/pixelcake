@@ -527,6 +527,61 @@ describe('a route whose line is down', () => {
   });
 });
 
+describe('a line with a port switched off at one end', () => {
+  /** twoLines() with port `portId` of `deviceId` switched off */
+  function switchedOff(deviceId: string, portId: number, base: Topology = twoLines()): Topology {
+    return {
+      ...base,
+      devices: base.devices.map(d =>
+        d.id === deviceId
+          ? { ...d, ports: d.ports?.map(p => (p.id === portId ? { ...p, enabled: false } : p)) }
+          : d
+      ),
+    };
+  }
+
+  it('is down for the router at the other end too: it takes its backup route', () => {
+    const result = traceRoute('pcA', 'pcB', switchedOff('r2', 2));
+    expect(result.verdict).toBe('success');
+    expect(way(result)).toBe('pcA > r1 > r3 > r2 > pcB');
+    expect(result.notes).toEqual([
+      'r1: the route 192.168.2.0/24 via 10.0.0.2 is unusable (port 2 on r2 is disabled), ' +
+        'the route 192.168.2.0/24 via 10.0.1.2 is used instead',
+    ]);
+  });
+
+  it('sends the reply back by the backup line as well: the ping works', () => {
+    const flow = planAndEvaluateFlow('ping', 'pcA', 'pcB', switchedOff('r1', 2));
+    expect(flow.verdict).toBe('success');
+    expect(flow.animationPath).toEqual(['pcA', 'r1', 'r3', 'r2', 'pcB', 'r2', 'r3', 'r1', 'pcA']);
+    expect(flow.notes).toContain(
+      'reply: r2: the route 192.168.1.0/24 via 10.0.0.1 is unusable (port 2 on r1 is disabled), ' +
+        'the route 192.168.1.0/24 via 10.0.2.1 is used instead'
+    );
+  });
+
+  it('works the same as a cut cable', () => {
+    const cut = planAndEvaluateFlow('ping', 'pcA', 'pcB', withFailures(twoLines(), broken([], ['main'])));
+    const off = planAndEvaluateFlow('ping', 'pcA', 'pcB', switchedOff('r2', 2));
+    expect(off.verdict).toBe(cut.verdict);
+    expect(off.animationPath).toEqual(cut.animationPath);
+    expect(off.animationLinks).toEqual(cut.animationLinks);
+  });
+
+  it('stays, and names the port, when no other route is left', () => {
+    const base = twoLines();
+    const mainOnly: Topology = {
+      ...base,
+      devices: base.devices.map(d => (d.id === 'r1' ? { ...d, routes: d.routes?.slice(0, 1) } : d)),
+    };
+    const result = traceRoute('pcA', 'pcB', switchedOff('r2', 2, mainOnly));
+    expect(result.verdict).toBe('blocked');
+    expect(result.failureReason).toBe('port 2 on r2 is disabled');
+    expect(way(result)).toBe('pcA > r1 > r2');
+    expect(result.notes).toEqual([]);
+  });
+});
+
 describe('deadInterfaces', () => {
   const drawing = topo(
     [
@@ -568,6 +623,16 @@ describe('deadInterfaces', () => {
     expect(deadInterfaces(r1, withFailures(drawing, broken([], ['two-second']))).size).toBe(0);
     const both = deadInterfaces(r1, withFailures(drawing, broken([], ['two-first', 'two-second'])));
     expect([...both]).toEqual([['port:2', 'link r1–b is down']]);
+  });
+
+  it('holds an interface whose cable ends on an interface switched off, with nothing broken', () => {
+    const off: Topology = {
+      ...drawing,
+      devices: drawing.devices.map(d =>
+        d.id === 'a' ? { ...d, ports: d.ports?.map(p => (p.id === 1 ? { ...p, enabled: false } : p)) } : d
+      ),
+    };
+    expect([...deadInterfaces(off.devices[0], off)]).toEqual([['port:1', 'port 1 on a is disabled']]);
   });
 
   it('says nothing of an interface with no cable, nor of a cable attached to no interface', () => {

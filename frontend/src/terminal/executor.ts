@@ -24,6 +24,7 @@ import {
   requiresExplicitBinding,
   routingTable,
   isBackupRoute,
+  deadInterfaces,
   hasInterfaceAddresses,
   formatNetwork,
   canonicalNetwork,
@@ -854,8 +855,12 @@ function showNeighbors(topo: Topology, d: NetworkDevice): TerminalLine[] {
   return lines;
 }
 
-/** `show routes <device>` — the routing table exactly as the engine reads it */
-function showRoutes(d: NetworkDevice): TerminalLine[] {
+/**
+ * `show routes <device>` — the routing table exactly as the engine reads it,
+ * with the routes it cannot use marked: an interface switched off, a line
+ * down (cut, the device at the other end down, or its port switched off)
+ */
+function showRoutes(topo: Topology, d: NetworkDevice): TerminalLine[] {
   const lines = [heading(`ROUTES of ${d.label}`)];
   if (isL3Capable(d) && !hasInterfaceAddresses(d)) {
     lines.push(muted(`  ${d.label} has no interface addresses: it lets traffic through, its routes are not used`));
@@ -863,6 +868,7 @@ function showRoutes(d: NetworkDevice): TerminalLine[] {
   }
 
   const table = routingTable(d);
+  const dead = deadInterfaces(d, topo);
   if (table.length === 0) {
     lines.push(muted('  no routes: the device has no address'));
   } else {
@@ -878,6 +884,8 @@ function showRoutes(d: NetworkDevice): TerminalLine[] {
       lines.push(err(`${row}  ✗ next hop on none of its networks`));
     } else if (!entry.out.enabled) {
       lines.push(muted(`${row}  (interface down)`));
+    } else if (dead.has(entry.out.iface?.key ?? '')) {
+      lines.push(muted(`${row}  (no link: ${dead.get(entry.out.iface?.key ?? '')})`));
     } else {
       lines.push(line(row));
     }
@@ -1138,7 +1146,7 @@ function runShow(what: ShowTarget, deviceQuery: string | undefined, context: Ter
   if (what === 'ports') return showPorts(topo, device);
   if (what === 'interfaces') return showInterfaces(topo, device);
   if (what === 'ip') return showIp(topo, device);
-  if (what === 'routes') return showRoutes(device);
+  if (what === 'routes') return showRoutes(topo, device);
   if (what === 'rules') return showRules(device);
   if (what === 'nat') return showNat(device);
   return showNeighbors(topo, device);
