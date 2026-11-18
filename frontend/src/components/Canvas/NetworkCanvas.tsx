@@ -43,6 +43,7 @@ import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
 import type { CanvasArea, NetworkDevice as NetworkDeviceType } from '@/types/network';
 import { useLanguage } from '@/i18n';
+import { shortcutLetter } from '@/utils/shortcutKey';
 
 // Define node and edge types outside component to prevent re-renders
 const nodeTypes: NodeTypes = {
@@ -544,12 +545,12 @@ const NetworkCanvas = () => {
   );
   useEffect(() => () => clearTimeout(viewAtRest.current), []);
 
-  // Keyboard shortcuts: Ctrl+C (copy), Ctrl+V (paste)
+  // Keyboard shortcuts: Ctrl+C (copy), Ctrl+V (paste), Cmd on a Mac. The
+  // letter is read whatever Caps Lock says (utils/shortcutKey)
   useEffect(() => {
     const handleKeyboardShortcuts = (e: KeyboardEvent) => {
-      // Check if Ctrl (Windows/Linux) or Cmd (Mac) is pressed
-      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-      if (!isCtrlOrCmd) return;
+      const letter = shortcutLetter(e);
+      if (letter === null) return;
       // Nothing is copied or pasted into a drawing that is being presented
       if (usePresentationStore.getState().active) return;
 
@@ -563,13 +564,13 @@ const NetworkCanvas = () => {
       if (isTyping || (window.getSelection()?.toString() ?? '') !== '') return;
 
       // Ctrl+C - Copy selection
-      if (isCtrlOrCmd && e.key === 'c' && selectedDeviceIds.length > 0) {
+      if (letter === 'c' && selectedDeviceIds.length > 0) {
         e.preventDefault();
         copySelection();
       }
 
       // Ctrl+V - Paste from clipboard
-      if (isCtrlOrCmd && e.key === 'v' && clipboard && clipboard.devices.length > 0) {
+      if (letter === 'v' && clipboard && clipboard.devices.length > 0) {
         e.preventDefault();
         paste();
       }

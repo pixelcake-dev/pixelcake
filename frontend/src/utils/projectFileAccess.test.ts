@@ -922,6 +922,20 @@ describe('project file access', () => {
       unregister();
     });
 
+    it('works on a keyboard whose letters are not Latin: the key of S', async () => {
+      const app = await appWithProject();
+      const file = diskFile('sede-milano.pixelcake.json');
+      savePicker(file);
+      const unregister = app.access.registerSaveShortcut();
+
+      // a Russian layout: the key of S writes «ы»
+      const event = press({ key: 'ы', code: 'KeyS', ctrlKey: true });
+
+      expect(event.defaultPrevented).toBe(true);
+      await vi.waitFor(() => expect(file.writes).toHaveLength(1));
+      unregister();
+    });
+
     it('ignores other keys and other combinations', async () => {
       const app = await appWithProject();
       const picker = savePicker();

@@ -215,6 +215,22 @@ describe('NetworkCanvas — mouse and keyboard', () => {
       expect(labels()).toEqual(['PC-1', 'PC-2', 'PC-1']);
     });
 
+    it('with Caps Lock on (the keys come as capital letters) Ctrl+C and Ctrl+V work the same', async () => {
+      addPc('PC-1');
+      addPc('PC-2');
+      renderCanvas();
+      await clickDevice('PC-1');
+
+      fireEvent.keyDown(document.body, { key: 'C', code: 'KeyC', ctrlKey: true });
+      expect(useNetworkStore.getState().clipboard?.devices.map(d => d.label)).toEqual(['PC-1']);
+
+      fireEvent.keyDown(document.body, { key: 'V', code: 'KeyV', ctrlKey: true });
+      expect(labels()).toHaveLength(3);
+      // Ctrl+Shift+V is another shortcut of the browser: nothing is pasted
+      fireEvent.keyDown(document.body, { key: 'V', code: 'KeyV', ctrlKey: true, shiftKey: true });
+      expect(labels()).toHaveLength(3);
+    });
+
     it('Ctrl+C with nothing selected and Ctrl+V with nothing copied are left to the browser', () => {
       addPc('PC-1');
       renderCanvas();
