@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Duplicate a board**, from the Explorer: the copy comes right after the original, with all it holds (devices, cables, areas, notes, settings), named as a copy.
+- **Rules on a router.** A router has the «Regole» tab (“Rules”) in its window, with the editor of a firewall, and `show rules` and `add rule` in the terminal: its access list. The engine already applied rules written on a router; now they can be seen and changed. As before, what no rule matches goes through.
+
+### Changed
+- **Copy and paste.** A pasted device takes the first free name of its family, with the rule of a new device: `PC-1` pasted gives the first free `PC-n`. Each of its network cards gets a new MAC address. A pasted PC, and any other end device that is not a server, takes its address from DHCP; a notice names those no DHCP server answers, which stay without one, as a real PC would. Servers, routers, firewalls and switches keep the addresses of the original. Pasting again goes past the copies already there.
+- **Areas join the selection.** A selection box takes the areas it holds whole; Ctrl + click on the name or the border of an area adds it or takes it away. Selected areas move, are copied, pasted and deleted with the devices; an area can also be copied alone. With two or more devices selected, a button «Racchiudi in un riquadro» (“Enclose in an area”) shows over them.
+- **The Delete key asks first**, in a window of the app, as the right-click menu does: for one thing the question of its menu, for more how many of each. Enter deletes, Esc deletes nothing.
+- **A name is taken once.** A name another device has, compared as the terminal compares names (whatever the case, the spaces around it not counted), is refused under the field of the window that adds a device and of the window of a device, and by `set name` in the terminal. In a drawing that already has two devices with one name, a command naming it is refused with a message that says how many have it, instead of taking the first.
+- **A new device goes to the first free place in view**, row by row from the top left, clear of the open panel, the small map and the zoom buttons, instead of piling up on the same spot; adding in bulk starts from there too.
+- **The terminal** opens small, at the right of the board, so that the drawing stays in view; Esc closes it, interrupting first a ping or a trace that runs (while presenting, the first Esc closes the terminal and the second leaves the presentation). Renaming the device the terminal is inside, with `set name` or in its window, moves the prompt to the new name. `set subnet` takes a mask, dotted or as `/24`, and refuses anything else. `show interfaces` shows in MODE-ZONE the zone of a firewall port and the mode of a switch port, no longer the kind of port (that is in `show ports`). Adding a route that is there already says so. `show config` no longer ends the lines of the network cards with a space.
+- **YAML.** The import keeps as written a name that YAML reads as a number or as true/false (`10`, `true`), with its links; of a name given twice, the later devices get the first free name, and a warning lists them; a VLAN outside 1–4094 is left out, and the warning says so. «Aggiungi» (“Add”) places the new group beside the drawing, its layout and areas kept; «Sostituisci» (“Replace”) asks first, saying how many devices, cables and areas go. The export writes the place of each device and the areas, and the import reads them back; a file without places is laid out in a grid as before.
+- **Templates.** A template can be made for a kind of device the generic templates cover already. «Ripristina i template di serie» (“Restore built-in templates”) brings back the built-in templates that were deleted, and leaves the others. The card of the custom templates no longer promises Terraform fields.
+- **Impostazioni → Avanzate** (“Settings → Advanced”) lists every shortcut, 36 in five groups, as the documentation does; a test holds the list, the page and the keys the code listens to together.
+- **Ctrl + C, Ctrl + V and Ctrl + S** work with Caps Lock on, and on a keyboard whose letters are not Latin.
+
+### Fixed
+- **A port switched off takes its line down at both ends.** The router at the other end of the cable now sends its replies by its backup route too, as a real router noticing the dead line would; `show routes` marks the routes left with no link. Through a switch the far router does not notice, as with no routing protocol.
+- **A firewall remembers its own connections.** A reply goes through a firewall only if that firewall saw the request; one the request never crossed judges the reply as a new packet, with its rules and zones, and the reason says that it never saw the request.
+- **A route whose next hop is on none of the router's networks** is passed over, with a note, and the next route or the default one is used, instead of catching the traffic and stopping it.
+- **A rule passed over on a port in zone «Nessuna»** (“None”) says that the port is in no zone, no longer that its cable is not attached to a port.
+- **A ping from a device to itself** succeeds, as `trace` did, in the terminal and in the simulation panel.
+- **Cloud email** leaves by an Internet or Cloud symbol, or by a device whose name has Internet, Cloud, WAN or ISP as a whole word: «Display-1» is no longer taken for the way out because it holds «isp».
+
+### Development
+- The tests use the localStorage of jsdom also on Node 25 and later, and the checks on GitHub run on Node 26.
+
+
 ## [0.9.0] - 2026-11-17
 
 The first public version: the app at https://app.pixelcake.dev, its documentation at https://app.pixelcake.dev/docs/, the code under the AGPL.
