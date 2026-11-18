@@ -38,7 +38,7 @@ const DeviceTemplatesTab = () => {
 
       {/* Template Tab Content */}
       <div>
-        {templateTab === 'generic' && <GenericTemplatesTab templates={genericTemplates} />}
+        {templateTab === 'generic' && <GenericTemplatesTab templates={genericTemplates} onCreated={() => setTemplateTab('custom')} />}
         {templateTab === 'custom' && <CustomTemplatesTab templates={customTemplates} />}
       </div>
     </div>

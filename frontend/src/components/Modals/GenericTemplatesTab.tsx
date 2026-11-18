@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import DeviceDrawing from '@/components/ui/DeviceDrawing';
 import { drawingOf } from '@/utils/deviceDrawing';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus, RotateCcw } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { useTemplateStore } from '@/store/templateStore';
 import TemplateEditModal from './TemplateEditModal';
@@ -11,12 +12,15 @@ import { useT } from '@/i18n';
 
 interface GenericTemplatesTabProps {
   templates: DeviceTemplate[];
+  /** A template was made: it is one of the custom ones */
+  onCreated?: () => void;
 }
 
-const GenericTemplatesTab = ({ templates }: GenericTemplatesTabProps) => {
+const GenericTemplatesTab = ({ templates, onCreated }: GenericTemplatesTabProps) => {
   const t = useT();
   const words = t.templates.devices.generic;
   const deleteTemplate = useTemplateStore((state) => state.deleteTemplate);
+  const restoreDefaultTemplates = useTemplateStore((state) => state.restoreDefaultTemplates);
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<DeviceTemplate | null>(null);
@@ -43,6 +47,12 @@ const GenericTemplatesTab = ({ templates }: GenericTemplatesTabProps) => {
     }
   };
 
+  const handleRestore = () => {
+    const restored = restoreDefaultTemplates();
+    if (restored === 0) toast.info(words.nothingToRestore);
+    else toast.success(words.restored(restored));
+  };
+
   const handleCloseModal = () => {
     setEditModalOpen(false);
     setSelectedTemplate(null);
@@ -53,10 +63,16 @@ const GenericTemplatesTab = ({ templates }: GenericTemplatesTabProps) => {
       {/* Header with Add Button */}
       <div className="tab-header">
         <p className="text-sm text-[var(--text-color-light)]">{words.intro}</p>
-        <Button variant="primary" onClick={handleAddNew} className="add-template-btn">
-          <Plus size={18} />
-          {words.add}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={handleRestore}>
+            <RotateCcw size={16} />
+            {words.restore}
+          </Button>
+          <Button variant="primary" onClick={handleAddNew} className="add-template-btn">
+            <Plus size={18} />
+            {words.add}
+          </Button>
+        </div>
       </div>
 
       {/* Template Grid */}
@@ -98,6 +114,7 @@ const GenericTemplatesTab = ({ templates }: GenericTemplatesTabProps) => {
         isOpen={editModalOpen}
         onClose={handleCloseModal}
         template={selectedTemplate}
+        onCreated={onCreated}
       />
     </div>
   );

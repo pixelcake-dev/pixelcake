@@ -22,6 +22,13 @@ interface TemplateStore {
   deleteTemplate: (id: string) => void;
   getTemplate: (id: string) => DeviceTemplate | undefined;
   loadDefaultTemplates: () => void;
+  /**
+   * Put back the built-in templates that are missing (deleted): each in its
+   * place among the built-in ones. The ones that are there are not touched,
+   * a built-in one the user edited as little as those the user made. Gives
+   * how many were put back.
+   */
+  restoreDefaultTemplates: () => number;
 
   // Connection Template Actions
   addConnectionTemplate: (template: Omit<ConnectionTemplate, 'id'>) => void;
@@ -482,6 +489,22 @@ export const useTemplateStore = create<TemplateStore>()(
 
       loadDefaultTemplates: () => {
         set({ templates: DEFAULT_TEMPLATES });
+      },
+
+      restoreDefaultTemplates: () => {
+        const { templates } = get();
+        const there = new Map(templates.map((template) => [template.id, template] as const));
+        const missing = DEFAULT_TEMPLATES.filter((template) => !there.has(template.id));
+        if (missing.length === 0) return 0;
+        const builtInIds = new Set(DEFAULT_TEMPLATES.map((template) => template.id));
+        set({
+          // (the built-in ones in their order, as the app comes with them, then what is not built-in)
+          templates: [
+            ...DEFAULT_TEMPLATES.map((template) => there.get(template.id) ?? template),
+            ...templates.filter((template) => !builtInIds.has(template.id)),
+          ],
+        });
+        return missing.length;
       },
 
       // Connection Template Actions
