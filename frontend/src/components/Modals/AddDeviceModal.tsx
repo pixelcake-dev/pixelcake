@@ -12,8 +12,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { findNextAvailableIP, generateMacAddress } from '@/utils/ipHelpers';
-import { firstFreePlace } from '@/utils/placeDevice';
-import { newDevicePlace } from '@/utils/viewPlace';
+import { allOnScreen, newDeviceSpot } from '@/utils/viewPlace';
 import { isNameTaken, newDeviceName, newDevicePorts } from '@/utils/newDevice';
 import { nicProblems, tidyNic } from '@/utils/interfaceProblems';
 import { isEndDeviceKind } from '@/utils/defaultDns';
@@ -120,15 +119,12 @@ const AddDeviceModal = () => {
       return;
     }
 
-    // The new device appears where the user is looking: at the centre of the
-    // visible part of the canvas, or in the nearest free place when another
-    // device is already there. Never at random: it is where one expects it
-    // (a batch added in bulk starts there too)
+    // The new device appears where the user is looking: in the first free
+    // place of the visible part of the canvas, row by row from its top left,
+    // out of the way of the panel and the small map. Never at random, and
+    // never on top of another: it is where one expects it
     const { devices: placed } = useNetworkStore.getState();
-    const place = firstFreePlace(
-      newDevicePlace(),
-      placed.map((device) => device.position)
-    );
+    const place = newDeviceSpot(placed.map((device) => device.position));
 
     // A router or firewall does not take the gateway of the end devices: its
     // gateway is its default route, set later by whoever configures it
@@ -159,7 +155,9 @@ const AddDeviceModal = () => {
       nics: keptCard ? [keptCard] : undefined,
     });
     // The new device is the selected one: it stands out, and is found at once
+    // (when no free place was left in view, the view is brought to it)
     useNetworkStore.getState().selectMultipleDevices([newId]);
+    if (!allOnScreen([place])) useNetworkStore.getState().triggerFitView([newId]);
 
     handleClose();
   };

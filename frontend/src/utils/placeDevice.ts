@@ -72,6 +72,46 @@ function isFreeOf(place: Place, taken: Place[]): boolean {
   );
 }
 
+/** A part of the board, in its coordinates */
+export interface BoardRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/**
+ * Where a device added by itself goes: the first free place of the part of
+ * the board on screen, row by row from the top left, on the grid of the
+ * board (multiples of NEW_DEVICE_STEP, so that devices added one at a time
+ * line up, wherever the view was moved in between). A place is left out when
+ * a device is on it, when the device would not be wholly in view, or when it
+ * would be under something that covers the board (`blocked`: a panel open
+ * beside it, the small map). None when the view has no free place left.
+ *
+ * @param view The part of the board on screen, already less a margin
+ * @param taken Where the devices of the board are
+ * @param blocked The parts of the view that are covered
+ * @param size How large a device is drawn
+ */
+export function placeInView(
+  view: BoardRect,
+  taken: Place[],
+  blocked: BoardRect[],
+  size: { width: number; height: number }
+): Place | null {
+  const covered = (x: number, y: number) =>
+    blocked.some(
+      (rect) => x < rect.right && x + size.width > rect.left && y < rect.bottom && y + size.height > rect.top
+    );
+  for (let y = Math.ceil(view.top / STEP.y) * STEP.y; y + size.height <= view.bottom; y += STEP.y) {
+    for (let x = Math.ceil(view.left / STEP.x) * STEP.x; x + size.width <= view.right; x += STEP.x) {
+      if (!covered(x, y) && isFreeOf({ x, y }, taken)) return { x, y };
+    }
+  }
+  return null;
+}
+
 /**
  * The places of `count` devices added together: a grid of rows, with as
  * many columns as rows or one more, from `start` to the right and down. A

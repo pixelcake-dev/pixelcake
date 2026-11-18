@@ -76,37 +76,71 @@ describe('AddDeviceModal — the gateway of a new device', () => {
 });
 
 describe('AddDeviceModal — where a new device appears', () => {
-  it('in the middle of what the user is looking at, wherever the view was moved', () => {
-    const near = (value: number, target: number) => Math.abs(value - target) <= 130;
-    const centre = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  beforeEach(() => {
+    useNetworkStore.getState().setViewport({ x: 0, y: 0, zoom: 1 });
+  });
 
-    // view untouched: the centre of the window
+  // (jsdom has no canvas on the page: the view is the window, 1024 by 768)
+  const inView = (place: { x: number; y: number }) => {
+    const { x, y, zoom } = useNetworkStore.getState().viewport;
+    return (
+      place.x >= -x / zoom &&
+      place.y >= -y / zoom &&
+      place.x + 104 <= (window.innerWidth - x) / zoom &&
+      place.y + 94 <= (window.innerHeight - y) / zoom
+    );
+  };
+
+  it('in the first free place of what the user is looking at, from its top left, wherever the view was moved', () => {
+    // view untouched: the first place of the grid of the board inside it
     const first = add('PC', 'tpl-pc');
-    expect(near(first.position.x, centre.x)).toBe(true);
-    expect(near(first.position.y, centre.y)).toBe(true);
+    expect(first.position).toEqual({ x: 160, y: 130 });
+    expect(inView(first.position)).toBe(true);
 
     // view moved far away and zoomed out: the device follows it
     useNetworkStore.getState().setViewport({ x: -4000, y: -3000, zoom: 0.5 });
     const second = add('PC', 'tpl-pc');
-    expect(near(second.position.x, (centre.x + 4000) / 0.5)).toBe(true);
-    expect(near(second.position.y, (centre.y + 3000) / 0.5)).toBe(true);
+    expect(inView(second.position)).toBe(true);
+    expect(second.position).toEqual({ x: 8160, y: 6110 });
   });
 
-  it('never on top of the one added before, and always in the same place: nothing is left to chance', () => {
-    const first = add('PC', 'tpl-pc');
-    const second = add('PC', 'tpl-pc');
-    const third = add('Switch', 'tpl-switch');
-    const apart = (a: typeof first, b: typeof first) =>
-      Math.abs(a.position.x - b.position.x) >= 120 || Math.abs(a.position.y - b.position.y) >= 90;
-    expect(apart(first, second)).toBe(true);
-    expect(apart(first, third)).toBe(true);
-    expect(apart(second, third)).toBe(true);
+  it('one after the other along a row: never on top of each other, and the same places for the same drawing', () => {
+    const added = [add('PC', 'tpl-pc'), add('PC', 'tpl-pc'), add('Switch', 'tpl-switch')];
+    expect(added.map((device) => device.position)).toEqual([
+      { x: 160, y: 130 },
+      { x: 320, y: 130 },
+      { x: 480, y: 130 },
+    ]);
 
     // the same three again, on an empty canvas: the same three places
-    const before = [first, second, third].map((device) => device.position);
     useNetworkStore.getState().clearAllDevices();
     const again = [add('PC', 'tpl-pc'), add('PC', 'tpl-pc'), add('Switch', 'tpl-switch')];
-    expect(again.map((device) => device.position)).toEqual(before);
+    expect(again.map((device) => device.position)).toEqual(added.map((device) => device.position));
+  });
+
+  it('a place a device was moved away from is the next one taken', () => {
+    const first = add('PC', 'tpl-pc');
+    add('PC', 'tpl-pc');
+    useNetworkStore.getState().updateDevice(first.id, { position: { x: 600, y: 500 } });
+
+    expect(add('PC', 'tpl-pc').position).toEqual({ x: 160, y: 130 });
+  });
+
+  it('with no free place left in view, the nearest free one to its middle, and the view is brought to it', () => {
+    // every place of the view taken
+    const { addDevice } = useNetworkStore.getState();
+    for (let y = 130; y + 94 <= 744; y += 130) {
+      for (let x = 160; x + 104 <= 1000; x += 160) {
+        addDevice({ type: 'PC', label: `PC-${x}-${y}`, ip: '', subnet: '', gateway: '', position: { x, y } });
+      }
+    }
+    const before = useNetworkStore.getState().fitViewRequest;
+
+    const device = add('PC', 'tpl-pc');
+
+    expect(inView(device.position)).toBe(false);
+    expect(useNetworkStore.getState().fitViewRequest).toBe(before + 1);
+    expect(useNetworkStore.getState().fitViewNodes).toEqual([device.id]);
   });
 
   it('is the selected device, alone: it is found at once', () => {

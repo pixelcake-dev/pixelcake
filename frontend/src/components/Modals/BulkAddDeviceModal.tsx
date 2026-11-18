@@ -10,7 +10,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { bulkAddDevices } from '@/utils/bulkDeviceHelpers';
-import { allOnScreen, newDevicePlace } from '@/utils/viewPlace';
+import { allOnScreen, newDeviceSpot } from '@/utils/viewPlace';
 import { withLeases } from '@/engine';
 import { useT } from '@/i18n';
 
@@ -183,7 +183,7 @@ const BulkAddDeviceModal = () => {
       },
       // In a grid where the user is looking, from where the window that adds
       // one device puts a new one, past the places that are taken
-      newDevicePlace()
+      newDeviceSpot(devices.map((device) => device.position))
     );
 
     closeModal('bulkAddDevice');

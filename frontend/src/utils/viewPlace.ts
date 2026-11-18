@@ -7,7 +7,13 @@
 
 import { useNetworkStore } from '@/store/networkStore';
 import { DEVICE_METRICS, deviceHeight } from '@/utils/deviceGeometry';
-import type { Place } from '@/utils/placeDevice';
+import { firstFreePlace, placeInView, type Place } from '@/utils/placeDevice';
+
+/** How far from the border of the view a device added by itself stays, on screen */
+const VIEW_MARGIN = 24;
+
+/** What may cover the board: a panel open beside it, the small map, the zoom buttons */
+const COVERS = ['.sidebar-panel.open', '.react-flow__minimap', '.react-flow__controls'];
 
 export interface CanvasRect {
   left: number;
@@ -43,6 +49,48 @@ export function newDevicePlace(): Place {
     x: Math.round((view.left + view.right) / 2) - DEVICE_METRICS.width / 2,
     y: Math.round((view.top + view.bottom) / 2) - deviceHeight(true) / 2,
   };
+}
+
+/** The parts of the board on screen that something of the page covers, in the coordinates of the board */
+function coveredOnScreen(): CanvasRect[] {
+  const canvas = document.querySelector('.react-flow')?.getBoundingClientRect();
+  if (!canvas) return [];
+  const { viewport } = useNetworkStore.getState();
+  const zoom = viewport.zoom || 1;
+  return COVERS.flatMap((selector) => {
+    const rect = document.querySelector(selector)?.getBoundingClientRect();
+    if (!rect || rect.width === 0 || rect.height === 0) return [];
+    return [
+      {
+        left: (rect.left - canvas.left - viewport.x) / zoom,
+        top: (rect.top - canvas.top - viewport.y) / zoom,
+        right: (rect.right - canvas.left - viewport.x) / zoom,
+        bottom: (rect.bottom - canvas.top - viewport.y) / zoom,
+      },
+    ];
+  });
+}
+
+/**
+ * Where a device added by itself goes: the first free place of what is on
+ * screen, row by row from the top left (placeInView), out of the way of the
+ * panels over the board. With no free place left in view, the nearest free
+ * one to its middle (firstFreePlace), which the window that adds it then
+ * brings into view.
+ *
+ * @param taken Where the devices of the board are
+ */
+export function newDeviceSpot(taken: Place[]): Place {
+  const view = canvasOnScreen();
+  const margin = VIEW_MARGIN / (useNetworkStore.getState().viewport.zoom || 1);
+  const inner = {
+    left: view.left + margin,
+    top: view.top + margin,
+    right: view.right - margin,
+    bottom: view.bottom - margin,
+  };
+  const size = { width: DEVICE_METRICS.width, height: deviceHeight(true) };
+  return placeInView(inner, taken, coveredOnScreen(), size) ?? firstFreePlace(newDevicePlace(), taken);
 }
 
 /** True when every one of these devices is wholly on screen */
