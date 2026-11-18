@@ -316,7 +316,7 @@ describe('interface … pool … dns', () => {
       '  eth0: 192.168.10.100 / 255.255.255.0 gw 192.168.10.1 dns 192.168.20.10 (dhcp from Router-1 port 1)'
     );
     expect(output('show config PC-1')).toContain(
-      '  nic eth0: 192.168.10.100 / 255.255.255.0 gw 192.168.10.1 dns 192.168.20.10 (dhcp from Router-1 port 1) '
+      '  nic eth0: 192.168.10.100 / 255.255.255.0 gw 192.168.10.1 dns 192.168.20.10 (dhcp from Router-1 port 1)'
     );
     expect(output('show dhcp')[2]).toBe(
       '  Router-1 port 1        192.168.10.100 – 192.168.10.199  gateway 192.168.10.1  dns 192.168.20.10  1 leased, 99 free of 100'
@@ -900,7 +900,7 @@ describe('a card that asks a DNS server, and a server that answers, in the other
   it('show ip and show config write the DNS server after the gateway, only where there is one', () => {
     expect(output('show ip PC-1')[4]).toBe('  eth0: 192.168.10.11 / 255.255.255.0 gw 192.168.10.1 dns 192.168.20.10');
     expect(output('show config PC-1')).toContain(
-      '  nic eth0: 192.168.10.11 / 255.255.255.0 gw 192.168.10.1 dns 192.168.20.10 '
+      '  nic eth0: 192.168.10.11 / 255.255.255.0 gw 192.168.10.1 dns 192.168.20.10'
     );
     expect(output('show ip PC-2')[4]).toBe('  eth0: 192.168.10.12 / 255.255.255.0 gw 192.168.10.1');
     expect(output('show config PC-2').join('\n')).not.toContain('dns');

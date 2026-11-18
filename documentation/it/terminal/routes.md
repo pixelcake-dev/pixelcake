@@ -24,7 +24,7 @@ Aggiunge una rotta statica: ciò che è diretto a `<network>` viene mandato a `<
 | `<next hop>` | L'indirizzo del router successivo, oppure il nome di un dispositivo che ha un indirizzo su una delle reti di questo router: il comando scrive allora quell'indirizzo e dice quale (`Mail-01 → 192.168.20.20`) |
 | `<device>` | Il router o il firewall su cui si scrive la rotta. Dentro `use <device>` si tralascia |
 
-Se la rete ha già una rotta, il comando non ne aggiunge una seconda: ne cambia il prossimo salto, e la risposta dice qual era. Una seconda rotta verso la stessa rete è una rotta di riserva ([più avanti](#add-backup-route)). Il comando avvisa, e scrive la rotta lo stesso, quando il prossimo salto non sta su nessuna delle reti del dispositivo: la rotta non si può usare finché una delle sue porte non ha un indirizzo sulla rete del prossimo salto, e `show routes` la segna con `✗ next hop on none of its networks`. Un router le cui porte non hanno ancora un indirizzo riceve lo stesso avviso in un'altra forma: le sue rotte non vengono usate finché una porta non ne ha uno.
+Se la rete ha già una rotta, il comando non ne aggiunge una seconda: ne cambia il prossimo salto, e la risposta dice qual era. La stessa rotta ripetuta, con il prossimo salto che ha già, non cambia nulla, e la risposta lo dice. Una seconda rotta verso la stessa rete è una rotta di riserva ([più avanti](#add-backup-route)). Il comando avvisa, e scrive la rotta lo stesso, quando il prossimo salto non sta su nessuna delle reti del dispositivo: la rotta non si può usare finché una delle sue porte non ha un indirizzo sulla rete del prossimo salto, e `show routes` la segna con `✗ next hop on none of its networks`. Un router le cui porte non hanno ancora un indirizzo riceve lo stesso avviso in un'altra forma: le sue rotte non vengono usate finché una porta non ne ha uno.
 
 Il prossimo salto viene scritto come indirizzo; il motore lo legge alla domanda successiva. Su un router la rotta predefinita è anche il «Gateway (rotta predefinita)» della sua finestra, e `set gateway` scrive la stessa cosa ([Dispositivi e indirizzi](devices-and-addresses.md#set)).
 
@@ -52,6 +52,8 @@ pixelcake> add route 192.168.2.0/24 via 10.0.1.2 on R-Sede
 R-Sede: route to 192.168.2.0/24 now goes via 10.0.1.2 (was 10.0.0.2)
 pixelcake> add route 192.168.2.0/24 via 10.0.0.2 on R-Sede
 R-Sede: route to 192.168.2.0/24 now goes via 10.0.0.2 (was 10.0.1.2)
+pixelcake> add route 192.168.2.0/24 via 10.0.0.2 on R-Sede
+R-Sede: route to 192.168.2.0/24 via 10.0.0.2 is already there, nothing changed
 ```
 
 Una rotta predefinita, e una rotta il cui prossimo salto non sta dove dovrebbe:

@@ -23,7 +23,7 @@ Imposta una proprietà di un dispositivo: il suo indirizzo, il suo gateway prede
 |---|---|
 | `<device>` | Il dispositivo da cambiare. Dentro `use <device>` si tralascia |
 | `<address>` | Un indirizzo IPv4, `192.168.10.21`. Viene controllato prima di essere scritto |
-| `<mask>` | La subnet mask, `255.255.255.0`. Il comando scrive ciò che viene digitato: non viene controllata |
+| `<mask>` | La subnet mask, `255.255.255.0`. Una maschera in forma puntata, oppure un prefisso come `/24` (scritto come maschera puntata). Viene controllata prima di essere scritta |
 | `<new name>` | Il nuovo nome del dispositivo, di una o più parole. Viene per ultimo nel comando, quindi non servono virgolette |
 
 Che cosa fa ciascuno:
@@ -42,6 +42,9 @@ PC-1: ip set to 192.168.10.12
   warning: 192.168.10.12 is also the address of PC-2
 pixelcake> set subnet of PC-1 to 255.255.255.128
 PC-1: subnet set to 255.255.255.128
+pixelcake> set subnet of PC-1 to banana
+"banana" is not a valid subnet mask
+  write it as 255.255.255.0 or as /24
 pixelcake> set gateway of PC-1 to 192.168.10.254
 PC-1: gateway set to 192.168.10.254
 pixelcake> show config PC-1
@@ -50,7 +53,7 @@ PC-1 — PC
   subnet:   255.255.255.128
   gateway:  192.168.10.254
   vlans:    none (untagged)
-  nic eth0: 192.168.10.12 / 255.255.255.128 gw 192.168.10.254 
+  nic eth0: 192.168.10.12 / 255.255.255.128 gw 192.168.10.254
 pixelcake> set gateway of Router-1 to 10.0.0.9
 Router-1: gateway set to 10.0.0.9
   the gateway of a router is its default route — "show routes Router-1"
@@ -58,7 +61,7 @@ pixelcake> set ip of SW-Office to 192.168.10.3
 SW-Office: ip set to 192.168.10.3
 ```
 
-Il nome può essere di più parole, e un nome che un altro dispositivo ha già non viene rifiutato.
+Il nome può essere di più parole. Un nome che un altro dispositivo ha già, in qualunque grafia (`pc-1` è `PC-1`), viene rifiutato: il terminale trova un dispositivo dal nome, e due dispositivi con lo stesso nome non si distinguerebbero. Si può cambiare la grafia, maiuscole comprese, del nome del dispositivo stesso.
 
 ```ncl sample=office
 pixelcake> set name of PC-1 to Accettazione
@@ -77,8 +80,18 @@ Web-01                   Server         192.168.20.10    -
 Mail-01                  Server         192.168.20.20    -
 ```
 
-> [!WARNING]
-> Rinominare il dispositivo in cui ti trovi (`use <device>`) lascia il prompt sul vecchio nome, e i comandi che hanno bisogno del dispositivo rispondono che non ne è indicato nessuno. Esci con `exit` ed entra di nuovo con il nuovo nome.
+Dentro `use <device>`, rinominare il dispositivo ti lascia dentro: il prompt prende il nuovo nome.
+
+```ncl sample=office
+pixelcake> use PC-1
+context: PC-1 — "from" is now implied, "exit" to leave
+PC-1> set name of PC-2 to pc-1
+the name "pc-1" is taken by another device: choose another one
+PC-1> set name Front desk
+PC-1 renamed to "Front desk"
+Front desk> exit
+left Front desk
+```
 
 ## connect, disconnect {#connect}
 

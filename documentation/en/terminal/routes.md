@@ -24,7 +24,7 @@ Adds a static route: what is for `<network>` is sent to `<next hop>`.
 | `<next hop>` | The address of the next router, or the name of a device that has an address on a network of this one: the command then writes that address and says which (`Mail-01 → 192.168.20.20`) |
 | `<device>` | The router or firewall the route is written on. Inside `use <device>` it is left out |
 
-A route to a network that already has one does not add a second: its next hop is changed, and the answer says what it was. A second route to the same network is a backup route ([below](#add-backup-route)). The command warns, and writes the route all the same, when the next hop is on none of the networks of the device: the route cannot be used until one of its ports has an address on the network of the next hop, and `show routes` marks it `✗ next hop on none of its networks`. A router whose ports have no address yet gets the same warning in a different form: its routes are not used until a port has one.
+A route to a network that already has one does not add a second: its next hop is changed, and the answer says what it was. The same route again, with the next hop it already has, changes nothing, and the answer says so. A second route to the same network is a backup route ([below](#add-backup-route)). The command warns, and writes the route all the same, when the next hop is on none of the networks of the device: the route cannot be used until one of its ports has an address on the network of the next hop, and `show routes` marks it `✗ next hop on none of its networks`. A router whose ports have no address yet gets the same warning in a different form: its routes are not used until a port has one.
 
 The route is written with the next hop as an address; the engine reads it at the next question. On a router the default route is also the “Gateway (default route)” of its window, and `set gateway` writes the same ([Devices and addresses](devices-and-addresses.md#set)).
 
@@ -52,6 +52,8 @@ pixelcake> add route 192.168.2.0/24 via 10.0.1.2 on R-HQ
 R-HQ: route to 192.168.2.0/24 now goes via 10.0.1.2 (was 10.0.0.2)
 pixelcake> add route 192.168.2.0/24 via 10.0.0.2 on R-HQ
 R-HQ: route to 192.168.2.0/24 now goes via 10.0.0.2 (was 10.0.1.2)
+pixelcake> add route 192.168.2.0/24 via 10.0.0.2 on R-HQ
+R-HQ: route to 192.168.2.0/24 via 10.0.0.2 is already there, nothing changed
 ```
 
 A default route, and a route whose next hop is not where it should be:

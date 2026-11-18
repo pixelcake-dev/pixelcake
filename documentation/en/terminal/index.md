@@ -18,7 +18,7 @@ There are three ways in:
 - **Right-click a device → “Console”** opens it already inside that device: the prompt is the name of the device, and `from` and `on` are implied ([`use`](help.md#use)).
 - **“Terminal”**, in the bar at the top of a presentation, opens it while presenting ([the terminal while presenting](../asking/presentation.md#terminal)).
 
-The terminal is a window of its own, not a dialog: it has no backdrop, and the board stays usable behind it. Drag it by its title bar, resize it from the corner at the bottom right, and close it with the cross at the right of the title bar. Closing does not clear it: what was printed, and the lines you can recall with the Up key, are there when you open it again, until the page is reloaded.
+The terminal is a window of its own, not a dialog: it has no backdrop, and the board stays usable behind it. It opens small, at the right of the board, so that the drawing stays in view. Drag it by its title bar, resize it from the corner at the bottom right, and close it with the cross at the right of the title bar, or with Esc. Closing does not clear it: what was printed, and the lines you can recall with the Up key, are there when you open it again, until the page is reloaded.
 
 The window starts with `PixelCake Terminal` and `type 'help' to list commands`. The prompt is `pixelcake>`; inside a device it is the name of the device, `PC-1>`. Type a line and press Enter. The keys the line takes are in [Help and the session](help.md#keys). The window and its frame follow the language of the interface (“Terminal” and the label of the input are translated); what is typed and what is printed are English in both.
 

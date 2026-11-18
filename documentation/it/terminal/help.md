@@ -113,10 +113,10 @@ PC-1 — addressing
   eth0: 192.168.10.11 / 255.255.255.0 gw 192.168.10.1
 PC-1> show interfaces Router-1
 IFACE      KIND   STATE   IP               VLAN       MODE-ZONE  LINK
-1          port   up      192.168.10.1     -          lan        SW-Office (port 8)
-2          port   up      192.168.20.1     -          lan        SW-Servers (port 8)
-3          port   up      -                -          lan        -
-4          port   up      -                -          lan        -
+1          port   up      192.168.10.1     -          -          SW-Office (port 8)
+2          port   up      192.168.20.1     -          -          SW-Servers (port 8)
+3          port   up      -                -          -          -
+4          port   up      -                -          -          -
 PC-1> use Router-1
 context: Router-1 — "from" is now implied, "exit" to leave
 Router-1> show routes
@@ -139,7 +139,7 @@ left SW-Office
 ```
 
 > [!NOTE]
-> Il terminale ricorda il nome del dispositivo in cui si trova. Rinominare quel dispositivo, con `set name` o nella sua finestra, lascia il prompt sul vecchio nome: esci con `exit` ed entra di nuovo con il nome nuovo ([Dispositivi e indirizzi](devices-and-addresses.md#set)).
+> Il terminale ricorda il nome del dispositivo in cui si trova. Rinominare quel dispositivo con `set name` sposta il prompt sul nome nuovo. Rinominarlo nella sua finestra lascia il prompt sul vecchio nome: esci con `exit` ed entra di nuovo con il nome nuovo ([Dispositivi e indirizzi](devices-and-addresses.md#set)).
 
 ## clear {#clear}
 
@@ -166,7 +166,7 @@ Nella riga di comando valgono questi tasti:
 | Giù | Va avanti nella cronologia; dopo l'ultima riga torna a ciò che stavi scrivendo |
 | Ctrl+C | Ferma la domanda in corso: il pacchetto si ferma sul canvas e il terminale stampa `^C — interrupted`. Quando non c'è nulla in corso fa ciò che fa ovunque: copia il testo selezionato |
 
-Scrivere una lettera esce dalla cronologia e modifica la riga su cui sei. La cronologia conserva ogni riga non vuota della sessione, errori compresi, finché la pagina resta aperta: non viene salvata con il progetto e si perde quando la pagina viene ricaricata. Esc e Tab non fanno nulla nel terminale: Esc non lo chiude, e un nome non viene completato.
+Scrivere una lettera esce dalla cronologia e modifica la riga su cui sei. La cronologia conserva ogni riga non vuota della sessione, errori compresi, finché la pagina resta aperta: non viene salvata con il progetto e si perde quando la pagina viene ricaricata. Tab non fa nulla nel terminale: un nome non viene completato. Esc chiude il terminale, come la sua croce; una domanda ancora in viaggio viene prima interrotta, come fa Ctrl+C.
 
 Mentre una domanda viaggia (`ping`, `trace`, `browse`, `mail`, `download`, `resolve`), il prompt non torna finché il pacchetto non è arrivato o non si è fermato: al suo posto c'è la riga `▌ running… — press Ctrl+C to interrupt`. I comandi che leggono o scrivono soltanto rispondono subito.
 

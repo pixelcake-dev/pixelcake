@@ -23,7 +23,7 @@ Sets one property of a device: its address, its default gateway, its mask, or it
 |---|---|
 | `<device>` | The device to change. Inside `use <device>` it is left out |
 | `<address>` | An IPv4 address, `192.168.10.21`. It is checked before it is written |
-| `<mask>` | The subnet mask, `255.255.255.0`. The command writes whatever is typed: it is not checked |
+| `<mask>` | The subnet mask, `255.255.255.0`. A dotted mask, or a prefix such as `/24` (written as the dotted mask). It is checked before it is written |
 | `<new name>` | The new name of the device, of one or more words. It is the last thing in the command, so it needs no quotes |
 
 What each one does:
@@ -42,6 +42,9 @@ PC-1: ip set to 192.168.10.12
   warning: 192.168.10.12 is also the address of PC-2
 pixelcake> set subnet of PC-1 to 255.255.255.128
 PC-1: subnet set to 255.255.255.128
+pixelcake> set subnet of PC-1 to banana
+"banana" is not a valid subnet mask
+  write it as 255.255.255.0 or as /24
 pixelcake> set gateway of PC-1 to 192.168.10.254
 PC-1: gateway set to 192.168.10.254
 pixelcake> show config PC-1
@@ -50,7 +53,7 @@ PC-1 — PC
   subnet:   255.255.255.128
   gateway:  192.168.10.254
   vlans:    none (untagged)
-  nic eth0: 192.168.10.12 / 255.255.255.128 gw 192.168.10.254 
+  nic eth0: 192.168.10.12 / 255.255.255.128 gw 192.168.10.254
 pixelcake> set gateway of Router-1 to 10.0.0.9
 Router-1: gateway set to 10.0.0.9
   the gateway of a router is its default route — "show routes Router-1"
@@ -58,7 +61,7 @@ pixelcake> set ip of SW-Office to 192.168.10.3
 SW-Office: ip set to 192.168.10.3
 ```
 
-The name may be several words, and a name another device already has is not refused.
+The name may be several words. A name another device already has, in any case (`pc-1` is `PC-1`), is refused: the terminal finds a device by its name, and two devices with one name could not be told apart. The case of the device's own name can be changed.
 
 ```ncl sample=office
 pixelcake> set name of PC-1 to Front desk
@@ -77,8 +80,18 @@ Web-01                   Server         192.168.20.10    -
 Mail-01                  Server         192.168.20.20    -
 ```
 
-> [!WARNING]
-> Renaming the device you are inside (`use <device>`) leaves the prompt on the old name, and the commands that need the device then say that none is specified. Leave with `exit` and enter it again by its new name.
+Inside `use <device>`, renaming the device keeps you in it: the prompt takes the new name.
+
+```ncl sample=office
+pixelcake> use PC-1
+context: PC-1 — "from" is now implied, "exit" to leave
+PC-1> set name of PC-2 to pc-1
+the name "pc-1" is taken by another device: choose another one
+PC-1> set name Front desk
+PC-1 renamed to "Front desk"
+Front desk> exit
+left Front desk
+```
 
 ## connect, disconnect {#connect}
 
