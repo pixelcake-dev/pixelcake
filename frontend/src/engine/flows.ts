@@ -5,21 +5,25 @@
  * one or more LEGS and evaluates each leg with traceRoute. This gives every
  * model realistic semantics instead of a single BFS line:
  *
- *  - ping:     request src→dst, then reply dst→src (asymmetric configs surface)
+ *  - ping:     request src→dst, then reply dst→src (asymmetric configs surface);
+ *              a device pinging itself answers without the packet leaving it
  *  - web:      HTTP request src→dst, HTTP response dst→src
  *  - download: download request src→dst, download data dst→src (a download
  *              is web traffic to a firewall)
  *  - email:    src→relay, relay→dst — the relay depends on the email mode:
  *              'internal' uses the nearest mail server, 'cloud' uses the
- *              nearest internet exit (Internet/Cloud/WAN/ISP device), and
- *              'auto' (default) prefers internal, falling back to cloud.
+ *              nearest internet exit (see internetExits), and 'auto'
+ *              (default) prefers internal, falling back to cloud.
+ *
+ * A reply carries the devices its request went through: a firewall lets it
+ * pass as a reply only when it saw the request (see ./firewall).
  *
  * Pure and deterministic: no React, no Zustand, no side effects.
  */
 
 import type { EmailMode, FlowModelType, NetworkDevice, ServiceName } from '@/types';
 import type { Topology, TraceResult, Verdict } from './types';
-import { buildAdjacency } from './topology';
+import { buildAdjacency, isInternetLike } from './topology';
 import { traceRoute } from './trace';
 import type { TraceOptions } from './trace';
 import { isPrivateAddress, matchForward, publications } from './nat';
@@ -79,13 +83,23 @@ function isMailServer(device: NetworkDevice): boolean {
   return identityText(device).includes('mail');
 }
 
-/** Substrings (lowercase) that mark a device as the network's internet exit */
-const INTERNET_EDGE_TOKENS = ['internet', 'cloud', 'wan', 'isp'];
+/** Words (lowercase) that name a device as the network's internet exit */
+const INTERNET_EXIT_WORDS = new Set(['internet', 'cloud', 'wan', 'isp']);
 
-/** True when the device is an internet exit (type, templateId or label match) */
-function isInternetEdge(device: NetworkDevice): boolean {
-  const text = `${identityText(device)} ${device.label.toLowerCase()}`;
-  return INTERNET_EDGE_TOKENS.some(token => text.includes(token));
+/** True when one of the words of the name (its runs of letters) names an internet exit */
+function namedAsInternetExit(device: NetworkDevice): boolean {
+  return (device.label.toLowerCase().match(/[a-z]+/g) ?? []).some(word => INTERNET_EXIT_WORDS.has(word));
+}
+
+/**
+ * The devices cloud email can leave by: the Internet and Cloud symbols, by
+ * their kind (type or template), and the devices whose name has one of the
+ * words Internet, Cloud, WAN or ISP on its own (`ISP-Router`, `R-WAN`,
+ * `WAN1`; never `Display-1` or `Swan`). A symbol often has no address, so the
+ * router named for the exit is needed as well: the nearest of them is used.
+ */
+function internetExits(topo: Topology): NetworkDevice[] {
+  return topo.devices.filter(device => isInternetLike(device) || namedAsInternetExit(device));
 }
 
 /** BFS hop distances from `sourceId` to every reachable device */
@@ -263,21 +277,22 @@ function nearestByHops(
 
 /** How email routes through a relay: classifier plus per-leg purposes */
 interface EmailRelayKind {
-  isRelay: (device: NetworkDevice) => boolean;
+  /** The devices of the topology that can relay the email */
+  relays: (topo: Topology) => NetworkDevice[];
   submitPurpose: string;
   deliveryPurpose: string;
 }
 
 /** Internal email: relay through a mail server */
 const INTERNAL_RELAY: EmailRelayKind = {
-  isRelay: isMailServer,
+  relays: topo => topo.devices.filter(isMailServer),
   submitPurpose: 'SMTP submit',
   deliveryPurpose: 'delivery',
 };
 
-/** Cloud email: relay through the internet exit (Internet/Cloud/WAN/ISP) */
+/** Cloud email: relay through the internet exit (see internetExits) */
 const CLOUD_RELAY: EmailRelayKind = {
-  isRelay: isInternetEdge,
+  relays: internetExits,
   submitPurpose: 'SMTP to cloud provider',
   deliveryPurpose: 'cloud delivery',
 };
@@ -307,15 +322,18 @@ function planEmailViaRelay(
   const source = topo.devices.find(d => d.id === sourceId);
   const target = topo.devices.find(d => d.id === targetId);
 
+  const relays = kind.relays(topo);
+  const isRelay = (device: NetworkDevice) => relays.includes(device);
+
   // Special cases: an endpoint already is the relay → single leg.
-  if (target && kind.isRelay(target)) {
+  if (target && isRelay(target)) {
     return evaluateLegs(
       [{ fromId: sourceId, toId: targetId, purpose: kind.submitPurpose, service: 'email' }],
       topo,
       note ? [note(target)] : []
     );
   }
-  if (source && kind.isRelay(source)) {
+  if (source && isRelay(source)) {
     return evaluateLegs(
       [{ fromId: sourceId, toId: targetId, purpose: kind.deliveryPurpose, service: 'email' }],
       topo,
@@ -323,7 +341,6 @@ function planEmailViaRelay(
     );
   }
 
-  const relays = topo.devices.filter(kind.isRelay);
   if (relays.length === 0) return undefined;
 
   const chosen = nearestByHops(relays, sourceId, topo);

@@ -478,6 +478,62 @@ describe('planAndEvaluateFlow email modes', () => {
   });
 });
 
+describe('planAndEvaluateFlow email: which device is the internet exit', () => {
+  /** PC-1 — SW-1 — PC-2, and on SW-1 a device of `type` named `label` */
+  function withDevice(label: string, type: string): Topology {
+    return topo(
+      [
+        device({ id: 'pc1', label: 'PC-1', ip: '192.168.1.10' }),
+        device({ id: 'sw1', label: 'Switch-0', type: 'Switch', ip: '192.168.1.2' }),
+        device({ id: 'other', label, type, ip: '192.168.1.1' }),
+        device({ id: 'pc2', label: 'PC-2', ip: '192.168.1.20' }),
+      ],
+      [link('pc1', 'sw1'), link('sw1', 'other'), link('sw1', 'pc2')]
+    );
+  }
+
+  it.each([
+    ['Display-1', 'PC'],
+    ['Cloudy-Lab', 'Server'],
+    ['Swan', 'Router'],
+    ['Internetwork-Core', 'Router'],
+  ])('is not a device whose name only holds the word inside another word: %s', (label, type) => {
+    const result = planAndEvaluateFlow('email', 'pc1', 'pc2', withDevice(label, type), {
+      emailMode: 'cloud',
+    });
+    expect(result.verdict).toBe('error');
+    expect(result.failureReason).toBe(
+      'no internet exit in the network — cloud email needs an Internet gateway or Cloud device'
+    );
+  });
+
+  it.each([
+    ['ISP-Router', 'Router'],
+    ['R-WAN', 'Router'],
+    ['WAN1', 'Router'],
+    ['Edge Internet', 'Firewall'],
+  ])('is a device whose name has the word on its own, when no device is a Cloud: %s', (label, type) => {
+    const result = planAndEvaluateFlow('email', 'pc1', 'pc2', withDevice(label, type), {
+      emailMode: 'cloud',
+    });
+    expect(result.verdict).toBe('success');
+    expect(result.legs.map(l => [l.fromId, l.toId])).toEqual([
+      ['pc1', 'other'],
+      ['other', 'pc2'],
+    ]);
+  });
+
+  it('is a Cloud device by its kind, whatever its name', () => {
+    const t = withDevice('Provider', 'Cloud');
+    const result = planAndEvaluateFlow('email', 'pc1', 'pc2', t, { emailMode: 'cloud' });
+    expect(result.verdict).toBe('success');
+    expect(result.legs.map(l => [l.fromId, l.toId])).toEqual([
+      ['pc1', 'other'],
+      ['other', 'pc2'],
+    ]);
+  });
+});
+
 // ---------- round trips through a zone-bound firewall ----------
 
 describe('planAndEvaluateFlow through a firewall with security zones', () => {
