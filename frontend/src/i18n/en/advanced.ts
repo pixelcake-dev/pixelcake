@@ -38,15 +38,18 @@ export const advanced: Dictionary['advanced'] = {
     /** What each shortcut does, and the keys (or the gesture) that do it */
     rows: {
       save: { action: 'Save the project to a file', keys: 'Ctrl + S' },
-      copy: { action: 'Copy the selected devices', keys: 'Ctrl + C' },
-      paste: { action: 'Paste the copied devices', keys: 'Ctrl + V' },
+      copy: { action: 'Copy the selected devices and areas', keys: 'Ctrl + C' },
+      paste: { action: 'Paste the copied devices and areas', keys: 'Ctrl + V' },
       delete: {
-        action: 'Delete the selected devices, cables or area (asks first)',
+        action: 'Delete the selected devices, cables and areas (asks first)',
         keys: 'Delete',
       },
-      toggleSelection: { action: 'Add a device to the selection, or remove it', keys: 'Ctrl + click' },
+      toggleSelection: {
+        action: 'Add a device, or an area (on its name or border), to the selection, or remove it',
+        keys: 'Ctrl + click',
+      },
       selectionBox: {
-        action: 'Select several devices with a selection box',
+        action: 'Select several devices and areas with a selection box',
         keys: 'Drag on empty space',
       },
       pan: { action: 'Move the view', keys: 'Right button + drag' },

@@ -36,15 +36,18 @@ export const advanced = {
     /** What each shortcut does, and the keys (or the gesture) that do it */
     rows: {
       save: { action: 'Salva il progetto su file', keys: 'Ctrl + S' },
-      copy: { action: 'Copia i dispositivi selezionati', keys: 'Ctrl + C' },
-      paste: { action: 'Incolla i dispositivi copiati', keys: 'Ctrl + V' },
+      copy: { action: 'Copia i dispositivi e i riquadri selezionati', keys: 'Ctrl + C' },
+      paste: { action: 'Incolla i dispositivi e i riquadri copiati', keys: 'Ctrl + V' },
       delete: {
-        action: 'Elimina i dispositivi, i cavi o il riquadro selezionati (chiede prima conferma)',
+        action: 'Elimina i dispositivi, i cavi e i riquadri selezionati (chiede prima conferma)',
         keys: 'Canc',
       },
-      toggleSelection: { action: 'Aggiungi o togli un dispositivo dalla selezione', keys: 'Ctrl + clic' },
+      toggleSelection: {
+        action: 'Aggiungi o togli dalla selezione un dispositivo, o un riquadro (sul nome o sul bordo)',
+        keys: 'Ctrl + clic',
+      },
       selectionBox: {
-        action: 'Seleziona più dispositivi con un riquadro di selezione',
+        action: 'Seleziona più dispositivi e riquadri con un riquadro di selezione',
         keys: "Trascina su un'area vuota",
       },
       pan: { action: 'Sposta la vista', keys: 'Tasto destro + trascina' },

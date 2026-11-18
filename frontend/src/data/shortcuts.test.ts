@@ -86,6 +86,11 @@ describe('the keys the code listens to', () => {
       /KeyCode=\{[^}]*'([A-Za-z]+)'/g,
       /KeyCode="([A-Za-z]+)"/g,
     ];
+    // the letter of a Ctrl shortcut, read whatever Caps Lock says (utils/shortcutKey):
+    // `shortcutLetter(event) !== 's'`, or `const letter = shortcutLetter(e)` then `letter === 'v'`
+    if (source.includes('shortcutLetter(')) {
+      patterns.push(/shortcutLetter\(\w+\)\s*[!=]==\s*'([a-z])'/g, /\bletter\s*[!=]==\s*'([a-z])'/g);
+    }
     for (const pattern of patterns) {
       for (const match of source.matchAll(pattern)) heard.set(match[1], [...(heard.get(match[1]) ?? []), file]);
     }
