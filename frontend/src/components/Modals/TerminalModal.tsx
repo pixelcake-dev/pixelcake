@@ -24,6 +24,7 @@ import type {
 } from 'react';
 import { useUIStore } from '@/store/uiStore';
 import { useSimulationStore } from '@/store/simulationStore';
+import { useNetworkStore } from '@/store/networkStore';
 import { executeCommand, type TerminalContext } from '@/terminal/executor';
 import type { TerminalLine } from '@/terminal/types';
 import { useT } from '@/i18n';
@@ -217,6 +218,25 @@ const TerminalModal = () => {
     ]);
     useUIStore.getState().setTerminalContextDevice(null);
   }, [isOpen, terminalContextDevice]);
+
+  // A device renamed elsewhere (its window, a YAML added) while the terminal
+  // is inside it: the prompt follows it, as it follows a rename inside `use`.
+  // The context names the device; here the name is pinned to the device it
+  // meant when it was entered, and moves with it.
+  useEffect(() => {
+    const label = context.deviceLabel;
+    if (!label) return;
+    const key = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase();
+    const named = useNetworkStore.getState().devices.filter((d) => key(d.label ?? '') === key(label));
+    if (named.length !== 1) return; // gone, or two with that name: the executor says so
+    const id = named[0].id;
+    return useNetworkStore.subscribe((state) => {
+      const device = state.devices.find((d) => d.id === id);
+      if (device?.label && device.label !== label) {
+        setContext((current) => (current.deviceLabel === label ? { ...current, deviceLabel: device.label } : current));
+      }
+    });
+  }, [context.deviceLabel]);
 
   // Mirror the canvas packet animation into the scrollback: each trace hop
   // line appears when the packet reaches that node, the verdict when the

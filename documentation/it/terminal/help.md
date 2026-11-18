@@ -139,7 +139,7 @@ left SW-Office
 ```
 
 > [!NOTE]
-> Il terminale ricorda il nome del dispositivo in cui si trova. Rinominare quel dispositivo con `set name` sposta il prompt sul nome nuovo. Rinominarlo nella sua finestra lascia il prompt sul vecchio nome: esci con `exit` ed entra di nuovo con il nome nuovo ([Dispositivi e indirizzi](devices-and-addresses.md#set)).
+> Il terminale ricorda il nome del dispositivo in cui si trova. Se rinomini quel dispositivo, con `set name` o nella sua finestra, il prompt passa al nome nuovo ([Dispositivi e indirizzi](devices-and-addresses.md#set)).
 
 ## clear {#clear}
 

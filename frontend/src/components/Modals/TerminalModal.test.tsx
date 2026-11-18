@@ -11,6 +11,8 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import type { ExecutionResult, TerminalContext } from './../../terminal/executor';
 import { useUIStore } from '@/store/uiStore';
 import { useSimulationStore } from '@/store/simulationStore';
+import { useNetworkStore } from '@/store/networkStore';
+import type { NetworkDevice } from '@/types/network';
 import TerminalModal from './TerminalModal';
 
 const { executeCommandMock } = vi.hoisted(() => ({
@@ -284,6 +286,31 @@ describe('TerminalModal', () => {
     typeCommand(input, 'show config');
     expect(screen.getByText('PC-1> show config')).toBeInTheDocument();
     expect(executeCommandMock).toHaveBeenLastCalledWith('show config', { deviceLabel: 'PC-1' });
+  });
+
+  it('follows the device of the context when it is renamed elsewhere (its window, a YAML)', () => {
+    const before = useNetworkStore.getState().devices;
+    useNetworkStore.setState({
+      devices: [{ id: 'pc-a', label: 'PC-1', type: 'PC', position: { x: 0, y: 0 } } as NetworkDevice],
+    });
+    try {
+      const input = openTerminal();
+      executeCommandMock.mockReturnValueOnce({ lines: [], context: { deviceLabel: 'PC-1' } });
+      typeCommand(input, 'use PC-1');
+      expect(screen.getByText('PC-1>')).toBeInTheDocument();
+
+      act(() => useNetworkStore.getState().updateDevice('pc-a', { label: 'Reception' }));
+
+      expect(screen.getByText('Reception>')).toBeInTheDocument();
+      typeCommand(input, 'show ip');
+      expect(executeCommandMock).toHaveBeenLastCalledWith('show ip', { deviceLabel: 'Reception' });
+
+      // a change of case only is followed too
+      act(() => useNetworkStore.getState().updateDevice('pc-a', { label: 'RECEPTION' }));
+      expect(screen.getByText('RECEPTION>')).toBeInTheDocument();
+    } finally {
+      useNetworkStore.setState({ devices: before });
+    }
   });
 
   it('reveals live trace output as the packet animation advances', () => {

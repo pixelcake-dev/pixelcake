@@ -139,7 +139,7 @@ left SW-Office
 ```
 
 > [!NOTE]
-> The terminal keeps the name of the device it is inside. Renaming that device with `set name` moves the prompt to the new name. Renaming it in its window leaves the prompt on the old name: `exit` and `use` the new one ([Devices and addresses](devices-and-addresses.md#set)).
+> The terminal keeps the name of the device it is inside. Renaming that device, with `set name` or in its window, moves the prompt to the new name ([Devices and addresses](devices-and-addresses.md#set)).
 
 ## clear {#clear}
 
