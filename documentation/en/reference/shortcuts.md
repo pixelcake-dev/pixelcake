@@ -4,7 +4,7 @@ description: "Every shortcut of the keyboard and every gesture of the mouse, on 
 order: 3
 ---
 
-These are all the keys and gestures the app has. Eight of them are also listed in Settings → Advanced, under “Keyboard and mouse shortcuts”; the others are only here. Where the keys differ between computers, the first column is for Windows and Linux and the second for a Mac. The menus have no shortcuts.
+These are all the keys and gestures the app has. All of them are also listed in Settings → Advanced, under “Keyboard and mouse shortcuts”, with the Windows and Linux keys; the Mac keys are only here. Where the keys differ between computers, the first column is for Windows and Linux and the second for a Mac. The menus have no shortcuts.
 
 ## On the board {#board}
 
@@ -23,12 +23,14 @@ These are all the keys and gestures the app has. Eight of them are also listed i
 | Move the selected device a little | Arrow keys | Arrow keys |
 | Move it further | Shift + arrow keys | Shift + arrow keys |
 | Let go of the selection | Esc | Esc |
+| Move the keyboard focus through the cables and the devices | Tab | Tab |
+| Select the device that has the focus | Enter | Enter |
 
 A few things about these:
 
 - **Save** works from anywhere in the app, also with a field in focus. The browser's own "save page" never opens.
 - **Copy and paste** act on the drawing only while no text is selected and no field is being typed in. With text selected (the output of the terminal, say) Ctrl + C copies that text, as anywhere. The pasted devices appear 50 units down and to the right of the originals, with the links that were among them. The two keys are read as lower case letters: with Caps Lock on, Ctrl + C and Ctrl + V do nothing on the board.
-- **Delete** is the Delete key. Backspace does nothing. It deletes without asking; the right-click menu asks first.
+- **Delete** is the Delete key. Backspace does nothing. It asks first, as the right-click menu does.
 - **Selecting more than one**: a click on a device selects it alone; Ctrl + click adds or removes one; a box drawn on empty space selects the devices that are wholly inside it. A click on empty space lets go.
 - **The view** moves only with the right button held down: the wheel zooms, it does not scroll. The zoom goes from 10 % to 400 %. The four buttons at the bottom left of the board zoom in, zoom out, fit the drawing in the window and lock it, so that nothing can be moved; View → Fit to window does the same as the third.
 - **Moving a device with the arrow keys** needs the device to be selected or to have the keyboard focus: a step of 5 units, 20 with Shift.
@@ -67,8 +69,9 @@ The windows of the app do not save on Enter: a window with fields has its “Sav
 | Enter | Runs the command. |
 | Up arrow, Down arrow | Walk through the commands of this session. Down past the newest brings back what was being typed. The list is lost when the page is reloaded. |
 | Ctrl + C (Control + C on a Mac too) | While a `ping`, `trace` or other question is running, stops it: the terminal prints `^C — interrupted` and the packet stops on the board. When nothing is running, it copies the selected text as anywhere. |
+| Esc | Closes the terminal. A `ping`, `trace` or other question that is running is stopped first, as with Ctrl + C. |
 
-The terminal is a window that floats over the board: drag it by its top bar to move it, drag the grip at the bottom right to resize it. It closes with its own close button, not with Esc, and Tab does not complete a command: it leaves the field. It opens from “Console” in the bar on the left, or from the right-click menu of a device, which opens it in the context of that device.
+The terminal is a window that floats over the board: drag it by its top bar to move it, drag the grip at the bottom right to resize it. It closes with its own close button or with Esc, and Tab does not complete a command: it leaves the field. It opens from “Console” in the bar on the left, or from the right-click menu of a device, which opens it in the context of that device.
 
 ## While presenting {#presenting}
 

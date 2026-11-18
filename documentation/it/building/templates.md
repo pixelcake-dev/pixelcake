@@ -8,11 +8,12 @@ Un template è il modello di un tipo di dispositivo, o di un tipo di connessione
 
 ## Template predefiniti {#built-in}
 
-**Dispositivi.** I 24 tipi di [Dispositivi](devices.md#kinds) sono 24 template. Impostazioni → Template, poi «Dispositivi», poi «Dispositivi generici» li mostra uno per uno, ciascuno con il disegno, il nome e il tipo di base: PC, Switch, Router, Server, Firewall, Access Point, Load Balancer, Database o Cloud. Il mail server, la stampante e il laptop sono template dei tipi di base Server e PC, con un disegno loro. Accanto a ciascuno ci sono una matita, «Modifica template», e un cestino, «Elimina template».
+**Dispositivi.** I 24 tipi di [Dispositivi](devices.md#kinds) sono 24 template. Impostazioni → Template, poi «Dispositivi», poi «Dispositivi generici» li mostra uno per uno, ciascuno con il disegno, il nome e il tipo di base: PC, Switch, Router, Server, Firewall, Access Point, Load Balancer, Database o Cloud. Il mail server, la stampante e il laptop sono template dei tipi di base Server e PC, con un disegno loro. Accanto a ciascuno ci sono una matita, «Modifica template», e un cestino, «Elimina template». In cima alla scheda, «Ripristina i template predefiniti» e «Nuovo template».
 
 - **Modificare** permette di cambiare il «Nome» e il «Disegno». Il «Tipo di base» è bloccato: «Il tipo non può essere modificato, per evitare problemi con i dispositivi esistenti.» Premi «Salva modifiche». Un dispositivo già sul canvas tiene il nome che ha, e viene disegnato con il disegno nuovo, perché ogni dispositivo è disegnato a partire dal suo template.
-- **Eliminare** chiede prima conferma, nominando il template e avvisando che i dispositivi esistenti di questo tipo potrebbero non essere più disegnati come prima. Quei dispositivi restano, e sono disegnati con il disegno del loro tipo di base. Il template sparisce dal pannello «Aggiungi» e da [Aggiungi in blocco](bulk-add.md); non c'è un pulsante per ripristinare un template predefinito.
-- **«Nuovo template»** crea un altro template generico per un tipo di base che non ne ha più. Poiché quelli predefiniti coprono i nove tipi di base, uno nuovo viene rifiutato («Questo tipo esiste già tra i template generici») finché non elimini quelli di quel tipo. Per creare un tipo nuovo di dispositivo, crea un template personalizzato.
+- **Eliminare** chiede prima conferma, nominando il template e avvisando che i dispositivi esistenti di questo tipo potrebbero non essere più disegnati come prima. Quei dispositivi restano, e sono disegnati con il disegno del loro tipo di base. Il template sparisce dal pannello «Aggiungi» e da [Aggiungi in blocco](bulk-add.md) finché «Ripristina i template predefiniti» non lo rimette.
+- **«Ripristina i template predefiniti»** rimette i template predefiniti che erano stati eliminati, ciascuno al suo posto tra gli altri, e un avviso dice quanti («I template predefiniti ci sono già tutti» se non ne mancava nessuno). Non tocca nient'altro: un template predefinito che hai modificato tiene il nome e il disegno nuovi, e quelli che hai creato tu restano come sono. I template restano salvati nel browser, con la stessa chiave e la stessa versione di prima; il ripristino cambia l'elenco e nulla del modo in cui è salvato.
+- **«Nuovo template»** apre un modulo con un «Nome», un «Tipo di base» e un «Disegno», e «Crea template» lo crea. Il tipo di base può essere uno qualsiasi dei nove, anche uno che ha già un template predefinito: il template nuovo è una variante, con un nome e un disegno suoi per lo stesso tipo di base, per esempio una postazione CAD accanto al PC. È un template personalizzato: compare nella scheda «Dispositivi personalizzati», che si apre subito, viaggia con il progetto ([più avanti](#in-the-file)) e «Ripristina i template predefiniti» non lo tocca.
 
 **Connessioni.** Impostazioni → Template, poi «Connessioni», elenca i tipi di connessione: Access, Trunk, Uplink, Backbone e MPLS, ciascuno con il suo ID del tipo, la sua descrizione e la sua linea. Sono le voci di «Tipo di connessione» nella finestra di una connessione ([Cavi e connessioni](cables.md#edit)). Un tipo predefinito si può modificare, non eliminare.
 
@@ -31,8 +32,7 @@ Il tipo di base decide di che cosa è fatto il tipo nuovo. Uno Switch, un Router
 
 Il template nuovo compare nel pannello «Aggiungi», dopo gli altri, come "Template personalizzato (Server)", con il suo tipo di base tra parentesi, e si usa come ogni altro. «Elimina template» nell'elenco lo elimina, dopo una conferma; i dispositivi creati con esso restano sul canvas.
 
-> [!NOTE]
-> La scheda dice «Template personalizzati con campi Terraform», ma il modulo non ha nessun campo Terraform: un nome, un tipo di base e un disegno sono tutto ciò che contiene. L'esportazione Terraform è solo una bozza.
+La scheda dice che cosa contiene un template: «Template personalizzati: un nome, un tipo di base e un disegno». Non c'è nessun campo Terraform; l'esportazione Terraform è solo una bozza.
 
 ## Nel file del progetto {#in-the-file}
 

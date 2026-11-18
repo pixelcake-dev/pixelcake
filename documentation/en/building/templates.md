@@ -8,11 +8,12 @@ A template is the blueprint of a kind of device, or of a kind of link. A device 
 
 ## Built-in templates {#built-in}
 
-**Devices.** The 24 kinds of [Devices](devices.md#kinds) are 24 templates. Settings → “Templates”, then “Devices”, then “Generic devices” shows them as cards, with the drawing, the name and the base type: PC, Switch, Router, Server, Firewall, Access Point, Load Balancer, Database or Cloud. The mail server, the printer and the laptop are templates of the base type Server and PC, with a drawing of their own. On each card a pencil, “Edit template”, and a bin, “Delete template”.
+**Devices.** The 24 kinds of [Devices](devices.md#kinds) are 24 templates. Settings → “Templates”, then “Devices”, then “Generic devices” shows them as cards, with the drawing, the name and the base type: PC, Switch, Router, Server, Firewall, Access Point, Load Balancer, Database or Cloud. The mail server, the printer and the laptop are templates of the base type Server and PC, with a drawing of their own. On each card a pencil, “Edit template”, and a bin, “Delete template”. At the top of the tab, “Restore built-in templates” and “New template”.
 
 - **Editing** changes the “Name” and the “Drawing”. The “Base type” is locked: “The type cannot be changed, to avoid problems with existing devices.” Press “Save changes”. A device already on a board keeps the name it has, and is drawn with the new drawing, because a device looks up its template.
-- **Deleting** asks first, naming the template and warning that existing devices of this type may no longer be drawn as before. Those devices stay, and are drawn with the drawing of their base type. The template is gone from the panel “Add” and from [Bulk add](bulk-add.md); there is no button that brings a built-in one back.
-- **“New template”** makes another generic template for a base type that has none left. As the built-in ones cover the nine base types, a new one is refused (“This type already exists among the generic templates”) until you delete the ones of that type. To make a new kind of device, make a custom template.
+- **Deleting** asks first, naming the template and warning that existing devices of this type may no longer be drawn as before. Those devices stay, and are drawn with the drawing of their base type. The template is gone from the panel “Add” and from [Bulk add](bulk-add.md) until “Restore built-in templates” puts it back.
+- **“Restore built-in templates”** puts back the built-in templates that were deleted, each in its place among the others, and a notice says how many (“All the built-in templates are there already” when none was missing). It touches nothing else: a built-in template you edited keeps its new name and drawing, and the templates you made are left as they are. The templates are kept in the browser, under one key and one version, as before; restoring changes the list and nothing about how it is stored.
+- **“New template”** opens a form with a “Name”, a “Base type” and a “Drawing”, and “Create template” makes it. The base type can be any of the nine, also one a built-in template has already: the new template is a variant, with a name and a drawing of its own for the same base type, such as a CAD workstation next to the PC. It is a custom template: it is listed in the tab “Custom devices”, which opens at once, it travels with the project ([below](#in-the-file)), and “Restore built-in templates” leaves it alone.
 
 **Links.** Settings → “Templates”, then “Links”, lists the link types: Access, Trunk, Uplink, Backbone and MPLS, each with its type ID, its description and its line. They are the entries of “Link type” in the window of a cable ([Cables and links](cables.md#edit)). A built-in type can be edited, not deleted.
 
@@ -31,8 +32,7 @@ The base type decides what the new kind is made of. A Switch, a Router or a Fire
 
 The new template is listed in the panel “Add”, after the others, as "Custom template (Server)", with its base type in brackets, and is made into a device like any other. “Delete template” in the list takes it away, after a question; the devices made from it stay on the board.
 
-> [!NOTE]
-> The tab says “Custom templates with Terraform fields”, but the form has no Terraform field: a name, a base type and a drawing are all it holds. The Terraform export is only a sketch.
+The tab says what a template holds: “Custom templates: a name, a base type and a drawing”. There is no Terraform field in it; the Terraform export is only a sketch.
 
 ## In the project file {#in-the-file}
 

@@ -32,7 +32,7 @@ In entrambi i casi il riquadro nuovo è selezionato e il suo nome è pronto per 
 - **Colore**: clic destro → «Colore», e scegli uno dei sei: Ardesia, Verde, Ocra, Rosso, Viola, Petrolio.
 - **Eliminalo**: il tasto Canc (Delete), oppure clic destro → «Elimina», che chiede conferma. I dispositivi che racchiude restano dove sono.
 
-I riquadri appartengono al loro canvas: ci restano quando passi a un altro canvas del progetto e poi torni, e si salvano nel file del progetto. L'esportazione YAML non ha posizioni, e non li contiene. In una presentazione i riquadri si vedono ma non si possono toccare; la mappa piccola li mostra come rettangoli tenui, e l'immagine esportata li disegna, in chiaro e in scuro.
+I riquadri appartengono al loro canvas: ci restano quando passi a un altro canvas del progetto e poi torni, e si salvano nel file del progetto. L'esportazione YAML li contiene, con la posizione di ogni dispositivo. In una presentazione i riquadri si vedono ma non si possono toccare; la mappa piccola li mostra come rettangoli tenui, e l'immagine esportata li disegna, in chiaro e in scuro.
 
 ## Mostrarli e nasconderli {#show-hide}
 
@@ -43,4 +43,3 @@ Vista → «Mostra i riquadri» nasconde i riquadri e li mostra di nuovo. La voc
 > [!LIMITS]
 > - Un riquadro non è una rete, una sede né una VLAN: non ha indirizzo né impostazioni, e il motore non lo legge.
 > - Un riquadro può essere disegnato dentro un altro, e la disposizione automatica ce lo lascia; non vuol dire altro.
-> - L'esportazione YAML non contiene i riquadri.

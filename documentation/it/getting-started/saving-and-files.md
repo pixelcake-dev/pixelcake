@@ -48,7 +48,7 @@ Tutti i canvas del progetto stanno nello stesso file. Un progetto nuovo parte co
 
 ## La rete in YAML {#yaml}
 
-«Import/Export», il quinto pulsante a sinistra, riguarda soltanto la rete del canvas aperto, in forma di testo: i dispositivi e le connessioni. La prima scheda la mostra in YAML, da copiare o da scaricare. La seconda carica un file `.yaml` o `.yml`, al posto di quello che è sul canvas («Sostituisci topologia») o in aggiunta («Aggiungi alla topologia»). È un modo per leggere il disegno in un editor di testo, o per costruirne uno con uno script; non è un modo per conservare un progetto, perché il nome, i canvas, i riquadri e le impostazioni non ci sono. Vedi [Importare ed esportare in YAML](../reference/yaml.md).
+«Import/Export», il quinto pulsante a sinistra, riguarda soltanto la rete del canvas aperto, in forma di testo: i dispositivi, le connessioni e i riquadri. La prima scheda la mostra in YAML, da copiare o da scaricare. La seconda carica un file `.yaml` o `.yml`, al posto di quello che è sul canvas («Sostituisci topologia») o in aggiunta («Aggiungi alla topologia»). È un modo per leggere il disegno in un editor di testo, o per costruirne uno con uno script; non è un modo per conservare un progetto, perché il nome, gli altri canvas e le impostazioni non ci sono. Vedi [Importare ed esportare in YAML](../reference/yaml.md).
 
 ## Due schede sullo stesso progetto {#two-tabs}
 

@@ -25,13 +25,25 @@ export const advanced: Dictionary['advanced'] = {
 
   shortcuts: {
     title: 'Keyboard and mouse shortcuts',
-    intro: 'Keyboard and mouse commands for working on the board.',
+    intro:
+      'Every key and gesture of the app, as on Windows and Linux. On a Mac, Ctrl becomes Cmd for save, copy and paste; the list with the Mac keys is in the documentation.',
+    /** The groups: the sections of the page of the documentation */
+    groups: {
+      board: 'On the board',
+      pointer: 'With the pointer',
+      windows: 'In the windows',
+      terminal: 'In the terminal',
+      presenting: 'While presenting',
+    },
     /** What each shortcut does, and the keys (or the gesture) that do it */
     rows: {
       save: { action: 'Save the project to a file', keys: 'Ctrl + S' },
       copy: { action: 'Copy the selected devices', keys: 'Ctrl + C' },
       paste: { action: 'Paste the copied devices', keys: 'Ctrl + V' },
-      delete: { action: 'Delete the selected devices, or the selected area', keys: 'Delete' },
+      delete: {
+        action: 'Delete the selected devices, cables or area (asks first)',
+        keys: 'Delete',
+      },
       toggleSelection: { action: 'Add a device to the selection, or remove it', keys: 'Ctrl + click' },
       selectionBox: {
         action: 'Select several devices with a selection box',
@@ -39,6 +51,50 @@ export const advanced: Dictionary['advanced'] = {
       },
       pan: { action: 'Move the view', keys: 'Right button + drag' },
       zoom: { action: 'Zoom', keys: 'Mouse wheel' },
+      zoomPoint: { action: 'Zoom in on a point', keys: 'Double click on empty space' },
+      moveDevice: { action: 'Move a device', keys: 'Drag it' },
+      nudge: { action: 'Move the selected device a little', keys: 'Arrow keys' },
+      nudgeFar: { action: 'Move it further', keys: 'Shift + arrow keys' },
+      release: { action: 'Let go of the selection', keys: 'Esc' },
+      focusNext: { action: 'Move the keyboard focus through the cables and the devices', keys: 'Tab' },
+      focusSelect: { action: 'Select the device that has the focus', keys: 'Enter' },
+
+      openDevice: { action: 'Open the window of a device', keys: 'Double click' },
+      deviceMenu: { action: 'Open the menu of a device', keys: 'Right click on the device' },
+      cableMenu: { action: 'Open the menu of a cable', keys: 'Right click on the cable' },
+      drawCable: {
+        action: 'Draw a cable',
+        keys: 'Drag from the edge of a device to another',
+      },
+      readNote: { action: 'Read the note of a device', keys: 'Rest the pointer on the device' },
+      selectArea: { action: 'Select an area', keys: 'Click on its name or its border' },
+      moveArea: {
+        action: 'Move an area, or resize it',
+        keys: 'Drag its name, its border or a handle',
+      },
+      renameArea: { action: 'Rename an area', keys: 'Double click on its name, or Enter' },
+      areaMenu: { action: 'Open the menu of an area', keys: 'Right click on the area' },
+      renameProject: {
+        action: 'Rename the project or a board',
+        keys: 'Double click on its name in the Explorer',
+      },
+
+      closeWindow: { action: 'Close the window on top', keys: 'Esc' },
+      confirm: { action: 'Confirm a question, or a name being edited', keys: 'Enter' },
+      nextField: { action: 'Move to the next field or the previous one', keys: 'Tab, Shift + Tab' },
+      vlans: { action: 'Add the VLAN typed, in the VLAN field of a device', keys: 'Enter or comma' },
+
+      run: { action: 'Run the command', keys: 'Enter' },
+      history: { action: 'Walk through the commands of the session', keys: 'Up arrow, Down arrow' },
+      interrupt: { action: 'Stop a ping or a trace that is running', keys: 'Ctrl + C' },
+      closeTerminal: {
+        action: 'Close the terminal (a ping or a trace that is running is stopped first)',
+        keys: 'Esc',
+      },
+
+      leavePresentation: { action: 'Leave the presentation', keys: 'Esc' },
+      askOrBreak: { action: 'Ask a question or simulate a failure', keys: 'Click a device or a cable' },
+      presentationView: { action: 'Move the view', keys: 'Drag with the left button' },
     },
   },
 };
