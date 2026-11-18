@@ -11,11 +11,32 @@ import { isL3Type } from '@/engine';
 
 /**
  * A name as the terminal compares names (`resolveEndpoint` of the engine):
- * without the spaces around it, and whatever the case. (The terminal also
- * takes a run of spaces for one space, which makes no difference here: a
- * name proposed has no space in it.)
+ * without the spaces around it, a run of spaces taken for one space, and
+ * whatever the case.
  */
-const nameKey = (name: string): string => name.trim().toLowerCase();
+const nameKey = (name: string): string => name.trim().replace(/\s+/g, ' ').toLowerCase();
+
+/**
+ * Whether another device of the list already has this name, compared as the
+ * terminal compares names: «pc-1», «PC-1» and « PC-1 » are the same name,
+ * because the terminal could not tell which of the two devices one means.
+ *
+ * Every place that names a device asks here (the window that adds one, the
+ * window of a device, the terminal), so that the rule is one.
+ *
+ * @param name The name wanted
+ * @param devices The devices of the canvas
+ * @param exceptId The device being renamed, whose own name does not count
+ */
+export function isNameTaken(
+  name: string,
+  devices: ReadonlyArray<Pick<NetworkDevice, 'id' | 'label'>>,
+  exceptId?: string
+): boolean {
+  const key = nameKey(name);
+  if (!key) return false;
+  return devices.some((device) => device.id !== exceptId && nameKey(device.label ?? '') === key);
+}
 
 /**
  * The name a new device of a template is proposed: the name of the template,
