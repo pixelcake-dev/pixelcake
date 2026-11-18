@@ -77,12 +77,12 @@ beforeEach(() => {
 });
 
 describe('InspectorModal — tabs', () => {
-  it('a router has Generale, Porte, Rotte, NAT and DHCP', () => {
+  it('a router has Generale, Porte, Rotte, Regole, NAT and DHCP', () => {
     openInspector('Router-1');
-    expect(tabNames()).toEqual(['Generale', 'Porte (4)', 'Rotte', 'NAT', 'DHCP']);
+    expect(tabNames()).toEqual(['Generale', 'Porte (4)', 'Rotte', 'Regole', 'NAT', 'DHCP']);
   });
 
-  it('a firewall also has Regole', () => {
+  it('a firewall has Regole as a router does', () => {
     addFirewall();
     openInspector('FW-1');
     expect(tabNames()).toEqual(['Generale', 'Porte (4)', 'Rotte', 'Regole', 'NAT', 'DHCP']);
@@ -317,6 +317,38 @@ describe('InspectorModal — Regole', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Elimina la regola 1' }));
     save();
     expect(device('FW-1').firewallRules).toBeUndefined();
+  });
+});
+
+describe('InspectorModal — Regole of a router', () => {
+  it('starts empty and says that a router without rules lets everything through', () => {
+    openInspector('Router-1');
+    openTab('Regole');
+    expect(screen.getByText('Nessuna regola: il router lascia passare tutto.')).toBeInTheDocument();
+    const noMatch = screen.getByRole('region', { name: 'Quando nessuna regola corrisponde' });
+    expect(noMatch).toHaveTextContent('È permesso tutto: un router non ha zone di sicurezza.');
+    expect(noMatch).not.toHaveTextContent('untrust → trust');
+  });
+
+  it('saves a rule that the engine then applies to the traffic the router routes', () => {
+    const ping = () => {
+      const { devices, connections } = useNetworkStore.getState();
+      return traceRoute(device('PC-1').id, device('Web-01').id, { devices, connections });
+    };
+    expect(ping().verdict).toBe('success');
+
+    openInspector('Router-1');
+    openTab('Regole');
+    fireEvent.click(screen.getByRole('button', { name: 'Aggiungi regola' }));
+    type('Azione della regola 1', 'deny');
+    type('Servizio della regola 1', 'ping');
+    type('Destinazione della regola 1', '192.168.20.10');
+    save();
+
+    expect(device('Router-1').firewallRules).toEqual([
+      { id: 'rule-1', action: 'deny', service: 'ping', source: 'any', destination: '192.168.20.10' },
+    ]);
+    expect(ping().failureReason).toBe('router Router-1: denied by rule 1 (deny ping from any to 192.168.20.10)');
   });
 });
 

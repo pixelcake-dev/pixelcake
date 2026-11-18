@@ -25,7 +25,7 @@ PixelCake terminal — NCL v0.5 (Network Command Language, vendor-neutral)
   show devices | vlans | connections                         topology overview
   show interfaces [of] <device>                              unified ports + NICs table (the standard view)
   show ip [of] <device>                                      compact addressing summary (also ipconfig/ifconfig)
-  show routes | rules | nat [of] <device>                    routing table, firewall rules, address translation
+  show routes | rules | nat [of] <device>                    routing table, rules, address translation
   show dhcp [[of] <device>]                                  DHCP: who hands out addresses, who got which, who got none
   show dns [[of] <device>]                                   DNS: the names a server answers for, the server each card asks
   show config | ports | neighbors <device>                   device detail
@@ -40,7 +40,7 @@ PixelCake terminal — NCL v0.5 (Network Command Language, vendor-neutral)
   interface <name> dns <address>|none on <device>            the DNS server a network card asks when a name is used
   add route <network>|default via <next hop> on <device>     static route (remove route <network> from <device>)
   add backup route <network> via <next hop> on <device>      second route to a network, used when the line of the first is down
-  add rule allow|deny <service> from <src> to <dst> on <fw>  firewall rule (remove rule <n> from <fw>)
+  add rule allow|deny <service> from <src> to <dst> on <fw>  rule of a router or firewall (remove rule <n> from <fw>)
   add forward <svc> from interface <n> to <address> on <dev> publish a service inside (remove forward <n> from <dev>)
   add record <name> <address> on <server>                    a name a DNS server answers for (remove record <n>|<name> from <server>)
   add vlan <id> to <device>                                  VLAN list of a device (remove vlan <id> from <device>)
@@ -62,7 +62,7 @@ Con una parola, `help` stampa solo le righe la cui sintassi la contiene: `help r
 pixelcake> help ping
 ping <target> [from <device>]                              does it answer? request and reply
 pixelcake> help route
-show routes | rules | nat [of] <device>                    routing table, firewall rules, address translation
+show routes | rules | nat [of] <device>                    routing table, rules, address translation
 add route <network>|default via <next hop> on <device>     static route (remove route <network> from <device>)
 add backup route <network> via <next hop> on <device>      second route to a network, used when the line of the first is down
 pixelcake> ? vlan

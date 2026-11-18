@@ -53,7 +53,7 @@ Un doppio clic su un dispositivo ne apre la finestra, come fa il clic destro →
 
 - «Generale»: il tipo, il «Nome del dispositivo», vendor e posizione, le «Note» ([Note](notes.md)), l'indirizzo e a che cosa è collegato il dispositivo. Per uno switch, un router e un firewall mostra anche come sono usate le porte.
 - «Porte» per uno switch, un router e un firewall; «Schede di rete» per gli altri tipi. La pagina [Porte e schede di rete](ports-and-cards.md) parla di queste due.
-- «Rotte» per un router e un firewall, «Regole» per un firewall, «NAT» per le porte di un router o di un firewall, «DHCP» per un router, un firewall e un server, «DNS» per un server.
+- «Rotte» per un router e un firewall, «Regole» per un router e un firewall, «NAT» per le porte di un router o di un firewall, «DHCP» per un router, un firewall e un server, «DNS» per un server.
 
 Sul canvas non cambia nulla finché non premi «Salva»; «Annulla» lascia il dispositivo com'era.
 

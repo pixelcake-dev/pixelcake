@@ -182,6 +182,25 @@ describe('evaluateFirewall: rules', () => {
     });
   });
 
+  it('says that the port is in no zone, not that the link is detached, when the port has none', () => {
+    // port 4 is attached, and its zone is «None»
+    const fw = firewall([rule('deny', 'any', 'untrust', 'any')]);
+    expect(decide(fw, 4, 1, packet())?.skipped).toEqual([
+      'firewall FW-1: rule 1 names a zone and port 4 is in no zone: skipped',
+    ]);
+    const outwards = firewall([rule('deny', 'any', 'any', 'untrust')]);
+    expect(decide(outwards, 1, 4, packet())?.skipped).toEqual([
+      'firewall FW-1: rule 1 names a zone and port 4 is in no zone: skipped',
+    ]);
+  });
+
+  it('names both reasons when each side of the rule misses its zone for its own', () => {
+    const fw = firewall([rule('deny', 'any', 'untrust', 'trust')]);
+    expect(decide(fw, undefined, 4, packet())?.skipped).toEqual([
+      'firewall FW-1: rule 1 names a zone, the link is not attached to a port and port 4 is in no zone: skipped',
+    ]);
+  });
+
   it('still applies rules written with addresses when the zones are unknown', () => {
     const fw = firewall([rule('deny', 'any', '203.0.113.50', 'any')]);
     expect(decide(fw, undefined, undefined, packet())).toMatchObject({
@@ -200,6 +219,28 @@ describe('who filters, and what a rule may name', () => {
     expect(filtersTraffic({ ...router, firewallRules: [rule('deny', 'any', 'any', 'any')] })).toBe(true);
 
     expect(evaluateFirewall(router, undefined, undefined, packet())).toBeUndefined();
+  });
+
+  it('a router with rules is named as a router, and lets through what no rule matches', () => {
+    const router = device({
+      id: 'r1',
+      label: 'R1',
+      type: 'Router',
+      ports: [port(1), port(2)],
+      firewallRules: [rule('deny', 'ping', 'any', '172.16.0.10')],
+    });
+    const iface = (id: number) =>
+      listInterfaces(router).find(candidate => candidate.kind === 'port' && candidate.port.id === id);
+    expect(evaluateFirewall(router, iface(1), iface(2), packet())).toEqual({
+      allowed: false,
+      text: 'router R1: denied by rule 1 (deny ping from any to 172.16.0.10)',
+      skipped: [],
+    });
+    expect(evaluateFirewall(router, iface(1), iface(2), packet({ service: 'web' }))).toEqual({
+      allowed: true,
+      text: 'router R1: no rule matches: allowed',
+      skipped: [],
+    });
   });
 
   it('accepts any, a zone, an address or a network as source and destination', () => {
@@ -390,5 +431,124 @@ describe('traceRoute through a transparent firewall with rules', () => {
       ['pc1', 'forwarded'],
       ['fw', 'blocked'],
     ]);
+  });
+});
+
+// ---------- each firewall remembers the flows it has seen ----------
+
+describe('a reply and the firewalls its request did not cross', () => {
+  const P2P = '255.255.255.252';
+
+  /**
+   * pcA ─ r1 ─ fwA ─ r2 ─ pcB, and r1 ─ fwB ─ r2 beside it. The request
+   * goes through fwA, the reply comes back through fwB: each router sends
+   * the other network by its own firewall. Both firewalls deny ping from
+   * the network of pcB to the network of pcA.
+   */
+  function twoFirewalls(): Topology {
+    const denyInwards = () => [rule('deny', 'ping', '192.168.2.0/24', '192.168.1.0/24')];
+    return topo(
+      [
+        host('pcA', '192.168.1.10', '192.168.1.1'),
+        host('pcB', '192.168.2.10', '192.168.2.1'),
+        device({
+          id: 'r1',
+          type: 'Router',
+          ports: [
+            port(1, { ip: '192.168.1.1' }),
+            port(2, { ip: '10.0.0.1', subnet: P2P }),
+            port(3, { ip: '10.0.1.1', subnet: P2P }),
+          ],
+          routes: [{ id: 'r1-1', destination: '192.168.2.0/24', nextHop: '10.0.0.2' }],
+        }),
+        device({
+          id: 'fwA',
+          type: 'Firewall',
+          ports: [port(1, { ip: '10.0.0.2', subnet: P2P }), port(2, { ip: '10.0.2.1', subnet: P2P })],
+          routes: [
+            { id: 'fwA-1', destination: '192.168.1.0/24', nextHop: '10.0.0.1' },
+            { id: 'fwA-2', destination: '192.168.2.0/24', nextHop: '10.0.2.2' },
+          ],
+          firewallRules: denyInwards(),
+        }),
+        device({
+          id: 'fwB',
+          type: 'Firewall',
+          ports: [port(1, { ip: '10.0.1.2', subnet: P2P }), port(2, { ip: '10.0.3.1', subnet: P2P })],
+          routes: [
+            { id: 'fwB-1', destination: '192.168.1.0/24', nextHop: '10.0.1.1' },
+            { id: 'fwB-2', destination: '192.168.2.0/24', nextHop: '10.0.3.2' },
+          ],
+          firewallRules: denyInwards(),
+        }),
+        device({
+          id: 'r2',
+          type: 'Router',
+          ports: [
+            port(1, { ip: '192.168.2.1' }),
+            port(2, { ip: '10.0.2.2', subnet: P2P }),
+            port(3, { ip: '10.0.3.2', subnet: P2P }),
+          ],
+          routes: [{ id: 'r2-1', destination: '192.168.1.0/24', nextHop: '10.0.3.1' }],
+        }),
+      ],
+      [
+        link('pcA', 'r1', { sourceNic: 'nic-1', targetPort: 1 }),
+        link('r1', 'fwA', { sourcePort: 2, targetPort: 1 }),
+        link('fwA', 'r2', { sourcePort: 2, targetPort: 2 }),
+        link('r1', 'fwB', { sourcePort: 3, targetPort: 1 }),
+        link('fwB', 'r2', { sourcePort: 2, targetPort: 3 }),
+        link('pcB', 'r2', { sourceNic: 'nic-1', targetPort: 1 }),
+      ]
+    );
+  }
+
+  it('is a new packet to a firewall that never saw the request: its rules apply', () => {
+    const flow = planAndEvaluateFlow('ping', 'pcA', 'pcB', twoFirewalls());
+    expect(flow.legs.map(leg => [leg.purpose, leg.trace.verdict])).toEqual([
+      ['request', 'success'],
+      ['reply', 'blocked'],
+    ]);
+    expect(flow.legs[0].trace.hops.map(h => h.deviceId)).toEqual(['pcA', 'r1', 'fwA', 'r2', 'pcB']);
+    expect(flow.failureReason).toBe(
+      'reply: firewall fwB: denied by rule 1 (deny ping from 192.168.2.0/24 to 192.168.1.0/24), ' +
+        'and it never saw the request'
+    );
+    expect(flow.animationPath).toEqual(['pcA', 'r1', 'fwA', 'r2', 'pcB', 'r2', 'fwB']);
+  });
+
+  it('passes the firewall that saw the request, whatever its rules say about a new flow', () => {
+    // Both routers send by fwA: the reply comes back the way the request went
+    const base = twoFirewalls();
+    const symmetric: Topology = {
+      ...base,
+      devices: base.devices.map(d =>
+        d.id === 'r2' ? { ...d, routes: [{ id: 'r2-1', destination: '192.168.1.0/24', nextHop: '10.0.2.1' }] } : d
+      ),
+    };
+    const flow = planAndEvaluateFlow('ping', 'pcA', 'pcB', symmetric);
+    expect(flow.verdict).toBe('success');
+    expect(flow.notes).toContain(
+      'reply: firewall fwA: reply to an allowed flow passes rule 1 (deny ping from 192.168.2.0/24 to 192.168.1.0/24)'
+    );
+  });
+
+  it('is judged by every firewall on its way: one that saw the request lets it pass, the next does not', () => {
+    // the reply crosses fwB after nothing else; fwA saw the request only
+    const packet = (seen: string[]): Packet => ({
+      sourceIp: '192.168.2.10',
+      destinationIp: '192.168.1.10',
+      service: 'ping',
+      returnTraffic: true,
+      requestPath: new Set(seen),
+    });
+    const fwB = twoFirewalls().devices.find(d => d.id === 'fwB') as NetworkDevice;
+    expect(evaluateFirewall(fwB, undefined, undefined, packet(['fwB']))?.allowed).toBe(true);
+    expect(evaluateFirewall(fwB, undefined, undefined, packet(['fwA']))).toMatchObject({
+      allowed: false,
+      text:
+        'firewall fwB: denied by rule 1 (deny ping from 192.168.2.0/24 to 192.168.1.0/24), ' +
+        'and it never saw the request',
+    });
   });
 });

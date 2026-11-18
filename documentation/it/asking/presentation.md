@@ -90,5 +90,5 @@ I guasti, però, non si possono simulare dal terminale. Si simulano con il picco
 > - I guasti non si salvano e non fanno parte del file. Uscire dalla presentazione, o cambiare canvas, li fa dimenticare.
 > - Tre tipi di comunicazione: ping, web ed email. Il download no.
 > - Un guasto è tutto o niente: un dispositivo è spento o acceso, un cavo tagliato o intero. Non c'è una linea lenta, una perdita parziale, né una porta che si guasta da sola.
-> - Una rotta il cui prossimo salto si spegne dietro uno switch non viene ritirata, e una porta spenta all'altro capo di un cavo che funziona non si vede da questa parte: vedi [che cosa non è simulato](how-the-engine-decides.md#not-simulated).
+> - Una rotta il cui prossimo salto si spegne dietro uno switch non viene ritirata: vedi [che cosa non è simulato](how-the-engine-decides.md#not-simulated).
 > - Un'assegnazione DHCP non cambia quando un dispositivo si guasta: tiene l'indirizzo che aveva, anche quando è spento il suo server DHCP.

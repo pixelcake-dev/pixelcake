@@ -11,6 +11,11 @@ interface FirewallRulesPanelProps {
   /** The ports of the firewall as in the form, to tell which zones are in use */
   ports: Port[];
   onChange: (rules: FirewallRule[]) => void;
+  /**
+   * The rules of a router: its access list. A router has no zones, so they
+   * are not offered, and what no rule matches passes
+   */
+  router?: boolean;
 }
 
 /** Lowest `rule-N` id not in use */
@@ -33,11 +38,18 @@ const iconButton =
 
 /**
  * FirewallRulesPanel
- * The ordered rules of a firewall. The order is the policy: the first rule
- * that matches decides, so each row can be moved up and down.
+ * The ordered rules of a firewall, or of a router. The order is the policy:
+ * the first rule that matches decides, so each row can be moved up and down.
  */
-const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, onChange }) => {
+const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({
+  rules,
+  ports,
+  onChange,
+  router = false,
+}) => {
   const t = useT();
+  // (a router reads its rules the same way, without zones: some words change)
+  const texts = router ? t.firewall.router : t.firewall;
   const update = (id: string, patch: Partial<FirewallRule>) => {
     onChange(rules.map((rule) => (rule.id === id ? { ...rule, ...patch } : rule)));
   };
@@ -66,14 +78,14 @@ const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, o
     <div className="flex flex-col gap-4 text-sm">
       <p className="text-[var(--text-color-light)]">
         <Rich
-          text={t.firewall.intro}
+          text={texts.intro}
           code={(words) => <code className="font-mono">{words}</code>}
         />
       </p>
 
-      <section aria-label={t.firewall.title}>
+      <section aria-label={texts.title}>
         {rules.length === 0 ? (
-          <p className="text-[var(--text-color-light)] mb-2">{t.firewall.none}</p>
+          <p className="text-[var(--text-color-light)] mb-2">{texts.none}</p>
         ) : (
           <table className="w-full border-collapse mb-2">
             <thead>
@@ -217,9 +229,7 @@ const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, o
         )}
         <datalist id="firewall-rule-endpoints">
           <option value="any" />
-          {ZONES.map((zone) => (
-            <option key={zone} value={zone} />
-          ))}
+          {!router && ZONES.map((zone) => <option key={zone} value={zone} />)}
         </datalist>
         <Button
           variant="secondary"
@@ -244,7 +254,7 @@ const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, o
 
       {unusedZones.length > 0 && (
         <div className="modal-info-box" role="note">
-          {t.firewall.unusedZones(unusedZones)}
+          {router ? t.firewall.router.zonesNeverMatch(unusedZones) : t.firewall.unusedZones(unusedZones)}
         </div>
       )}
 
@@ -252,7 +262,7 @@ const FirewallRulesPanel: React.FC<FirewallRulesPanelProps> = ({ rules, ports, o
         <h4 className="text-sm font-semibold text-[var(--text-color)] mb-1">
           {t.firewall.noMatch.title}
         </h4>
-        <p>{t.firewall.noMatch.text}</p>
+        <p>{router ? t.firewall.router.noMatch : t.firewall.noMatch.text}</p>
       </section>
     </div>
   );

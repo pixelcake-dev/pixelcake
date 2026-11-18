@@ -1,4 +1,4 @@
-/** The rules tab of a firewall */
+/** The rules tab of a firewall, and of a router */
 export const firewall = {
   /** Drawn with Rich: the words between backticks are shown as code */
   intro:
@@ -45,7 +45,27 @@ export const firewall = {
     text:
       'Decide la politica delle zone: il traffico verso una zona più fidata è negato (untrust → ' +
       'trust, untrust → dmz, dmz → trust), tutto il resto è permesso. La risposta a un flusso ' +
-      'permesso passa sempre.',
+      'che il firewall ha permesso passa; una risposta di cui non ha visto la richiesta viene ' +
+      'giudicata come ogni altro pacchetto.',
+  },
+
+  /** The same tab on a router: its rules are its access list, and it has no zones */
+  router: {
+    /** Drawn with Rich: the words between backticks are shown as code */
+    intro:
+      "Le regole si leggono dall'alto in basso: decide la prima che corrisponde. In «Da» e «A» " +
+      'si scrive `any` (qualsiasi), un indirizzo o una rete come `192.168.10.0/24`.',
+    title: 'Regole del router',
+    none: 'Nessuna regola: il router lascia passare tutto.',
+    noMatch:
+      'È permesso tutto: un router non ha zone di sicurezza. La risposta a un flusso che il ' +
+      'router ha permesso passa; una risposta di cui non ha visto la richiesta viene giudicata ' +
+      'come ogni altro pacchetto.',
+    /** Rules of a router name zones (`trust`, `untrust`, `dmz`: written as they are typed) */
+    zonesNeverMatch: (zones: readonly string[]) =>
+      'Le zone sono delle porte di un firewall: su un router le regole che nominano ' +
+      (zones.length === 1 ? `la zona ${zones[0]}` : `le zone ${zones.join(', ')}`) +
+      ' non corrispondono mai.',
   },
 
   /** What is wrong with a rule as typed: under its row, and after «Regola 2: » on saving */

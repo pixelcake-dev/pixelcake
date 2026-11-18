@@ -38,7 +38,8 @@ export function runFlowSimulation(
     toast.warning(notices.chooseBothEnds);
     return false;
   }
-  if (sourceId === targetId) {
+  // (a device pings itself without the packet leaving it; the rest needs two)
+  if (sourceId === targetId && flowModel !== 'ping') {
     toast.warning(notices.sameDevice);
     return false;
   }
@@ -46,6 +47,13 @@ export function runFlowSimulation(
   const result = planAndEvaluateFlow(flowModel, sourceId, targetId, topology, {
     emailMode: globalNetworkSettings.emailMode ?? 'auto',
   });
+  if (result.verdict === 'success' && result.animationPath.length < 2) {
+    // Answered by the device itself: nothing travels, the device says so at once
+    useSimulationStore.getState().leaveAnswer(flowOutcome(result, flowModel));
+    const device = topology.devices.find((d) => d.id === sourceId);
+    toast.success(notices.loopback(device?.label ?? sourceId));
+    return false;
+  }
   const start = () =>
     useSimulationStore
       .getState()

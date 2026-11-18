@@ -1,6 +1,6 @@
 import type { Dictionary } from '../dictionary';
 
-/** The rules tab of a firewall */
+/** The rules tab of a firewall, and of a router */
 export const firewall: Dictionary['firewall'] = {
   /** Drawn with Rich: the words between backticks are shown as code */
   intro:
@@ -46,8 +46,27 @@ export const firewall: Dictionary['firewall'] = {
     title: 'When no rule matches',
     text:
       'The zone policy decides: traffic towards a more trusted zone is denied (untrust → trust, ' +
-      'untrust → dmz, dmz → trust); everything else is allowed. The reply to an allowed flow ' +
-      'always passes.',
+      'untrust → dmz, dmz → trust); everything else is allowed. The reply to a flow this ' +
+      'firewall allowed passes; a reply whose request it never saw is judged like any other ' +
+      'packet.',
+  },
+
+  /** The same tab on a router: its rules are its access list, and it has no zones */
+  router: {
+    /** Drawn with Rich: the words between backticks are shown as code */
+    intro:
+      'Rules are read top to bottom: the first that matches decides. In “From” and “To” write ' +
+      '`any`, an address or a network such as `192.168.10.0/24`.',
+    title: 'Router rules',
+    none: 'No rules: the router lets everything through.',
+    noMatch:
+      'Everything is allowed: a router has no security zones. The reply to a flow the router ' +
+      'allowed passes; a reply whose request it never saw is judged like any other packet.',
+    /** Rules of a router name zones (`trust`, `untrust`, `dmz`: written as they are typed) */
+    zonesNeverMatch: (zones: readonly string[]) =>
+      'Zones belong to the ports of a firewall: on a router the rules that name ' +
+      (zones.length === 1 ? `the zone ${zones[0]}` : `the zones ${zones.join(', ')}`) +
+      ' never match.',
   },
 
   /** What is wrong with a rule as typed: under its row, and after “Rule 2: ” on saving */

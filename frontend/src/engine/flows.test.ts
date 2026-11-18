@@ -80,12 +80,40 @@ function mailViaSwitch(): Topology {
 // ---------- common guards ----------
 
 describe('planAndEvaluateFlow guards', () => {
-  it('errors when source and target are the same device', () => {
+  it.each(['web', 'download', 'email'] as const)(
+    'errors on %s when source and target are the same device',
+    model => {
+      const result = planAndEvaluateFlow(model, 'pc1', 'pc1', sameSubnetViaSwitch());
+      expect(result.verdict).toBe('error');
+      expect(result.failureReason).toBe('source and target are the same device');
+      expect(result.legs).toEqual([]);
+      expect(result.animationPath).toEqual([]);
+    }
+  );
+
+  it('answers a ping from a device to itself without the packet leaving it (loopback)', () => {
     const result = planAndEvaluateFlow('ping', 'pc1', 'pc1', sameSubnetViaSwitch());
+    expect(result.verdict).toBe('success');
+    expect(result.legs.map(l => [l.purpose, l.trace.verdict, l.trace.hops.map(h => h.deviceId)])).toEqual([
+      ['request', 'success', ['pc1']],
+      ['reply', 'success', ['pc1']],
+    ]);
+    expect(result.animationPath).toEqual(['pc1']);
+    expect(result.animationLinks).toEqual([]);
+    // as a trace from the device to itself does
+    expect(traceRoute('pc1', 'pc1', sameSubnetViaSwitch()).verdict).toBe('success');
+  });
+
+  it('a ping from a device to itself still needs the device to have an address', () => {
+    const t = sameSubnetViaSwitch();
+    const bare: Topology = {
+      ...t,
+      devices: t.devices.map(d => (d.id === 'pc1' ? { ...d, ip: '' } : d)),
+    };
+    const result = planAndEvaluateFlow('ping', 'pc1', 'pc1', bare);
     expect(result.verdict).toBe('error');
-    expect(result.failureReason).toBe('source and target are the same device');
-    expect(result.legs).toEqual([]);
-    expect(result.animationPath).toEqual([]);
+    expect(result.failureReason).toBe('request: PC-1 has no IP address configured');
+    expect(traceRoute('pc1', 'pc1', bare).failureReason).toBe('PC-1 has no IP address configured');
   });
 
   it('stops after the first failing leg (legs.length === 1)', () => {
@@ -447,6 +475,62 @@ describe('planAndEvaluateFlow email modes', () => {
       ['SMTP to cloud provider', 'pc1', 'gw1'],
     ]);
     expect(result.animationPath).toEqual(['pc1', 'sw1', 'gw1']);
+  });
+});
+
+describe('planAndEvaluateFlow email: which device is the internet exit', () => {
+  /** PC-1 — SW-1 — PC-2, and on SW-1 a device of `type` named `label` */
+  function withDevice(label: string, type: string): Topology {
+    return topo(
+      [
+        device({ id: 'pc1', label: 'PC-1', ip: '192.168.1.10' }),
+        device({ id: 'sw1', label: 'Switch-0', type: 'Switch', ip: '192.168.1.2' }),
+        device({ id: 'other', label, type, ip: '192.168.1.1' }),
+        device({ id: 'pc2', label: 'PC-2', ip: '192.168.1.20' }),
+      ],
+      [link('pc1', 'sw1'), link('sw1', 'other'), link('sw1', 'pc2')]
+    );
+  }
+
+  it.each([
+    ['Display-1', 'PC'],
+    ['Cloudy-Lab', 'Server'],
+    ['Swan', 'Router'],
+    ['Internetwork-Core', 'Router'],
+  ])('is not a device whose name only holds the word inside another word: %s', (label, type) => {
+    const result = planAndEvaluateFlow('email', 'pc1', 'pc2', withDevice(label, type), {
+      emailMode: 'cloud',
+    });
+    expect(result.verdict).toBe('error');
+    expect(result.failureReason).toBe(
+      'no internet exit in the network — cloud email needs an Internet gateway or Cloud device'
+    );
+  });
+
+  it.each([
+    ['ISP-Router', 'Router'],
+    ['R-WAN', 'Router'],
+    ['WAN1', 'Router'],
+    ['Edge Internet', 'Firewall'],
+  ])('is a device whose name has the word on its own, when no device is a Cloud: %s', (label, type) => {
+    const result = planAndEvaluateFlow('email', 'pc1', 'pc2', withDevice(label, type), {
+      emailMode: 'cloud',
+    });
+    expect(result.verdict).toBe('success');
+    expect(result.legs.map(l => [l.fromId, l.toId])).toEqual([
+      ['pc1', 'other'],
+      ['other', 'pc2'],
+    ]);
+  });
+
+  it('is a Cloud device by its kind, whatever its name', () => {
+    const t = withDevice('Provider', 'Cloud');
+    const result = planAndEvaluateFlow('email', 'pc1', 'pc2', t, { emailMode: 'cloud' });
+    expect(result.verdict).toBe('success');
+    expect(result.legs.map(l => [l.fromId, l.toId])).toEqual([
+      ['pc1', 'other'],
+      ['other', 'pc2'],
+    ]);
   });
 });
 

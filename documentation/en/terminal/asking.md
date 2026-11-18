@@ -32,7 +32,9 @@ An answer that does not arrive says `Ping failed (<verdict>): <reason>`, and und
 | `success` | The question arrived, and was answered |
 | `blocked` | A device dropped the packet: the reason names it |
 | `unreachable` | No cable joins the two devices, by any path that works |
-| `error` | The question cannot even be asked: a device has no address, or the source and the target are the same device |
+| `error` | The question cannot even be asked: a device has no address, or the source and the target of `browse`, `mail` or `download` are the same device |
+
+A device can ping itself: it answers without the packet leaving it, in one hop, as a `trace` to itself shows.
 
 Lines that start with `note:` come after the answer. They tell what the engine assumed or did on the way and did not verify: a firewall that decided, an address that was translated, the Internet symbol that was taken as letting everything through.
 
@@ -53,7 +55,7 @@ Ping failed (blocked): request: Internet does not carry private addresses: 192.1
   dropped at: Internet
 pixelcake> ping Web-ERP from Web-ERP
 Pinging Web-ERP (192.168.30.30) from Web-ERP...
-Ping failed (error): source and target are the same device
+Reply from 192.168.30.30: hops=1 time=1ms
 pixelcake> ping Internet from PC-Sales
 Pinging Internet (no ip) from PC-Sales...
 Ping failed (error): request: Internet has no IP address configured

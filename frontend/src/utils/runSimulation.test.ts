@@ -63,11 +63,24 @@ describe('runFlowSimulation', () => {
     expect(simulation().answer).toBeNull();
   });
 
-  it('refuses a question with a missing end, or from a device to itself, and says why', () => {
+  it('refuses a question with a missing end, or a page from a device to itself, and says why', () => {
     expect(runFlowSimulation('', id('Srv-File'), 'ping')).toBe(false);
-    expect(runFlowSimulation(id('Srv-File'), id('Srv-File'), 'ping')).toBe(false);
+    expect(runFlowSimulation(id('Srv-File'), id('Srv-File'), 'web')).toBe(false);
     expect(toast.warning).toHaveBeenCalledTimes(2);
     expect(simulation().isRunning).toBe(false);
+  });
+
+  it('answers a ping from a device to itself on the device, with no packet to animate', () => {
+    vi.mocked(toast.success).mockClear();
+    expect(runFlowSimulation(id('Srv-File'), id('Srv-File'), 'ping')).toBe(false);
+
+    expect(simulation().isRunning).toBe(false);
+    expect(simulation().answer).toEqual({ arrives: true, deviceId: id('Srv-File') });
+    expect(toast.warning).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(toast.success).toHaveBeenCalledWith(
+      'Srv-File risponde a se stesso: il pacchetto non esce dal dispositivo'
+    );
   });
 
   it('refuses to simulate on a canvas with fewer than two devices', () => {

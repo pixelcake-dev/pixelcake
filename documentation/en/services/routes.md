@@ -39,7 +39,7 @@ The first three rows are connected networks, each with the port it is on. The la
 
 A static route is a network and a next hop: the address of the router that is closer to that network. In the window of the router, in the “Routes” tab, press “Add route” under “Static routes”. Write the network and its mask in “Destination network”, for example `192.168.2.0/24`, the address in “Next hop”, and if you like a reminder in “Note”. Nothing changes until you press “Save”. A row left blank is not kept, and a destination that is not a network is refused: write it as `192.168.30.0/24`, or as `default`.
 
-The next hop has to be in a network the router is attached to. If it is not, the row stays in the table, marked as unusable, and it still takes the traffic for its network: the packet stops at the router with that reason, and goes on neither by a backup route nor by the default route. The terminal warns when you write it:
+The next hop has to be in a network the router is attached to. If it is not, the row stays in the table, marked as unusable, and the router passes it over, as a real one does: the traffic for its network goes by the next route to the same network, or by the default route, and the answer says so in a note. With no other way, the packet stops at the router with that reason. The terminal warns when you write it:
 
 ```ncl sample=two-sites
 pixelcake> add route 192.168.9.0/24 via 10.0.9.9 on R-HQ
@@ -190,11 +190,22 @@ DESTINATION          VIA              OUT      KIND
 
 `show routes` marks the second row `static, backup`.
 
-The backup is used when the port of the main route is switched off, or when its line has failed. A line has failed when the cable is cut, or the device at the other end is down: you can simulate both in [presentation mode](../asking/presentation.md#failures), where a click on the cable and “Simulate a failure” is enough. A router then behaves like a real one that loses the carrier: it withdraws the route that leaves by that port and uses the next. The trace says so in a note, for example: `R-HQ: the route 192.168.2.0/24 via 10.0.0.2 is unusable (link R-HQ–R-Branch is down), the route 192.168.2.0/24 via 10.0.1.2 is used instead`.
+The backup is used when the port of the main route is switched off, or when its line is down. A line is down when the port at its other end is switched off, when the cable is cut, or when the device at the other end is down; the last two you can simulate in [presentation mode](../asking/presentation.md#failures), where a click on the cable and “Simulate a failure” is enough. A router then behaves like a real one that loses the carrier: it withdraws the route that leaves by that port and uses the next. The trace says so in a note, for example: `R-HQ: the route 192.168.2.0/24 via 10.0.0.2 is unusable (link R-HQ–R-Branch is down), the route 192.168.2.0/24 via 10.0.1.2 is used instead`.
 
 The same goes for two default routes, and for a PC with a gateway on each of two network cards.
 
-Switching off a port is a setting of that port only. The router at the other end does not notice and keeps sending through it. To see the backup at work from the terminal, switch off both ends of the line; with only one end off, the request finds the way round and the reply comes back along the main route into a port that is down:
+Switching off one end of the line is enough. The router at the other end loses the carrier too, and takes its own backup route: the request and the reply both go round by R-Backup.
+
+```ncl sample=two-sites
+pixelcake> interface 2 down on R-HQ
+port 2 on R-HQ is now down
+pixelcake> ping PC-Branch-1 from PC-HQ-1
+Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
+Reply from 192.168.2.11: hops=8 time=13ms
+  note: reply: R-Branch: the route 192.168.1.0/24 via 10.0.0.1 is unusable (port 2 on R-HQ is disabled), the route 192.168.1.0/24 via 10.0.2.1 is used instead
+```
+
+From the terminal the way is easier to follow with a trace, and with the routing tables of the two routers:
 
 ```ncl sample=two-sites
 pixelcake> interface 2 down on R-HQ
@@ -210,15 +221,6 @@ Tracing route to PC-Branch-1 (192.168.2.11) from PC-HQ-1:
   7  ○ SW-Branch (Switch)
   8  ● PC-Branch-1 (PC)
 Trace complete: destination reached.
-pixelcake> ping PC-Branch-1 from PC-HQ-1
-Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
-Ping failed (blocked): reply: port 2 on R-HQ is disabled
-  dropped at: R-HQ
-pixelcake> interface 2 down on R-Branch
-port 2 on R-Branch is now down
-pixelcake> ping PC-Branch-1 from PC-HQ-1
-Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
-Reply from 192.168.2.11: hops=8 time=13ms
 pixelcake> show routes R-HQ
 ROUTES of R-HQ
 DESTINATION          VIA              OUT      KIND
@@ -227,9 +229,17 @@ DESTINATION          VIA              OUT      KIND
 192.168.1.0/24       -                port 1   connected
 192.168.2.0/24       10.0.0.2         port 2   static  (interface down)
 192.168.2.0/24       10.0.1.2         port 3   static, backup
+pixelcake> show routes R-Branch
+ROUTES of R-Branch
+DESTINATION          VIA              OUT      KIND
+10.0.0.0/30          -                port 2   connected  (no link: port 2 on R-HQ is disabled)
+10.0.2.0/30          -                port 3   connected
+192.168.2.0/24       -                port 1   connected
+192.168.1.0/24       10.0.0.1         port 2   static  (no link: port 2 on R-HQ is disabled)
+192.168.1.0/24       10.0.2.1         port 3   static, backup
 ```
 
-The failures of a presentation do not have this problem: a cable that is cut is down for both routers.
+A cable cut in a presentation does the same, for both routers.
 
 ## When routes disagree {#loops}
 
@@ -264,5 +274,5 @@ Trace failed (blocked): routing loop: the packet comes back to R-HQ
 > - Two routes to the same network are not shared. The first is used, and the second only when the interface of the first has no working link. There are no metrics and no distances to compare.
 > - Only what is attached to the port counts. A next hop that goes down behind a switch does not take the interface down: the route stays and the traffic is lost there, as with any static route.
 > - A next hop is an address, not an interface. There are no routes through a port, no policy routing, and no sub-interfaces on a port.
-> - A port switched off is not seen from the other end of its cable. A cut cable or a device that is down, simulated in presentation mode, is.
+> - A port switched off is seen from the other end of its own cable only. With a switch between the two routers, the one beyond the switch does not notice, as with any line that goes down behind a switch.
 > - A failure simulated in presentation mode changes nothing in the drawing.

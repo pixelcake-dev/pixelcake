@@ -69,7 +69,7 @@ pixelcake> show rules FW-Edge
 RULES of FW-Edge (the first that matches decides)
    1  allow web    from untrust            to 172.16.0.10
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
-  the reply to an allowed flow always passes
+  the reply to a flow it allowed passes
 pixelcake> browse Web-Pubblico from PC-Remoto
 Browsing Web-Pubblico (203.0.113.1) from PC-Remoto...
   ✓ HTTP request: PC-Remoto → Web-Pubblico

@@ -251,7 +251,7 @@ show routes [of] <device>
 
 La tabella di instradamento come la legge il motore, una riga per ogni rotta: dove va, da quale prossimo salto, da quale interfaccia esce, e di che tipo è. I tipi sono `connected` (una rete in cui sta una delle sue interfacce con indirizzo), `static` (scritta con `add route`), `default` (una rotta verso ogni rete) e `default (gateway)` (il gateway di una scheda o il gateway di un router). Una rotta che aspetta la caduta di un'altra è indicata con `backup`. Un dispositivo finale ha una tabella sua, con la sua rete e il suo gateway.
 
-Una rotta che non si può usare lo dice sulla sua riga: `(interface down)` quando la sua interfaccia è spenta, e `✗ next hop on none of its networks` quando il prossimo salto non sta su nessuna rete del dispositivo. Una rotta scritta come qualcosa che non è una rete e un indirizzo viene elencata sotto la tabella, come ignorata. Un router senza indirizzi di interfaccia dice che le sue rotte non vengono usate ([Rotte](routes.md)).
+Una rotta che non si può usare lo dice sulla sua riga: `(interface down)` quando la sua interfaccia è spenta; `(no link: …)` quando la linea da cui esce non porta nulla, perché la porta all'altro capo è spenta, oppure perché in una [presentazione](../asking/presentation.md#failures) il cavo è tagliato o il dispositivo all'altro capo è spento; e `✗ next hop on none of its networks` quando il prossimo salto non sta su nessuna rete del dispositivo. Il motore salta una rotta così e prende la successiva verso la stessa rete, o la rotta predefinita. Una rotta scritta come qualcosa che non è una rete e un indirizzo viene elencata sotto la tabella, come ignorata. Un router senza indirizzi di interfaccia dice che le sue rotte non vengono usate ([Rotte](routes.md)).
 
 ```ncl sample=two-sites
 pixelcake> show routes R-Sede
@@ -272,6 +272,14 @@ DESTINATION          VIA              OUT      KIND
 192.168.1.0/24       -                port 1   connected
 192.168.2.0/24       10.0.0.2         port 2   static  (interface down)
 192.168.2.0/24       10.0.1.2         port 3   static, backup
+pixelcake> show routes R-Filiale
+ROUTES of R-Filiale
+DESTINATION          VIA              OUT      KIND
+10.0.0.0/30          -                port 2   connected  (no link: port 2 on R-Sede is disabled)
+10.0.2.0/30          -                port 3   connected
+192.168.2.0/24       -                port 1   connected
+192.168.1.0/24       10.0.0.1         port 2   static  (no link: port 2 on R-Sede is disabled)
+192.168.1.0/24       10.0.2.1         port 3   static, backup
 pixelcake> show routes PC-Sede-1
 ROUTES of PC-Sede-1
 DESTINATION          VIA              OUT      KIND
@@ -285,7 +293,7 @@ default              192.168.1.1      eth0     default (gateway)
 show rules [of] <device>
 ```
 
-Le regole di un firewall nell'ordine in cui si leggono, ciascuna con il suo numero, l'azione, il servizio, la partenza e la destinazione, e poi ciò che decide quando nessuna corrisponde: la politica delle zone. La risposta a un flusso permesso passa sempre. Un dispositivo che non è un firewall e non ha regole dice che non filtra nulla.
+Le regole di un router o di un firewall nell'ordine in cui si leggono, ciascuna con il suo numero, l'azione, il servizio, la partenza e la destinazione, e poi ciò che decide quando nessuna corrisponde: su un firewall la politica delle zone; su un router niente, quindi tutto il resto è permesso. Un firewall lascia passare la risposta a un flusso che ha permesso lui stesso. Un dispositivo che non è né un router né un firewall, e non ha regole, dice che non filtra nulla.
 
 ```ncl sample=company
 pixelcake> show rules FW-Edge
@@ -294,9 +302,12 @@ RULES of FW-Edge (the first that matches decides)
    2  allow email  from untrust            to 192.168.30.40
    3  allow web    from 172.16.0.10        to 192.168.30.20
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
-  the reply to an allowed flow always passes
+  the reply to a flow it allowed passes
 pixelcake> show rules Router-Core
-Router-Core is not a firewall and has no rules: it filters nothing
+RULES of Router-Core (the first that matches decides)
+  no rules
+  then anything else is allowed
+  the reply to a flow it allowed passes
 ```
 
 ## show nat {#show-nat}
@@ -412,7 +423,7 @@ specify a device: "show ip <device>" — or enter a context with "use <device>"
 pixelcake> show nat PC-1
 PC-1 is a PC: it translates no addresses
 pixelcake> show rules PC-1
-PC-1 is not a firewall and has no rules: it filters nothing
+PC-1 is not a router or a firewall and has no rules: it filters nothing
 pixelcake> show ports PC-1
 PC-1 has no configurable ports
 ```

@@ -675,6 +675,33 @@ describe('traceRoute across several routers', () => {
     expect(result.hops[result.hops.length - 1]).toMatchObject({ deviceId: 'r1', status: 'blocked' });
   });
 
+  it('ignores a route whose next hop is on none of its networks: the next route takes the traffic', () => {
+    const lost = { id: 'route-1', destination: '192.168.30.0/24', nextHop: '172.16.0.1' };
+    const backup = { id: 'route-2', destination: '192.168.30.0/24', nextHop: '10.0.0.2' };
+    const result = traceRoute('pc1', 'pc2', twoRouters({ r1: { routes: [lost, backup] } }));
+    expect(result.verdict).toBe('success');
+    expect(result.hops[1].note).toBe('routed: 192.168.30.0/24 via 10.0.0.2 (port 2)');
+    expect(result.notes).toEqual([
+      'R1: the route 192.168.30.0/24 via 172.16.0.1 is unusable (172.16.0.1 is on none of its networks), ' +
+        'the route 192.168.30.0/24 via 10.0.0.2 is used instead',
+    ]);
+  });
+
+  it('ignores a more specific route that cannot be used, and falls back on the default route', () => {
+    const lost = { id: 'route-1', destination: '192.168.30.0/25', nextHop: '172.16.0.1' };
+    const result = traceRoute(
+      'pc1',
+      'pc2',
+      twoRouters({ r1: { gateway: '10.0.0.2', routes: [lost] } })
+    );
+    expect(result.verdict).toBe('success');
+    expect(result.hops[1].note).toBe('routed: default route via 10.0.0.2 (port 2)');
+    expect(result.notes).toEqual([
+      'R1: the route 192.168.30.0/25 via 172.16.0.1 is unusable (172.16.0.1 is on none of its networks), ' +
+        'the default route via 10.0.0.2 is used instead',
+    ]);
+  });
+
   it('blocks when nobody has the next hop address, naming who is there instead', () => {
     const wrong = { id: 'route-1', destination: '192.168.30.0/24', nextHop: '10.0.0.9' };
     const result = traceRoute('pc1', 'pc2', twoRouters({ r1: { routes: [wrong] } }));

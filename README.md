@@ -90,7 +90,7 @@ Every command is explained, with examples, in the [terminal reference](https://a
 The engine carries a packet the way the network would. At every device that handles it:
 
 1. **Routing.** The device looks the destination up in its routing table: a network one of its interfaces is in, a static route, or its default gateway. The most specific entry wins. No entry, no way: "no route", "no default gateway".
-2. **Filtering.** A firewall in transit applies its rules top to bottom; the first that matches decides. When none matches, the zone policy does: a new flow towards a more trusted zone is denied. The reply to an allowed flow passes.
+2. **Filtering.** A firewall in transit applies its rules top to bottom; the first that matches decides. When none matches, the zone policy does: a new flow towards a more trusted zone is denied. A firewall lets through the reply to a flow it allowed itself; a reply that comes back by another way is a new flow to the firewalls its request did not cross. A router can carry rules too, its access list, without zones.
 3. **Delivery.** The packet goes to the next address across switches, VLAN by VLAN: a switch port is an access port in one VLAN or a trunk carrying several, and once a switch has a VLAN on any port the ports nobody touched are in VLAN 1, as on real hardware. The shortest path that works is taken, so a port that is down is gone round when the drawing offers another way.
 
 A routing loop, an address used twice, a next hop nobody has, a trunk towards a device that expects no tag: each stops the packet with its own explanation.
@@ -132,7 +132,7 @@ In presentation mode a click on a device or on a cable, then “Simulate a failu
 
 - A device that is down sends and takes nothing; a cable that is cut carries nothing. The reason of a failed answer names them: `SW-Core is down`, `link R-HQ–R-Branch is down`.
 - Between switches the engine takes the shortest path that still works, so a ring or a second cable carries the traffic.
-- A router, or a host with two network cards, stops using a route when the interface it leaves by has no working cable left, and takes the next route for that destination: a backup route written after the main one. The answer says so in a note.
+- A router, or a host with two network cards, stops using a route when the interface it leaves by has no working cable left (cut, the device at the other end down, or the port at the other end switched off), and takes the next route for that destination: a backup route written after the main one. The answer says so in a note.
 - The panel then counts, over every pair of end devices: how many exchanges stop, how many take another path, how many do not change. A click on one of them asks that question.
 
 The terminal sees the same failures while the presentation lasts, so a `ping` typed there agrees with what is on screen.
@@ -157,7 +157,7 @@ Opened from a presentation (the “Export image” button on its bar), it shows 
 
 - **It is not a packet-level simulator.** There is no ARP, MAC learning or dynamic routing. Ping times are derived from the number of hops.
 - **Routes are static.** A router knows the networks it is attached to and the routes you wrote. Router sub-interfaces are not modelled: routing between VLANs needs a router port in each.
-- **A backup route takes over only when the line is seen to be down.** That is, when the interface of the main route has no working cable left. A next hop that dies behind a switch is not noticed, as with a plain static route on real hardware, and the traffic is lost there. A host has one gateway per network card: there is no gateway redundancy protocol.
+- **A backup route takes over only when the line is seen to be down.** That is, when the interface of the main route has no working cable left: cut, the device at the other end down, or the port at the other end switched off. A next hop that dies behind a switch is not noticed, as with a plain static route on real hardware, and the traffic is lost there. A host has one gateway per network card: there is no gateway redundancy protocol.
 - **Simulated failures are not saved.** They belong to the presentation and are gone when it ends.
 - **Firewall rules know four services**: ping, web, email and DNS. There are no port numbers, and traffic addressed to the firewall itself is not filtered.
 - **Spanning tree is not simulated.** A drawing with redundant links is walked without loops, but no port is blocked.

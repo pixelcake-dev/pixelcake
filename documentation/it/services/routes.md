@@ -39,7 +39,7 @@ Le prime tre righe sono reti collegate, ciascuna con la porta da cui si raggiung
 
 Una rotta statica è una rete e un prossimo salto: l'indirizzo del router che sta più vicino a quella rete. Nella finestra del router, nella scheda «Rotte», premi «Aggiungi rotta» sotto «Rotte statiche». Scrivi la rete con la sua maschera in «Rete di destinazione», per esempio `192.168.2.0/24`, l'indirizzo in «Prossimo salto» e, se vuoi un promemoria, una «Nota». Non cambia nulla finché non premi «Salva». Una riga lasciata vuota non viene salvata, e una destinazione che non è una rete viene rifiutata: scrivila come `192.168.30.0/24`, oppure come `default`.
 
-Il prossimo salto deve stare in una rete a cui il router è collegato. Se non ci sta, la riga resta nella tabella, segnata come non utilizzabile, e continua a prendere il traffico per la sua rete: il pacchetto si ferma sul router con quel motivo, e non prosegue né per una rotta di riserva né per la rotta predefinita. Il terminale avvisa quando la scrivi:
+Il prossimo salto deve stare in una rete a cui il router è collegato. Se non ci sta, la riga resta nella tabella, segnata come non utilizzabile, e il router la salta, come fa uno vero: il traffico per la sua rete prende la rotta successiva verso la stessa rete, o la rotta predefinita, e la risposta lo dice in una nota. Se non c'è un'altra strada, il pacchetto si ferma sul router con quel motivo. Il terminale avvisa quando la scrivi:
 
 ```ncl sample=two-sites
 pixelcake> add route 192.168.9.0/24 via 10.0.9.9 on R-Sede
@@ -190,11 +190,22 @@ DESTINATION          VIA              OUT      KIND
 
 `show routes` indica la seconda riga con `static, backup`.
 
-La riserva si usa quando la porta della rotta principale è spenta, o quando la sua linea si è guastata. La linea è guasta quando il cavo è tagliato o il dispositivo all'altro capo è spento: tutte e due le cose si simulano in [modalità presentazione](../asking/presentation.md#failures), dove basta un clic sul cavo e «Simula un guasto». Il router si comporta allora come uno vero che perde il segnale: ritira la rotta che esce da quella porta e usa la successiva. Il `trace` lo dice in una nota, per esempio: `R-Sede: the route 192.168.2.0/24 via 10.0.0.2 is unusable (link R-Sede–R-Filiale is down), the route 192.168.2.0/24 via 10.0.1.2 is used instead`.
+La riserva si usa quando la porta della rotta principale è spenta, o quando la sua linea è caduta. La linea è caduta quando la porta all'altro capo è spenta, quando il cavo è tagliato, o quando il dispositivo all'altro capo è spento; le ultime due cose si simulano in [modalità presentazione](../asking/presentation.md#failures), dove basta un clic sul cavo e «Simula un guasto». Il router si comporta allora come uno vero che perde il segnale: ritira la rotta che esce da quella porta e usa la successiva. Il `trace` lo dice in una nota, per esempio: `R-Sede: the route 192.168.2.0/24 via 10.0.0.2 is unusable (link R-Sede–R-Filiale is down), the route 192.168.2.0/24 via 10.0.1.2 is used instead`.
 
 Lo stesso vale per due rotte predefinite, e per un PC con un gateway su ciascuna di due schede di rete.
 
-Spegnere una porta riguarda solo quella porta. Il router all'altro capo non se ne accorge e continua a mandare i pacchetti da lì. Per vedere la riserva all'opera dal terminale spegni tutte e due le estremità della linea; con una sola estremità spenta la richiesta trova un'altra strada, e la risposta torna per la rotta principale, finendo su una porta spenta:
+Basta spegnere un capo della linea. Anche il router all'altro capo perde il segnale, e prende la sua rotta di riserva: la richiesta e la risposta passano tutte e due da R-Riserva.
+
+```ncl sample=two-sites
+pixelcake> interface 2 down on R-Sede
+port 2 on R-Sede is now down
+pixelcake> ping PC-Filiale-1 from PC-Sede-1
+Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
+Reply from 192.168.2.11: hops=8 time=13ms
+  note: reply: R-Filiale: the route 192.168.1.0/24 via 10.0.0.1 is unusable (port 2 on R-Sede is disabled), the route 192.168.1.0/24 via 10.0.2.1 is used instead
+```
+
+Dal terminale la strada si segue meglio con un `trace`, e con le tabelle di instradamento dei due router:
 
 ```ncl sample=two-sites
 pixelcake> interface 2 down on R-Sede
@@ -210,15 +221,6 @@ Tracing route to PC-Filiale-1 (192.168.2.11) from PC-Sede-1:
   7  ○ SW-Filiale (Switch)
   8  ● PC-Filiale-1 (PC)
 Trace complete: destination reached.
-pixelcake> ping PC-Filiale-1 from PC-Sede-1
-Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
-Ping failed (blocked): reply: port 2 on R-Sede is disabled
-  dropped at: R-Sede
-pixelcake> interface 2 down on R-Filiale
-port 2 on R-Filiale is now down
-pixelcake> ping PC-Filiale-1 from PC-Sede-1
-Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
-Reply from 192.168.2.11: hops=8 time=13ms
 pixelcake> show routes R-Sede
 ROUTES of R-Sede
 DESTINATION          VIA              OUT      KIND
@@ -227,9 +229,17 @@ DESTINATION          VIA              OUT      KIND
 192.168.1.0/24       -                port 1   connected
 192.168.2.0/24       10.0.0.2         port 2   static  (interface down)
 192.168.2.0/24       10.0.1.2         port 3   static, backup
+pixelcake> show routes R-Filiale
+ROUTES of R-Filiale
+DESTINATION          VIA              OUT      KIND
+10.0.0.0/30          -                port 2   connected  (no link: port 2 on R-Sede is disabled)
+10.0.2.0/30          -                port 3   connected
+192.168.2.0/24       -                port 1   connected
+192.168.1.0/24       10.0.0.1         port 2   static  (no link: port 2 on R-Sede is disabled)
+192.168.1.0/24       10.0.2.1         port 3   static, backup
 ```
 
-I guasti della presentazione non hanno questo problema: un cavo tagliato è giù per tutti e due i router.
+Un cavo tagliato in una presentazione fa lo stesso, per tutti e due i router.
 
 ## Quando le rotte non concordano {#loops}
 
@@ -264,5 +274,5 @@ Trace failed (blocked): routing loop: the packet comes back to R-Sede
 > - Due rotte verso la stessa rete non si dividono il traffico. Si usa la prima, e la seconda solo quando l'interfaccia della prima non ha un cavo che funzioni. Non ci sono metriche né distanze da confrontare.
 > - Conta solo ciò che è collegato alla porta. Un prossimo salto che si spegne dietro uno switch non fa cadere l'interfaccia: la rotta resta e il traffico si perde lì, come con ogni rotta statica.
 > - Un prossimo salto è un indirizzo, non un'interfaccia. Non ci sono rotte attraverso una porta, né instradamento per criteri, né sottointerfacce su una porta.
-> - Una porta spenta non si vede dall'altro capo del suo cavo. Un cavo tagliato o un dispositivo spento, simulati in modalità presentazione, sì.
+> - Una porta spenta si vede solo dall'altro capo del suo cavo. Con uno switch tra i due router, quello oltre lo switch non se ne accorge, come per ogni linea che cade dietro uno switch.
 > - Un guasto simulato in modalità presentazione non cambia nulla nel disegno.

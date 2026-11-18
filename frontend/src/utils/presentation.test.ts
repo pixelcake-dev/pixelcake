@@ -123,14 +123,15 @@ describe('answerLegs', () => {
   });
 
   it('is empty for an exchange that could not even be planned', () => {
-    expect(answerLegs(ask('PC-Sede-1', 'PC-Sede-1'))).toEqual([]);
+    // (a page from a device to itself: a ping to itself is answered by the device)
+    expect(answerLegs(ask('PC-Sede-1', 'PC-Sede-1', undefined, 'web'))).toEqual([]);
   });
 });
 
 describe('routeOf', () => {
   it('is nothing without an answer, or for one with nowhere to draw', () => {
     expect(routeOf(null)).toBeNull();
-    expect(routeOf(ask('PC-Sede-1', 'PC-Sede-1'))).toBeNull();
+    expect(routeOf(ask('PC-Sede-1', 'PC-Sede-1', undefined, 'web'))).toBeNull();
   });
 
   it('lists the cables of an answer that arrives, each once', () => {
@@ -396,10 +397,11 @@ describe('captionOf', () => {
   });
 
   it('a question that cannot be tried says so, in its own colour', () => {
-    const toItself = planAndEvaluateFlow('ping', id('PC-Sede-1'), id('PC-Sede-1'), sample);
+    // (a page from a device to itself: a ping to itself is answered by the device)
+    const toItself = planAndEvaluateFlow('web', id('PC-Sede-1'), id('PC-Sede-1'), sample);
     expect(toItself.verdict).toBe('error');
     const result = captionOf({
-      flow: 'ping',
+      flow: 'web',
       question: { sourceLabel: 'PC-Sede-1', targetLabel: 'PC-Sede-1' },
       answer: toItself,
       intactAnswer: null,
@@ -408,7 +410,7 @@ describe('captionOf', () => {
       labelOf,
     });
     expect(result?.tone).toBe('unknown');
-    expect(result?.heading).toBe('Ping da PC-Sede-1 a PC-Sede-1: non si può provare');
+    expect(result?.heading).toMatch(/ da PC-Sede-1 a PC-Sede-1: non si può provare$/);
     expect(result?.lines[0]).toBe('Manca qualcosa per fare la prova.');
     expect(result?.lines[1]).toMatch(/^Motivo: /);
   });

@@ -57,13 +57,13 @@ The device looks the destination up in its routing table. Three kinds of entry e
 
 The most specific entry wins. At equal length a connected network beats a static route, and a static route beats the default. Of two routes to the same network the first one written is used, and the others are [backup routes](../services/routes.md#backup). A route that leaves by a port that is switched off is not used. The table is explained in [the routing table](../services/routes.md#routing-table).
 
-When there is no entry the packet stops here, and the reason says which device and what is missing: `no default gateway configured on PC-1`, or `Router-1 has no route to 192.168.30.11`. A route whose next hop is on none of the device's own networks cannot be used either: the packet stops there, with that reason, even when a backup route or the default route would lead on. When the only way leaves by a port that is switched off, the reason is that port: `port 2 on Router-1 is disabled`.
+When there is no entry the packet stops here, and the reason says which device and what is missing: `no default gateway configured on PC-1`, or `Router-1 has no route to 192.168.30.11`. A route whose next hop is on none of the device's own networks leads nowhere: it is passed over, as a real router does, and the next entry decides, a backup route or the default route, with a note. When it was the only way, the packet stops there with that reason: `Router-1 cannot use the route 192.168.30.0/24 via 172.16.0.1: that address is on none of its networks`. When the only way leaves by a port that is switched off, the reason is that port: `port 2 on Router-1 is disabled`.
 
 Having found the next address, the engine looks for the device that answers for it on the sender's own network. When there is none, the reason says what is there instead: `PC-1 uses gateway 192.168.10.99, but Router-1 port 1 on its network is 192.168.10.1`. See [the gateway](../building/addresses.md#gateway).
 
 ### Backup routes {#backup-route}
 
-A route is withdrawn when the interface it leaves by has no working cable left: every cable on it is cut, or the device at the other end of each is down (the two [simulated failures](#failures)), or the port itself is switched off. The next route for that destination takes over. When the cause is a simulated failure the answer carries a note:
+A route is withdrawn when the interface it leaves by has no working cable left: every cable on it is cut, or the device at the other end of each is down (the two [simulated failures](#failures)), or the interface at the other end is switched off; or when the port itself is switched off. The next route for that destination takes over. A line that goes down is down for the devices at both of its ends, as a real link loses its carrier on both sides. When it is the line that is down, and not the port itself switched off, the answer carries a note:
 
 ```text
 note: R-HQ: the route 192.168.2.0/24 via 10.0.0.2 is unusable (link R-HQ–R-Branch is down), the route 192.168.2.0/24 via 10.0.1.2 is used instead
@@ -73,18 +73,18 @@ Two cases keep the main route. A network the device is attached to by a failed c
 
 ### The firewall {#firewall}
 
-A firewall that a packet crosses (not one that sends it, not one it is addressed to) decides before the packet goes on:
+A firewall that a packet crosses (not one that sends it, not one it is addressed to) decides before the packet goes on. So does a router that carries rules, its access list: it reads them the same way, and has no zones.
 
 1. **The rules**, top to bottom. The first rule that is enabled and matches the service, the source and the destination decides, to allow or to deny. A rule that names a zone needs the cable to be attached to a port that is in a zone, because the zone belongs to the port: without that the rule is skipped, with a note.
-2. **The zone policy**, when no rule matches. A new flow to a more trusted zone is denied: `untrust → trust`, `untrust → dmz` and `dmz → trust`. Anything else is allowed. A firewall that does not know the zone of both sides, because a cable is attached to no zoned port, allows, with a note.
-3. **Replies**. The reply to an allowed flow passes, whatever the rules say about a new flow in that direction. No table of flows is kept: every firewall on the way back lets the reply through, even one the request did not cross.
+2. **The zone policy**, when no rule matches. A new flow to a more trusted zone is denied: `untrust → trust`, `untrust → dmz` and `dmz → trust`. Anything else is allowed. A firewall that does not know the zone of both sides, because a cable is attached to no port or to a port in no zone, allows, with a note. A router has no zones: what no rule matches passes.
+3. **Replies**. A firewall remembers the flows it has let through itself. The reply to such a flow passes it, whatever the rules say about a new flow in that direction. A reply that comes back by another way, through a firewall the request did not cross, is a new packet to that firewall: its rules and its zones decide, and when they deny it the reason ends with `and it never saw the request`.
 
 ```ncl sample=site
 pixelcake> show rules FW-Edge
 RULES of FW-Edge (the first that matches decides)
    1  allow web    from untrust            to 172.16.0.10
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
-  the reply to an allowed flow always passes
+  the reply to a flow it allowed passes
 pixelcake> ping Srv-Internal from Web-Public
 Pinging Srv-Internal (192.168.20.10) from Web-Public...
 Ping failed (blocked): request: firewall FW-Edge: no rule matches, zone policy dmz → trust denied
@@ -165,8 +165,8 @@ A question is rarely one packet. The engine turns each kind of traffic into **le
 | File download | download request, then download data | web |
 | Email | SMTP submit to the relay, then delivery from the relay | email |
 
-- **A reply is a packet of its own.** It starts only if the request arrived, goes back to the address the request seemed to come from, and takes the way its own routing tables give. It may take another way than the request, and may fail where the request did not. Every firewall on its way lets it through because it answers an allowed flow, even a firewall the request did not cross, and the NAT devices of the way translate it back.
-- **Email has no reply.** The relay depends on the email mode in Settings → Network, group “Simulation”, field “Email mode (SMTP)”. “Internal mail server” uses the mail server with the fewest cables from the sender, counted on the drawing. “Cloud (M365, Gmail…)” uses the nearest internet exit: a device whose type, template or name contains Internet, Cloud, WAN or ISP. “Auto (detect automatically)” prefers the mail server and falls back to the exit, with a note. When the recipient is the mail server there is one leg; when the sender is, the delivery alone.
+- **A reply is a packet of its own.** It starts only if the request arrived, goes back to the address the request seemed to come from, and takes the way its own routing tables give. It may take another way than the request, and may fail where the request did not. A firewall that saw the request lets it through because it answers a flow it allowed; a firewall the request did not cross judges it as a new packet. The NAT devices of the way translate it back.
+- **Email has no reply.** The relay depends on the email mode in Settings → Network, group “Simulation”, field “Email mode (SMTP)”. “Internal mail server” uses the mail server with the fewest cables from the sender, counted on the drawing. “Cloud (M365, Gmail…)” uses the nearest internet exit: an Internet or Cloud symbol, or a device whose name has Internet, Cloud, WAN or ISP as a word of its own (`ISP-Router`, `R-WAN`, `WAN1`, but not `Display-1`). “Auto (detect automatically)” prefers the mail server and falls back to the exit, with a note. When the recipient is the mail server there is one leg; when the sender is, the delivery alone.
 - **A page from a device that is not a server** is followed all the same, with a note.
 
 ```ncl sample=office
@@ -177,26 +177,25 @@ Mailing PC-2 (192.168.10.12) from PC-1...
 Mail delivered to PC-2
 ```
 
-Because a reply is evaluated on its own, a ping can fail where a trace to the same device succeeds. In the two-sites sample, switch off the main line on the head office side: the request finds another way by the backup line, but the branch router knows nothing of it and sends the reply down the main line, where it is dropped.
+Because a reply is evaluated on its own, a ping can fail where a trace to the same device succeeds. In the two-sites sample, take away the routes of the branch router back to the head office: the request arrives, and the reply finds no way back.
 
 ```ncl sample=two-sites
-pixelcake> interface 2 down on R-HQ
-port 2 on R-HQ is now down
+pixelcake> remove route 192.168.1.0/24 from R-Branch
+R-Branch: 2 routes to 192.168.1.0/24 removed
 pixelcake> trace PC-Branch-1 from PC-HQ-1
 Tracing route to PC-Branch-1 (192.168.2.11) from PC-HQ-1:
   1  ○ PC-HQ-1 (PC)
   2  ○ SW-Floor-1 (Switch)
   3  ○ SW-Core (Switch)
-  4  ○ R-HQ (Router)  — routed: 192.168.2.0/24 via 10.0.1.2 (port 3)
-  5  ○ R-Backup (Router)  — routed: 192.168.2.0/24 via 10.0.2.2 (port 2)
-  6  ○ R-Branch (Router)  — routed: 192.168.2.0/24 is on port 1
-  7  ○ SW-Branch (Switch)
-  8  ● PC-Branch-1 (PC)
+  4  ○ R-HQ (Router)  — routed: 192.168.2.0/24 via 10.0.0.2 (port 2)
+  5  ○ R-Branch (Router)  — routed: 192.168.2.0/24 is on port 1
+  6  ○ SW-Branch (Switch)
+  7  ● PC-Branch-1 (PC)
 Trace complete: destination reached.
 pixelcake> ping PC-Branch-1 from PC-HQ-1
 Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
-Ping failed (blocked): reply: port 2 on R-HQ is disabled
-  dropped at: R-HQ
+Ping failed (blocked): reply: R-Branch has no route to 192.168.1.11
+  dropped at: R-Branch
 ```
 
 ## Simulated failures {#failures}
@@ -219,7 +218,7 @@ An answer is one of four verdicts:
 | `success` | the destination answered (and, for a flow, every leg arrived) |
 | `blocked` | the packet was dropped on the way: the reason says why, and where |
 | `unreachable` | no chain of cables joins the two devices |
-| `error` | the question cannot be tried: one end does not exist or has no usable address, both ends of an exchange are the same device, or there is no mail server or internet exit for an email to go through |
+| `error` | the question cannot be tried: one end does not exist or has no usable address, both ends of a page, a download or an email are the same device, or there is no mail server or internet exit for an email to go through. (A device that pings itself answers, without the packet leaving it, as a trace to itself does.) |
 
 A stop says two things: the **reason**, in a sentence that names the device, the port, the route or the rule; and the **device where it stopped**, `dropped at:` in the terminal, the red box in the panel and in the presentation. It is the device that holds the packet when it stops. For a port, a rule or a route it is the device they belong to; for a cut cable or a device that is down it is the device in front, the last one that could still send. In a flow the reason begins with the name of the leg that failed.
 
@@ -262,8 +261,8 @@ What the engine cannot verify is **never passed silently as a success**: it adds
 - `Router-1 has no interface addresses: gateway and routing not verified`: the router's ports carry no address, so it is assumed to pass the packet on.
 - `Internet is not simulated: traffic assumed to pass`: the Internet symbol is a stand-in. `203.0.113.1 is not in the drawing: Internet assumed to take the traffic` says a gateway belongs to the outside world.
 - `link A–B has no port binding…: per-port rules skipped`: one end of a cable is attached to no port or card.
-- `firewall FW-1 has no zone binding: allowed`, or a rule `names a zone and the link is not attached to a port: skipped`.
-- `firewall FW-1: allowed by rule 1 (…)`, `NAT: source … → …`, and the line about a backup route, which tell what the device did and are there to be read.
+- `firewall FW-1 has no zone binding: allowed`, or a rule `names a zone and the link is not attached to a port: skipped`, or `names a zone and port 4 is in no zone: skipped`.
+- `firewall FW-1: allowed by rule 1 (…)`, `router R-1: denied by rule 1 (…)`, `NAT: source … → …`, and the line about a route that is unusable and the one used instead, which tell what the device did and are there to be read.
 
 The terminal prints the notes under the answer. The simulation panel shows only the reason of a stop; [presentation mode](presentation.md#ask) shows the path hop by hop with the notes of each hop, and `trace` prints them in the terminal.
 
@@ -271,7 +270,7 @@ The terminal prints the notes under the answer. The simulation panel shows only 
 
 > [!LIMITS]
 > - **It is not a packet simulator.** There is no ARP, no MAC table, no spanning tree, no dynamic routing (RIP, OSPF, BGP) and no gateway redundancy: a host has one gateway for each network card. Routes are the ones written.
-> - **A cable is not asked at the far end.** A route is withdrawn when the port it leaves by is switched off, when its cables are cut, or when the devices at their other ends are down. A port switched off at the far end of a working cable is not seen from this side, and the packet is lost there. A next hop that dies behind a switch is not seen either, as with a static route on real hardware.
+> - **Only the line itself is looked at.** A route is withdrawn when the port it leaves by is switched off, or when its line carries nothing: the cables are cut, the devices at their other ends are down, or the interfaces there are switched off. A next hop that dies behind a switch is not seen, as with a static route on real hardware, and the packet is lost there.
 > - **There is no time and no load.** The time printed by `ping` is worked out from the number of hops of the request (1 ms, plus 2 ms for each device between the two ends). There is no cable speed, queue, congestion, packet loss or timeout.
 > - **Four services.** A flow is ping, web, email or DNS (a download is web to a firewall). There are no TCP or UDP ports, and traffic addressed to the firewall itself is not filtered.
 > - **NAT is by service, not by port number.** Two flows never compete for a translation. A server reached from inside at its published address is not treated apart, and a device behind two layers of NAT is found by name only through the first.

@@ -90,5 +90,5 @@ The failures themselves cannot be made from the terminal. They are made with the
 > - Failures are not saved and are not part of the file. Leaving presentation mode, or changing board, forgets them.
 > - Three kinds of exchange: ping, web and email. Not download.
 > - A failure is all or nothing: a device is down or up, a cable cut or whole. There is no slow line, partial loss, or port that fails alone.
-> - A route whose next hop dies behind a switch is not withdrawn, and a port switched off at the far end of a working cable is not seen from this side: see [what is not simulated](how-the-engine-decides.md#not-simulated).
+> - A route whose next hop dies behind a switch is not withdrawn: see [what is not simulated](how-the-engine-decides.md#not-simulated).
 > - A DHCP lease does not change when a device fails: it keeps the address it had, even when its DHCP server is down.

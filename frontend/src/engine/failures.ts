@@ -11,14 +11,19 @@
  *  - a router or a host stops using a route whose interface has no working
  *    cable left, and takes its next route for that destination (see ./trace)
  *
+ * A cable whose far end is attached to an interface that is switched off
+ * carries nothing either, and the device at the near end sees it: a port
+ * switched off takes its line down for both ends, as a real link loses its
+ * carrier on both sides.
+ *
  * Pure and deterministic: no React, no Zustand, no side effects.
  */
 
 import type { NetworkConnection, NetworkDevice } from '@/types';
 import type { Failures, Topology } from './types';
-import { boundInterface, listInterfaces } from './interfaces';
+import { boundInterface, interfacePhrase, listInterfaces } from './interfaces';
 import { memoSlot, rememberedFor } from './memo';
-import { devicesById } from './topology';
+import { connectionsOf, devicesById } from './topology';
 
 /** True when the list breaks something */
 export function hasFailures(failures: Failures | undefined): failures is Failures {
@@ -71,18 +76,38 @@ export function linkDownReason(
 }
 
 /**
+ * Why `connection` carries nothing between `device` and `peer`, as `device`
+ * sees it: the cable is cut, `peer` is down, or the interface at `peer`'s end
+ * is switched off. Undefined when the line works.
+ */
+function lineDownReason(
+  topo: Topology,
+  connection: NetworkConnection,
+  device: NetworkDevice,
+  peer: NetworkDevice
+): string | undefined {
+  const broken = linkDownReason(topo, connection, device, peer);
+  if (broken !== undefined) return broken;
+  const far = boundInterface(connection, peer);
+  return far && !far.enabled ? `${interfacePhrase(far)} on ${peer.label} is disabled` : undefined;
+}
+
+/**
  * The interfaces of `device` that have cables attached and none of them
  * working, as interface key → reason. A device knows such an interface is
- * down (no carrier) and stops using the routes that leave by it.
+ * down (no carrier) and stops using the routes that leave by it. A cable does
+ * not work when it is cut, when the device at its other end is down, or when
+ * the interface at its other end is switched off.
  *
  * An interface nothing is attached to is not in the map: there is no failure
- * to speak of, and layer 2 reports the missing cable.
+ * to speak of, and layer 2 reports the missing cable. Nor is an interface of
+ * `device` that is itself switched off: the routes that leave by it are
+ * already out of use (see lookupRoute in ./addressing).
  *
  * Worked out once per topology and device while a memo is in force (see
  * ./memo); the map is not to be changed by the caller.
  */
 export function deadInterfaces(device: NetworkDevice, topo: Topology): Map<string, string> {
-  if (!hasFailures(topo.failures)) return new Map();
   // (kept by its id when the device is the topology's own object; any other
   // version of it is worked out apart)
   if (devicesById(topo).get(device.id) !== device) return findDeadInterfaces(device, topo);
@@ -93,19 +118,18 @@ const DEAD_INTERFACES = memoSlot('dead interfaces');
 
 function findDeadInterfaces(device: NetworkDevice, topo: Topology): Map<string, string> {
   const dead = new Map<string, string>();
-  const devicesById = new Map(topo.devices.map(d => [d.id, d] as const));
+  const byId = devicesById(topo);
   const interfaces = new Set(listInterfaces(device).map(iface => iface.key));
   const working = new Set<string>();
 
-  for (const connection of topo.connections) {
-    if (connection.source !== device.id && connection.target !== device.id) continue;
+  for (const connection of connectionsOf(topo, device.id)) {
     if (connection.source === connection.target) continue;
     const iface = boundInterface(connection, device);
     if (!iface || !interfaces.has(iface.key)) continue;
-    const peer = devicesById.get(connection.source === device.id ? connection.target : connection.source);
+    const peer = byId.get(connection.source === device.id ? connection.target : connection.source);
     if (!peer) continue;
 
-    const reason = linkDownReason(topo, connection, device, peer);
+    const reason = lineDownReason(topo, connection, device, peer);
     if (reason === undefined) {
       working.add(iface.key);
       dead.delete(iface.key);
