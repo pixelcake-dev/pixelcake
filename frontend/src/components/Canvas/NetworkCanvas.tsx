@@ -21,6 +21,7 @@ import type {
   NodeTypes,
   NodeChange,
   NodeMouseHandler,
+  MiniMapNodeProps,
   OnConnectStart,
   OnConnectEnd,
   EdgeMouseHandler,
@@ -30,7 +31,7 @@ import NetworkDevice from './NetworkDevice';
 import AreaNode from './AreaNode';
 import { useDhcp } from '@/utils/useDhcp';
 import { shownAddress } from '@/utils/dhcpLabels';
-import { miniMapAreaColour, miniMapColour } from '@/utils/miniMapColour';
+import { miniMapColour } from '@/utils/miniMapColour';
 import CustomEdge from './CustomEdge';
 import ParticleEdge from './ParticleEdge';
 import PacketAnimation from './PacketAnimation';
@@ -41,7 +42,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { useUIStore } from '@/store/uiStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
-import type { CanvasArea, NetworkDevice as NetworkDeviceType } from '@/types/network';
+import type { NetworkDevice as NetworkDeviceType } from '@/types/network';
 import { useLanguage } from '@/i18n';
 import { shortcutLetter } from '@/utils/shortcutKey';
 
@@ -60,14 +61,33 @@ const edgeTypes = {
   particle: ParticleEdge, // Particle animations with CSS offset-path
 };
 
-/**
- * A device on the small map is drawn in the colour of its type; an area is
- * a faint rectangle of its own colour behind them
- */
+/** A device on the small map is drawn in the colour of its type */
 const miniMapNodeColour = (node: Node): string =>
-  node.type === AREA_NODE
-    ? miniMapAreaColour((node.data as CanvasArea | undefined)?.color)
-    : miniMapColour((node.data as NetworkDeviceType | undefined)?.type);
+  miniMapColour((node.data as NetworkDeviceType | undefined)?.type);
+
+/** What tells an area on the small map, where it is not drawn */
+const MINI_MAP_AREA = 'minimap-area';
+const miniMapNodeClass = (node: Node): string => (node.type === AREA_NODE ? MINI_MAP_AREA : '');
+
+/**
+ * A device on the small map: a plain square, without the rounded corners and
+ * the border React Flow gives it (drawn without smoothing, at a scale that is
+ * not a whole number, the corners left stray pixels). An area is not drawn:
+ * at the size of the map its faint rectangle showed as marks around and
+ * under the squares of its devices
+ */
+const MiniMapSquare = ({ x, y, width, height, color, className, shapeRendering }: MiniMapNodeProps) =>
+  className.includes(MINI_MAP_AREA) ? null : (
+    <rect
+      className="react-flow__minimap-node"
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      fill={color}
+      shapeRendering={shapeRendering}
+    />
+  );
 
 /** How long the view has to stand still to be taken as come to rest (ms) */
 const VIEW_AT_REST_AFTER = 150;
@@ -669,7 +689,9 @@ const NetworkCanvas = () => {
             background and the veil outside the view follow the theme: they
             are in index.css, like those of the zoom buttons and the credit */}
         {/* (the devices on the small map take their one colour from the style sheet) */}
-        {!presenting && <MiniMap nodeColor={miniMapNodeColour} />}
+        {!presenting && (
+          <MiniMap nodeColor={miniMapNodeColour} nodeClassName={miniMapNodeClass} nodeComponent={MiniMapSquare} />
+        )}
         {/* Packet Animation Logic */}
         <PacketAnimation />
         <DeviceNote />

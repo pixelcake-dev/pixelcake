@@ -54,8 +54,8 @@ export function defaultAreaLabel(): string {
 /**
  * The palette, in the light theme and in the dark: the colour of the border
  * and of the label of an area. The screen takes them from the style sheet
- * (`--area-<name>` in index.css); the exported picture and the small map
- * take them from here, and a test holds the two to each other. Calm colours
+ * (`--area-<name>` in index.css); the exported picture takes them from
+ * here, and a test holds the two to each other. Calm colours
  * of a kind of thing, like those of the cables: none is the accent.
  */
 export const AREA_PALETTE: Record<'light' | 'dark', Record<AreaColour, string>> = {
