@@ -35,7 +35,7 @@ I nomi sono quelli dei template, e sono gli stessi nelle due lingue. Che cosa di
 3. Controlla la finestra. In «Identità» ci sono il «Nome del dispositivo» (è proposto, vedi [Nomi](#names)) e, per uno switch, un router o un firewall, il «Numero di porte»: 5, 8, 16, 24 o 48 per uno switch, 2, 4, 8 o 16 per un router o un firewall. Vendor e posizione sono testo libero, per i dispositivi che non sono un PC. In «Rete» ci sono «Indirizzo IP», «Subnet mask» e «Gateway».
 4. Premi «Aggiungi».
 
-Il dispositivo compare al centro della parte di canvas che stai guardando, o nel posto libero più vicino, ed è selezionato. La finestra di un dispositivo finale riguarda la sua prima scheda di rete, `eth0`: l'indirizzo scritto lì è quello della scheda, e in «Indirizzo» si può scegliere «Automatico (DHCP)». Un router o un firewall non ha un indirizzo da compilare: le sue porte lo ricevono dopo, nella sua finestra ([Porte e schede di rete](ports-and-cards.md)).
+Il dispositivo compare nel primo posto libero della parte di canvas che stai guardando, riga per riga da in alto a sinistra, lontano dal pannello aperto e dalla mappa piccola, ed è selezionato. Se nella vista non c'è più un posto libero, va nel posto libero più vicino e la vista si sposta per mostrarlo. La finestra di un dispositivo finale riguarda la sua prima scheda di rete, `eth0`: l'indirizzo scritto lì è quello della scheda, e in «Indirizzo» si può scegliere «Automatico (DHCP)». Un router o un firewall non ha un indirizzo da compilare: le sue porte lo ricevono dopo, nella sua finestra ([Porte e schede di rete](ports-and-cards.md)).
 
 L'indirizzo è il primo libero della rete del progetto, a partire da `.2`, con la subnet mask e il gateway di quella rete, e il server DNS se il progetto ne ha uno. Si impostano in Impostazioni → Rete, e [Indirizzi e gateway](addresses.md#project-network) spiega a che cosa serve ciascuno. Un indirizzo assegnato (cioè dato da un server DHCP) non viene mai proposto a un dispositivo nuovo.
 
@@ -45,7 +45,7 @@ Per aggiungere molti dispositivi in una volta ci sono [Aggiungi in blocco](bulk-
 
 Il nome di un dispositivo è come lo chiama una persona, e come lo chiama il terminale: `ping PC-2 from PC-1`. Un dispositivo nuovo prende il nome del suo template, con un trattino al posto di ogni spazio, e un numero: il più basso, da 1, che lasci il nome libero. Il primo PC è `PC-1`, il successivo `PC-2`, e un Web Server è `Web-Server-1`. Se elimini `PC-1`, il PC successivo sarà di nuovo `PC-1`. Un nome conta come occupato qualunque sia la sua grafia in maiuscole e minuscole, e qualunque sia il tipo del dispositivo che lo porta.
 
-Il nome si cambia nella scheda «Generale» della finestra del dispositivo, sotto «Nome del dispositivo». Non può essere vuoto, ma PixelCake non ti impedisce di dare a due dispositivi lo stesso nome, e non rinomina quelli che ci sono già. Il terminale trova un dispositivo dal nome senza distinguere `pc-1` da `PC-1`; quando due dispositivi hanno lo stesso nome prende il primo, nell'ordine in cui sono stati disegnati. Un nome unico è un nome che funziona.
+Il nome si cambia nella scheda «Generale» della finestra del dispositivo, sotto «Nome del dispositivo». Non può essere vuoto, e non può essere il nome di un altro dispositivo, maiuscole o minuscole che siano: «Aggiungi dispositivo» e la finestra del dispositivo lo dicono sotto il campo, «Un altro dispositivo ha già questo nome», e non aggiungono né salvano nulla finché non lo cambi. I dispositivi che ci sono già non vengono mai rinominati. Il terminale trova un dispositivo dal nome senza distinguere `pc-1` da `PC-1`; quando due dispositivi hanno lo stesso nome prende il primo, nell'ordine in cui sono stati disegnati. Un nome unico è un nome che funziona.
 
 ## La finestra di un dispositivo {#window}
 
@@ -59,9 +59,9 @@ Sul canvas non cambia nulla finché non premi «Salva»; «Annulla» lascia il d
 
 ## Copiare ed eliminare {#copy-delete}
 
-- **Selezionare.** Un clic su un dispositivo lo seleziona. Ctrl + clic lo aggiunge alla selezione o lo toglie, e trascinando su uno spazio vuoto si disegna un riquadro di selezione.
-- **Copiare.** Modifica → «Copia» o Ctrl+C copia i dispositivi selezionati, con i cavi che li uniscono. Modifica → «Incolla» o Ctrl+V aggiunge le copie, 50 unità più a destra e più in basso. Una copia tiene il nome e gli indirizzi del dispositivo da cui è nata: rinominala e dalle un indirizzo prima di chiedere qualcosa alla rete.
-- **Eliminare.** Seleziona e premi il tasto Canc (Delete), che elimina subito, oppure clic destro → «Elimina», che chiede conferma. I cavi del dispositivo spariscono insieme a lui. Un dispositivo tolto dal canvas non torna: sul canvas non si può annullare.
+- **Selezionare.** Un clic su un dispositivo lo seleziona. Ctrl + clic lo aggiunge alla selezione o lo toglie, e trascinando su uno spazio vuoto si disegna un riquadro di selezione. Nella selezione possono entrare anche i riquadri ([Riquadri](areas.md#with-devices)), e con due o più dispositivi selezionati sopra di loro compare «Racchiudi in un riquadro».
+- **Copiare.** Modifica → «Copia» o Ctrl+C copia i dispositivi selezionati, con i cavi che li uniscono e i riquadri selezionati. Modifica → «Incolla» o Ctrl+V aggiunge le copie, 50 unità più a destra e più in basso, o più in là se lì c'è già una copia incollata prima. Ogni copia è un dispositivo a sé: prende il primo nome libero della sua famiglia (da `PC-1` il primo `PC-n` libero, da `Reception` `Reception-1`) e un indirizzo MAC nuovo su ogni scheda di rete. Un PC, un portatile, una stampante e gli altri dispositivi finali che non sono server chiedono l'indirizzo: le loro schede passano ad «Automatico (DHCP)». Se nella loro rete non c'è un server DHCP restano senza indirizzo, la riga sotto il nome dice «DHCP: nessun indirizzo» e un avviso li nomina. Server, database, router, firewall e switch tengono gli indirizzi dell'originale: dai alla copia i suoi prima di chiedere qualcosa alla rete.
+- **Eliminare.** Seleziona e premi il tasto Canc (Delete), oppure clic destro → «Elimina»: in tutti e due i casi l'applicazione chiede conferma, in una sua finestra. Il tasto Canc elimina tutto ciò che è selezionato, dispositivi, cavi e riquadri, e la domanda dice quanti ce ne sono di ciascuno. I cavi di un dispositivo spariscono insieme a lui. Un dispositivo tolto dal canvas non torna: sul canvas non si può annullare.
 
 ## Il colore di un dispositivo {#lamp}
 
@@ -86,4 +86,5 @@ La risposta resta sul canvas dopo una domanda fatta dal pannello Simulazione o d
 > - Il tipo decide il ruolo nel motore, e nient'altro dell'apparato: un dispositivo non ha modello, firmware, CPU o memoria, e nessun limite al traffico che porta.
 > - Un Load Balancer non bilancia e un Cloud non trasporta nulla: di entrambi si considera che lascino passare il traffico.
 > - Una stampante, una telecamera IP e gli altri dispositivi finali rispondono solo a ciò che il motore chiede loro; non eseguono servizi propri.
-> - Due dispositivi possono avere lo stesso nome o lo stesso indirizzo, e il canvas non lo segnala.
+> - Due dispositivi possono avere lo stesso indirizzo, e il canvas non lo segnala. La copia di un server, di un router, di un firewall o di uno switch ha gli indirizzi dell'originale finché non li cambi.
+> - Le finestre rifiutano un nome che ha già un altro dispositivo, ma un disegno fatto con una versione precedente può ancora avere due dispositivi con lo stesso nome.

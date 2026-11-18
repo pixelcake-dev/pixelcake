@@ -11,10 +11,10 @@ Questi sono tutti i tasti e i gesti dell'app. Otto sono elencati anche in Impost
 | Per | Windows, Linux | Mac |
 |---|---|---|
 | Salvare il progetto su file | Ctrl + S | Cmd + S |
-| Copiare i dispositivi selezionati | Ctrl + C | Cmd + C |
+| Copiare i dispositivi e i riquadri selezionati | Ctrl + C | Cmd + C |
 | Incollarli | Ctrl + V | Cmd + V |
-| Eliminare i dispositivi, i cavi o il riquadro selezionati | Canc | Fn + cancella (il tasto cancella di un portatile) |
-| Aggiungere un dispositivo alla selezione, o toglierlo | Ctrl + clic | Control + clic |
+| Eliminare i dispositivi, i cavi e i riquadri selezionati, dopo una domanda | Canc | Fn + cancella (il tasto cancella di un portatile) |
+| Aggiungere un dispositivo o un riquadro alla selezione, o toglierlo | Ctrl + clic (un riquadro sul nome o sul bordo) | Control + clic |
 | Selezionare con un riquadro di selezione | Trascina su un'area vuota | Trascina su un'area vuota |
 | Spostare la vista | Tasto destro + trascina | Tasto destro + trascina |
 | Fare zoom | Rotellina del mouse | Rotellina o scorrimento |
@@ -27,9 +27,9 @@ Questi sono tutti i tasti e i gesti dell'app. Otto sono elencati anche in Impost
 Qualche precisazione:
 
 - **Salvare** funziona da qualunque punto dell'app, anche mentre scrivi in un campo. Non si apre mai il "salva pagina" del browser.
-- **Copia e incolla** agiscono sul disegno solo quando nessun testo è selezionato e non si sta scrivendo in un campo. Con del testo selezionato (l'output del terminale, per esempio) Ctrl + C copia quel testo, come ovunque. I dispositivi incollati compaiono 50 unità più in basso e a destra degli originali, con le connessioni che c'erano tra loro. I due tasti sono letti come lettere minuscole: con il blocco maiuscole acceso, Ctrl + C e Ctrl + V sul canvas non fanno nulla.
-- **Eliminare** è il tasto Canc. Backspace non fa nulla. Elimina senza chiedere; il menu del clic destro chiede prima conferma.
-- **Selezionare più di uno**: un clic su un dispositivo lo seleziona da solo; Ctrl + clic ne aggiunge o ne toglie uno; un riquadro di selezione tracciato su un'area vuota seleziona i dispositivi che ci stanno interamente dentro. Un clic su un'area vuota toglie la selezione.
+- **Copia e incolla** agiscono sul disegno solo quando nessun testo è selezionato e non si sta scrivendo in un campo. Con del testo selezionato (l'output del terminale, per esempio) Ctrl + C copia quel testo, come ovunque. I dispositivi incollati compaiono 50 unità più in basso e a destra degli originali, o più in là se lì c'è già una copia incollata prima, con le connessioni che c'erano tra loro e i riquadri selezionati; [Dispositivi](../building/devices.md#copy-delete) dice che cosa ricevono di nuovo le copie. I tasti funzionano anche con il blocco maiuscole acceso, e su una tastiera con lettere non latine.
+- **Eliminare** è il tasto Canc. Backspace non fa nulla. Chiede prima conferma, in una finestra dell'applicazione, come il menu del clic destro: per una cosa sola la domanda del suo menu, per più cose quante ce ne sono di ciascuna. Invio o un clic su «Elimina» elimina; Esc non elimina nulla.
+- **Selezionare più di uno**: un clic su un dispositivo lo seleziona da solo; Ctrl + clic ne aggiunge o ne toglie uno; un riquadro di selezione tracciato su un'area vuota seleziona i dispositivi e i riquadri che ci stanno interamente dentro. Ctrl + clic sul nome o sul bordo di un riquadro lo aggiunge o lo toglie. Un clic su un'area vuota toglie la selezione.
 - **La vista** si sposta solo tenendo premuto il tasto destro: la rotellina fa zoom, non scorre. Lo zoom va dal 10 % al 400 %. I quattro pulsanti in basso a sinistra del canvas ingrandiscono, riducono, adattano il disegno alla finestra e lo bloccano, perché nulla si possa spostare; Vista → Adatta alla finestra fa lo stesso del terzo.
 - **Spostare un dispositivo con le frecce** richiede che il dispositivo sia selezionato o abbia il focus della tastiera: un passo di 5 unità, 20 con Maiusc.
 - **Tab** sposta il focus della tastiera tra i cavi e i dispositivi; Invio su un dispositivo lo seleziona. Un dispositivo che ha una nota la mostra finché ha il focus, ed Esc la chiude.

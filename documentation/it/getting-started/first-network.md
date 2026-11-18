@@ -19,7 +19,7 @@ Se la schermata di benvenuto non compare (hai chiesto di non vederla più), sceg
 ## Disegna tre dispositivi {#draw}
 
 1. Nella barra a sinistra premi «Aggiungi dispositivo», il pulsante +. Si apre il pannello «Aggiungi», con l'elenco dei tipi di dispositivo.
-2. Scegli «PC». Una finestra propone il nome PC-1 e un indirizzo, 192.168.1.2, con la maschera 255.255.255.0 e il gateway 192.168.1.1. Premi «Aggiungi». PC-1 compare al centro del canvas.
+2. Scegli «PC». Una finestra propone il nome PC-1 e un indirizzo, 192.168.1.2, con la maschera 255.255.255.0 e il gateway 192.168.1.1. Premi «Aggiungi». PC-1 compare in alto a sinistra del canvas, accanto al pannello.
 3. Scegli «Server», poi premi «Aggiungi». La finestra propone Server-1 e 192.168.1.3.
 4. Scegli «Firewall» (scorri l'elenco se non lo vedi), poi premi «Aggiungi». La finestra propone Firewall-1 e 192.168.1.4.
 5. Chiudi il pannello con la croce in alto a destra. Trascina i dispositivi, prendendoli dal loro disegno, e mettili in fila: PC-1 a sinistra, Firewall-1 in mezzo, Server-1 a destra.

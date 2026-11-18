@@ -14,7 +14,7 @@ A link is the line you draw between two devices; the cable is the thing it stand
 2. Press there and drag to another device. A line follows the pointer.
 3. Let go anywhere over the other device. The cable ends on the side where you let go.
 
-The cable is made at once. A click on it selects it, and the Delete key deletes it at once. Right click it for a menu with “Edit link” and “Delete link”, which asks first. Two devices may be joined by more than one cable, as the two cables between Router-Core and SW-Core in the company sample, and each takes interfaces of its own. Nothing can be drawn or edited in presentation mode.
+The cable is made at once. A click on it selects it, and the Delete key deletes it after a question, as “Delete link” does in the menu of the right click. Right click it for a menu with “Edit link” and “Delete link”. Two devices may be joined by more than one cable, as the two cables between Router-Core and SW-Core in the company sample, and each takes interfaces of its own. Nothing can be drawn or edited in presentation mode.
 
 ## The two ends {#ends}
 

@@ -11,10 +11,10 @@ These are all the keys and gestures the app has. Eight of them are also listed i
 | To | Windows, Linux | Mac |
 |---|---|---|
 | Save the project to a file | Ctrl + S | Cmd + S |
-| Copy the selected devices | Ctrl + C | Cmd + C |
+| Copy the selected devices and areas | Ctrl + C | Cmd + C |
 | Paste them | Ctrl + V | Cmd + V |
-| Delete the selected devices, cables or area | Delete | Fn + Delete (the Delete key of a laptop) |
-| Add a device to the selection, or take it out | Ctrl + click | Control + click |
+| Delete the selected devices, cables and areas, after a question | Delete | Fn + Delete (the Delete key of a laptop) |
+| Add a device or an area to the selection, or take it out | Ctrl + click (an area by its name or border) | Control + click |
 | Select with a box | Drag on empty space | Drag on empty space |
 | Move the view | Right button + drag | Right button + drag |
 | Zoom | Mouse wheel | Mouse wheel or scroll |
@@ -27,9 +27,9 @@ These are all the keys and gestures the app has. Eight of them are also listed i
 A few things about these:
 
 - **Save** works from anywhere in the app, also with a field in focus. The browser's own "save page" never opens.
-- **Copy and paste** act on the drawing only while no text is selected and no field is being typed in. With text selected (the output of the terminal, say) Ctrl + C copies that text, as anywhere. The pasted devices appear 50 units down and to the right of the originals, with the links that were among them. The two keys are read as lower case letters: with Caps Lock on, Ctrl + C and Ctrl + V do nothing on the board.
-- **Delete** is the Delete key. Backspace does nothing. It deletes without asking; the right-click menu asks first.
-- **Selecting more than one**: a click on a device selects it alone; Ctrl + click adds or removes one; a box drawn on empty space selects the devices that are wholly inside it. A click on empty space lets go.
+- **Copy and paste** act on the drawing only while no text is selected and no field is being typed in. With text selected (the output of the terminal, say) Ctrl + C copies that text, as anywhere. The pasted devices appear 50 units down and to the right of the originals, or further when a copy pasted before is there, with the links that were among them and the areas that were selected; [Devices](../building/devices.md#copy-delete) says what a copy is given anew. The keys work with Caps Lock on too, and on a keyboard whose letters are not Latin.
+- **Delete** is the Delete key. Backspace does nothing. It asks first, in a window of the app, as the right-click menu does: for one thing alone the question of its menu, for more how many of each. Enter or a click on “Delete” deletes; Esc deletes nothing.
+- **Selecting more than one**: a click on a device selects it alone; Ctrl + click adds or removes one; a box drawn on empty space selects the devices and the areas that are wholly inside it. Ctrl + click on the name or the border of an area adds it or removes it. A click on empty space lets go.
 - **The view** moves only with the right button held down: the wheel zooms, it does not scroll. The zoom goes from 10 % to 400 %. The four buttons at the bottom left of the board zoom in, zoom out, fit the drawing in the window and lock it, so that nothing can be moved; View → Fit to window does the same as the third.
 - **Moving a device with the arrow keys** needs the device to be selected or to have the keyboard focus: a step of 5 units, 20 with Shift.
 - **Tab** moves the keyboard focus through the cables and the devices; Enter on a device selects it. A device that has a note shows it while it has the focus, and Esc sends it away.

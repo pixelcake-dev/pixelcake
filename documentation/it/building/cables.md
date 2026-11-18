@@ -14,7 +14,7 @@ Una connessione è la linea che disegni tra due dispositivi; il cavo è la cosa 
 2. Premi lì e trascina fino a un altro dispositivo. Una linea segue il puntatore.
 3. Rilascia il pulsante in un punto qualsiasi sopra l'altro dispositivo. Il cavo arriva sul lato dove l'hai rilasciato.
 
-Il cavo c'è subito. Un clic lo seleziona, e il tasto Canc (Delete) lo elimina all'istante. Il clic destro apre un menu con «Modifica connessione» ed «Elimina connessione»; la seconda chiede conferma. Due dispositivi possono essere uniti da più di un cavo, come i due cavi tra Router-Core e SW-Core nella rete dell'azienda, e ciascuno ha le sue interfacce. Nella modalità presentazione non si può disegnare né modificare nulla.
+Il cavo c'è subito. Un clic lo seleziona, e il tasto Canc (Delete) lo elimina dopo una domanda, come «Elimina connessione» nel menu del clic destro. Il clic destro apre un menu con «Modifica connessione» ed «Elimina connessione». Due dispositivi possono essere uniti da più di un cavo, come i due cavi tra Router-Core e SW-Core nella rete dell'azienda, e ciascuno ha le sue interfacce. Nella modalità presentazione non si può disegnare né modificare nulla.
 
 ## Le due estremità {#ends}
 

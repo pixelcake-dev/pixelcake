@@ -12,7 +12,7 @@ An area is a coloured rectangle with a short name in a corner, drawn behind a gr
 
 An area is a drawing and nothing else. No device belongs to it: moving an area moves no device, and moving a device does not move the area. The engine never reads it, so a PC drawn inside an area called Servers is not in any server network, and an address, a VLAN or a rule does not follow the colour. Two things look at where a device is drawn: the [automatic layout](layout-and-connection.md#layout), which keeps the devices of an area together and draws the area again around them, and [the automatic connection](layout-and-connection.md#connect), which prefers a switch of the same area.
 
-An area is light, so that it is not in the way: devices and cables are drawn over it, a selection box drawn on it takes the devices and never the area, and selecting, copying, pasting and deleting devices work as they do without it.
+An area is light, so that it is not in the way: devices and cables are drawn over it, a selection box drawn on it takes the devices and leaves the area unless it holds the whole of it, and selecting, copying, pasting and deleting devices work as they do without it.
 
 ## Adding one {#add}
 
@@ -26,17 +26,29 @@ Either way the new area is selected and its name is open for typing. Type the na
 ## Moving, resizing, renaming {#edit}
 
 - **Select** an area with a click on its name or on its border. The inside does not take the press, so that the devices in it can be reached.
-- **Move** it by dragging its name or its border. The devices stay where they are.
-- **Resize** it with the eight handles it shows when it is selected. It cannot be made smaller than 120 by 80.
+- **Move** it by dragging its name or its border. The devices stay where they are, unless they are selected with it.
+- **Resize** it with the eight handles it shows when it is selected by itself. It cannot be made smaller than 120 by 80.
 - **Rename** it with a double click on its name, or right click → “Rename”. “Area name” is the field in which you type; Enter keeps the name, Esc leaves it as it was.
 - **Colour**: right click → “Colour”, and pick one of six: Slate, Green, Ochre, Red, Purple, Teal.
-- **Delete**: the Delete key, or right click → “Delete”, which asks first. The devices it encloses stay where they are.
+- **Delete**: the Delete key or right click → “Delete”, both after a question. The devices it encloses stay where they are.
 
-Areas belong to their board: they stay with it when you go to another board of the project and back, and they are saved in the project file. The YAML export has no places, and it does not carry them. A presentation shows the areas and lets nothing be done to them; the small map shows them as faint rectangles, and the exported image draws them, in light and in dark.
+## With the devices {#with-devices}
+
+An area can be part of the selection, together with devices and other areas:
+
+- a selection box takes the areas it holds whole, with the devices;
+- Ctrl + click on the name or the border of an area adds it to the selection, or takes it away; the devices stay selected;
+- a click on a device, without Ctrl, starts a new selection, and the areas are let go.
+
+What is selected goes together. Dragging a selected device, or the name of a selected area, moves the whole selection. Edit → “Copy” and Ctrl + C copy the selected areas with the devices; pasted, each is in the same place around its devices, with its name and colour, as a new area. The Delete key deletes them with the rest, after a question that says how many of each. An area can also be copied and pasted alone.
+
+## On the board and in the file {#where}
+
+Areas belong to their board: they stay with it when you go to another board of the project and back, and they are saved in the project file. The YAML export has no places, and it does not carry them. A presentation shows the areas and lets nothing be done to them; the small map shows the devices alone, and the exported image draws the areas, in light and in dark.
 
 ## Showing and hiding them {#show-hide}
 
-View → “Show areas” hides the areas and shows them again. It is marked when on, which it is at first. The choice is a preference of this browser, kept with the theme: the drawing and the project file are not touched. Hidden, the areas are not drawn on the board, in its small map, in a presentation or in the exported image; they cannot be selected, moved or resized, and the Delete key does not reach them. Making a new area shows them again, and a notice says so.
+View → “Show areas” hides the areas and shows them again. It is marked when on, which it is at first. The choice is a preference of this browser, kept with the theme: the drawing and the project file are not touched. Hidden, the areas are not drawn on the board, in a presentation or in the exported image; they cannot be selected, moved or resized, and the Delete key does not reach them. Making a new area shows them again, and a notice says so.
 
 ## Limits {#limits}
 
