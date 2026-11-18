@@ -126,7 +126,7 @@ export const help: Dictionary['help'] = {
         'policy decides: traffic towards a more trusted zone is denied, the rest passes. The ' +
         'exceptions are written in the “Rules” tab, read top to bottom: the first that matches ' +
         'decides, by service (ping, web, email, DNS), source and destination. A firewall lets ' +
-        'through the reply to a flow it allowed itself. A router has the same tab: its rules ' +
+        'through the reply to a flow it allowed itself. A router has the same “Rules” tab: its rules ' +
         'filter what it routes, and what no rule matches passes.',
     },
     nat: {

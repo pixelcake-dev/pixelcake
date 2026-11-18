@@ -63,8 +63,9 @@ export const firewall = {
       'come ogni altro pacchetto.',
     /** Rules of a router name zones (`trust`, `untrust`, `dmz`: written as they are typed) */
     zonesNeverMatch: (zones: readonly string[]) =>
-      `Le zone sono delle porte di un firewall: su un router le regole che nominano ${zones.join(', ')} ` +
-      'non corrispondono mai.',
+      'Le zone sono delle porte di un firewall: su un router le regole che nominano ' +
+      (zones.length === 1 ? `la zona ${zones[0]}` : `le zone ${zones.join(', ')}`) +
+      ' non corrispondono mai.',
   },
 
   /** What is wrong with a rule as typed: under its row, and after «Regola 2: » on saving */

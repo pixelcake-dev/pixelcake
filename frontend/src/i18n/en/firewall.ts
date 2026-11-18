@@ -64,8 +64,9 @@ export const firewall: Dictionary['firewall'] = {
       'allowed passes; a reply whose request it never saw is judged like any other packet.',
     /** Rules of a router name zones (`trust`, `untrust`, `dmz`: written as they are typed) */
     zonesNeverMatch: (zones: readonly string[]) =>
-      `Zones belong to the ports of a firewall: on a router the rules that name ${zones.join(', ')} ` +
-      'never match.',
+      'Zones belong to the ports of a firewall: on a router the rules that name ' +
+      (zones.length === 1 ? `the zone ${zones[0]}` : `the zones ${zones.join(', ')}`) +
+      ' never match.',
   },
 
   /** What is wrong with a rule as typed: under its row, and after “Rule 2: ” on saving */
