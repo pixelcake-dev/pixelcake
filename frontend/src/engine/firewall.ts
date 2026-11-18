@@ -9,18 +9,25 @@
  *  2. when no rule matches, the zone policy: traffic towards a more trusted
  *     zone is denied (untrust → trust, untrust → dmz, dmz → trust), anything
  *     else is allowed;
- *  3. firewalls keep state: the reply to a flow that was allowed passes
- *     whatever the rules say about new flows in that direction.
+ *  3. firewalls keep state: the reply to a flow the firewall itself saw, and
+ *     allowed, passes whatever the rules say about new flows in that
+ *     direction. A reply whose request went another way is, to this
+ *     firewall, a packet like any other: its rules and zones decide.
+ *
+ * A router filters too when it carries rules: its access list. They are read
+ * the same way; a router has no zones, so what no rule matches passes.
  *
  * Zones are a property of the firewall's ports, so a rule naming a zone can
- * only be evaluated when the link is attached to a port: otherwise the rule
- * is skipped and the verdict says so.
+ * only be evaluated when the link is attached to a port that is in a zone:
+ * otherwise the rule is skipped and the verdict says which of the two is
+ * missing.
  *
  * Pure and deterministic: no React, no Zustand, no side effects.
  */
 
 import type { FirewallRule, NetworkDevice, Port, ServiceName } from '@/types';
 import { isValidIP } from '@/utils/ipHelpers';
+import { interfacePhrase } from './interfaces';
 import type { DeviceInterface } from './interfaces';
 import { networkContains, parseNetwork } from './addressing';
 
@@ -38,6 +45,13 @@ export interface Packet {
   service: ServiceName;
   /** The packet answers a flow that was just allowed in the other direction */
   returnTraffic: boolean;
+  /**
+   * For a reply: the devices its request went through. A firewall remembers
+   * the flows it has seen itself, so the reply passes as a reply only the
+   * firewalls in this set; any other judges it as a new packet. Undefined:
+   * the request is taken to have crossed every firewall the reply meets.
+   */
+  requestPath?: ReadonlySet<string>;
 }
 
 /** What a firewall decided, in words fit for a trace */
@@ -49,11 +63,14 @@ export interface FirewallVerdict {
   skipped: string[];
 }
 
+/** True when the device is a firewall; anything else that filters is a router with rules */
+function isFirewall(device: NetworkDevice): boolean {
+  return device.type.toLowerCase().includes('firewall');
+}
+
 /** True when the device filters traffic: a firewall, or anything carrying rules */
 export function filtersTraffic(device: NetworkDevice): boolean {
-  return (
-    device.type.toLowerCase().includes('firewall') || (device.firewallRules ?? []).length > 0
-  );
+  return isFirewall(device) || (device.firewallRules ?? []).length > 0;
 }
 
 /** True when the text can be the source or destination of a rule */
@@ -86,6 +103,11 @@ function zoneOf(iface: DeviceInterface | undefined): Zone | undefined {
   return iface?.kind === 'port' ? iface.port.securityZone : undefined;
 }
 
+/** Why one side of a crossing has no zone: the link end is not attached, or its interface is in none */
+function whyNoZone(iface: DeviceInterface | undefined): string {
+  return iface ? `${interfacePhrase(iface)} is in no zone` : 'the link is not attached to a port';
+}
+
 /**
  * The firewall's decision on a packet crossing `device` from `ingress` to
  * `egress` (either may be unknown: a link end not attached to a port).
@@ -104,6 +126,8 @@ export function evaluateFirewall(
   const ingressZone = zoneOf(ingress);
   const egressZone = zoneOf(egress);
   const skipped: string[] = [];
+  /** `firewall FW-1`, or `router R-1` for a router that carries rules */
+  const name = `${isFirewall(device) ? 'firewall' : 'router'} ${device.label}`;
 
   // What the policy says about a NEW flow
   let decision: { allowed: boolean; text: string; replyText: string } | undefined;
@@ -114,17 +138,22 @@ export function evaluateFirewall(
     const destination = matchSide(rule.destination, packet.destinationIp, egressZone);
     if (source === 'no-match' || destination === 'no-match') continue;
     if (source === 'unknown-zone' || destination === 'unknown-zone') {
+      const why = [
+        ...(source === 'unknown-zone' ? [whyNoZone(ingress)] : []),
+        ...(destination === 'unknown-zone' ? [whyNoZone(egress)] : []),
+      ].filter((reason, index, all) => all.indexOf(reason) === index);
       skipped.push(
-        `firewall ${device.label}: rule ${numberOf(rule)} names a zone and the link is not ` +
-          `attached to a port: skipped`
+        `${name}: rule ${numberOf(rule)} names a zone` +
+          (why.length === 1 ? ` and ${why[0]}` : `, ${why[0]} and ${why[1]}`) +
+          ': skipped'
       );
       continue;
     }
     const what = `rule ${numberOf(rule)} (${describeRule(rule)})`;
     decision = {
       allowed: rule.action === 'allow',
-      text: `firewall ${device.label}: ${rule.action === 'allow' ? 'allowed' : 'denied'} by ${what}`,
-      replyText: `firewall ${device.label}: reply to an allowed flow passes ${what}`,
+      text: `${name}: ${rule.action === 'allow' ? 'allowed' : 'denied'} by ${what}`,
+      replyText: `${name}: reply to an allowed flow passes ${what}`,
     };
     break;
   }
@@ -135,7 +164,7 @@ export function evaluateFirewall(
       const transition = `${ingressZone} → ${egressZone}`;
       const denied = DENIED_ZONE_TRANSITIONS.has(`${ingressZone}→${egressZone}`);
       if (hasRules) {
-        const policy = `firewall ${device.label}: no rule matches, zone policy ${transition}`;
+        const policy = `${name}: no rule matches, zone policy ${transition}`;
         decision = {
           allowed: !denied,
           text: `${policy} ${denied ? 'denied' : 'allowed'}`,
@@ -151,15 +180,21 @@ export function evaluateFirewall(
         };
       }
     } else {
-      const text = hasRules
-        ? `firewall ${device.label}: no rule matches and no zone binding: allowed`
-        : `firewall ${device.label} has no zone binding: allowed`;
+      // (a router has no zones: what no rule of its list matches passes)
+      const text = !isFirewall(device)
+        ? `${name}: no rule matches: allowed`
+        : hasRules
+          ? `${name}: no rule matches and no zone binding: allowed`
+          : `${name} has no zone binding: allowed`;
       decision = { allowed: true, text, replyText: text };
     }
   }
 
   if (!decision.allowed && packet.returnTraffic) {
-    return { allowed: true, text: decision.replyText, skipped };
+    // A firewall knows the replies to the flows it has seen itself, and only those
+    const sawRequest = packet.requestPath?.has(device.id) ?? true;
+    if (sawRequest) return { allowed: true, text: decision.replyText, skipped };
+    return { allowed: false, text: `${decision.text}, and it never saw the request`, skipped };
   }
   return { allowed: decision.allowed, text: decision.text, skipped };
 }

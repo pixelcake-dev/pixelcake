@@ -86,6 +86,13 @@ export interface TraceOptions {
    * deny a NEW flow in that direction.
    */
   returnTraffic?: boolean;
+  /**
+   * For a reply: the devices its request went through, in any order. A
+   * firewall knows only the flows it has seen: one that is not in the list
+   * judges the reply as a new packet. Undefined: every firewall on the way
+   * is taken to have seen the request.
+   */
+  requestPath?: readonly string[];
   /** What the packet is, for firewall rules (default: ping) */
   service?: ServiceName;
   /**
@@ -351,6 +358,9 @@ export function traceRoute(
 
   const service = options.service ?? 'ping';
   const isReply = options.returnTraffic ?? false;
+  /** What the firewalls on the way back know of the request (see TraceOptions) */
+  const requestPath =
+    isReply && options.requestPath !== undefined ? new Set(options.requestPath) : undefined;
   const natState = options.natState ?? [];
   /** What the NAT devices on the way will remember of this flow */
   const translations: NatTranslation[] = [];
@@ -502,6 +512,7 @@ export function traceRoute(
       destinationIp: targetIp,
       service,
       returnTraffic: isReply,
+      ...(requestPath ? { requestPath } : {}),
     };
     if (!isSource && forwardingRole(current) === 'router') {
       const note = routeNote(decision);

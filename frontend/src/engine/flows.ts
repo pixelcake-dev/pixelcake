@@ -195,7 +195,8 @@ function evaluateLegs(plans: LegPlan[], topo: Topology, planNotes: string[]): Fl
     // A reply goes back to the address the request was seen to come from,
     // and leaves from the address the request ended up at: with NAT on the
     // way these are not the two the request was sent with. The NAT devices
-    // translate it back by what they remember of the request
+    // translate it back by what they remember of the request, and a firewall
+    // lets it pass as a reply only if the request went through it
     const reply = plan.returnTraffic ? previous : undefined;
     const options: TraceOptions = {
       returnTraffic: plan.returnTraffic,
@@ -203,6 +204,7 @@ function evaluateLegs(plans: LegPlan[], topo: Topology, planNotes: string[]): Fl
       targetIp: reply ? (reply.seenSourceIp ?? reply.sourceIp) : plan.targetIp,
       sourceIp: reply ? (reply.reachedIp ?? reply.targetIp) : undefined,
       natState: reply?.translations,
+      requestPath: reply?.hops.map(hop => hop.deviceId),
     };
     // (a device behind NAT is aimed at where it is reached from outside)
     const { trace, note } = traceToDevice(plan.fromId, plan.toId, topo, options);
