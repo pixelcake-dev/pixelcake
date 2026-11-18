@@ -902,12 +902,16 @@ function showRoutes(topo: Topology, d: NetworkDevice): TerminalLine[] {
 const ZONE_POLICY =
   'zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed';
 
-/** `show rules <device>` — the rules in order, then what decides when none matches */
+/**
+ * `show rules <device>` — the rules in order, then what decides when none
+ * matches: the zone policy on a firewall; on a router (its access list)
+ * nothing, so the rest passes
+ */
 function showRules(d: NetworkDevice): TerminalLine[] {
   const rules = d.firewallRules ?? [];
   const isFirewall = d.type.toLowerCase().includes('firewall');
-  if (!isFirewall && rules.length === 0) {
-    return [muted(`${d.label} is not a firewall and has no rules: it filters nothing`)];
+  if (!isL3Capable(d) && rules.length === 0) {
+    return [muted(`${d.label} is not a router or a firewall and has no rules: it filters nothing`)];
   }
   const lines = [heading(`RULES of ${d.label} (the first that matches decides)`)];
   if (rules.length === 0) lines.push(muted('  no rules'));
@@ -917,8 +921,8 @@ function showRules(d: NetworkDevice): TerminalLine[] {
       `from ${rule.source.padEnd(18)} to ${rule.destination}`;
     lines.push(rule.enabled === false ? muted(`${row}  (disabled)`) : line(row));
   });
-  lines.push(muted(`  then the ${ZONE_POLICY}`));
-  lines.push(muted('  the reply to an allowed flow always passes'));
+  lines.push(muted(isFirewall ? `  then the ${ZONE_POLICY}` : '  then anything else is allowed'));
+  lines.push(muted('  the reply to a flow it allowed passes'));
   return lines;
 }
 
@@ -1817,7 +1821,7 @@ function runRuleAdd(
   if ('errorLines' in found) return found.errorLines;
   const { device, topo } = found;
   if (!isL3Capable(device)) {
-    return [err(`${device.label} is a ${device.type}: rules belong on firewalls`)];
+    return [err(`${device.label} is a ${device.type}: rules belong on routers and firewalls`)];
   }
 
   const source = ruleEndpoint(command.source, topo);
@@ -1853,9 +1857,16 @@ function runRuleAdd(
   }
   // A rule that names a zone no port is in can never match
   const zones = new Set((device.ports ?? []).map((p) => p.securityZone).filter(Boolean));
+  const zoned = device.type.toLowerCase().includes('firewall');
   for (const value of [rule.source, rule.destination]) {
     if ((value === 'trust' || value === 'untrust' || value === 'dmz') && !zones.has(value)) {
-      lines.push(muted(`  no port of ${device.label} is in zone ${value} yet: interface <n> zone ${value} on ${device.label}`));
+      lines.push(
+        muted(
+          zoned
+            ? `  no port of ${device.label} is in zone ${value} yet: interface <n> zone ${value} on ${device.label}`
+            : `  zones belong to the ports of a firewall: on ${device.label} a rule that names ${value} never matches`
+        )
+      );
     }
   }
   return lines;
@@ -2099,7 +2110,7 @@ export const COMMAND_REFERENCE: Array<[string, string]> = [
   ['show devices | vlans | connections', 'topology overview'],
   ['show interfaces [of] <device>', 'unified ports + NICs table (the standard view)'],
   ['show ip [of] <device>', 'compact addressing summary (also ipconfig/ifconfig)'],
-  ['show routes | rules | nat [of] <device>', 'routing table, firewall rules, address translation'],
+  ['show routes | rules | nat [of] <device>', 'routing table, rules, address translation'],
   ['show dhcp [[of] <device>]', 'DHCP: who hands out addresses, who got which, who got none'],
   ['show dns [[of] <device>]', 'DNS: the names a server answers for, the server each card asks'],
   ['show config | ports | neighbors <device>', 'device detail'],
@@ -2114,7 +2125,7 @@ export const COMMAND_REFERENCE: Array<[string, string]> = [
   ['interface <name> dns <address>|none on <device>', 'the DNS server a network card asks when a name is used'],
   ['add route <network>|default via <next hop> on <device>', 'static route (remove route <network> from <device>)'],
   ['add backup route <network> via <next hop> on <device>', 'second route to a network, used when the line of the first is down'],
-  ['add rule allow|deny <service> from <src> to <dst> on <fw>', 'firewall rule (remove rule <n> from <fw>)'],
+  ['add rule allow|deny <service> from <src> to <dst> on <fw>', 'rule of a router or firewall (remove rule <n> from <fw>)'],
   ['add forward <svc> from interface <n> to <address> on <dev>', 'publish a service inside (remove forward <n> from <dev>)'],
   ['add record <name> <address> on <server>', 'a name a DNS server answers for (remove record <n>|<name> from <server>)'],
   ['add vlan <id> to <device>', 'VLAN list of a device (remove vlan <id> from <device>)'],

@@ -125,8 +125,9 @@ export const help: Dictionary['help'] = {
         'The ports of a firewall are put in a zone: trust, untrust or dmz. Without rules the zone ' +
         'policy decides: traffic towards a more trusted zone is denied, the rest passes. The ' +
         'exceptions are written in the “Rules” tab, read top to bottom: the first that matches ' +
-        'decides, by service (ping, web, email, DNS), source and destination. The reply to an ' +
-        'allowed flow always passes.',
+        'decides, by service (ping, web, email, DNS), source and destination. A firewall lets ' +
+        'through the reply to a flow it allowed itself. A router has the same tab: its rules ' +
+        'filter what it routes, and what no rule matches passes.',
     },
     nat: {
       title: 'Go out to the Internet with NAT',

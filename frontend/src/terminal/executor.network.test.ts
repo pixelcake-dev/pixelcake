@@ -608,7 +608,7 @@ describe('a firewall at the edge, from the terminal', () => {
       'RULES of FW-1 (the first that matches decides)',
       '  no rules',
       '  then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed',
-      '  the reply to an allowed flow always passes',
+      '  the reply to a flow it allowed passes',
     ]);
 
     run('add rule allow web from untrust to Web-01 on FW-1');
@@ -617,9 +617,34 @@ describe('a firewall at the edge, from the terminal', () => {
       '   1  allow web    from untrust            to 192.168.20.10',
       '   2  deny  any    from 203.0.113.0/24     to any',
     ]);
-    expect(output('show rules of Router-1')).toEqual([
-      'Router-1 is not a firewall and has no rules: it filters nothing',
+    expect(output('show rules of PC-1')).toEqual([
+      'PC-1 is not a router or a firewall and has no rules: it filters nothing',
     ]);
+  });
+
+  it('takes rules on a router too, as its access list', () => {
+    expect(output('show rules of Router-1')).toEqual([
+      'RULES of Router-1 (the first that matches decides)',
+      '  no rules',
+      '  then anything else is allowed',
+      '  the reply to a flow it allowed passes',
+    ]);
+    expect(output('add rule deny ping from any to Web-01 on Router-1')).toEqual([
+      'Router-1: rule 1 added — deny ping from any to 192.168.20.10',
+      '  Web-01 → 192.168.20.10',
+    ]);
+    expect(output('show rules of Router-1')).toEqual([
+      'RULES of Router-1 (the first that matches decides)',
+      '   1  deny  ping   from any                to 192.168.20.10',
+      '  then anything else is allowed',
+      '  the reply to a flow it allowed passes',
+    ]);
+    expect(transcript('ping Web-01 from PC-1')).toEqual([
+      'Pinging Web-01 (192.168.20.10) from PC-1...',
+      'Ping failed (blocked): request: router Router-1: denied by rule 1 (deny ping from any to 192.168.20.10)',
+      '  dropped at: Router-1',
+    ]);
+    expect(verdict('browse Web-01 from PC-1')).toBe('Page received from Web-01');
   });
 
   it('stores a network without its host bits and an address as it is', () => {
@@ -644,7 +669,7 @@ describe('a firewall at the edge, from the terminal', () => {
       '"wan" is not any, a zone (trust, untrust, dmz), an address, a network or a device',
     ]);
     expect(output('add rule allow web from untrust to dmz on PC-1')).toEqual([
-      'PC-1 is a PC: rules belong on firewalls',
+      'PC-1 is a PC: rules belong on routers and firewalls',
     ]);
     expect(output('add rule 3 allow web from untrust to dmz on FW-1')).toEqual([
       'FW-1 has no rules yet: the first one goes at position 1',

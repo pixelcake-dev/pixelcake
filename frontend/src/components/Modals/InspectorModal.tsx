@@ -377,7 +377,7 @@ const InspectorModal = () => {
     else linkedNics.set(iface.nic.id, linkPeerLabel(link));
   }
 
-  // Routers and firewalls route; firewalls also filter
+  // Routers and firewalls route, and filter by their rules; firewalls also have zones
   const routesTraffic = isL3Capable(inspectorDevice);
   const isFirewall = inspectorDevice.type.toLowerCase().includes('firewall');
   const isSwitch = inspectorDevice.type.toLowerCase().includes('switch');
@@ -747,12 +747,19 @@ const InspectorModal = () => {
     });
   }
 
-  // Rules: firewalls
-  if (isFirewall) {
+  // Rules: firewalls, and routers (their access list, the same editor without zones)
+  if (routesTraffic) {
     tabs.push({
       id: 'rules',
       label: tabLabel(tabNames.rules, firewallRules.length),
-      content: <FirewallRulesPanel rules={firewallRules} ports={ports} onChange={setFirewallRules} />,
+      content: (
+        <FirewallRulesPanel
+          rules={firewallRules}
+          ports={ports}
+          onChange={setFirewallRules}
+          router={!isFirewall}
+        />
+      ),
     });
   }
 
