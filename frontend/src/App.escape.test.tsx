@@ -154,14 +154,14 @@ describe('App — Esc closes the window on top', () => {
     fireEvent.click(tab('Dispositivi'));
     fireEvent.click(screen.getByRole('button', { name: /Nuovo template/ }));
     expect(windows()).toBe(2);
-    expect(screen.getByRole('heading', { name: 'Nuovo template generico' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Nuovo template' })).toBeInTheDocument();
     // (its drawings are all on show: there is no list to close first)
     expect(screen.getAllByRole('radio').length).toBeGreaterThan(20);
     expect(windows()).toBe(2);
 
     esc();
     expect(windows()).toBe(1);
-    expect(screen.queryByRole('heading', { name: 'Nuovo template generico' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Nuovo template' })).toBeNull();
     expect(screen.getByRole('heading', { name: 'Impostazioni' })).toBeInTheDocument();
     expect(ui().modals.settings).toBe(true);
 

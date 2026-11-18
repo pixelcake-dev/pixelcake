@@ -20,6 +20,7 @@ import DevicePanel from '@/components/Sidebar/DevicePanel';
 import TopMenuBar from '@/components/Toolbar/TopMenuBar';
 import ContextMenu from '@/components/ui/ContextMenu';
 import AreaContextMenu from '@/components/ui/AreaContextMenu';
+import { getT } from '@/i18n';
 import HelpModal from './HelpModal';
 import SettingsModal from './SettingsModal';
 
@@ -235,7 +236,7 @@ describe('the guide — the areas of the canvas', () => {
     act(() => ui().openModal('settings'));
     render(<SettingsModal />);
     fireEvent.click(screen.getByRole('button', { name: 'Avanzate' }));
-    const line = screen.getByText('Elimina i dispositivi selezionati, o il riquadro selezionato');
+    const line = screen.getByText(getT().advanced.shortcuts.rows.delete.action);
     expect(line.nextElementSibling).toHaveTextContent('Canc');
     act(() => ui().closeModal('settings'));
   });
