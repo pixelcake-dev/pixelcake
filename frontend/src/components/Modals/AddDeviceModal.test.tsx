@@ -386,4 +386,27 @@ describe('AddDeviceModal — the name of a new device is proposed, to be changed
     expect(addNamed('PC', 'tpl-pc')).toBe('PC-2');
     expect(labels()).toEqual(['Reception', 'pc-1', 'PC-2']);
   });
+
+  it('a name another device has is an error under the field, and nothing is added until it is changed', () => {
+    addNamed('PC', 'tpl-pc', 'Reception');
+    useUIStore.getState().setAddDeviceType('Server', 'tpl-server');
+    useUIStore.getState().openModal('addDevice');
+    render(<AddDeviceModal />);
+    const field = () => screen.getByLabelText(/^Nome del dispositivo/);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    // the same name, whatever its case and the spaces around it
+    fireEvent.change(field(), { target: { value: '  reception ' } });
+    expect(screen.getByRole('alert')).toHaveTextContent('Un altro dispositivo ha già questo nome');
+    expect(field()).toHaveAttribute('aria-invalid', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Aggiungi' }));
+    expect(labels()).toEqual(['Reception']);
+    // the window stays open, with the name as it was typed
+    expect(field()).toHaveValue('  reception ');
+
+    fireEvent.change(field(), { target: { value: 'Reception-2' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Aggiungi' }));
+    expect(labels()).toEqual(['Reception', 'Reception-2']);
+  });
 });

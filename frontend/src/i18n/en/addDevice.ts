@@ -18,6 +18,8 @@ export const addDevice: Dictionary['addDevice'] = {
     legend: 'Identity',
     name: 'Device name',
     namePlaceholder: (type: string) => `e.g. ${type}-Office-01`,
+    /** Under the name, when another device of the board has it (whatever its case) */
+    nameTaken: 'Another device already has this name',
     vendor: 'Vendor',
     vendorPlaceholder: 'e.g. Cisco, HP…',
     location: 'Location',

@@ -14,7 +14,7 @@ import { useTemplateStore } from '@/store/templateStore';
 import { findNextAvailableIP, generateMacAddress } from '@/utils/ipHelpers';
 import { firstFreePlace } from '@/utils/placeDevice';
 import { newDevicePlace } from '@/utils/viewPlace';
-import { newDeviceName, newDevicePorts } from '@/utils/newDevice';
+import { isNameTaken, newDeviceName, newDevicePorts } from '@/utils/newDevice';
 import { nicProblems, tidyNic } from '@/utils/interfaceProblems';
 import { isEndDeviceKind } from '@/utils/defaultDns';
 import { isL3Type, withLeases } from '@/engine';
@@ -100,6 +100,10 @@ const AddDeviceModal = () => {
   // An end device is addressed through its card: what is typed here is the card
   const card = nics?.[0];
 
+  // A name another device has is refused: the terminal finds a device by its
+  // name, and could not tell the two apart (utils/newDevice)
+  const nameTaken = isNameTaken(name, devices);
+
   const handleSave = () => {
     if (!addDeviceType) return;
     // A card on DHCP needs no address; any other device is asked for one
@@ -108,6 +112,8 @@ const AddDeviceModal = () => {
       toast.error(t.addDevice.nameAndAddressRequired);
       return;
     }
+    // (said under the field: the window stays open until the name is changed)
+    if (isNameTaken(name, useNetworkStore.getState().devices)) return;
     const cardProblem = card ? nicProblems(card).dns : undefined;
     if (cardProblem) {
       toast.error(cardProblem);
@@ -216,6 +222,7 @@ const AddDeviceModal = () => {
               onChange={(e) => setName(e.target.value)}
               placeholder={t.addDevice.identity.namePlaceholder(addDeviceType)}
               required
+              error={nameTaken ? t.addDevice.identity.nameTaken : undefined}
             />
             {/* Who made it and where it is: not asked of a PC */}
             {!isPC && (

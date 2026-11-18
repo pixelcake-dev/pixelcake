@@ -80,6 +80,34 @@ beforeEach(() => {
   useUIStore.getState().closeModal('inspector');
 });
 
+describe('InspectorModal — renaming a device', () => {
+  it('a name another device has is an error under the field, and nothing is saved until it is changed', () => {
+    openInspector('PC-1');
+    const field = () => within(section('Identità')).getByLabelText('Nome del dispositivo');
+
+    // the name of another device, whatever its case
+    type('Nome del dispositivo', 'pc-2');
+    expect(screen.getByRole('alert')).toHaveTextContent('Un altro dispositivo ha già questo nome');
+    expect(field()).toHaveAttribute('aria-invalid', 'true');
+    save();
+    expect(device('PC-1').label).toBe('PC-1');
+    expect(useUIStore.getState().modals.inspector).toBe(true);
+
+    // its own name, in another case, is its own: it can be saved
+    type('Nome del dispositivo', 'pc-1');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    save();
+    expect(store().devices.map(d => d.label)).toContain('pc-1');
+  });
+
+  it('a name nobody has is saved', () => {
+    openInspector('PC-1');
+    type('Nome del dispositivo', 'PC-Reception');
+    save();
+    expect(device('PC-Reception')).toBeDefined();
+  });
+});
+
 describe('InspectorModal — the first screen of an end device', () => {
   it('is what the device is and how it is addressed, with the address typed there', () => {
     openInspector('PC-1');
