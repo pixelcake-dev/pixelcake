@@ -321,12 +321,14 @@ describe('InspectorModal — Regole', () => {
 });
 
 describe('InspectorModal — Regole of a router', () => {
-  it('starts empty and says that a router without rules lets everything through', () => {
+  it('starts empty, says that a router without rules lets everything through and that with one it blocks the rest', () => {
     openInspector('Router-1');
     openTab('Regole');
     expect(screen.getByText('Nessuna regola: il router lascia passare tutto.')).toBeInTheDocument();
     const noMatch = screen.getByRole('region', { name: 'Quando nessuna regola corrisponde' });
-    expect(noMatch).toHaveTextContent('È permesso tutto: un router non ha zone di sicurezza.');
+    expect(noMatch).toHaveTextContent(
+      'Viene bloccato: appena un router ha una regola attiva, ciò che nessuna regola permette non passa, come sui router veri.'
+    );
     expect(noMatch).not.toHaveTextContent('untrust → trust');
   });
 
@@ -705,5 +707,39 @@ describe('InspectorModal — NAT', () => {
     const taken = matchForward(device('Router-1'), 'web', '192.168.10.1');
     expect(taken?.forward.to).toBe('192.168.20.10');
     expect(matchForward(device('Router-1'), 'ping', '192.168.10.1')).toBeUndefined();
+  });
+});
+
+describe('InspectorModal — an address in conflict', () => {
+  const conflictBox = () => document.querySelector('.inspector-address-conflict');
+
+  it('says which other device has the address as it is typed, and nothing once it is another', () => {
+    openInspector('PC-2');
+    expect(conflictBox()).toBeNull();
+
+    type('Indirizzo IP', '192.168.10.11');
+    expect(conflictBox()).toHaveTextContent(
+      'Indirizzo in conflitto: 192.168.10.11 è anche su PC-1. Finché resta su più dispositivi, ' +
+        'una domanda verso questo indirizzo o da questo indirizzo non ha una risposta di cui fidarsi.'
+    );
+
+    type('Indirizzo IP', '192.168.10.13');
+    expect(conflictBox()).toBeNull();
+  });
+
+  it('says it on opening a device that is already in conflict, on every tab, and saving is not refused', () => {
+    const { updateDevice } = useNetworkStore.getState();
+    const pc1 = device('PC-1');
+    updateDevice(device('Router-1').id, {
+      ports: device('Router-1').ports?.map(p => (p.id === 3 ? { ...p, ip: pc1.ip, subnet: '255.255.255.0' } : p)),
+    });
+    openInspector('Router-1');
+    expect(conflictBox()).toHaveTextContent(`${pc1.ip} è anche su PC-1`);
+    openTab('Porte (4)');
+    expect(conflictBox()).toHaveTextContent(`${pc1.ip} è anche su PC-1`);
+
+    save();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(useUIStore.getState().modals.inspector).toBe(false);
   });
 });

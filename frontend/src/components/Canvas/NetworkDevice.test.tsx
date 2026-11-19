@@ -45,7 +45,8 @@ function add(label: string, type = 'PC', more: { ip?: string; templateId?: strin
   return network().addDevice({
     type,
     label,
-    ip: '192.168.1.10',
+    // (an address of its own: two devices with one address are in conflict)
+    ip: `192.168.1.${10 + network().devices.length}`,
     subnet: '255.255.255.0',
     gateway: '192.168.1.1',
     position: { x: network().devices.length * 200, y: 0 },
@@ -468,6 +469,46 @@ describe('what the upper layer of a device says', () => {
     expect(frameOf('Portatile').className).not.toMatch(/device-(drop|arrival)/);
     expect(wordsOf('Portatile')).toEqual([]);
     expect(stateOf('PC-2')).toEqual(['is-rest']);
+  });
+
+  it('"warning" on two devices with one address: the line under the name says it is in conflict, until it changes', async () => {
+    const first = add('Srv-1', 'Server', { ip: '192.168.1.10' });
+    add('Srv-2', 'Server', { ip: '192.168.1.10' });
+    add('PC-2', 'PC', { ip: '192.168.1.20' });
+    await renderCanvas();
+
+    for (const label of ['Srv-1', 'Srv-2']) {
+      expect(nodeOf(label).querySelector('.device-ip')?.textContent).toBe('192.168.1.10 · in conflitto');
+      expect(stateOf(label)).toEqual(['is-warning']);
+    }
+    expect(stateOf('PC-2')).toEqual(['is-rest']);
+    expect(nodeOf('PC-2').querySelector('.device-ip')?.textContent).toBe('192.168.1.20');
+
+    // in the language of the interface
+    try {
+      act(() => setLanguage('en'));
+      expect(nodeOf('Srv-1').querySelector('.device-ip')?.textContent).toBe('192.168.1.10 · in conflict');
+    } finally {
+      act(() => setLanguage('it'));
+    }
+
+    // another address, and both are at rest again
+    act(() => network().updateDevice(first, { ip: '192.168.1.11' }));
+    await settle();
+    expect(nodeOf('Srv-1').querySelector('.device-ip')?.textContent).toBe('192.168.1.11');
+    expect(nodeOf('Srv-2').querySelector('.device-ip')?.textContent).toBe('192.168.1.10');
+    expect(stateOf('Srv-1')).toEqual(['is-rest']);
+    expect(stateOf('Srv-2')).toEqual(['is-rest']);
+  });
+
+  it('a router whose port has the address of another device shows that address in conflict', async () => {
+    const router = add('R-1', 'Router', { ip: '' });
+    act(() => network().updateDevice(router, { ports: [{ id: 1, enabled: true, ip: '192.168.1.10', subnet: '255.255.255.0' }] }));
+    add('Srv-1', 'Server', { ip: '192.168.1.10' });
+    await renderCanvas();
+
+    expect(nodeOf('R-1').querySelector('.device-ip')?.textContent).toBe('192.168.1.10 · in conflitto');
+    expect(stateOf('R-1')).toEqual(['is-warning']);
   });
 
   it('one thing at a time: off, then where the answer ends, then selected, then what is to be put right', async () => {

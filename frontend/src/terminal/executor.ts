@@ -11,6 +11,7 @@ import type { SimulationOutcome } from '@/store/simulationStore';
 import { flowOutcome, traceOutcome } from '@/utils/answerOutcome';
 import { isNameTaken } from '@/utils/newDevice';
 import {
+  addressConflicts,
   resolveEndpoint,
   suggestEndpoint,
   buildAdjacency,
@@ -833,7 +834,18 @@ function showInterfaces(topo: Topology, d: NetworkDevice): TerminalLine[] {
       );
     }
   }
-  return lines;
+  return [...lines, ...conflictLines(topo, d)];
+}
+
+/** `  ✗ address conflict: 192.168.20.10 is also on Mail-01`: one line for each address of `d` in conflict */
+function conflictLines(topo: Topology, d: NetworkDevice): TerminalLine[] {
+  const own = addressConflicts(topo).byDevice.get(d.id);
+  if (!own) return [];
+  return [...own].map(([ip, devices]) => {
+    const others = devices.filter((other) => other.id !== d.id).map((other) => other.label);
+    const who = others.length <= 1 ? others.join('') : `${others.slice(0, -1).join(', ')} and ${others[others.length - 1]}`;
+    return err(`  ✗ address conflict: ${ip} is also on ${who}`);
+  });
 }
 
 /** `show ip <device>` — compact addressing summary (also ipconfig/ifconfig). */
@@ -861,7 +873,7 @@ function showIp(topo: Topology, d: NetworkDevice): TerminalLine[] {
       )
     );
   }
-  return lines;
+  return [...lines, ...conflictLines(topo, d)];
 }
 
 function showNeighbors(topo: Topology, d: NetworkDevice): TerminalLine[] {
@@ -924,10 +936,24 @@ function showRoutes(topo: Topology, d: NetworkDevice): TerminalLine[] {
 const ZONE_POLICY =
   'zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed';
 
+/** A rule on one line of `show rules`, its number first (blank for the implicit deny) */
+function ruleRow(number: string, rule: Pick<FirewallRule, 'action' | 'service' | 'source' | 'destination'>): string {
+  return (
+    `  ${number.padStart(2)}  ${rule.action.padEnd(5)} ${rule.service.padEnd(6)} ` +
+    `from ${rule.source.padEnd(18)} to ${rule.destination}`
+  );
+}
+
+/** True when a router's rules end with the implicit deny: it has one switched on */
+function routerDeniesTheRest(rules: FirewallRule[]): boolean {
+  return rules.some((rule) => rule.enabled !== false);
+}
+
 /**
  * `show rules <device>` — the rules in order, then what decides when none
- * matches: the zone policy on a firewall; on a router (its access list)
- * nothing, so the rest passes
+ * matches: the zone policy on a firewall; on a router (its access list) the
+ * implicit deny once it has a rule switched on, else nothing, so the rest
+ * passes
  */
 function showRules(d: NetworkDevice): TerminalLine[] {
   const rules = d.firewallRules ?? [];
@@ -938,12 +964,17 @@ function showRules(d: NetworkDevice): TerminalLine[] {
   const lines = [heading(`RULES of ${d.label} (the first that matches decides)`)];
   if (rules.length === 0) lines.push(muted('  no rules'));
   rules.forEach((rule, index) => {
-    const row =
-      `  ${String(index + 1).padStart(2)}  ${rule.action.padEnd(5)} ${rule.service.padEnd(6)} ` +
-      `from ${rule.source.padEnd(18)} to ${rule.destination}`;
+    const row = ruleRow(String(index + 1), rule);
     lines.push(rule.enabled === false ? muted(`${row}  (disabled)`) : line(row));
   });
-  lines.push(muted(isFirewall ? `  then the ${ZONE_POLICY}` : '  then anything else is allowed'));
+  if (isFirewall) {
+    lines.push(muted(`  then the ${ZONE_POLICY}`));
+  } else if (routerDeniesTheRest(rules)) {
+    const implicit = { action: 'deny', service: 'any', source: 'any', destination: 'any' } as const;
+    lines.push(muted(`${ruleRow('', implicit)}  (implicit: what no rule allows)`));
+  } else {
+    lines.push(muted(rules.length === 0 ? '  then anything else is allowed' : '  then anything else is allowed: no rule is switched on'));
+  }
   lines.push(muted('  the reply to a flow it allowed passes'));
   return lines;
 }
@@ -1931,6 +1962,10 @@ function runRuleAdd(
       );
     }
   }
+  // A router's first rule brings the implicit deny of its access list with it
+  if (!zoned && !routerDeniesTheRest(rules)) {
+    lines.push(muted(`  from now on ${device.label} blocks what no rule allows`));
+  }
   return lines;
 }
 
@@ -1953,7 +1988,19 @@ function runRuleRemove(position: number, deviceQuery: string | undefined, contex
   useNetworkStore.getState().updateDevice(device.id, {
     firewallRules: remaining.length > 0 ? remaining : undefined,
   });
-  return [ok(`${device.label}: rule ${position} removed — ${describeRule(rule)}`)];
+  const lines = [ok(`${device.label}: rule ${position} removed — ${describeRule(rule)}`)];
+  // (a router left with no rule switched on filters nothing any more)
+  const isRouter = isL3Capable(device) && !device.type.toLowerCase().includes('firewall');
+  if (isRouter && routerDeniesTheRest(rules) && !routerDeniesTheRest(remaining)) {
+    lines.push(
+      muted(
+        remaining.length === 0
+          ? `  ${device.label} has no rules left: it lets everything through`
+          : `  ${device.label} has no rule switched on left: it lets everything through`
+      )
+    );
+  }
+  return lines;
 }
 
 /* ── port forwards ────────────────────────────────────────────────────── */

@@ -49,7 +49,7 @@ add rule [<position>] allow|deny [<service>|any] from <source> to <destination> 
   allow may be written permit, deny block
 ```
 
-Aggiunge una regola all'elenco di un router o di un firewall. Le regole si leggono dall'alto, e la prima che corrisponde per servizio, partenza e destinazione decide; quando nessuna corrisponde, su un firewall decide la politica delle zone ([regole](../services/firewall.md#rules)), e un router lascia passare il pacchetto ([regole su un router](../services/firewall.md#router)).
+Aggiunge una regola all'elenco di un router o di un firewall. Le regole si leggono dall'alto, e la prima che corrisponde per servizio, partenza e destinazione decide; quando nessuna corrisponde, su un firewall decide la politica delle zone ([regole](../services/firewall.md#rules)), e un router blocca il pacchetto: la sua lista finisce con un divieto implicito ([regole su un router](../services/firewall.md#router)). La prima regola di un router lo dice in una riga sua, e togliere l'ultima dice che il router torna a lasciar passare tutto.
 
 | Parametro | Che cos'è |
 |---|---|

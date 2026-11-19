@@ -41,7 +41,13 @@
  * one, takes the traffic. When no other route is left, it says why the
  * packet stops there.
  *
- * Verdicts: 'error' (an endpoint does not exist or has no usable address),
+ * An address in conflict, held by two devices that can meet (see
+ * ./conflicts), is no address to trust: a question to it, or from it, ends
+ * there with the reason, and so does a port forward that sends a packet on
+ * to one.
+ *
+ * Verdicts: 'error' (an endpoint does not exist, has no usable address, or
+ * its address is in conflict),
  * 'unreachable' (no cables join the two devices), 'blocked' (dropped on the
  * way, with the reason and the device), 'success'.
  *
@@ -73,6 +79,7 @@ import type { L2Request, L2Result, Unroutable } from './l2';
 import { doesNat, matchForward, natAddress } from './nat';
 import type { NatTranslation } from './nat';
 import { noLeaseReason, withLeases } from './dhcp';
+import { conflictAt } from './conflicts';
 
 /** A packet that crosses more layer 3 devices than this is in a loop */
 const MAX_ROUTED_HOPS = 64;
@@ -325,6 +332,15 @@ export function traceRoute(
     }
   }
 
+  // An address two devices have: which of them answers cannot be told (see
+  // ./conflicts). A device asking itself is answered without the packet
+  // leaving it
+  const holder = ownedAddresses(target).includes(targetIp)
+    ? target
+    : topo.devices.find(device => ownedAddresses(device).includes(targetIp));
+  const clash = sourceId !== targetId && holder ? conflictAt(topo, holder.id, targetIp) : undefined;
+  if (clash) return { verdict: 'error', hops: [], failureReason: clash, notes };
+
   // 2. Cables
   if (!physicallyConnected(topo, sourceId, targetId)) {
     return {
@@ -486,6 +502,8 @@ export function traceRoute(
           `${current.label} sends ${targetIp} on to ${onward.to} (${onward.why}), an address no device has`
         );
       }
+      const onwardClash = conflictAt(topo, next.id, onward.to);
+      if (onwardClash) return blocked(current, onwardClash);
       hopNotes.push(`NAT: destination ${targetIp} → ${onward.to} (${onward.why})`);
       if (onward.remember) translations.push(onward.remember);
       targetIp = onward.to;
@@ -505,6 +523,9 @@ export function traceRoute(
       sourceIp = decision.out.ip;
       sentFrom = sourceIp;
     }
+    // (the reply to an address two devices have may reach either of them)
+    const ownClash = isSource && options.sourceIp === undefined ? conflictAt(topo, source.id, sourceIp) : undefined;
+    if (ownClash) return { verdict: 'error', hops: [], failureReason: ownClash, notes, ...addresses() };
     // What a firewall on this device sees: the destination already translated
     // (above), the source not yet (below)
     const packet: Packet = {

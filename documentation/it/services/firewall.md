@@ -197,22 +197,52 @@ Le regole giudicano solo ciò che attraversa il firewall. L'amministrazione del 
 
 ## Regole su un router {#router}
 
-Anche un router può avere delle regole: la sua lista di accesso. La finestra di un router ha la stessa scheda «Regole», con lo stesso editor, e il terminale accetta `add rule` e `show rules` su un router come su un firewall. Le regole si leggono allo stesso modo, dall'alto in basso, su ciò che il router instrada. Un router non ha zone, quindi una regola nomina indirizzi e reti, e ciò che nessuna regola indica passa. La risposta nomina il router come tale:
+Anche un router può avere delle regole: la sua lista di accesso. La finestra di un router ha la stessa scheda «Regole», con lo stesso editor, e il terminale accetta `add rule` e `show rules` su un router come su un firewall. Le regole si leggono allo stesso modo, dall'alto in basso, su ciò che il router instrada. Un router non ha zone, quindi una regola nomina indirizzi e reti.
+
+Ciò che nessuna regola indica si decide come sui router veri: la lista finisce con un divieto implicito. Un router senza regole lascia passare tutto; appena ne ha una attiva, ciò che nessuna regola permette viene bloccato, e il motivo lo dice: `router Router-Core: no rule allows it`. Un router con tutte le regole spente torna a lasciar passare tutto. La risposta a un flusso che il router ha permesso passa, come su un firewall. Sotto «Quando nessuna regola corrisponde» la scheda «Regole» di un router dice lo stesso, e `show rules` finisce con il divieto implicito:
 
 ```ncl sample=site
 pixelcake> add rule deny ping from any to Srv-Interno on Router-Core
 Router-Core: rule 1 added — deny ping from any to 192.168.20.10
   Srv-Interno → 192.168.20.10
+  from now on Router-Core blocks what no rule allows
 pixelcake> ping Srv-Interno from PC-Uffici-1
 Pinging Srv-Interno (192.168.20.10) from PC-Uffici-1...
 Ping failed (blocked): request: router Router-Core: denied by rule 1 (deny ping from any to 192.168.20.10)
   dropped at: Router-Core
+pixelcake> browse Srv-Interno from PC-Uffici-1
+Browsing Srv-Interno (192.168.20.10) from PC-Uffici-1...
+  ✗ HTTP request: PC-Uffici-1 → Srv-Interno
+Browse failed (blocked): HTTP request: router Router-Core: no rule allows it
+  dropped at: Router-Core
+```
+
+Il ping è fermato dalla regola 1, la pagina dal divieto implicito: nessuna regola la permette. Una regola che permette ciò che mandano gli uffici apre il resto, e la risposta del server torna indietro come risposta a un flusso che il router ha permesso:
+
+```ncl continue
+pixelcake> add rule allow any from 192.168.10.0/24 to any on Router-Core
+Router-Core: rule 2 added — allow any from 192.168.10.0/24 to any
+pixelcake> browse Srv-Interno from PC-Uffici-1
+Browsing Srv-Interno (192.168.20.10) from PC-Uffici-1...
+  ✓ HTTP request: PC-Uffici-1 → Srv-Interno
+  ✓ HTTP response: Srv-Interno → PC-Uffici-1
+Page received from Srv-Interno
+  note: HTTP request: router Router-Core: allowed by rule 2 (allow any from 192.168.10.0/24 to any)
+  note: HTTP response: router Router-Core: no rule matches, allowed as the reply to an allowed flow
 pixelcake> show rules Router-Core
 RULES of Router-Core (the first that matches decides)
    1  deny  ping   from any                to 192.168.20.10
-  then anything else is allowed
+   2  allow any    from 192.168.10.0/24    to any
+      deny  any    from any                to any  (implicit: what no rule allows)
   the reply to a flow it allowed passes
+pixelcake> remove rule 2 from Router-Core
+Router-Core: rule 2 removed — allow any from 192.168.10.0/24 to any
+pixelcake> remove rule 1 from Router-Core
+Router-Core: rule 1 removed — deny ping from any to 192.168.20.10
+  Router-Core has no rules left: it lets everything through
 ```
+
+La regola 1 viene sempre prima: il ping resta negato, e tutto il resto che parte dagli uffici passa. Tolta l'ultima regola, il router non filtra più niente.
 
 ## Limiti {#limits}
 
@@ -223,4 +253,4 @@ RULES of Router-Core (the first that matches decides)
 > - Ciò che è diretto al firewall stesso non viene filtrato.
 > - Il pacchetto è guardato solo per indirizzo e per zona. Non c'è ispezione di ciò che trasporta, né registro degli eventi, né limite di frequenza, né orari. L'opzione IPS/IDS di una porta è solo documentazione: il motore non la simula.
 > - Un'estremità di connessione non assegnata a una porta non ha una zona, e nemmeno una porta la cui zona è «Nessuna». Le regole che nominano una zona vengono saltate lì, e il `trace` dice quale dei due casi è; il traffico non viene fermato per questo.
-> - Le regole di un router non hanno un divieto implicito in fondo, a differenza di molte liste di accesso vere: ciò che nessuna regola indica passa. Per averlo, scrivi `deny any from any to any` come ultima regola.
+> - Le regole di un router tengono lo stato, come quelle di un firewall: la risposta a un flusso che il router ha permesso passa. Una semplice lista di accesso su un router vero no, e vuole una regola anche per le risposte.

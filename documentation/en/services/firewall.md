@@ -197,22 +197,52 @@ Only what goes through is judged by the rules. The administration of the firewal
 
 ## Rules on a router {#router}
 
-A router can carry rules too: its access list. The window of a router has the same “Rules” tab, with the same editor, and the terminal takes `add rule` and `show rules` on a router as on a firewall. The rules are read the same way, top to bottom, on what the router routes. A router has no zones, so a rule names addresses and networks, and what no rule matches passes. The answer names the router as such:
+A router can carry rules too: its access list. The window of a router has the same “Rules” tab, with the same editor, and the terminal takes `add rule` and `show rules` on a router as on a firewall. The rules are read the same way, top to bottom, on what the router routes. A router has no zones, so a rule names addresses and networks.
+
+What no rule matches is decided as on real routers: the list ends with an implicit deny. A router with no rules lets everything through; as soon as it has one that is enabled, what no rule allows is blocked, and the reason says so: `router Router-Core: no rule allows it`. A router whose rules are all disabled lets everything through again. The reply to a flow the router allowed passes, as on a firewall. Under “When no rule matches” the “Rules” tab of a router says the same, and `show rules` ends with the implicit deny:
 
 ```ncl sample=site
 pixelcake> add rule deny ping from any to Srv-Internal on Router-Core
 Router-Core: rule 1 added — deny ping from any to 192.168.20.10
   Srv-Internal → 192.168.20.10
+  from now on Router-Core blocks what no rule allows
 pixelcake> ping Srv-Internal from PC-Office-1
 Pinging Srv-Internal (192.168.20.10) from PC-Office-1...
 Ping failed (blocked): request: router Router-Core: denied by rule 1 (deny ping from any to 192.168.20.10)
   dropped at: Router-Core
+pixelcake> browse Srv-Internal from PC-Office-1
+Browsing Srv-Internal (192.168.20.10) from PC-Office-1...
+  ✗ HTTP request: PC-Office-1 → Srv-Internal
+Browse failed (blocked): HTTP request: router Router-Core: no rule allows it
+  dropped at: Router-Core
+```
+
+The ping is stopped by rule 1, and the page by the implicit deny: no rule allows it. A rule that allows what the offices send opens the rest, and the response of the server comes back as the reply of a flow the router allowed:
+
+```ncl continue
+pixelcake> add rule allow any from 192.168.10.0/24 to any on Router-Core
+Router-Core: rule 2 added — allow any from 192.168.10.0/24 to any
+pixelcake> browse Srv-Internal from PC-Office-1
+Browsing Srv-Internal (192.168.20.10) from PC-Office-1...
+  ✓ HTTP request: PC-Office-1 → Srv-Internal
+  ✓ HTTP response: Srv-Internal → PC-Office-1
+Page received from Srv-Internal
+  note: HTTP request: router Router-Core: allowed by rule 2 (allow any from 192.168.10.0/24 to any)
+  note: HTTP response: router Router-Core: no rule matches, allowed as the reply to an allowed flow
 pixelcake> show rules Router-Core
 RULES of Router-Core (the first that matches decides)
    1  deny  ping   from any                to 192.168.20.10
-  then anything else is allowed
+   2  allow any    from 192.168.10.0/24    to any
+      deny  any    from any                to any  (implicit: what no rule allows)
   the reply to a flow it allowed passes
+pixelcake> remove rule 2 from Router-Core
+Router-Core: rule 2 removed — allow any from 192.168.10.0/24 to any
+pixelcake> remove rule 1 from Router-Core
+Router-Core: rule 1 removed — deny ping from any to 192.168.20.10
+  Router-Core has no rules left: it lets everything through
 ```
+
+Rule 1 still comes first: the ping stays denied, and everything else from the offices passes. Once the last rule is removed the router filters nothing.
 
 ## Limits {#limits}
 
@@ -223,4 +253,4 @@ RULES of Router-Core (the first that matches decides)
 > - What is addressed to the firewall itself is not filtered.
 > - The packet is looked at by address and by zone only. There is no inspection of what it carries, no logging, no rate limit and no schedule. The IPS/IDS option of a port is documentation: the engine does not simulate it.
 > - A link end that is not attached to a port has no zone, and neither has a port whose zone is “None”. The rules that name a zone are skipped there, and the trace says which of the two it is; the traffic is not stopped for it.
-> - The rules of a router have no implicit deny at the end, unlike many real access lists: what no rule matches passes. To have one, write `deny any from any to any` as the last rule.
+> - The rules of a router keep state, as those of a firewall: the reply to a flow the router allowed passes. A plain access list on a real router does not, and needs a rule for the replies too.

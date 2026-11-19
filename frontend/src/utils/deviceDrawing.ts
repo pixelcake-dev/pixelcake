@@ -19,7 +19,8 @@ import {
  *  - rest:     nothing to say
  *  - selected: the device is selected
  *  - ok:       the answer on screen arrives here
- *  - warning:  something of the device is to be put right
+ *  - warning:  something of the device is to be put right (an address in
+ *              conflict, an address it waits for)
  *  - error:    the answer on screen stops here
  *  - off:      the device is taken as broken
  */
@@ -34,6 +35,8 @@ export interface DeviceFacts {
   /** The answer on screen arrives on it */
   arrivesHere?: boolean;
   selected?: boolean;
+  /** One of its addresses is on another device too (see engine/conflicts) */
+  conflict?: boolean;
   /** It waits for an address nobody gave it (DHCP, and no lease) */
   waiting?: boolean;
 }
@@ -50,7 +53,7 @@ export function deviceState(facts: DeviceFacts): DeviceState {
   if (facts.stopsHere) return 'error';
   if (facts.arrivesHere) return 'ok';
   if (facts.selected) return 'selected';
-  if (facts.waiting) return 'warning';
+  if (facts.conflict || facts.waiting) return 'warning';
   return 'rest';
 }
 

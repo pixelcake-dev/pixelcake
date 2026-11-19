@@ -23,6 +23,8 @@ interface NetworkDeviceData extends NetworkDeviceType {
    * device-level address is shown.
    */
   address?: string;
+  /** An address of the device that another device has too (see utils/addressConflicts) */
+  conflict?: string;
   isSelected?: boolean;
   onContextMenu?: (e: React.MouseEvent, device: NetworkDeviceType) => void;
   onDoubleClick?: (device: NetworkDeviceType) => void;
@@ -86,6 +88,7 @@ function arePropsEqual(
     prevProps.data.label === nextProps.data.label &&
     prevProps.data.ip === nextProps.data.ip &&
     prevProps.data.address === nextProps.data.address &&
+    prevProps.data.conflict === nextProps.data.conflict &&
     prevProps.data.notes === nextProps.data.notes &&
     prevProps.data.type === nextProps.data.type &&
     prevProps.data.templateId === nextProps.data.templateId &&
@@ -150,17 +153,20 @@ const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>
     updateNodeInternals(id);
   }, [drawing, id, updateNodeInternals]);
 
-  // What is written under the name: nothing, for a device with no address to show
-  const address = data.address ?? data.ip;
+  // What is written under the name: nothing, for a device with no address to
+  // show; an address another device has too, with the words that say so
+  const address = data.conflict ? t.canvas.device.conflict(data.conflict) : (data.address ?? data.ip);
 
   // What the upper layer of the drawing says: one thing, by the order of
-  // deviceState. A device on DHCP that got no address waits for one, and the
-  // line under its name says so in words
+  // deviceState. A device on DHCP that got no address waits for one, a
+  // device with an address in conflict is to be put right, and the line
+  // under its name says so in words
   const state = deviceState({
     failed: isFailed,
     stopsHere: isDropPoint || answered === 'error',
     arrivesHere: isArrival || answered === 'ok',
     selected,
+    conflict: data.conflict !== undefined,
     // (both in the language of the interface: the address is worked out in it, and t draws this again when it changes)
     waiting: address === noLeaseLabel(),
   });

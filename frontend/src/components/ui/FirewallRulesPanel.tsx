@@ -13,7 +13,8 @@ interface FirewallRulesPanelProps {
   onChange: (rules: FirewallRule[]) => void;
   /**
    * The rules of a router: its access list. A router has no zones, so they
-   * are not offered, and what no rule matches passes
+   * are not offered; once it has an enabled rule, what no rule allows is
+   * blocked (the implicit deny of a real access list)
    */
   router?: boolean;
 }

@@ -10,12 +10,13 @@ Lo stesso motore risponde al [pannello della simulazione](simulation-panel.md), 
 
 ## Prima che il pacchetto parta {#before}
 
-Quattro cose si decidono prima del primo salto.
+Cinque cose si decidono prima del primo salto.
 
 1. **Gli indirizzi da DHCP.** Una scheda di rete impostata per prendere l'indirizzo da un server DHCP ha l'indirizzo che le viene assegnato. Il motore lo ricava dal disegno, sempre allo stesso modo. Una scheda che non ne riceve nessuno resta senza indirizzo, e la risposta dice perché: [una scheda che non ne riceve](../services/dhcp.md#no-address).
 2. **I nomi.** Nel terminale un nome di host può prendere il posto di un dispositivo. Il motore chiede prima al server DNS del mittente, con una richiesta e una risposta che viaggiano come qualunque altro pacchetto, e solo dopo manda la domanda vera all'indirizzo trovato. Il pannello e la presentazione scelgono i dispositivi dai menu e non usano nomi: [una ricerca](../services/dns.md#lookup).
 3. **Le due estremità esistono e hanno un indirizzo.** Senza, la risposta è `error` e dice quale dispositivo non ce l'ha (`PC-1 has no IP address configured`).
-4. **Un cavo le unisce.** Il motore cerca una qualunque catena di cavi tra i due dispositivi, come sono disegnati. Se non c'è, la risposta è `unreachable` (`no physical path between PC-1 and Web-01`). Un cavo tagliato da un [guasto simulato](#failures) resta disegnato: allora il pacchetto si ferma, e il motivo è il cavo.
+4. **L'indirizzo non è in conflitto.** Quando l'indirizzo a cui va la domanda è anche su un altro dispositivo, e i due possono incontrarsi, nessuno può dire quale dei due risponde: la risposta è `error`, e nomina l'indirizzo e i dispositivi (`address conflict: 192.168.20.10 is on both Web-01 and Mail-01, so the answer cannot be trusted`). Vale lo stesso per l'indirizzo da cui parte il mittente, e per un inoltro che manda il pacchetto a un indirizzo così. [Due dispositivi con lo stesso indirizzo](../building/addresses.md#conflicts) dice quali indirizzi entrano in conflitto.
+5. **Un cavo le unisce.** Il motore cerca una qualunque catena di cavi tra i due dispositivi, come sono disegnati. Se non c'è, la risposta è `unreachable` (`no physical path between PC-1 and Web-01`). Un cavo tagliato da un [guasto simulato](#failures) resta disegnato: allora il pacchetto si ferma, e il motivo è il cavo.
 
 Un dispositivo spento non manda nulla. Se è spento il mittente, la domanda si ferma su di lui (`PC-1 is down`).
 
@@ -76,7 +77,7 @@ Due casi tengono la rotta principale. Una rete a cui il dispositivo è collegato
 Un firewall che un pacchetto attraversa (non uno che lo manda, non uno a cui è indirizzato) decide prima che il pacchetto prosegua. Lo stesso fa un router che ha delle regole, la sua lista di accesso: le legge allo stesso modo, e non ha zone.
 
 1. **Le regole**, dall'alto in basso. La prima regola attiva che corrisponde per servizio, partenza e destinazione decide se permettere o negare. Una regola che nomina una zona ha bisogno che il cavo sia assegnato a una porta che sta in una zona, perché la zona appartiene alla porta: altrimenti la regola viene saltata, con una nota.
-2. **La politica delle zone**, quando nessuna regola corrisponde. Un nuovo flusso verso una zona più fidata viene negato: `untrust → trust`, `untrust → dmz` e `dmz → trust`. Tutto il resto è permesso. Un firewall che non conosce la zona di entrambi i lati, perché un cavo non è assegnato a nessuna porta o è assegnato a una porta senza zona, permette, con una nota. Un router non ha zone: ciò che nessuna regola indica passa.
+2. **La politica delle zone**, quando nessuna regola corrisponde. Un nuovo flusso verso una zona più fidata viene negato: `untrust → trust`, `untrust → dmz` e `dmz → trust`. Tutto il resto è permesso. Un firewall che non conosce la zona di entrambi i lati, perché un cavo non è assegnato a nessuna porta o è assegnato a una porta senza zona, permette, con una nota. Un router non ha zone: la sua lista finisce con un divieto implicito, come sui router veri, e quindi ciò che nessuna regola permette viene bloccato (`router Router-Core: no rule allows it`). Un router senza regole, o con tutte spente, lascia passare tutto.
 3. **Le risposte.** Un firewall ricorda i flussi che ha lasciato passare lui stesso. La risposta a uno di questi flussi lo attraversa, qualunque cosa dicano le regole su un nuovo flusso in quel verso. Una risposta che torna per un'altra strada, attraverso un firewall che la richiesta non ha attraversato, per quel firewall è un pacchetto nuovo: decidono le sue regole e le sue zone, e quando la negano il motivo finisce con `and it never saw the request`.
 
 ```ncl sample=site
@@ -218,7 +219,7 @@ Una risposta è uno di quattro verdetti:
 | `success` | la destinazione ha risposto (e, per un flusso, ogni tratto è arrivato) |
 | `blocked` | il pacchetto è stato scartato per strada: il motivo dice perché, e dove |
 | `unreachable` | nessuna catena di cavi unisce i due dispositivi |
-| `error` | la domanda non si può provare: un'estremità non esiste o non ha un indirizzo utilizzabile, le due estremità di una pagina, di un download o di un'email sono lo stesso dispositivo, oppure non c'è un server di posta o un'uscita verso Internet da cui far passare un'email. (Un dispositivo che fa il ping a se stesso risponde, senza che il pacchetto esca, come fa un `trace` verso se stesso.) |
+| `error` | la domanda non si può provare: un'estremità non esiste, non ha un indirizzo utilizzabile o ha un indirizzo in conflitto, le due estremità di una pagina, di un download o di un'email sono lo stesso dispositivo, oppure non c'è un server di posta o un'uscita verso Internet da cui far passare un'email. (Un dispositivo che fa il ping a se stesso risponde, senza che il pacchetto esca, come fa un `trace` verso se stesso.) |
 
 Quando il pacchetto si ferma, la risposta dice due cose: il **motivo**, in una frase che nomina il dispositivo, la porta, la rotta o la regola; e il **dispositivo dove si è fermato**, `dropped at:` nel terminale, la cornice rossa nel pannello e nella presentazione. È il dispositivo che ha in mano il pacchetto quando si ferma. Per una porta, una regola o una rotta è il dispositivo a cui appartengono; per un cavo tagliato o un dispositivo spento è il dispositivo davanti, l'ultimo che poteva ancora mandare. In un flusso il motivo comincia con il nome del tratto che è fallito.
 
@@ -250,6 +251,8 @@ I motivi sono scritti in inglese, in entrambe le lingue dell'interfaccia, e nomi
 | `VLAN 10 does not leave through port 2 on SW-Office: …` | la VLAN del pacchetto non può uscire da quella porta |
 | `firewall FW-Edge: denied by rule 2 (…)` | una regola dice di negare, con il suo numero |
 | `firewall FW-Edge: no rule matches, zone policy dmz → trust denied` | nessuna regola decide, e decidono le zone |
+| `router Router-Core: no rule allows it` | un router ha delle regole, e nessuna permette il pacchetto |
+| `address conflict: 192.168.20.10 is on both Web-01 and Mail-01, …` | due dispositivi hanno l'indirizzo a cui va la domanda, o da cui parte |
 | `Internet does not carry private addresses: …` | un indirizzo privato è arrivato al simbolo Internet |
 | `SW-Core is down`, `link R-HQ–R-Branch is down` | un guasto simulato |
 | `PC-2 is an end device: it does not forward traffic for others` | l'unica strada passa da un dispositivo finale |

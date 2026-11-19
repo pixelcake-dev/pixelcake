@@ -32,6 +32,7 @@ import { useTemplateStore } from '@/store/templateStore';
 import { generateMacAddress } from '@/utils/ipHelpers';
 import { isNameTaken } from '@/utils/newDevice';
 import {
+  addressConflicts,
   interfaceLinks,
   isL3Capable,
   leaseOf,
@@ -45,6 +46,7 @@ import type { DeviceInterface, DhcpResolution } from '@/engine';
 import { linkPeerLabel } from '@/utils/interfaceLabels';
 import { cardLeaseText, firstPoolProblem, noLeaseLabel, poolStatusText } from '@/utils/dhcpLabels';
 import { firstInterfaceProblem, tidyNic, tidyPort } from '@/utils/interfaceProblems';
+import { conflictsOf } from '@/utils/addressConflicts';
 import { NOTES_MAX_LENGTH, noteRows, tidyNotes } from '@/utils/deviceNotes';
 import {
   BRIDGE_PRIORITY_DEFAULT,
@@ -440,6 +442,26 @@ const InspectorModal = () => {
     const status = poolStatus(`nic:${nic.id}`);
     if (status) nicPoolStatus.set(nic.id, status);
   }
+
+  // The addresses of the device, as they are in the form, that other devices
+  // have too: said over the tabs, while they are typed (saving is not refused)
+  const conflicts = conflictsOf(
+    liveDevice.id,
+    addressConflicts({
+      devices: devices.map((d) =>
+        d.id === liveDevice.id
+          ? normalizeAddressing({
+              ...liveDevice,
+              // (a device addressed through its cards: its own address follows the first one)
+              ip: viaCards ? '' : ip.trim(),
+              ports: ports.length > 0 ? ports.map((port) => tidyPort(liveDevice.type, port)) : undefined,
+              nics: nics.length > 0 ? nics.map(tidyNic) : undefined,
+            })
+          : d
+      ),
+      connections,
+    })
+  );
 
   const primaryNic = nics[0];
   const selectedPort = ports.find((port) => port.id === selectedPortId);
@@ -858,6 +880,13 @@ const InspectorModal = () => {
           jump from a tab to the next; a device with little to set (a PC) is
           as tall as what it shows */}
       <div style={{ minHeight: tabs.length > 2 ? '420px' : undefined }}>
+        {conflicts.length > 0 && (
+          <div className="modal-error-box inspector-address-conflict mb-3" role="status">
+            {conflicts.map((conflict) => (
+              <p key={conflict.address}>{t.inspector.addressConflict(conflict.address, conflict.devices)}</p>
+            ))}
+          </div>
+        )}
         <TabContainer tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
     </Modal>

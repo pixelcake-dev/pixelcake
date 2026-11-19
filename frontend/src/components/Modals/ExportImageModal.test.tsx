@@ -362,6 +362,27 @@ describe('ExportImageModal — the choices', () => {
     expect(lit('warning')).toBeGreaterThan(0);
   });
 
+  it('draws an address in conflict as the canvas shows it: the words under the name, the lamp', async () => {
+    const lit = () => picture().querySelectorAll(`[fill="${DEVICE_STATE_COLORS.warning}"]`).length;
+    render(<ExportImageModal />);
+    await openDialog();
+    expect(lit()).toBe(0);
+
+    // the file server is given the address of another device of the drawing
+    const taken = network().devices.find((d) => d.label === 'PC-Sede-1')!.ip;
+    const server = network().devices.find((d) => d.label === 'Srv-File')!;
+    act(() => {
+      network().updateDevice(server.id, {
+        ip: taken,
+        nics: server.nics?.map((nic, index) => (index === 0 ? { ...nic, ip: taken } : nic)),
+      });
+    });
+    await settle();
+
+    expect(pictureTexts().filter((text) => text === `${taken} · in conflitto`)).toHaveLength(2);
+    expect(lit()).toBeGreaterThan(0);
+  });
+
   it('draws every device in its frame, the same whatever its name: nothing is read from the screen', async () => {
     // (a device on the page that is not laid out as the picture expects changes nothing)
     const node = document.createElement('div');

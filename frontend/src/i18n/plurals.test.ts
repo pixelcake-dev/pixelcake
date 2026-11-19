@@ -41,6 +41,7 @@ const LISTS: Record<string, 'numbers' | 'names'> = {
   servers: 'names',
   zones: 'names',
   devices: 'names',
+  addresses: 'names',
 };
 
 /**

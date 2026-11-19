@@ -24,6 +24,8 @@ export const canvas: Dictionary['canvas'] = {
     /** For a screen reader: what the colour of the lamp says of the answer (red, green) */
     stopsHere: 'Stops here',
     getsHere: 'Gets here',
+    /** Under the name: an address that another device has too */
+    conflict: (address: string) => `${address} · in conflict`,
   },
 
   /** Presentation mode: the mark on a cable that is cut */
@@ -48,6 +50,17 @@ export const canvas: Dictionary['canvas'] = {
       names.length === 1
         ? `${names[0]} asks DHCP for its address, and no DHCP server gave it one`
         : `${shortList(names)} ask DHCP for their address, and no DHCP server gave them one`,
+    /** Pasted servers, routers, firewalls and switches keep the addresses of the originals: those now in conflict */
+    keptAddresses: (names: string[], addresses: string[]) => {
+      const who =
+        names.length === 1
+          ? `${names[0]} keeps the addresses of the original`
+          : `${shortList(names)} keep the addresses of the originals`;
+      if (addresses.length === 0) return who;
+      return addresses.length === 1
+        ? `${who}: ${addresses[0]} is now in conflict until you change it`
+        : `${who}: ${shortList(addresses)} are now in conflict until you change them`;
+    },
   },
 
   /** The Delete key, with more than one thing selected (one alone is asked about as in its menu) */

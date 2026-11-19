@@ -25,6 +25,8 @@ import { captionOf } from '@/utils/presentation';
 import { useImpact } from '@/utils/useImpact';
 import { useDhcp } from '@/utils/useDhcp';
 import { noLeaseLabel, shownAddress } from '@/utils/dhcpLabels';
+import { useAddressConflicts } from '@/utils/useAddressConflicts';
+import { conflictedAddress } from '@/utils/addressConflicts';
 import {
   pixelSize,
   renderDrawingImage,
@@ -47,7 +49,7 @@ import {
   type ImageFormat,
   type PngScale,
 } from '@/utils/imageExport';
-import { useLanguage, useT } from '@/i18n';
+import { getT, useLanguage, useT } from '@/i18n';
 
 const ExportImageModal = () => {
   const isOpen = useUIStore((state) => state.modals.exportImage);
@@ -102,22 +104,27 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
   // Under each device the image says what the drawing says: for a device on
   // DHCP, the address it is leased
   const dhcp = useDhcp();
+  // (and an address another device has too, in conflict)
+  const conflicts = useAddressConflicts();
   const drawnDevices = useMemo(() => {
     // (a device that was leased no address says so in words: said again
     // when the language changes)
     void language;
     return devices.map((device) => {
-      const address = shownAddress(device, dhcp);
+      const conflict = conflictedAddress(device, conflicts);
+      const address = conflict ? getT().canvas.device.conflict(conflict) : shownAddress(device, dhcp);
       return address === device.ip ? device : { ...device, ip: address };
     });
-  }, [devices, dhcp, language]);
+  }, [devices, dhcp, conflicts, language]);
 
   // What the lamps of the devices say outside a presentation, as on the
-  // canvas: who waits for an address, and the answer the last question left
+  // canvas: who waits for an address, whose address is in conflict, and the
+  // answer the last question left
   const waiting = useMemo(
     () => drawnDevices.filter((device) => device.ip === noLeaseLabel()).map((device) => device.id),
     [drawnDevices]
   );
+  const inConflict = useMemo(() => [...conflicts.byDevice.keys()], [conflicts]);
   const answer = useSimulationStore((state) => state.answer);
 
   const measureText = useMemo(() => createTextMeasure(), []);
@@ -204,6 +211,7 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
           measureText,
           marks,
           waiting,
+          conflicts: inConflict,
           answer,
         },
         {
@@ -223,6 +231,7 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
       measureText,
       marks,
       waiting,
+      inConflict,
       answer,
       theme,
       transparent,
