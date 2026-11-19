@@ -16,6 +16,8 @@ To put it away, press the button again, or P, or Esc, or “Close the marker” 
 
 ## The tools {#tools}
 
+![The company sample network with the marker on. Over the top of the board, the tools of the marker: pen, text, arrow, circle, tick, cross and eraser, four colours, two thicknesses, the bin and the button that closes it. On the drawing, a red circle around Internet, a red cross on its link to FW-Edge, an orange arrow to FW-Edge from the words Single point of failure written by hand, and a green tick by SW-Core.](../../media/marker/marker.en.png "The marker on the company sample: its tools over the top of the board, and five marks on the drawing.")
+
 - **“Pen”**: a line by hand, wherever the pointer goes.
 - **“Text”**: click where the words go, type them and press Enter. Shift + Enter starts a new line, Esc gives the words up, a click elsewhere keeps them. They are written in a handwriting, Caveat.
 - **“Arrow”**: from where the button is pressed to where it is let go, with its head there.

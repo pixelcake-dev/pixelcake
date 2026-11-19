@@ -16,6 +16,8 @@ Per metterlo via premi di nuovo il pulsante, oppure P, oppure Esc, oppure «Chiu
 
 ## Gli strumenti {#tools}
 
+![La rete di esempio dell'azienda con il pennarello attivo. In alto sul canvas gli strumenti del pennarello: penna, testo, freccia, cerchio, spunta, croce e gomma, quattro colori, due spessori, il cestino e il pulsante che lo chiude. Sul disegno, un cerchio rosso intorno a Internet, una croce rossa sulla sua connessione con FW-Edge, una freccia arancione verso FW-Edge dalle parole Punto unico di guasto scritte a mano, e una spunta verde accanto a SW-Core.](../../media/marker/marker.it.png "Il pennarello sulla rete di esempio dell'azienda: i suoi strumenti in alto sul canvas, e cinque segni sul disegno.")
+
 - **«Penna»**: una linea a mano, dovunque vada il puntatore.
 - **«Testo»**: fai clic dove vanno le parole, scrivile e premi Invio. Maiusc + Invio va a capo, Esc le lascia perdere, un clic altrove le tiene. Sono scritte in una grafia a mano, Caveat.
 - **«Freccia»**: da dove premi il tasto a dove lo lasci, con la punta lì.
