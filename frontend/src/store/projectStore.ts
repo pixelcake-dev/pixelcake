@@ -52,7 +52,7 @@ interface ProjectStore {
   renameCanvas: (canvasId: string, name: string) => void;
   /**
    * A copy of a canvas, right after it, named «<name> (copia)»: everything on
-   * it (devices, cables, areas, notes, the view), and nothing shared with the
+   * it (devices, cables, areas, notes, the marks of the marker, the view), and nothing shared with the
    * original. It does not switch to it. The id of the new canvas, or null
    * when there is no such canvas
    */

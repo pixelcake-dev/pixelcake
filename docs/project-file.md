@@ -121,6 +121,7 @@ The reference implementation is `frontend/src/utils/projectFile.ts`
 | `devices` | array | Devices on the canvas. |
 | `connections` | array | Links between devices of the same canvas. |
 | `areas` | array | Optional. The areas drawn behind the devices, in the order they are drawn, see below. Left out when the canvas has none. |
+| `marks` | array | Optional. What is written on the canvas with the marker, in the order it was written, see below. Left out when nothing is. |
 | `viewport` | object | Pan and zoom of the view: `x`, `y` (numbers) and `zoom` (number greater than 0). |
 | `deviceCounter` | integer | Number the next device id (`dev-N`) will use. |
 | `connectionCounter` | integer | Number the next connection id (`conn-N`) will use. |
@@ -290,6 +291,26 @@ else: no device belongs to it, and nothing that follows a packet reads it.
 
 Fields this document does not list are not kept on an area.
 
+### Mark
+
+A mark is what is written by hand on the canvas with the marker
+(«Pennarello»): a line, words, an arrow, a ring, a tick, a cross. It is drawn
+over the devices and the cables, and like an area it is a drawing and nothing
+else. The marks a presenter writes in presentation mode are never written to
+the file.
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `id` | string | Unique within the canvas. The application creates ids of the form `mark-N`. |
+| `kind` | `pen`, `text`, `arrow`, `ellipse`, `tick`, `cross` | What it is. |
+| `color` | `accent`, `red`, `green`, `ink` | `accent` is the orange of the logo, `ink` the colour of the text of the theme; each has a value in the light theme and one in the dark. |
+| `width` | `thin`, `thick` | How thick its lines are; for `text`, how large the words are. |
+| `points` | array of numbers | Points of the canvas, `x` and `y` one after the other (written on one line). `pen`: every point the line goes through, one at least. `arrow`: the tail, then the tip. `ellipse`, `tick`, `cross`: two opposite corners of the box it is drawn in. `text`: the top left of the first line. |
+| `text` | string | Only for `text`: the words, one line or more (`\n` between lines), 300 characters at most. |
+| `seed` | integer | From 1 to 2147483647: what the slight hand-drawn wobble of the mark is worked out from, so that it is drawn the same every time. |
+
+Fields this document does not list are not kept on a mark.
+
 ## Templates
 
 `templates.devices` and `templates.connections` hold the custom templates
@@ -354,6 +375,8 @@ Everything else is repaired, and each repair is reported to the user:
 | A DNS record without `id`, `name` or `address` as text | Dropped: the other records keep their order. |
 | An area that is not an object, or without a `position` or a `size` made of numbers (a `size` of 0 or less included); an `areas` that is not an array | Dropped: there is nothing to draw. |
 | An area without `id`, or with one an earlier area has; with a `color` that is not of the palette; with a `label` that is not text; smaller than 120 by 80 | Completed: a new `area-N` id, the colour `slate`, an empty label, the smallest size. |
+| A mark that is not an object, with an unknown `kind`, with `points` that are not all numbers or fewer than its kind needs (2 numbers for `pen` and `text`, 4 for the others), or a `text` mark without words; a `marks` that is not an array | Dropped: there is nothing to draw. |
+| A mark without `id`, or with one an earlier mark has; with an unknown `color` or `width`; without a usable `seed`; with an odd number of `points` | Completed: a new `mark-N` id, the colour `accent`, the width `thin`, a seed worked out from the mark (the same every time), the last lone number dropped. |
 | A connection that is not an object or has no `id`, `source` or `target` | Dropped. |
 | Connections sharing an `id` | The first one is kept. |
 | A connection whose `source` or `target` is not a device of the canvas | Dropped. |
@@ -361,7 +384,7 @@ Everything else is repaired, and each repair is reported to the user:
 | No `templates` | None. |
 | A template missing a required field | Dropped. |
 
-Six normalisations are applied silently, so that files written by earlier
+Seven normalisations are applied silently, so that files written by earlier
 versions (or by hand) keep working:
 
 - a connection end attached to a port or NIC its device does not have, or to
@@ -381,7 +404,10 @@ versions (or by hand) keep working:
 - the `vlans` of the settings are put in the order of their `id`, their names
   lose the white space around them, and an empty list is dropped;
 - the `label` of an area is made one line, without the white space around
-  it, and an empty `areas` list is dropped.
+  it, and an empty `areas` list is dropped;
+- the `points` of a mark are rounded to a tenth, the `text` of a mark loses
+  the white space at the end of its lines and around it, a mark that is not
+  `text` loses any `text`, and an empty `marks` list is dropped.
 
 A file that is already in this form is read back exactly as it was written.
 
@@ -393,8 +419,9 @@ A file that is already in this form is read back exactly as it was written.
 - Fields without a value are omitted, not written as `null` (`sourceHandle`
   and `targetHandle` are the exception: `null` is a value for them).
 - Fields this document does not list are kept on devices, ports, NICs,
-  connections and templates. At the top level, on a canvas, in the settings
-  and on an area they are not preserved.
+  connections and templates. At the top level, on a canvas, in the settings,
+  on an area and on a mark they are not preserved.
+- The `points` of a mark are written on one line, whatever their number.
 
 ## Versioning
 
