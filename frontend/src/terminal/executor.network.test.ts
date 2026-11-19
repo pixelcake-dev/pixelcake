@@ -93,6 +93,28 @@ beforeEach(() => {
   store.loadTopology(sample.devices, sample.connections);
 });
 
+// ---------- an address on two devices ----------
+
+describe('an address on two devices', () => {
+  it('show ip and show interfaces say who else has it, a ping to it ends with the conflict, and a new address clears it', () => {
+    run('set ip of Mail-01 to 192.168.20.10');
+
+    expect(output('show ip Web-01').at(-1)).toBe('  ✗ address conflict: 192.168.20.10 is also on Mail-01');
+    expect(output('show ip Mail-01').at(-1)).toBe('  ✗ address conflict: 192.168.20.10 is also on Web-01');
+    expect(output('show interfaces Mail-01').at(-1)).toBe(
+      '  ✗ address conflict: 192.168.20.10 is also on Web-01'
+    );
+    expect(verdict('ping Web-01 from PC-1')).toBe(
+      'Ping failed (error): request: address conflict: 192.168.20.10 is on both Web-01 and Mail-01, ' +
+        'so the answer cannot be trusted'
+    );
+
+    run('set ip of Mail-01 to 192.168.20.11');
+    expect(output('show ip Web-01').join('\n')).not.toContain('conflict');
+    expect(verdict('ping Web-01 from PC-1')).toMatch(/^Reply from 192\.168\.20\.10/);
+  });
+});
+
 // ---------- routing ----------
 
 describe('a second site, routed from the terminal', () => {
@@ -622,7 +644,7 @@ describe('a firewall at the edge, from the terminal', () => {
     ]);
   });
 
-  it('takes rules on a router too, as its access list', () => {
+  it('takes rules on a router too, as its access list, which ends with an implicit deny', () => {
     expect(output('show rules of Router-1')).toEqual([
       'RULES of Router-1 (the first that matches decides)',
       '  no rules',
@@ -632,11 +654,12 @@ describe('a firewall at the edge, from the terminal', () => {
     expect(output('add rule deny ping from any to Web-01 on Router-1')).toEqual([
       'Router-1: rule 1 added — deny ping from any to 192.168.20.10',
       '  Web-01 → 192.168.20.10',
+      '  from now on Router-1 blocks what no rule allows',
     ]);
     expect(output('show rules of Router-1')).toEqual([
       'RULES of Router-1 (the first that matches decides)',
       '   1  deny  ping   from any                to 192.168.20.10',
-      '  then anything else is allowed',
+      '      deny  any    from any                to any  (implicit: what no rule allows)',
       '  the reply to a flow it allowed passes',
     ]);
     expect(transcript('ping Web-01 from PC-1')).toEqual([
@@ -644,7 +667,35 @@ describe('a firewall at the edge, from the terminal', () => {
       'Ping failed (blocked): request: router Router-1: denied by rule 1 (deny ping from any to 192.168.20.10)',
       '  dropped at: Router-1',
     ]);
+    // what no rule allows is blocked too
+    expect(verdict('browse Web-01 from PC-1')).toBe(
+      'Browse failed (blocked): HTTP request: router Router-1: no rule allows it'
+    );
+    // a rule that allows the web lets the page through, and its response back
+    expect(output('add rule allow web from any to Web-01 on Router-1')[0]).toBe(
+      'Router-1: rule 2 added — allow web from any to 192.168.20.10'
+    );
     expect(verdict('browse Web-01 from PC-1')).toBe('Page received from Web-01');
+
+    // with every rule gone the router lets everything through again
+    run('remove rule 2 from Router-1');
+    expect(output('remove rule 1 from Router-1')).toEqual([
+      'Router-1: rule 1 removed — deny ping from any to 192.168.20.10',
+      '  Router-1 has no rules left: it lets everything through',
+    ]);
+    expect(verdict('ping Web-01 from PC-1')).toMatch(/^Reply from 192\.168\.20\.10/);
+  });
+
+  it('a router whose rules are all switched off filters nothing, and says so', () => {
+    run('add rule allow web from any to Web-01 on Router-1');
+    useNetworkStore.getState().updateDevice(device('Router-1').id, {
+      firewallRules: device('Router-1').firewallRules?.map(r => ({ ...r, enabled: false })),
+    });
+    expect(output('show rules of Router-1').slice(1, 3)).toEqual([
+      '   1  allow web    from any                to 192.168.20.10  (disabled)',
+      '  then anything else is allowed: no rule is switched on',
+    ]);
+    expect(verdict('ping Web-01 from PC-1')).toMatch(/^Reply from 192\.168\.20\.10/);
   });
 
   it('stores a network without its host bits and an address as it is', () => {
