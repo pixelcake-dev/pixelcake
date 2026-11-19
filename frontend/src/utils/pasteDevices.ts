@@ -10,7 +10,9 @@
  *    for its address, as a real one plugged into a network does: its cards
  *    go on DHCP. Without a DHCP server that hears it, it stays without one,
  *    and the board says so under its name. Servers, routers, firewalls and
- *    switches keep the addresses of the original.
+ *    switches keep the addresses of the original, as a real machine that
+ *    is cloned: those addresses are then in conflict (engine/conflicts),
+ *    and the board says so, until they are changed.
  *  - The copy goes one step down and to the right of the original, or as
  *    many steps as it takes not to land on a device, or an area on an
  *    area, that is there (a copy pasted before).

@@ -14,7 +14,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useNetworkStore } from './networkStore';
-import { resolveDhcp } from '@/engine';
+import { addressConflicts, resolveDhcp } from '@/engine';
 import { device, host, link, nic, port, switchWith } from '@/test/networkFixtures';
 import type { CanvasArea, NetworkDevice } from '@/types';
 
@@ -192,7 +192,7 @@ describe('a pasted end device asks for its address', () => {
     expect(dhcp.leases.find((lease) => lease.deviceId === named('PC-2').id)?.ip).toBe('192.168.1.100');
   });
 
-  it('servers, databases, routers, firewalls and switches keep their addresses (a decision for later)', () => {
+  it('servers, databases, routers, firewalls and switches keep their addresses, which are then in conflict with the originals', () => {
     const server = device({ id: 'Srv-1', label: 'Srv-1', type: 'Server', ip: '192.168.1.10', nics: [nic({ ip: '192.168.1.10' })] });
     const nas = device({ id: 'NAS-1', label: 'NAS-1', type: 'Database', templateId: 'tpl-nas', ip: '192.168.1.11', nics: [nic({ ip: '192.168.1.11' })] });
     const router = device({ id: 'R-1', label: 'R-1', type: 'Router', ports: [port(1, { ip: '192.168.1.1', subnet: MASK })] });
@@ -208,6 +208,20 @@ describe('a pasted end device asks for its address', () => {
     expect(named('R-2').ports?.[0]).toMatchObject({ ip: '192.168.1.1' });
     expect(named('FW-2').ports?.[0]).toMatchObject({ ip: '192.168.1.254' });
     expect(named('SW-2').ip).toBe('192.168.1.250');
+
+    // as when a real machine is cloned: each address is now on two devices, until it is changed
+    const conflicts = addressConflicts({ devices: store().devices, connections: store().connections });
+    expect(conflicts.list.map((c) => [c.ip, c.devices.map((d) => d.label)])).toEqual([
+      ['192.168.1.10', ['Srv-1', 'Srv-2']],
+      ['192.168.1.11', ['NAS-1', 'NAS-2']],
+      ['192.168.1.1', ['R-1', 'R-2']],
+      ['192.168.1.254', ['FW-1', 'FW-2']],
+      ['192.168.1.250', ['SW-1', 'SW-2']],
+    ]);
+    store().updateDevice(named('Srv-2').id, { ip: '192.168.1.12', nics: [nic({ ip: '192.168.1.12' })] });
+    expect(
+      addressConflicts({ devices: store().devices, connections: store().connections }).list.map((c) => c.ip)
+    ).not.toContain('192.168.1.10');
   });
 
   it('paste() says which pasted devices went on DHCP', () => {
