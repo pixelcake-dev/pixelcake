@@ -13,6 +13,15 @@ const cardsTab = common.quote(common.deviceTabs.cards);
 export const inspector = {
   title: (deviceName: string) => `Modifica: ${deviceName}`,
 
+  /** Over the tabs: an address of the device, as it is in the form, that other devices have too */
+  addressConflict: (address: string, devices: string[]) =>
+    devices.length === 0
+      ? ''
+      : `Indirizzo in conflitto: ${address} è anche su ${
+          devices.length === 1 ? devices[0] : `${devices.slice(0, -1).join(', ')} e ${devices[devices.length - 1]}`
+        }. Finché resta su più dispositivi, una domanda verso questo indirizzo o da questo indirizzo ` +
+        'non ha una risposta di cui fidarsi.',
+
   /** The first tab: what the device is, how it is addressed */
   general: {
     identity: {

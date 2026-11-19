@@ -14,6 +14,15 @@ const cardsTab = common.quote(common.deviceTabs.cards);
 export const inspector: Dictionary['inspector'] = {
   title: (deviceName: string) => `Edit: ${deviceName}`,
 
+  /** Over the tabs: an address of the device, as it is in the form, that other devices have too */
+  addressConflict: (address: string, devices: string[]) =>
+    devices.length === 0
+      ? ''
+      : `Address conflict: ${address} is also on ${
+          devices.length === 1 ? devices[0] : `${devices.slice(0, -1).join(', ')} and ${devices[devices.length - 1]}`
+        }. While it is on more than one device, a question to or from this address has no answer ` +
+        'you can trust.',
+
   /** The first tab: what the device is, how it is addressed */
   general: {
     identity: {
