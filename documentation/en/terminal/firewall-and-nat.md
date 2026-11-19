@@ -49,7 +49,7 @@ add rule [<position>] allow|deny [<service>|any] from <source> to <destination> 
   allow may be written permit, deny block
 ```
 
-Adds a rule to the list of a router or a firewall. Rules are read from the top, and the first one that matches the service, the source and the destination decides; when none matches, the zone policy of a firewall decides ([rules](../services/firewall.md#rules)), and a router lets the packet through ([rules on a router](../services/firewall.md#router)).
+Adds a rule to the list of a router or a firewall. Rules are read from the top, and the first one that matches the service, the source and the destination decides; when none matches, the zone policy of a firewall decides ([rules](../services/firewall.md#rules)), and a router blocks the packet: its list ends with an implicit deny ([rules on a router](../services/firewall.md#router)). The first rule of a router says so in a line of its own, and removing its last rule says that it lets everything through again.
 
 | Parameter | What it is |
 |---|---|

@@ -219,7 +219,7 @@ ipconfig [<device>]
 ifconfig [<device>]
 ```
 
-L'indirizzamento di un dispositivo in poche righe: indirizzo, maschera e gateway con cui è conosciuto, poi ogni porta con indirizzo e ogni scheda. Una scheda che prende l'indirizzo dal DHCP mostra l'indirizzo assegnato e da quale interfaccia viene, oppure perché non ne ha uno. Una scheda che interroga un server DNS mostra quale. `ipconfig` e `ifconfig` sono lo stesso comando; prima del dispositivo si può scrivere `of` o `on`.
+L'indirizzamento di un dispositivo in poche righe: indirizzo, maschera e gateway con cui è conosciuto, poi ogni porta con indirizzo e ogni scheda. Una scheda che prende l'indirizzo dal DHCP mostra l'indirizzo assegnato e da quale interfaccia viene, oppure perché non ne ha uno. Una scheda che interroga un server DNS mostra quale. Un indirizzo che ha anche un altro dispositivo chiude l'elenco con una riga sua, `✗ address conflict: … is also on …` ([Due dispositivi con lo stesso indirizzo](../building/addresses.md#conflicts)); `show interfaces` finisce con la stessa riga. `ipconfig` e `ifconfig` sono lo stesso comando; prima del dispositivo si può scrivere `of` o `on`.
 
 ```ncl sample=office
 pixelcake> show ip Router-1
@@ -293,7 +293,7 @@ default              192.168.1.1      eth0     default (gateway)
 show rules [of] <device>
 ```
 
-Le regole di un router o di un firewall nell'ordine in cui si leggono, ciascuna con il suo numero, l'azione, il servizio, la partenza e la destinazione, e poi ciò che decide quando nessuna corrisponde: su un firewall la politica delle zone; su un router niente, quindi tutto il resto è permesso. Un firewall lascia passare la risposta a un flusso che ha permesso lui stesso. Un dispositivo che non è né un router né un firewall, e non ha regole, dice che non filtra nulla.
+Le regole di un router o di un firewall nell'ordine in cui si leggono, ciascuna con il suo numero, l'azione, il servizio, la partenza e la destinazione, e poi ciò che decide quando nessuna corrisponde: su un firewall la politica delle zone; su un router con una regola attiva il divieto implicito della sua lista di accesso, un'ultima riga `deny any from any to any` segnata `(implicit: what no rule allows)`; su un router senza regole, o con tutte spente, niente, quindi tutto il resto è permesso. Un router o un firewall lascia passare la risposta a un flusso che ha permesso lui stesso. Un dispositivo che non è né un router né un firewall, e non ha regole, dice che non filtra nulla.
 
 ```ncl sample=company
 pixelcake> show rules FW-Edge

@@ -219,7 +219,7 @@ ipconfig [<device>]
 ifconfig [<device>]
 ```
 
-The addressing of a device in a few lines: the address, mask and gateway it is known by, then each addressed port and each card. A card that takes its address from DHCP shows the lease and the pool it comes from, or why it has none. A card that asks a DNS server shows which. `ipconfig` and `ifconfig` are the same command; `of` or `on` may be written before the device.
+The addressing of a device in a few lines: the address, mask and gateway it is known by, then each addressed port and each card. A card that takes its address from DHCP shows the lease and the pool it comes from, or why it has none. A card that asks a DNS server shows which. An address that another device has too ends the list with a line of its own, `✗ address conflict: … is also on …` ([Two devices with one address](../building/addresses.md#conflicts)); `show interfaces` ends with the same line. `ipconfig` and `ifconfig` are the same command; `of` or `on` may be written before the device.
 
 ```ncl sample=office
 pixelcake> show ip Router-1
@@ -293,7 +293,7 @@ default              192.168.1.1      eth0     default (gateway)
 show rules [of] <device>
 ```
 
-The rules of a router or a firewall in the order they are read, each with its number, its action, its service, its source and its destination, and then what decides when none matches: on a firewall the zone policy; on a router nothing, so anything else is allowed. A firewall lets through the reply to a flow it allowed itself. A device that is neither a router nor a firewall, and has no rules, says that it filters nothing.
+The rules of a router or a firewall in the order they are read, each with its number, its action, its service, its source and its destination, and then what decides when none matches: on a firewall the zone policy; on a router with an enabled rule the implicit deny of its access list, a last row `deny any from any to any` marked `(implicit: what no rule allows)`; on a router with no rule, or with all of them disabled, nothing, so anything else is allowed. A router or a firewall lets through the reply to a flow it allowed itself. A device that is neither a router nor a firewall, and has no rules, says that it filters nothing.
 
 ```ncl sample=company
 pixelcake> show rules FW-Edge

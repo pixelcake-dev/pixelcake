@@ -111,7 +111,8 @@ export type ServiceName = 'ping' | 'web' | 'email' | 'dns';
  * Firewall rule. Rules are read top to bottom and the first one that matches
  * decides. `source` and `destination` are `any`, a security zone
  * (`trust` | `untrust` | `dmz`), an IP address or a network in CIDR form.
- * When no rule matches, the zone policy of the firewall decides.
+ * When no rule matches, the zone policy of the firewall decides; on a router
+ * (its access list, no zones) what no rule allows is blocked.
  */
 export interface FirewallRule {
   id: string;              // Rule ID (rule-1, rule-2...)

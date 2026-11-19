@@ -10,12 +10,13 @@ The same engine answers the [simulation panel](simulation-panel.md), [presentati
 
 ## Before the packet starts {#before}
 
-Four things are settled before the first hop.
+Five things are settled before the first hop.
 
 1. **Addresses from DHCP.** A network card set to take its address from a DHCP server has the address it is leased. The engine works the lease out from the drawing, the same way every time. A card that gets none has no address, and the answer says why: [a card that gets none](../services/dhcp.md#no-address).
 2. **Names.** In the terminal a host name can stand in place of a device. The engine first asks the DNS server of the sender, as a request and a reply that travel like any other packet, and only then sends the real question to the address it found. The panel and the presentation choose devices from menus and use no names: [a lookup](../services/dns.md#lookup).
 3. **Both ends exist and have an address.** Without one the answer is `error` and says which device has none (`PC-1 has no IP address configured`).
-4. **A cable joins them.** The engine looks for any chain of cables between the two devices, as drawn. If there is none the answer is `unreachable` (`no physical path between PC-1 and Web-01`). A cable that is cut by a [simulated failure](#failures) is still drawn: the answer is then a stop, with the cable as the reason.
+4. **The address is not in conflict.** When the address the question goes to is on another device too, and the two can meet, nobody can say which of them answers: the answer is `error`, and names the address and the devices (`address conflict: 192.168.20.10 is on both Web-01 and Mail-01, so the answer cannot be trusted`). The same holds for the address the sender sends from, and for a port forward that sends the packet on to such an address. [Two devices with one address](../building/addresses.md#conflicts) says which addresses collide.
+5. **A cable joins them.** The engine looks for any chain of cables between the two devices, as drawn. If there is none the answer is `unreachable` (`no physical path between PC-1 and Web-01`). A cable that is cut by a [simulated failure](#failures) is still drawn: the answer is then a stop, with the cable as the reason.
 
 A device that is down sends nothing. If the sender is down the question stops on it (`PC-1 is down`).
 
@@ -76,7 +77,7 @@ Two cases keep the main route. A network the device is attached to by a failed c
 A firewall that a packet crosses (not one that sends it, not one it is addressed to) decides before the packet goes on. So does a router that carries rules, its access list: it reads them the same way, and has no zones.
 
 1. **The rules**, top to bottom. The first rule that is enabled and matches the service, the source and the destination decides, to allow or to deny. A rule that names a zone needs the cable to be attached to a port that is in a zone, because the zone belongs to the port: without that the rule is skipped, with a note.
-2. **The zone policy**, when no rule matches. A new flow to a more trusted zone is denied: `untrust → trust`, `untrust → dmz` and `dmz → trust`. Anything else is allowed. A firewall that does not know the zone of both sides, because a cable is attached to no port or to a port in no zone, allows, with a note. A router has no zones: what no rule matches passes.
+2. **The zone policy**, when no rule matches. A new flow to a more trusted zone is denied: `untrust → trust`, `untrust → dmz` and `dmz → trust`. Anything else is allowed. A firewall that does not know the zone of both sides, because a cable is attached to no port or to a port in no zone, allows, with a note. A router has no zones: its list ends with an implicit deny, as on real routers, so what no rule allows is blocked (`router Router-Core: no rule allows it`). A router with no rules, or with all of them disabled, lets everything through.
 3. **Replies**. A firewall remembers the flows it has let through itself. The reply to such a flow passes it, whatever the rules say about a new flow in that direction. A reply that comes back by another way, through a firewall the request did not cross, is a new packet to that firewall: its rules and its zones decide, and when they deny it the reason ends with `and it never saw the request`.
 
 ```ncl sample=site
@@ -218,7 +219,7 @@ An answer is one of four verdicts:
 | `success` | the destination answered (and, for a flow, every leg arrived) |
 | `blocked` | the packet was dropped on the way: the reason says why, and where |
 | `unreachable` | no chain of cables joins the two devices |
-| `error` | the question cannot be tried: one end does not exist or has no usable address, both ends of a page, a download or an email are the same device, or there is no mail server or internet exit for an email to go through. (A device that pings itself answers, without the packet leaving it, as a trace to itself does.) |
+| `error` | the question cannot be tried: one end does not exist, has no usable address or has an address in conflict, both ends of a page, a download or an email are the same device, or there is no mail server or internet exit for an email to go through. (A device that pings itself answers, without the packet leaving it, as a trace to itself does.) |
 
 A stop says two things: the **reason**, in a sentence that names the device, the port, the route or the rule; and the **device where it stopped**, `dropped at:` in the terminal, the red box in the panel and in the presentation. It is the device that holds the packet when it stops. For a port, a rule or a route it is the device they belong to; for a cut cable or a device that is down it is the device in front, the last one that could still send. In a flow the reason begins with the name of the leg that failed.
 
@@ -250,6 +251,8 @@ The reasons are written in English, in both languages of the interface, and name
 | `VLAN 10 does not leave through port 2 on SW-Office: …` | the VLAN of the packet is not allowed out of that port |
 | `firewall FW-Edge: denied by rule 2 (…)` | a rule says deny, with its number |
 | `firewall FW-Edge: no rule matches, zone policy dmz → trust denied` | no rule decides, and the zones do |
+| `router Router-Core: no rule allows it` | a router with rules, and none of them allows the packet |
+| `address conflict: 192.168.20.10 is on both Web-01 and Mail-01, …` | two devices have the address the question goes to, or comes from |
 | `Internet does not carry private addresses: …` | a private address reached the Internet symbol |
 | `SW-Core is down`, `link R-HQ–R-Branch is down` | a simulated failure |
 | `PC-2 is an end device: it does not forward traffic for others` | the only way goes through an end device |

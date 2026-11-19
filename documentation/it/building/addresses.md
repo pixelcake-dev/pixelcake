@@ -100,7 +100,47 @@ Ping failed (blocked): request: PC-2 (192.168.20.77) does not answer on the netw
   dropped at: Router-1
 ```
 
-Nessuno di questi valori viene rifiutato quando lo scrivi. La finestra controlla che un indirizzo sia fatto di quattro numeri da 0 a 255, che una subnet mask sia una maschera, e che una maschera abbia un indirizzo ([Porte e schede di rete](ports-and-cards.md#problems)); non controlla che un gateway sia nella rete della scheda, che due dispositivi abbiano indirizzi diversi, o che un indirizzo appartenga alla rete del cavo a cui è collegato. A questo serve interrogare la rete: un `ping`, o un `trace`, dice dove si è fermato il pacchetto e perché.
+Nessuno di questi valori viene rifiutato quando lo scrivi. La finestra controlla che un indirizzo sia fatto di quattro numeri da 0 a 255, che una subnet mask sia una maschera, e che una maschera abbia un indirizzo ([Porte e schede di rete](ports-and-cards.md#problems)); non controlla che un gateway sia nella rete della scheda, o che un indirizzo appartenga alla rete del cavo a cui è collegato. A questo serve interrogare la rete: un `ping`, o un `trace`, dice dove si è fermato il pacchetto e perché. Non viene rifiutato nemmeno un indirizzo che ha già un altro dispositivo, ma viene segnalato subito ([più sotto](#conflicts)).
+
+## Due dispositivi con lo stesso indirizzo {#conflicts}
+
+Un indirizzo scritto su due dispositivi è in conflitto, come in una rete vera quando si clona una macchina con il suo indirizzo: a chi lo cerca può rispondere l'uno o l'altro, e quindi nessuna risposta che lo riguarda è affidabile. Succede soprattutto dopo un incolla: la copia di un server, di un router, di un firewall o di uno switch tiene gli indirizzi dell'originale ([Dispositivi](devices.md#copy-delete)). Finché uno dei due non ha un altro indirizzo:
+
+- **sul canvas** i due dispositivi sono gialli, e la riga sotto il nome mostra l'indirizzo seguito da `· in conflitto`;
+- **nella finestra del dispositivo** un riquadro sopra le schede nomina l'altro dispositivo che ha l'indirizzo, e segue quello che scrivi; il salvataggio non viene rifiutato;
+- **nelle risposte** una domanda verso quell'indirizzo, o che parte da lì, si ferma prima di cominciare, con un motivo che nomina l'indirizzo e i dispositivi. Un dispositivo che fa ping a sé stesso riceve comunque risposta, e una domanda fra altri due dispositivi non cambia;
+- **nel terminale** `show ip` e `show interfaces` finiscono con una riga per ogni indirizzo in conflitto.
+
+```ncl sample=office
+pixelcake> set ip of Mail-01 to 192.168.20.10
+Mail-01: ip set to 192.168.20.10
+  warning: 192.168.20.10 is also the address of Web-01
+pixelcake> show ip Mail-01
+Mail-01 — addressing
+  ip:       192.168.20.10
+  subnet:   255.255.255.0
+  gateway:  192.168.20.1
+  eth0: 192.168.20.10 / 255.255.255.0 gw 192.168.20.1
+  ✗ address conflict: 192.168.20.10 is also on Web-01
+pixelcake> ping Web-01 from PC-1
+Pinging Web-01 (192.168.20.10) from PC-1...
+Ping failed (error): request: address conflict: 192.168.20.10 is on both Web-01 and Mail-01, so the answer cannot be trusted
+pixelcake> set ip of Mail-01 to 192.168.20.11
+Mail-01: ip set to 192.168.20.11
+pixelcake> ping Web-01 from PC-1
+Pinging Web-01 (192.168.20.10) from PC-1...
+Reply from 192.168.20.10: hops=5 time=7ms
+```
+
+Il ping non esce da PC-1: quale dei due server risponderebbe non si può dire, e una rete vera risponderebbe ora dall'uno, ora dall'altro.
+
+Che cosa conta:
+
+- **Un indirizzo scritto a mano**: su una scheda di rete, su una porta di un router o di un firewall, o sul dispositivo stesso (l'indirizzo di uno switch). Un'interfaccia disattivata non risponde a nessuno e non conta. `0.0.0.0` e gli indirizzi di loopback (`127.x.x.x`) non contano mai.
+- **Non un indirizzo assegnato dal DHCP.** Un server DHCP assegna solo indirizzi che nessuno ha, scritti a mano o assegnati ([DHCP](../services/dhcp.md#which-address)), quindi un indirizzo assegnato non è mai in conflitto, nemmeno con uno scritto a mano dentro il suo intervallo.
+- **Un indirizzo pubblico** è in conflitto ovunque siano i due dispositivi: su Internet è unico.
+- **Un indirizzo privato** (10.x, 172.16–31.x, 192.168.x) non è in conflitto quando fra i due dispositivi c'è Internet, cioè quando sono collegati l'uno all'altro solo attraverso un simbolo Internet. Internet non porta gli indirizzi privati ([NAT](../services/nat.md#private)), e quindi ognuno sta in una rete sua: due uffici, ciascuno dietro il suo router verso Internet, possono avere tutti e due `192.168.1.10`, come succede davvero. Qualsiasi altra strada fra loro, un cavo, uno switch, un router, un simbolo Cloud che non è Internet come una rete MPLS, li mette nella stessa rete.
+- **Due dispositivi che non sono collegati in nessun modo** si considerano nella stessa rete: una copia appena incollata, non ancora collegata, è pensata per stare accanto all'originale.
 
 ## La rete del progetto {#project-network}
 
@@ -122,5 +162,5 @@ Ogni rete di esempio porta con sé le sue impostazioni: quella dell'azienda, per
 > [!LIMITS]
 > - Solo IPv4. Non c'è l'IPv6.
 > - Una porta o una scheda ha un solo indirizzo. Un secondo indirizzo sulla stessa interfaccia, una sottointerfaccia e un indirizzo che si sposta tra dispositivi (VRRP, HSRP) non sono modellati.
-> - Non c'è l'ARP. Due dispositivi con lo stesso indirizzo non vengono notati, e nulla viene appreso né entra in conflitto.
+> - Non c'è l'ARP. Un conflitto si trova nel disegno, non nel traffico: quale dei due dispositivi risponderebbe non viene calcolato, e un gateway in conflitto non viene notato dai pacchetti che ci passano soltanto attraverso. Due interfacce dello stesso dispositivo con lo stesso indirizzo non sono considerate un conflitto.
 > - Un gateway viene controllato solo quando un pacchetto ne ha bisogno: il canvas ne accetta uno lontano dalla rete della sua scheda.

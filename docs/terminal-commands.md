@@ -178,8 +178,9 @@ At every device that handles the packet at layer 3:
    rest is allowed. A firewall lets through the reply to a flow it allowed
    itself; to a firewall the request did not cross, a reply is a new flow.
    A router with rules (its access list) filters the same way, without
-   zones: what no rule matches passes. Traffic addressed to the firewall
-   itself is not filtered.
+   zones; its list ends with an implicit deny: once it has an enabled rule,
+   what no rule allows is blocked (`router R1: no rule allows it`). Traffic
+   addressed to the firewall itself is not filtered.
 
    A router or a firewall may also change the addresses of the packet: see
    *Address translation* below. A firewall filters between the two changes,
@@ -192,7 +193,14 @@ At every device that handles the packet at layer 3:
 until the destination answers, something drops the packet, or the packet
 comes back to a router it already crossed (`routing loop`).
 
-Verdicts: `error` (an endpoint does not exist or has no usable address),
+An address held by two devices that can meet is in conflict: a question to
+it, or from it, ends at once (`address conflict: 192.168.1.10 is on both
+Srv-1 and Srv-2, so the answer cannot be trusted`). A private address is not
+in conflict with one on the other side of the Internet symbol; a lease never
+is, as a DHCP server hands out only addresses nobody has.
+
+Verdicts: `error` (an endpoint does not exist, has no usable address, or its
+address is in conflict),
 `unreachable` (no cables join the two devices), `blocked` (dropped on the
 way: the reason names the device, the port, the route or the rule),
 `success`.
@@ -389,7 +397,7 @@ condition into a silent success; it adds a note to the result instead:
 | `show connections [of <device>]` | Links, with the interface on each end: `[port 3 ↔ eth0]` (`?` for an end not attached to an interface) |
 | `show config [of] <device>` | IP/subnet/gateway, location and note, VLANs, STP, ports, NICs, number of routes and rules, NAT, DHCP, DNS |
 | `show neighbors [of] <device>` | Directly connected devices |
-| `show ip [of] <device>` | Compact addressing summary: primary ip/mask/gateway + each NIC + each addressed port. A card on DHCP shows its lease and the pool it comes from, or why it has none. A card that asks a DNS server shows which |
+| `show ip [of] <device>` | Compact addressing summary: primary ip/mask/gateway + each NIC + each addressed port. A card on DHCP shows its lease and the pool it comes from, or why it has none. A card that asks a DNS server shows which. An address in conflict ends it with `✗ address conflict: … is also on …` |
 | `show routes [of] <device>` | The routing table exactly as the engine reads it: destination, next hop, interface it leaves from, kind. A route whose interface is down, whose line carries nothing (`no link`), or whose next hop is on none of the device's networks is flagged |
 | `show rules [of] <device>` | The rules of a router or a firewall in order, then what decides when none matches |
 | `show nat [of] <device>` | The interfaces that do source NAT with the address each gives, then the port forwards in order |

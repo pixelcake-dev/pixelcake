@@ -100,7 +100,47 @@ Ping failed (blocked): request: PC-2 (192.168.20.77) does not answer on the netw
   dropped at: Router-1
 ```
 
-None of these is refused when you type it. The window checks that an address is four numbers from 0 to 255, that a mask is a mask, and that a mask comes with an address ([Ports and network cards](ports-and-cards.md#problems)); it does not check that a gateway is in the network of the card, that two devices have different addresses, or that an address belongs to the network of the cable it is on. That is what asking the network is for: a `ping`, or a `trace`, says where the packet stopped and why.
+None of these is refused when you type it. The window checks that an address is four numbers from 0 to 255, that a mask is a mask, and that a mask comes with an address ([Ports and network cards](ports-and-cards.md#problems)); it does not check that a gateway is in the network of the card, or that an address belongs to the network of the cable it is on. That is what asking the network is for: a `ping`, or a `trace`, says where the packet stopped and why. An address that another device has too is not refused either, but it is marked at once ([below](#conflicts)).
+
+## Two devices with one address {#conflicts}
+
+An address written on two devices is in conflict, as on a real network when a machine is cloned with its address: whoever asks for it may be answered by either of the two, so no answer about it can be trusted. It happens most often after a paste: a copy of a server, a router, a firewall or a switch keeps the addresses of the original ([Devices](devices.md#copy-delete)). Until one of the two has another address:
+
+- **on the board** both devices are yellow, and the line under the name shows the address followed by `· in conflict`;
+- **in the window of the device** a box over the tabs names the other device that has the address, and follows what you type; saving is not refused;
+- **in the answers** a question to that address, or from it, stops before it starts, with a reason that names the address and the devices. A device that pings itself is still answered, and a question between two other devices is not touched;
+- **in the terminal** `show ip` and `show interfaces` end with a line for each address in conflict.
+
+```ncl sample=office
+pixelcake> set ip of Mail-01 to 192.168.20.10
+Mail-01: ip set to 192.168.20.10
+  warning: 192.168.20.10 is also the address of Web-01
+pixelcake> show ip Mail-01
+Mail-01 — addressing
+  ip:       192.168.20.10
+  subnet:   255.255.255.0
+  gateway:  192.168.20.1
+  eth0: 192.168.20.10 / 255.255.255.0 gw 192.168.20.1
+  ✗ address conflict: 192.168.20.10 is also on Web-01
+pixelcake> ping Web-01 from PC-1
+Pinging Web-01 (192.168.20.10) from PC-1...
+Ping failed (error): request: address conflict: 192.168.20.10 is on both Web-01 and Mail-01, so the answer cannot be trusted
+pixelcake> set ip of Mail-01 to 192.168.20.11
+Mail-01: ip set to 192.168.20.11
+pixelcake> ping Web-01 from PC-1
+Pinging Web-01 (192.168.20.10) from PC-1...
+Reply from 192.168.20.10: hops=5 time=7ms
+```
+
+The ping does not leave PC-1: which of the two servers would answer cannot be said, and a real network would answer now from one, now from the other.
+
+What counts:
+
+- **An address written by hand**: on a network card, on a port of a router or a firewall, or on the device itself (the address of a switch). An interface that is disabled answers nobody and does not count. `0.0.0.0` and the loopback addresses (`127.x.x.x`) never do.
+- **Not a leased address.** A DHCP server hands out only addresses nobody has, written by hand or leased ([DHCP](../services/dhcp.md#which-address)), so a lease is never in conflict, not even with an address written inside its range.
+- **A public address** is in conflict wherever the two devices are: on the Internet it is unique.
+- **A private address** (10.x, 172.16–31.x, 192.168.x) is not in conflict when the Internet stands between the two devices, that is, when they are cabled to each other only through an Internet symbol. The Internet does not carry private addresses ([NAT](../services/nat.md#private)), so each is in a network of its own: two offices, each behind its own router towards the Internet, can both have `192.168.1.10`, as real ones do. Any other way between them, a cable, a switch, a router, a Cloud symbol that is not the Internet such as an MPLS network, puts them in one network.
+- **Two devices not cabled to each other at all** are taken to be in one network: a copy just pasted, not cabled yet, is meant to sit beside its original.
 
 ## The network of the project {#project-network}
 
@@ -122,5 +162,5 @@ Each sample network brings its own settings: the company, for example, starts ne
 > [!LIMITS]
 > - Only IPv4. There is no IPv6.
 > - A port or a card has one address. A second address on the same interface, a sub-interface, and an address that moves between devices (VRRP, HSRP) are not modelled.
-> - There is no ARP. Two devices with one address are not noticed, and nothing is learned or conflicts.
+> - There is no ARP. A conflict is found in the drawing, not in the traffic: which of the two devices would answer is not worked out, and a gateway that is in conflict is not noticed by the packets that only pass through it. Two interfaces of one device with the same address are not taken for a conflict.
 > - A gateway is only looked at when a packet needs it: the board accepts one that is nowhere near the network of its card.
