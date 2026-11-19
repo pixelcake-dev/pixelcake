@@ -23,6 +23,8 @@ export const canvas = {
     /** For a screen reader: what the colour of the lamp says of the answer (red, green) */
     stopsHere: 'Qui si ferma',
     getsHere: 'Qui arriva',
+    /** Under the name: an address that another device has too */
+    conflict: (address: string) => `${address} · in conflitto`,
   },
 
   /** Presentation mode: the mark on a cable that is cut */
@@ -47,6 +49,17 @@ export const canvas = {
       names.length === 1
         ? `${names[0]} chiede l'indirizzo al DHCP, e nessun server DHCP gliene ha dato uno`
         : `${shortList(names)} chiedono l'indirizzo al DHCP, e nessun server DHCP ne ha dato loro uno`,
+    /** Pasted servers, routers, firewalls and switches keep the addresses of the originals: those now in conflict */
+    keptAddresses: (names: string[], addresses: string[]) => {
+      const who =
+        names.length === 1
+          ? `${names[0]} tiene gli indirizzi dell'originale`
+          : `${shortList(names)} tengono gli indirizzi degli originali`;
+      if (addresses.length === 0) return who;
+      return addresses.length === 1
+        ? `${who}: ${addresses[0]} ora è in conflitto, finché non lo cambi`
+        : `${who}: ${shortList(addresses)} ora sono in conflitto, finché non li cambi`;
+    },
   },
 
   /** The Delete key, with more than one thing selected (one alone is asked about as in its menu) */

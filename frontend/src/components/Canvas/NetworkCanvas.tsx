@@ -34,6 +34,8 @@ import NetworkDevice from './NetworkDevice';
 import AreaNode from './AreaNode';
 import { useDhcp } from '@/utils/useDhcp';
 import { shownAddress } from '@/utils/dhcpLabels';
+import { useAddressConflicts } from '@/utils/useAddressConflicts';
+import { conflictedAddress } from '@/utils/addressConflicts';
 import { miniMapColour } from '@/utils/miniMapColour';
 import CustomEdge from './CustomEdge';
 import ParticleEdge from './ParticleEdge';
@@ -320,6 +322,8 @@ const NetworkCanvas = () => {
   // What each device shows under its name: its address, the leased one
   // for a device on DHCP
   const dhcp = useDhcp();
+  // (and an address another device has too, in conflict)
+  const conflicts = useAddressConflicts();
   const language = useLanguage();
 
   // The areas come first and lie under everything: under the cables too,
@@ -369,12 +373,13 @@ const NetworkCanvas = () => {
       data: {
         ...device,
         address: shownAddress(device, dhcp),
+        conflict: conflictedAddress(device, conflicts),
         isSelected: selectedDeviceIds.includes(device.id), // Keep for backward compatibility
         onContextMenu: handleDeviceContextMenu,
         onDoubleClick: handleDeviceDoubleClick,
       },
     }));
-  }, [devices, dhcp, language, selectedDeviceIds, handleDeviceContextMenu, handleDeviceDoubleClick]);
+  }, [devices, dhcp, conflicts, language, selectedDeviceIds, handleDeviceContextMenu, handleDeviceDoubleClick]);
 
   const reactFlowNodes: Node[] = useMemo(
     () => (areaNodes.length > 0 ? [...areaNodes, ...deviceNodes] : deviceNodes),

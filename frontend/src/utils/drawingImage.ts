@@ -94,6 +94,8 @@ export interface DrawingInput {
   marks?: DrawingMarks;
   /** The devices that wait for an address nobody gave them: their lamp says so, as on screen */
   waiting?: readonly string[];
+  /** The devices with an address another device has too: their lamp says so, as on screen */
+  conflicts?: readonly string[];
   /** Outside a presentation: the answer the last question asked left on a device */
   answer?: { arrives: boolean; deviceId: string } | null;
 }
@@ -443,6 +445,7 @@ export function layoutDrawing(input: DrawingInput): Scene {
         failed,
         stopsHere: stops,
         arrivesHere: arrives,
+        conflict: input.conflicts?.includes(device.id),
         waiting: input.waiting?.includes(device.id),
       }),
       role:

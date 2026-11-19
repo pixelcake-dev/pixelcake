@@ -31,6 +31,7 @@ describe('the one state the upper layer of a device tells', () => {
     expect(deviceState({ arrivesHere: true })).toBe('ok');
     expect(deviceState({ selected: true })).toBe('selected');
     expect(deviceState({ waiting: true })).toBe('warning');
+    expect(deviceState({ conflict: true })).toBe('warning');
   });
 
   it('when more is true: off, then where the answer stops, where it arrives, selected, to be put right', () => {
@@ -39,6 +40,7 @@ describe('the one state the upper layer of a device tells', () => {
       ['stopsHere', 'error'],
       ['arrivesHere', 'ok'],
       ['selected', 'selected'],
+      ['conflict', 'warning'],
       ['waiting', 'warning'],
     ];
     // each wins over all that come after it, however many of them are true
