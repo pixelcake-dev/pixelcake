@@ -321,12 +321,14 @@ describe('InspectorModal — Regole', () => {
 });
 
 describe('InspectorModal — Regole of a router', () => {
-  it('starts empty and says that a router without rules lets everything through', () => {
+  it('starts empty, says that a router without rules lets everything through and that with one it blocks the rest', () => {
     openInspector('Router-1');
     openTab('Regole');
     expect(screen.getByText('Nessuna regola: il router lascia passare tutto.')).toBeInTheDocument();
     const noMatch = screen.getByRole('region', { name: 'Quando nessuna regola corrisponde' });
-    expect(noMatch).toHaveTextContent('È permesso tutto: un router non ha zone di sicurezza.');
+    expect(noMatch).toHaveTextContent(
+      'Viene bloccato: appena un router ha una regola attiva, ciò che nessuna regola permette non passa, come sui router veri.'
+    );
     expect(noMatch).not.toHaveTextContent('untrust → trust');
   });
 

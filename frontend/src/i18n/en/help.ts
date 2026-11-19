@@ -135,7 +135,8 @@ export const help: Dictionary['help'] = {
         'exceptions are written in the “Rules” tab, read top to bottom: the first that matches ' +
         'decides, by service (ping, web, email, DNS), source and destination. A firewall lets ' +
         'through the reply to a flow it allowed itself. A router has the same “Rules” tab: its rules ' +
-        'filter what it routes, and what no rule matches passes.',
+        'filter what it routes. A router with no rules lets everything through; once it has an ' +
+        'enabled one, it blocks what no rule allows, as a real router does.',
     },
     nat: {
       title: 'Go out to the Internet with NAT',

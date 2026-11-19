@@ -60,8 +60,10 @@ export const firewall: Dictionary['firewall'] = {
     title: 'Router rules',
     none: 'No rules: the router lets everything through.',
     noMatch:
-      'Everything is allowed: a router has no security zones. The reply to a flow the router ' +
-      'allowed passes; a reply whose request it never saw is judged like any other packet.',
+      'It is blocked: once a router has an enabled rule, what no rule allows does not pass, as on ' +
+      'real routers. With no rules, or with all of them disabled, the router lets everything ' +
+      'through. The reply to a flow the router allowed passes; a reply whose request it never saw ' +
+      'is judged like any other packet.',
     /** Rules of a router name zones (`trust`, `untrust`, `dmz`: written as they are typed) */
     zonesNeverMatch: (zones: readonly string[]) =>
       'Zones belong to the ports of a firewall: on a router the rules that name ' +

@@ -58,9 +58,10 @@ export const firewall = {
     title: 'Regole del router',
     none: 'Nessuna regola: il router lascia passare tutto.',
     noMatch:
-      'È permesso tutto: un router non ha zone di sicurezza. La risposta a un flusso che il ' +
-      'router ha permesso passa; una risposta di cui non ha visto la richiesta viene giudicata ' +
-      'come ogni altro pacchetto.',
+      'Viene bloccato: appena un router ha una regola attiva, ciò che nessuna regola permette ' +
+      'non passa, come sui router veri. Senza regole, o con tutte spente, il router lascia ' +
+      'passare tutto. La risposta a un flusso che il router ha permesso passa; una risposta di ' +
+      'cui non ha visto la richiesta viene giudicata come ogni altro pacchetto.',
     /** Rules of a router name zones (`trust`, `untrust`, `dmz`: written as they are typed) */
     zonesNeverMatch: (zones: readonly string[]) =>
       'Le zone sono delle porte di un firewall: su un router le regole che nominano ' +

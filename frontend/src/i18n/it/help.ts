@@ -135,8 +135,9 @@ export const help = {
         "passa. Nella scheda «Regole» si scrivono le eccezioni, lette dall'alto in basso: decide " +
         'la prima che corrisponde, per servizio (ping, web, email, DNS), partenza e ' +
         'destinazione. Un firewall lascia passare la risposta a un flusso che ha permesso lui ' +
-        'stesso. Anche un router ha la scheda «Regole»: le sue regole filtrano ciò che instrada, ' +
-        'e ciò che nessuna regola indica passa.',
+        'stesso. Anche un router ha la scheda «Regole»: le sue regole filtrano ciò che instrada. ' +
+        'Un router senza regole lascia passare tutto; appena ne ha una attiva, blocca ciò che ' +
+        'nessuna regola permette, come un router vero.',
     },
     nat: {
       title: 'Esci su Internet con il NAT',
