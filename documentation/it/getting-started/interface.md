@@ -28,7 +28,7 @@ A sinistra, il logo apre il sito di PixelCake in una nuova scheda, e i quattro m
 | File | «Nuovo progetto…», «Apri…», «Salva», «Salva con nome…» ed «Esporta immagine…». Vedi [Salvare, aprire, i file](saving-and-files.md) e [Esportare un'immagine](../asking/exporting-an-image.md). |
 | Modifica | «Annulla», «Ripeti», «Copia», «Incolla» e «Racchiudi in un riquadro». Vedi [Annullare e ripetere](#undo). |
 | Vista | «Adatta alla finestra», «Modalità presentazione», «Disposizione automatica» («Verticale» od «Orizzontale»), «Collega i dispositivi senza cavo», «Ingrandisci», «Animazione rete», «Mostra i riquadri» e «Pennarello». |
-| Aiuto | «Guida», «Tour guidato», «Documentazione», «Comandi del terminale», «Mostra la schermata di benvenuto», «Informazioni» e «Il sito di PixelCake». |
+| Aiuto | «Guida», «Documentazione», «Comandi del terminale», «Tour guidato», «Mostra la schermata di benvenuto», «Informazioni» e «Il sito di PixelCake». |
 
 «Guida» è la guida breve dentro l'applicazione. «Tour guidato» riapre il [tour della prima visita](#tour). «Documentazione» apre queste pagine, nella lingua dell'interfaccia, in una nuova scheda del browser. «Mostra la schermata di benvenuto» fa ricomparire la schermata di benvenuto, ma solo su un canvas vuoto.
 

@@ -2907,6 +2907,10 @@ legend {
   overflow-wrap: break-word;
 }
 
+.first-try-word {
+  white-space: nowrap;
+}
+
 .first-try-run {
   flex: 0 0 auto;
   padding: 5px 12px;

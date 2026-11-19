@@ -28,7 +28,7 @@ On the left, the logo opens the PixelCake website in a new tab, and the four men
 | File | “New project…”, “Open…”, “Save”, “Save as…” and “Export image…”. See [Saving, opening, files](saving-and-files.md) and [Exporting an image](../asking/exporting-an-image.md). |
 | Edit | “Undo”, “Redo”, “Copy”, “Paste” and “Enclose in an area”. See [Undo and redo](#undo). |
 | View | “Fit to window”, “Presentation mode”, “Auto-layout” (“Vertical” or “Horizontal”), “Connect devices with no cable”, “Magnify”, “Animation”, “Show areas” and “Marker”. |
-| Help | “Guide”, “Guided tour”, “Documentation”, “Terminal commands”, “Show the welcome screen”, “About” and “The PixelCake website”. |
+| Help | “Guide”, “Documentation”, “Terminal commands”, “Guided tour”, “Show the welcome screen”, “About” and “The PixelCake website”. |
 
 “Guide” is the short guide inside the app. “Guided tour” takes the [tour of the first visit](#tour) again. “Documentation” opens these pages, in the language of the interface, in a new tab. “Show the welcome screen” brings back the first screen, on an empty board only.
 

@@ -5,7 +5,7 @@
  * going over the board. Put away with its cross, or by using it.
  */
 
-import { useEffect, useId } from 'react';
+import { Fragment, useEffect, useId } from 'react';
 import { X } from 'lucide-react';
 import { useGuideStore } from '@/store/guideStore';
 import { useUIStore } from '@/store/uiStore';
@@ -48,7 +48,15 @@ const FirstTryHint = ({ question }: { question: FirstTry }) => {
       </div>
       <p className="first-try-question">{t.guide.firstTry.question(question.from, question.to)}</p>
       <div className="first-try-row">
-        <code className="first-try-command">{command}</code>
+        {/* (a narrow window breaks the command between its words, never inside a name) */}
+        <code className="first-try-command">
+          {command.split(' ').map((word, index) => (
+            <Fragment key={index}>
+              {index > 0 && ' '}
+              <span className="first-try-word">{word}</span>
+            </Fragment>
+          ))}
+        </code>
         <button type="button" className="first-try-run" onClick={tryIt}>
           {t.guide.firstTry.run}
         </button>

@@ -478,13 +478,14 @@ const TopMenuBar = () => {
         <div className="dropdown-content">
           <ul>
             <li onClick={() => openHelp('guide')}>{t.menu.help.guide}</li>
-            {/* The guided tour again, from its first step, whenever asked */}
-            <li onClick={openTour}>{t.guide.tour.name}</li>
             {/* The documentation, in a new tab: the drawing stays where it is */}
             <li onClick={() => window.open(docsUrl(language), '_blank', 'noopener,noreferrer')}>
               {t.menu.help.docs}
             </li>
             <li onClick={() => openHelp('commands')}>{t.menu.help.commands}</li>
+            {/* The guided tour again, from its first step, whenever asked; next to the
+                other thing a first visit shows */}
+            <li onClick={openTour}>{t.guide.tour.name}</li>
             <li onClick={handleShowWelcome}>{t.menu.help.welcome}</li>
             <li onClick={() => openHelp('about')}>{t.menu.help.about}</li>
             <li onClick={() => window.open(siteUrl(language), '_blank', 'noopener,noreferrer')}>

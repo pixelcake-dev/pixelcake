@@ -184,7 +184,7 @@ Writing and drawing by hand over the drawing, as on a whiteboard: a line, words,
 ### Top Menu Bar (`frontend/src/components/Toolbar/TopMenuBar.tsx`)
 - File Menu: Nuovo progetto…, Apri…, Salva (Ctrl+S), Salva con nome…, Esporta immagine…
 - Modifica Menu: Annulla and Ripeti, each with its keys beside it (`.menu-entry-shortcut`: `Ctrl+Z`, `Ctrl+Y`; `⌘Z`, `⇧⌘Z` on a Mac) and, under the pointer, the step it would take back or do again («Annulla: elimina «PC-3»»); Copia, Incolla, Racchiudi in un riquadro
-- Aiuto Menu: Guida, Tour guidato (the guided tour again, from its first step), Documentazione (the documentation in a new tab, `docsUrl` of `constants/links.ts`), Comandi del terminale, Mostra la schermata di benvenuto, Informazioni, Il sito di PixelCake
+- Aiuto Menu: Guida, Documentazione (the documentation in a new tab, `docsUrl` of `constants/links.ts`), Comandi del terminale, Tour guidato (the guided tour again, from its first step), Mostra la schermata di benvenuto, Informazioni, Il sito di PixelCake
 - In the middle of the bar, the project that is open: its name, the canvas on screen when there is more than one, a dot while there are changes not saved to a file. A click opens the Explorer
 - No entry is there to announce a feature: an entry that cannot act (nothing selected to copy) is disabled only for as long as that is true
 - Vista → «Pennarello» (a tick while it is in use), and its button before «Presenta» (`.marker-toggle`): see [The marker](#the-marker-pennarello)

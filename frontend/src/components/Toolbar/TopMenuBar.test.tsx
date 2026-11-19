@@ -166,9 +166,9 @@ describe('TopMenuBar', () => {
       expect(entriesOf('Modifica')).toEqual(['Annulla', 'Ripeti', 'Copia', 'Incolla', 'Racchiudi in un riquadro']);
       expect(entriesOf('Aiuto')).toEqual([
         'Guida',
-        'Tour guidato',
         'Documentazione',
         'Comandi del terminale',
+        'Tour guidato',
         'Mostra la schermata di benvenuto',
         'Informazioni',
         'Il sito di PixelCake',
