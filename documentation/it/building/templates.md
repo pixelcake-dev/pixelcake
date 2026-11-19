@@ -24,11 +24,11 @@ Un tipo di connessione ha un «Nome», un «ID del tipo» (minuscolo, senza spaz
 In Impostazioni → Template → «Dispositivi», la scheda «Dispositivi personalizzati» è per i tipi di dispositivo che crei tu. «Nuovo template» apre un modulo:
 
 1. «Nome del template»: per esempio `AWS EC2 Instance`.
-2. «Tipo di base»: Server, Firewall, Load Balancer, Database, Cloud, Router o Switch.
+2. «Tipo di base»: uno qualsiasi dei nove, in tre gruppi: Rete (Switch, Router, Firewall, Access Point, Load Balancer), Server e dati (Server, Database, Cloud) e Dispositivi finali (PC).
 3. «Disegno»: uno dei 24, nei gruppi Rete, Server, Dati e Dispositivi finali. All'inizio è il disegno del tipo di base.
 4. Premi «Salva template».
 
-Il tipo di base decide di che cosa è fatto il tipo nuovo. Uno Switch, un Router o un Firewall ha porte numerate (e VLAN e spanning tree su uno switch); gli altri quattro hanno schede di rete, una per cominciare. Il tipo di base decide anche che cosa ne fa il motore: un Router personalizzato instrada, uno Switch personalizzato inoltra dentro una rete, un Cloud personalizzato lascia passare il traffico, come i predefiniti ([Dispositivi](devices.md#kinds)). I ruoli che vanno con un nome, come il Mail Server da cui passa la posta, appartengono al template predefinito, non a uno personalizzato che si chiama soltanto mail.
+Il tipo di base decide di che cosa è fatto il tipo nuovo. Uno Switch, un Router o un Firewall ha porte numerate (e VLAN e spanning tree su uno switch); gli altri sei, tra cui il PC e l'Access Point, hanno schede di rete, una per cominciare. Uno Switch, un Router e un Firewall hanno anche i numeri di porte dei predefiniti. Il tipo di base decide anche che cosa ne fa il motore: un Router personalizzato instrada, uno Switch personalizzato inoltra dentro una rete, un Access Point personalizzato fa da ponte, un Cloud personalizzato lascia passare il traffico, come i predefiniti ([Dispositivi](devices.md#kinds)). I ruoli che vanno con un nome, come il Mail Server da cui passa la posta, appartengono al template predefinito, non a uno personalizzato che si chiama soltanto mail.
 
 Il template nuovo compare nel pannello «Aggiungi», dopo gli altri, come "Template personalizzato (Server)", con il suo tipo di base tra parentesi, e si usa come ogni altro. «Elimina template» nell'elenco lo elimina, dopo una conferma; i dispositivi creati con esso restano sul canvas.
 

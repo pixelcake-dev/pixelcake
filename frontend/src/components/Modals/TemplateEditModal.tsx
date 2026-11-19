@@ -9,6 +9,7 @@ import { drawingOf } from '@/utils/deviceDrawing';
 import type { DeviceDrawingId } from '@/data/deviceDrawings';
 import { useTemplateStore } from '@/store/templateStore';
 import type { DeviceTemplate } from '@/types/network';
+import { BASE_TYPES, BASE_TYPE_GROUPS, templateFieldsOfType } from '@/utils/templateBaseTypes';
 import { useT, type Dictionary } from '@/i18n';
 
 /** What is wrong with a field: named here, said in the language of the interface when drawn */
@@ -93,37 +94,13 @@ const TemplateEditModal = ({ isOpen, onClose, template, onCreated }: TemplateEdi
       // Create new template: a variant of a kind the app covers already, or a
       // kind of its own. It is a custom one: it is kept with the project, and
       // restoring the built-in templates leaves it alone
-      // Auto-set VLAN/STP support based on device type
-      const supportsVLAN = ['Switch', 'Router', 'Firewall'].includes(formData.type);
-      const supportsSTP = ['Switch', 'Router', 'Firewall'].includes(formData.type);
-
-      // Auto-set port management support
-      const supportsPorts = ['Switch', 'Router', 'Firewall'].includes(formData.type);
-
-      // Determine port options based on device type
-      let portOptions: number[] | undefined;
-      let defaultPortCount: number | undefined;
-
-      if (formData.type === 'Switch') {
-        portOptions = [5, 8, 16, 24, 48];
-        defaultPortCount = 24;
-      } else if (formData.type === 'Router' || formData.type === 'Firewall') {
-        portOptions = [2, 4, 8, 16];
-        defaultPortCount = 8;
-      }
-
       addTemplate({
         name: formData.name,
         type: formData.type,
         icon: drawing,
         color: '#5E8096',
         isCustom: true,
-        supportsVLAN,
-        supportsSTP,
-        supportsPorts,
-        supportsNICs: !supportsPorts,
-        portOptions,
-        defaultPortCount,
+        ...templateFieldsOfType(formData.type),
       });
       onCreated?.();
     }
@@ -186,15 +163,15 @@ const TemplateEditModal = ({ isOpen, onClose, template, onCreated }: TemplateEdi
             required
           >
             <option value="">{words.chooseType}</option>
-            <option value="PC">PC</option>
-            <option value="Switch">Switch</option>
-            <option value="Router">Router</option>
-            <option value="Server">Server</option>
-            <option value="Firewall">Firewall</option>
-            <option value="AccessPoint">Access Point</option>
-            <option value="LoadBalancer">Load Balancer</option>
-            <option value="Database">Database</option>
-            <option value="Cloud">Cloud</option>
+            {BASE_TYPE_GROUPS.map((group) => (
+              <optgroup key={group} label={t.templates.devices.baseTypeGroups[group]}>
+                {BASE_TYPES.filter((entry) => entry.group === group).map((entry) => (
+                  <option key={entry.type} value={entry.type}>
+                    {entry.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
           </Select>
           {errors.type && (
             <span className="text-sm text-[var(--danger-color)]">{words.errors[errors.type]}</span>

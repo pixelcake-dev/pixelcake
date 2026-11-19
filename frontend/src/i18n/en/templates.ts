@@ -23,6 +23,8 @@ export const templates: Dictionary['templates'] = {
 
     /** Fields the editor of a generic template and the form of a custom one share */
     baseType: 'Base type',
+    /** The groups the base types are shown in */
+    baseTypeGroups: { network: 'Network', servers: 'Servers', endpoints: 'End devices' },
     /** The drawing a device of the template is shown with, chosen among those of the app */
     drawing: 'Drawing',
     /** The groups the drawings are shown in, those of the kit they come from */

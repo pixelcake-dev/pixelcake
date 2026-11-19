@@ -23,6 +23,8 @@ export const templates = {
 
     /** Fields the editor of a generic template and the form of a custom one share */
     baseType: 'Tipo di base',
+    /** The groups the base types are shown in */
+    baseTypeGroups: { network: 'Rete', servers: 'Server e dati', endpoints: 'Dispositivi finali' },
     /** The drawing a device of the template is shown with, chosen among those of the app */
     drawing: 'Disegno',
     /** The groups the drawings are shown in, those of the kit they come from */

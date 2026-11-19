@@ -24,11 +24,11 @@ A link type has a “Name”, a “Type ID” (lower case, without spaces, uniqu
 In Settings → “Templates” → “Devices”, the tab “Custom devices” is for kinds of device you make. “New template” opens a form:
 
 1. “Template name”: for example `AWS EC2 Instance`.
-2. “Base type”: Server, Firewall, Load Balancer, Database, Cloud, Router or Switch.
+2. “Base type”: any of the nine, in three groups: Network (Switch, Router, Firewall, Access Point, Load Balancer), Servers (Server, Database, Cloud) and End devices (PC).
 3. “Drawing”: one of the 24, in the groups Network, Servers, Data and End devices. It starts as the drawing of the base type.
 4. Press “Save template”.
 
-The base type decides what the new kind is made of. A Switch, a Router or a Firewall has numbered ports (and VLANs and spanning tree on a switch); the other four have network cards, one to begin with. The base type also decides what the engine does with it: a custom Router routes, a custom Switch forwards inside a network, a custom Cloud lets traffic through, as the built-in ones do ([Devices](devices.md#kinds)). The roles that go with a name, such as the Mail Server that an email is relayed through, belong to the built-in template, not to a custom one that is merely called mail.
+The base type decides what the new kind is made of. A Switch, a Router or a Firewall has numbered ports (and VLANs and spanning tree on a switch); the other six, the PC and the Access Point among them, have network cards, one to begin with. A Switch, a Router and a Firewall also come with the port counts of the built-in ones. The base type also decides what the engine does with it: a custom Router routes, a custom Switch forwards inside a network, a custom Access Point bridges, a custom Cloud lets traffic through, as the built-in ones do ([Devices](devices.md#kinds)). The roles that go with a name, such as the Mail Server that an email is relayed through, belong to the built-in template, not to a custom one that is merely called mail.
 
 The new template is listed in the panel “Add”, after the others, as "Custom template (Server)", with its base type in brackets, and is made into a device like any other. “Delete template” in the list takes it away, after a question; the devices made from it stay on the board.
 
