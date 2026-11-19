@@ -20,13 +20,15 @@ export type ShortcutGroup = keyof Shortcuts['groups'];
 
 export const SHORTCUT_GROUPS: ReadonlyArray<{ id: ShortcutGroup; rows: readonly ShortcutRow[] }> = [
   {
-    // NetworkCanvas (copy, paste, delete) and registerSaveShortcut (save); the
-    // rest is React Flow: multi-selection key, selection on drag, pan on the
+    // NetworkCanvas (copy, paste, delete), registerSaveShortcut (save) and
+    // registerUndoShortcuts (undo, redo); the rest is React Flow: multi-selection key, selection on drag, pan on the
     // right button, the wheel, the double click, the arrow keys, Tab, Enter and
     // Esc on a device that has the focus
     id: 'board',
     rows: [
       'save',
+      'undo',
+      'redo',
       'copy',
       'paste',
       'delete',
@@ -80,6 +82,8 @@ export const KEYS_HEARD: Record<string, readonly ShortcutRow[]> = {
   c: ['copy', 'interrupt'],
   v: ['paste'],
   s: ['save'],
+  z: ['undo', 'redo'],
+  y: ['redo'],
   ArrowUp: ['history'],
   ArrowDown: ['history'],
   ',': ['vlans'],

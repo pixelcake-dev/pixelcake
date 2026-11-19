@@ -57,7 +57,7 @@ export const importExport: Dictionary['importExport'] = {
     /** The question before “Replace the topology” empties the board: what will be removed */
     replaceTitle: 'Replace the topology?',
     replaceDetail: (deviceCount: number, connectionCount: number, areaCount: number) =>
-      `The board holds ${devices(deviceCount)}, ${connections(connectionCount)} and ${areas(areaCount)}: they will be removed and replaced by the contents of the file. This cannot be undone.`,
+      `The board holds ${devices(deviceCount)}, ${connections(connectionCount)} and ${areas(areaCount)}: they will be removed and replaced by the contents of the file. Edit → Undo brings them back.`,
     replaceConfirm: 'Replace',
     /** After “Add to the topology”: devices of the file that had a name already on the board */
     renamedNotice: (renamed: string) =>

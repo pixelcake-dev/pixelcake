@@ -15,6 +15,34 @@ export const menu = {
 
   edit: {
     title: 'Modifica',
+    undo: 'Annulla',
+    redo: 'Ripeti',
+    /** Under the pointer: what undo would take back, «Annulla: elimina «PC-3»» */
+    undoNamed: (text: string) => `Annulla: ${text}`,
+    /** Under the pointer: what redo would do again */
+    redoNamed: (text: string) => `Ripeti: ${text}`,
+    /** What a step did, after «Annulla:» or «Ripeti:» (utils/historySteps.ts) */
+    steps: {
+      addDevice: (name: string) => `aggiungi «${name}»`,
+      deleteDevice: (name: string) => `elimina «${name}»`,
+      moveDevice: (name: string) => `sposta «${name}»`,
+      editDevice: (name: string) => `modifica «${name}»`,
+      addDevices: (count: number) =>
+        count === 1 ? 'aggiungi 1 dispositivo' : `aggiungi ${amount(count)} dispositivi`,
+      deleteDevices: (count: number) =>
+        count === 1 ? 'elimina 1 dispositivo' : `elimina ${amount(count)} dispositivi`,
+      moveDevices: (count: number) => (count === 1 ? 'sposta 1 dispositivo' : `sposta ${amount(count)} dispositivi`),
+      addLinks: (count: number) =>
+        count === 1 ? 'aggiungi 1 connessione' : `aggiungi ${amount(count)} connessioni`,
+      addLink: (source: string, target: string) => `aggiungi la connessione tra «${source}» e «${target}»`,
+      deleteLink: (source: string, target: string) => `elimina la connessione tra «${source}» e «${target}»`,
+      editLink: (source: string, target: string) => `modifica la connessione tra «${source}» e «${target}»`,
+      /** `name` is empty for an area without a name */
+      addArea: (name: string) => (name ? `aggiungi il riquadro «${name}»` : 'aggiungi un riquadro'),
+      deleteArea: (name: string) => (name ? `elimina il riquadro «${name}»` : 'elimina un riquadro'),
+      moveArea: (name: string) => (name ? `sposta il riquadro «${name}»` : 'sposta un riquadro'),
+      editArea: (name: string) => (name ? `modifica il riquadro «${name}»` : 'modifica un riquadro'),
+    },
     copy: 'Copia',
     paste: 'Incolla',
     enclose: 'Racchiudi in un riquadro',
@@ -63,12 +91,12 @@ export const menu = {
   lightTheme: 'Passa al tema chiaro',
   darkTheme: 'Passa al tema scuro',
 
-  /** Asked before the automatic layout: it moves every device, and cannot be undone */
+  /** Asked before the automatic layout: it moves every device (Modifica → Annulla puts them back) */
   layoutQuestion: {
     title: 'Disporre di nuovo il disegno?',
     detail:
       'Ogni dispositivo sarà spostato e i riquadri saranno ridisegnati intorno ai loro dispositivi. ' +
-      'Non si può annullare.',
+      "Modifica → Annulla rimette tutto com'era.",
     confirm: 'Disponi',
   },
 

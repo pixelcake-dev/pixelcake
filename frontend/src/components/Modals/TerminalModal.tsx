@@ -222,7 +222,8 @@ const TerminalModal = () => {
   // A device renamed elsewhere (its window, a YAML added) while the terminal
   // is inside it: the prompt follows it, as it follows a rename inside `use`.
   // The context names the device; here the name is pinned to the device it
-  // meant when it was entered, and moves with it.
+  // meant when it was entered, and moves with it. A device that leaves the
+  // board (deleted, or taken back by an undo) takes the context with it.
   useEffect(() => {
     const label = context.deviceLabel;
     if (!label) return;
@@ -232,7 +233,12 @@ const TerminalModal = () => {
     const id = named[0].id;
     return useNetworkStore.subscribe((state) => {
       const device = state.devices.find((d) => d.id === id);
-      if (device?.label && device.label !== label) {
+      if (!device) {
+        setContext((current) => (current.deviceLabel === label ? { ...current, deviceLabel: null } : current));
+        setLines((prev) => [...prev, { text: `left ${label} — it is no longer on the board`, tone: 'muted' }]);
+        return;
+      }
+      if (device.label && device.label !== label) {
         setContext((current) => (current.deviceLabel === label ? { ...current, deviceLabel: device.label } : current));
       }
     });

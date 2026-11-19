@@ -8,6 +8,7 @@ import { Toaster } from 'sonner';
 import { useUIStore } from '@/store/uiStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { registerSaveShortcut } from '@/utils/projectFileAccess';
+import { registerUndoShortcuts } from '@/utils/undoActions';
 import TopMenuBar from '@/components/Toolbar/TopMenuBar';
 import SidebarContainer from '@/components/Sidebar/SidebarContainer';
 import NetworkCanvas from '@/components/Canvas/NetworkCanvas';
@@ -46,6 +47,11 @@ function App() {
   useEffect(() => {
     // Ctrl+S saves the project to a file, anywhere in the app
     return registerSaveShortcut();
+  }, []);
+
+  useEffect(() => {
+    // Ctrl+Z undoes, Ctrl+Y and Ctrl+Shift+Z redo; a drag is one step
+    return registerUndoShortcuts();
   }, []);
 
   return (

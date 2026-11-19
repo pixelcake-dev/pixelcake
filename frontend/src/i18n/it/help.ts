@@ -50,7 +50,8 @@ export const help = {
         'Impostazioni → Avanzate. Vista → «Disposizione automatica» → «Verticale» o «Orizzontale» ' +
         'li dispone di nuovo: in cima ciò da cui il traffico esce dalla rete (Internet, se no il ' +
         'firewall, se no il router), sotto un livello per ogni cavo; i riquadri vanno con i loro ' +
-        'dispositivi. Prima chiede conferma: sposta ogni dispositivo e non si può annullare.',
+        'dispositivi. Prima chiede conferma, perché sposta ogni dispositivo. Modifica → «Annulla» ' +
+        "(Ctrl + Z) disfa l'ultima modifica del disegno, e «Ripeti» (Ctrl + Y) la rifà.",
     },
     connect: {
       title: 'Collegali',

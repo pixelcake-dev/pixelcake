@@ -51,8 +51,9 @@ export const help: Dictionary['help'] = {
         'view, and the wheel zooms. All the shortcuts are in Settings → Advanced. View → ' +
         '“Auto-layout” → “Vertical” or “Horizontal” lays them out again: on top what the traffic ' +
         'leaves the network through (the Internet, else the firewall, else the router), below it ' +
-        'one level for each cable; the areas go with their devices. It asks first: every device ' +
-        'is moved, and this cannot be undone.',
+        'one level for each cable; the areas go with their devices. It asks first, since every ' +
+        'device is moved. Edit → “Undo” (Ctrl + Z) takes back the last change to the drawing, and ' +
+        '“Redo” (Ctrl + Y) makes it again.',
     },
     connect: {
       title: 'Connect them',

@@ -34,8 +34,29 @@ import { encloseDevices } from '@/utils/areaActions';
 import { hasClipboard } from '@/utils/pasteDevices';
 import { pasteAndTell } from '@/utils/pasteActions';
 import { docsUrl, siteUrl } from '@/constants/links';
+import { redo, undo, useHistoryStore } from '@/store/historyStore';
+import { undoKeys } from '@/utils/undoActions';
+import type { StepName } from '@/utils/historySteps';
 
 type ConnectWords = ReturnType<typeof useT>['menu']['connectNotice'];
+type StepWords = ReturnType<typeof useT>['menu']['edit']['steps'];
+
+/** What a step of the history did, in the words of the menu («elimina «PC-3»») */
+function stepText(step: StepName, words: StepWords): string {
+  switch (step.kind) {
+    case 'addDevices':
+    case 'deleteDevices':
+    case 'moveDevices':
+    case 'addLinks':
+      return words[step.kind](step.count);
+    case 'addLink':
+    case 'deleteLink':
+    case 'editLink':
+      return words[step.kind](step.source, step.target);
+    default:
+      return words[step.kind](step.name);
+  }
+}
 
 /** Names written out for one reason: of a longer list, the first three and «e altri N» */
 const NAMES_SHOWN = 4;
@@ -84,6 +105,12 @@ const TopMenuBar = () => {
   );
   const somethingToPaste = useNetworkStore((state) => hasClipboard(state.clipboard));
   const copySelection = useNetworkStore((state) => state.copySelection);
+  // The history of the board on screen: what can be undone and redone, and its name
+  const canUndo = useHistoryStore((state) => state.canUndo);
+  const canRedo = useHistoryStore((state) => state.canRedo);
+  const undoStep = useHistoryStore((state) => state.undoStep);
+  const redoStep = useHistoryStore((state) => state.redoStep);
+  const keys = undoKeys();
   const connectionTemplates = useTemplateStore((state) => state.connectionTemplates);
   const projectName = useProjectStore((state) => state.name);
   const canvases = useProjectStore((state) => state.canvases);
@@ -101,7 +128,7 @@ const TopMenuBar = () => {
   const handleSave = () => void saveProject();
   const handleSaveAs = () => void saveProjectAs();
 
-  // Every device is moved, and nothing can be undone yet: asked first
+  // Every device is moved: asked first (one step, which Modifica → Annulla takes back)
   const handleAutoLayout = async (direction: LayoutDirection) => {
     const deviceCount = useNetworkStore.getState().devices.length;
     if (deviceCount === 0) {
@@ -238,6 +265,24 @@ const TopMenuBar = () => {
         <span>{t.menu.edit.title}</span>
         <div className="dropdown-content">
           <ul>
+            {/* The last step of the drawing taken back, or done again: named under the pointer */}
+            <li
+              onClick={canUndo ? () => undo() : undefined}
+              className={canUndo ? 'menu-entry-keys' : 'menu-entry-keys disabled'}
+              title={undoStep ? t.menu.edit.undoNamed(stepText(undoStep, t.menu.edit.steps)) : undefined}
+            >
+              <span className="menu-entry-label">{t.menu.edit.undo}</span>
+              <span className="menu-entry-shortcut">{keys.undo}</span>
+            </li>
+            <li
+              onClick={canRedo ? () => redo() : undefined}
+              className={canRedo ? 'menu-entry-keys' : 'menu-entry-keys disabled'}
+              title={redoStep ? t.menu.edit.redoNamed(stepText(redoStep, t.menu.edit.steps)) : undefined}
+            >
+              <span className="menu-entry-label">{t.menu.edit.redo}</span>
+              <span className="menu-entry-shortcut">{keys.redo}</span>
+            </li>
+            <hr />
             <li
               onClick={nothingToCopy ? undefined : handleCopy}
               className={nothingToCopy ? 'disabled' : ''}

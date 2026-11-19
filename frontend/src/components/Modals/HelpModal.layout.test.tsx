@@ -69,7 +69,7 @@ afterEach(() => {
 describe('the guide — the automatic layout', () => {
   it('names the entries of the menus as the menu shows them', () => {
     // (the first is the button over two selected devices, the entry of Modifica too)
-    const names = ['Racchiudi in un riquadro', 'Disposizione automatica', 'Verticale', 'Orizzontale'];
+    const names = ['Racchiudi in un riquadro', 'Disposizione automatica', 'Verticale', 'Orizzontale', 'Annulla', 'Ripeti'];
     expect(quotedIt(step('Spostali e selezionali'))).toEqual(names);
     render(<TopMenuBar />);
     for (const name of names) expect(screen.getByText(name)).toBeInTheDocument();
@@ -79,7 +79,8 @@ describe('the guide — the automatic layout', () => {
     expect(step('Spostali e selezionali')).toContain(
       'in cima ciò da cui il traffico esce dalla rete (Internet, se no il firewall, se no il router), sotto un livello per ogni cavo'
     );
-    expect(step('Spostali e selezionali')).toContain('Prima chiede conferma: sposta ogni dispositivo e non si può annullare.');
+    expect(step('Spostali e selezionali')).toContain('Prima chiede conferma, perché sposta ogni dispositivo.');
+    expect(step('Spostali e selezionali')).toContain("Modifica → «Annulla» (Ctrl + Z) disfa l'ultima modifica del disegno");
     chain();
     const answers = answerConfirms(true);
     render(<TopMenuBar />);
@@ -95,7 +96,7 @@ describe('the guide — the automatic layout', () => {
 
   it('in English too', () => {
     act(() => setLanguage('en'));
-    const names = ['Enclose in an area', 'Auto-layout', 'Vertical', 'Horizontal'];
+    const names = ['Enclose in an area', 'Auto-layout', 'Vertical', 'Horizontal', 'Undo', 'Redo'];
     expect(quotedEn(step('Move and select them'))).toEqual(names);
     render(<TopMenuBar />);
     for (const name of names) expect(screen.getByText(name)).toBeInTheDocument();

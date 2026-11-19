@@ -1,7 +1,8 @@
 /**
- * Vista → Disposizione automatica asks first: every device will be moved,
- * and it cannot be undone. A no leaves the drawing as it was; a yes lays it
- * out, its areas with it, and the view is fitted to the drawing.
+ * Vista → Disposizione automatica asks first: every device will be moved
+ * (Modifica → Annulla puts them back, in one step). A no leaves the drawing
+ * as it was; a yes lays it out, its areas with it, and the view is fitted to
+ * the drawing.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -11,6 +12,7 @@ import { useNetworkStore } from '@/store/networkStore';
 import { createNewProject } from '@/utils/projectFileAccess';
 import { createRedundancySample } from '@/utils/sampleRedundancy';
 import { answerConfirms, settled } from '@/test/confirm';
+import { clearHistory, undo } from '@/store/historyStore';
 import TopMenuBar from './TopMenuBar';
 
 vi.mock('sonner', () => ({
@@ -29,7 +31,7 @@ beforeEach(() => {
 });
 
 describe('Vista → Disposizione automatica', () => {
-  it('asks first, saying that every device is moved and that it cannot be undone', async () => {
+  it('asks first, saying that every device is moved and that Modifica → Annulla puts them back', async () => {
     const answers = answerConfirms(false);
     render(<TopMenuBar />);
     const before = places();
@@ -41,7 +43,7 @@ describe('Vista → Disposizione automatica', () => {
     expect(answers.asked).toHaveLength(1);
     expect(answers.asked[0]).toMatchObject({ title: 'Disporre di nuovo il disegno?', confirmLabel: 'Disponi' });
     expect(answers.asked[0].detail).toContain('Ogni dispositivo sarà spostato');
-    expect(answers.asked[0].detail).toContain('Non si può annullare');
+    expect(answers.asked[0].detail).toContain("Modifica → Annulla rimette tutto com'era");
     // no: nothing moves, nothing changes
     expect(places()).toEqual(before);
     expect(network().hasUnsavedChanges).toBe(false);
@@ -63,6 +65,23 @@ describe('Vista → Disposizione automatica', () => {
     expect(network().hasUnsavedChanges).toBe(true);
     expect(network().fitViewRequest).toBe(fits + 1);
     expect(network().fitViewNodes).toBeNull();
+  });
+
+  it('is one step: Modifica → Annulla puts every device and every area back where it was', async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    clearHistory();
+    answerConfirms(true);
+    render(<TopMenuBar />);
+    const before = places();
+
+    fireEvent.click(screen.getByText('Verticale'));
+    await settled();
+    await waitFor(() => expect(network().hasUnsavedChanges).toBe(true));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(undo()).toBe(true);
+    expect(places()).toEqual(before);
+    expect(undo()).toBe(false);
   });
 
   it('on an empty canvas there is nothing to lay out: no question, a notice', async () => {

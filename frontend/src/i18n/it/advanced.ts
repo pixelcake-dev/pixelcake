@@ -24,7 +24,7 @@ export const advanced = {
   shortcuts: {
     title: 'Scorciatoie da tastiera e mouse',
     intro:
-      "Tutti i tasti e i gesti dell'app, come su Windows e Linux. Su un Mac, per salvare, copiare e incollare Ctrl diventa Cmd; l'elenco con i tasti del Mac è nella documentazione.",
+      "Tutti i tasti e i gesti dell'app, come su Windows e Linux. Su un Mac, per salvare, annullare, ripetere, copiare e incollare Ctrl diventa Cmd; l'elenco con i tasti del Mac è nella documentazione.",
     /** The groups: the sections of the page of the documentation */
     groups: {
       board: 'Sul canvas',
@@ -36,6 +36,8 @@ export const advanced = {
     /** What each shortcut does, and the keys (or the gesture) that do it */
     rows: {
       save: { action: 'Salva il progetto su file', keys: 'Ctrl + S' },
+      undo: { action: "Annulla l'ultima modifica del disegno", keys: 'Ctrl + Z' },
+      redo: { action: 'Ripeti la modifica annullata', keys: 'Ctrl + Y, Ctrl + Maiusc + Z' },
       copy: { action: 'Copia i dispositivi e i riquadri selezionati', keys: 'Ctrl + C' },
       paste: { action: 'Incolla i dispositivi e i riquadri copiati', keys: 'Ctrl + V' },
       delete: {

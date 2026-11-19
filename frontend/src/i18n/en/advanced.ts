@@ -26,7 +26,7 @@ export const advanced: Dictionary['advanced'] = {
   shortcuts: {
     title: 'Keyboard and mouse shortcuts',
     intro:
-      'Every key and gesture of the app, as on Windows and Linux. On a Mac, Ctrl becomes Cmd for save, copy and paste; the list with the Mac keys is in the documentation.',
+      'Every key and gesture of the app, as on Windows and Linux. On a Mac, Ctrl becomes Cmd for save, undo, redo, copy and paste; the list with the Mac keys is in the documentation.',
     /** The groups: the sections of the page of the documentation */
     groups: {
       board: 'On the board',
@@ -38,6 +38,8 @@ export const advanced: Dictionary['advanced'] = {
     /** What each shortcut does, and the keys (or the gesture) that do it */
     rows: {
       save: { action: 'Save the project to a file', keys: 'Ctrl + S' },
+      undo: { action: 'Undo the last change to the drawing', keys: 'Ctrl + Z' },
+      redo: { action: 'Redo the change undone', keys: 'Ctrl + Y, Ctrl + Shift + Z' },
       copy: { action: 'Copy the selected devices and areas', keys: 'Ctrl + C' },
       paste: { action: 'Paste the copied devices and areas', keys: 'Ctrl + V' },
       delete: {
