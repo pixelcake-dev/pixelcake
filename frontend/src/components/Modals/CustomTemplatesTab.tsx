@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/Select';
 import { useTemplateStore } from '@/store/templateStore';
 import type { DeviceTemplate, DeviceType } from '@/types/network';
 import { askConfirm } from '@/store/confirmStore';
+import { BASE_TYPES, BASE_TYPE_GROUPS, templateFieldsOfType } from '@/utils/templateBaseTypes';
 import { useT } from '@/i18n';
 
 interface CustomTemplatesTabProps {
@@ -32,21 +33,13 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const supportsVLAN = ['Switch', 'Router', 'Firewall'].includes(formData.type);
-    const supportsSTP = ['Switch', 'Router', 'Firewall'].includes(formData.type);
-    const supportsPorts = ['Switch', 'Router', 'Firewall'].includes(formData.type);
-    const supportsNICs = !supportsPorts;
-
     addTemplate({
       name: formData.name,
       type: formData.type,
       icon: formData.icon,
       color: '#5E8096',
       isCustom: true,
-      supportsVLAN,
-      supportsSTP,
-      supportsPorts,
-      supportsNICs,
+      ...templateFieldsOfType(formData.type),
     });
 
     // Reset form
@@ -105,13 +98,15 @@ const CustomTemplatesTab = ({ templates }: CustomTemplatesTabProps) => {
                 })
               }
             >
-              <option value="Server">Server</option>
-              <option value="Firewall">Firewall</option>
-              <option value="LoadBalancer">Load Balancer</option>
-              <option value="Database">Database</option>
-              <option value="Cloud">Cloud</option>
-              <option value="Router">Router</option>
-              <option value="Switch">Switch</option>
+              {BASE_TYPE_GROUPS.map((group) => (
+                <optgroup key={group} label={t.templates.devices.baseTypeGroups[group]}>
+                  {BASE_TYPES.filter((entry) => entry.group === group).map((entry) => (
+                    <option key={entry.type} value={entry.type}>
+                      {entry.label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
             </Select>
 
             <div className="col-span-2">
