@@ -59,6 +59,14 @@
   --area-violet: #6a58a6;
   --area-teal: #1c6f7c;
 
+  /* The marker («Pennarello»): the orange of the logo, a red, a green, and
+     the ink of the theme. Strong enough to read over a drawing. The
+     exported picture repeats them (utils/canvasMarks.ts) */
+  --mark-accent: #F07D2A;
+  --mark-red: #d92d20;
+  --mark-green: #1f8a4c;
+  --mark-ink: #22313b;
+
   /* The drawing of a device: a silhouette in two layers. The lower one is
      the ink of the theme; the upper one is the lamp of the device, and its
      colour is the state (at rest, the slate of the logo). What is drawn on
@@ -124,6 +132,11 @@
   --area-red: #e08f88;
   --area-violet: #a99bd6;
   --area-teal: #62bccb;
+
+  --mark-accent: #F07D2A;
+  --mark-red: #ff5a4e;
+  --mark-green: #4cc38a;
+  --mark-ink: #f4f6f8;
 
   --device-lower: #8fb0c6;
   --device-upper: #c9d8e2;
@@ -3709,5 +3722,226 @@ legend {
 
   .export-image-options {
     width: auto;
+  }
+}
+
+/* ============================================================
+   The marker («Pennarello»): writing and drawing by hand on the
+   board (components/Canvas/MarksLayer, MarkerSurface, MarkerToolbar)
+   ============================================================ */
+
+/* What is written, over the devices and the cables (React Flow draws them
+   at depth 4, the zoom buttons and the small map at 5): it never takes the
+   pointer */
+.marks-layer,
+.marker-draft {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.marks-layer {
+  z-index: 4;
+}
+
+.marks-layer path,
+.marker-draft path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.marks-layer .mark-text,
+.marker-draft .mark-text {
+  paint-order: stroke;
+  stroke-linejoin: round;
+}
+
+/* The marker in use: the sheet that takes the pointer, a finger or a pen
+   included (no scrolling, no zoom of the page under it) */
+.marker-surface {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  touch-action: none;
+  user-select: none;
+  cursor: crosshair;
+}
+
+.marker-surface[data-tool='text'] {
+  cursor: text;
+}
+
+.marker-surface[data-tool='eraser'] {
+  cursor: cell;
+}
+
+/* The words being typed, where the board was clicked, in the handwriting */
+.marker-text-field {
+  position: absolute;
+  min-width: 140px;
+  margin: 0;
+  padding: 0 2px;
+  border: 1px dashed var(--line-color);
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  resize: none;
+  overflow: hidden;
+  white-space: pre;
+  field-sizing: content;
+}
+
+.marker-text-field::placeholder {
+  color: var(--text-color-light);
+  opacity: 0.8;
+}
+
+/* Its tools, over the top of the board: a flat strip with square corners,
+   the colours of a menu, the shadow of what floats over the page. The tool
+   in use is a block of ink, as a choice among a few is. Centred by its
+   margins, not moved back by half its width: so it may take the whole
+   width of the board before it goes on a second line */
+.marker-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  right: 16px;
+  width: fit-content;
+  margin: 0 auto;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px;
+  background: var(--bg-menu);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-small);
+  box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.marker-group {
+  display: flex;
+  align-items: center;
+}
+
+.marker-group + .marker-group,
+.marker-presenting + .marker-group {
+  padding-left: 6px;
+  border-left: 1px solid var(--border-color);
+}
+
+.marker-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.marker-button:hover:not(:disabled):not(.active) {
+  background: var(--bg-hover);
+}
+
+.marker-button.active {
+  background: var(--text-color);
+  color: var(--bg-canvas);
+}
+
+.marker-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.marker-button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
+/* A colour: a square of it; the one in use is ringed with ink */
+.marker-swatch span {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.marker-swatch.active {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--text-color);
+}
+
+/* A thickness: a line as thick as the marker writes */
+.marker-width {
+  display: block;
+  width: 16px;
+  background: currentColor;
+}
+
+.marker-width-thin {
+  height: 2px;
+}
+
+.marker-width-thick {
+  height: 5px;
+}
+
+/* While presenting: what is written goes with the presentation */
+.marker-presenting {
+  padding: 0 6px;
+  color: var(--text-color-light);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Its button on the menu bar, before «Presenta»; on the bar of the
+   presentation, a tool among the others. In use, a block of ink */
+.marker-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.marker-toggle:hover:not(.active) {
+  background: var(--bg-hover);
+}
+
+.marker-toggle.active,
+.presentation-icon-button.active,
+.presentation-icon-button.active:hover:not(:disabled) {
+  background: var(--text-color);
+  color: var(--bg-canvas);
+}
+
+.marker-toggle + .present-button {
+  margin-left: 8px;
+}
+
+/* A narrow phone: the marker is in the View menu, as the presentation is */
+@media (max-width: 400px) {
+  .marker-toggle {
+    display: none;
   }
 }

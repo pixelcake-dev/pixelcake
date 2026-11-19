@@ -241,6 +241,42 @@ export interface CanvasArea {
   size: { width: number; height: number };
 }
 
+/** What a mark of the marker («Pennarello») is: a line by hand, words, an arrow, a ring, a tick, a cross */
+export const MARK_KINDS = ['pen', 'text', 'arrow', 'ellipse', 'tick', 'cross'] as const;
+export type MarkKind = (typeof MARK_KINDS)[number];
+
+/** The colours of the marker: the accent, red, green, and the ink of the theme */
+export const MARK_COLOURS = ['accent', 'red', 'green', 'ink'] as const;
+export type MarkColour = (typeof MARK_COLOURS)[number];
+
+/** How thick a mark is (for words: how large) */
+export const MARK_WIDTHS = ['thin', 'thick'] as const;
+export type MarkWidth = (typeof MARK_WIDTHS)[number];
+
+/**
+ * A mark written by hand on a canvas with the marker («Pennarello»): drawn
+ * over the devices and the cables, in the coordinates of the canvas. Like an
+ * area it is a drawing and nothing else: the engine never reads it, and it
+ * does not follow a device that is moved.
+ */
+export interface CanvasMark {
+  id: string;              // Unique within the canvas (mark-1, mark-2...)
+  kind: MarkKind;
+  color: MarkColour;
+  width: MarkWidth;
+  /**
+   * Points of the canvas, flat: x, y, x, y… A line by hand is every point
+   * it went through; an arrow its tail and its tip; a ring, a tick and a
+   * cross the two corners of the box they are drawn in; words the point
+   * their first line starts at (left, top)
+   */
+  points: number[];
+  /** The words, for a mark of words: one line or more */
+  text?: string;
+  /** What the hand-drawn wobble of the mark is made from: the same seed, the same mark */
+  seed: number;
+}
+
 /**
  * FlowMap Meta Information
  */

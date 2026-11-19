@@ -83,6 +83,18 @@ export const projectFile: Dictionary['projectFile'] = {
         canvasName,
         count === 1 ? '1 incomplete area repaired.' : `${amount(count)} incomplete areas repaired.`
       ),
+    marksDropped: (canvasName: string, count: number) =>
+      inCanvas(
+        canvasName,
+        count === 1 ? '1 invalid mark of the marker ignored.' : `${amount(count)} invalid marks of the marker ignored.`
+      ),
+    marksRepaired: (canvasName: string, count: number) =>
+      inCanvas(
+        canvasName,
+        count === 1
+          ? '1 incomplete mark of the marker repaired.'
+          : `${amount(count)} incomplete marks of the marker repaired.`
+      ),
     viewReset: (canvasName: string) =>
       inCanvas(canvasName, 'view missing or not valid, reset to the starting position.'),
     countersRaised: (canvasName: string) =>

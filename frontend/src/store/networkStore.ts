@@ -7,6 +7,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
   CanvasArea,
+  CanvasMark,
   DeviceTemplate,
   CanvasData,
   NetworkDevice,
@@ -14,6 +15,7 @@ import type {
   GlobalNetworkSettings,
 } from '@/types';
 import { AREA_MIN_SIZE, nextAreaId, readAreas, tidyAreaLabel } from '@/utils/canvasAreas';
+import { nextMarkId, readMarks, tidyMark } from '@/utils/canvasMarks';
 import { arrangeInSteps, type LayoutDirection } from '@/utils/autoLayout';
 import { connectLooseDevices, type ConnectionSummary } from '@/utils/autoConnect';
 import { cleanupConnections } from '@/utils/cleanupConnections';
@@ -33,6 +35,12 @@ interface NetworkStore {
    * drawing and nothing else: no device or cable refers to one
    */
   areas: CanvasArea[];
+  /**
+   * What is written on the canvas with the marker («Pennarello»), first
+   * written first: over the devices and the cables. A drawing and nothing
+   * else, like the areas
+   */
+  marks: CanvasMark[];
   globalNetworkSettings: GlobalNetworkSettings;
   selectedDeviceId: string | null;
   hoveredDeviceId: string | null;
@@ -127,6 +135,14 @@ interface NetworkStore {
   /** The area whose label is being typed in place, or none */
   setEditingArea: (id: string | null) => void;
 
+  // Actions - Marks of the marker
+  /** A mark finished: one edit. The id it got, or null when it is no mark (too few points, no words) */
+  addMark: (mark: Omit<CanvasMark, 'id'>) => string | null;
+  /** The marks the eraser touched, in one edit */
+  removeMarks: (ids: string[]) => void;
+  /** Everything written on the canvas, in one edit */
+  clearMarks: () => void;
+
   // Actions - Connections
   addConnection: (connection: Omit<NetworkConnection, 'id'>) => void;
   updateConnection: (id: string, updates: Partial<NetworkConnection>) => void;
@@ -200,6 +216,7 @@ type PersistedNetworkState = Pick<
   | 'devices'
   | 'connections'
   | 'areas'
+  | 'marks'
   | 'globalNetworkSettings'
   | 'viewport'
   | 'deviceCounter'
@@ -232,6 +249,7 @@ export const useNetworkStore = create<NetworkStore>()(
       devices: [],
       connections: [],
       areas: [],
+      marks: [],
       selectedAreaIds: [],
       selectedAreaId: null,
       editingAreaId: null,
@@ -515,6 +533,29 @@ export const useNetworkStore = create<NetworkStore>()(
         set({ editingAreaId: id });
       },
 
+      // Marks of the marker
+      addMark: (mark) => {
+        const kept = tidyMark(mark);
+        if (!kept) return null;
+        const id = nextMarkId(get().marks);
+        set((state) => ({ marks: [...state.marks, { id, ...kept }] }));
+        get().markChanged();
+        return id;
+      },
+
+      removeMarks: (ids) => {
+        const gone = new Set(ids);
+        if (!get().marks.some((mark) => gone.has(mark.id))) return;
+        set((state) => ({ marks: state.marks.filter((mark) => !gone.has(mark.id)) }));
+        get().markChanged();
+      },
+
+      clearMarks: () => {
+        if (get().marks.length === 0) return;
+        set({ marks: [] });
+        get().markChanged();
+      },
+
       // Connection Actions
       addConnection: (connection) => {
         set((state) => {
@@ -657,8 +698,10 @@ export const useNetworkStore = create<NetworkStore>()(
         set({
           devices: [],
           connections: [],
-          // (the areas were drawn for the devices that are going)
+          // (the areas were drawn for the devices that are going, and the
+          // marks written over them)
           areas: [],
+          marks: [],
           selectedAreaIds: [],
           selectedAreaId: null,
           editingAreaId: null,
@@ -697,8 +740,10 @@ export const useNetworkStore = create<NetworkStore>()(
             devices: devicesWithNewIds,
             connections: normalizeBindings(devicesWithNewIds, connectionsWithNewIds),
             // A drawing loaded as a whole takes the place of the one on the
-            // canvas: the areas drawn around the old devices go with them
+            // canvas: the areas drawn around the old devices go with them,
+            // and what was written over them
             areas: [],
+            marks: [],
             selectedAreaIds: [],
             selectedAreaId: null,
             editingAreaId: null,
@@ -727,12 +772,14 @@ export const useNetworkStore = create<NetworkStore>()(
 
       // Whole canvas
       getCanvasSnapshot: () => {
-        const { devices, connections, areas, viewport, deviceCounter, connectionCounter } = get();
-        // (a canvas without areas is stored, and written to a file, without the list)
+        const { devices, connections, areas, marks, viewport, deviceCounter, connectionCounter } = get();
+        // (a canvas without areas, or with nothing written on it, is stored,
+        // and written to a file, without the list)
         return {
           devices,
           connections,
           areas: areas.length > 0 ? areas : undefined,
+          marks: marks.length > 0 ? marks : undefined,
           viewport,
           deviceCounter,
           connectionCounter,
@@ -749,6 +796,7 @@ export const useNetworkStore = create<NetworkStore>()(
           devices,
           connections: normalizeBindings(devices, canvas.connections),
           areas: readAreas(canvas.areas).areas,
+          marks: readMarks(canvas.marks).marks,
           selectedAreaIds: [],
           selectedAreaId: null,
           editingAreaId: null,
@@ -770,6 +818,7 @@ export const useNetworkStore = create<NetworkStore>()(
         devices: state.devices,
         connections: state.connections,
         areas: state.areas,
+        marks: state.marks,
         globalNetworkSettings: state.globalNetworkSettings,
         viewport: state.viewport,
         deviceCounter: state.deviceCounter,
@@ -789,6 +838,8 @@ export const useNetworkStore = create<NetworkStore>()(
           // (none in what an older version wrote; whatever is there is read
           // as a file is: an area that cannot be drawn is left behind)
           areas: readAreas(saved.areas).areas,
+          // (the same for the marks: none before the marker existed)
+          marks: readMarks(saved.marks).marks,
           globalNetworkSettings: saved.globalNetworkSettings ?? current.globalNetworkSettings,
           viewport: saved.viewport ?? current.viewport,
           deviceCounter: saved.deviceCounter ?? current.deviceCounter,
