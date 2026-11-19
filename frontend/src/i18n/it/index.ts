@@ -37,6 +37,7 @@ import { terminal } from './terminal';
 import { help } from './help';
 import { ui } from './ui';
 import { samples } from './samples';
+import { marker } from './marker';
 
 export const it = {
   common,
@@ -73,4 +74,5 @@ export const it = {
   help,
   ui,
   samples,
+  marker,
 };

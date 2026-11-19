@@ -38,6 +38,7 @@ import { terminal } from './terminal';
 import { help } from './help';
 import { ui } from './ui';
 import { samples } from './samples';
+import { marker } from './marker';
 
 export const en: Dictionary = {
   common,
@@ -74,4 +75,5 @@ export const en: Dictionary = {
   help,
   ui,
   samples,
+  marker,
 };

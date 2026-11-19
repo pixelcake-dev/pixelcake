@@ -239,7 +239,7 @@ PixelCake is released under the GNU Affero General Public License v3.0. See [LIC
 
 The drawings of the devices are PixelCake's own: Copyright © 2025–2026 [@Phil-pje](https://github.com/Phil-pje), under the same licence as the app.
 
-The bundled icons keep their own licences: Material Design Icons (Apache 2.0) and Lucide (ISC), obtained through [Iconify](https://iconify.design). So do the two typefaces of the interface: Inter and JetBrains Mono, both under the SIL Open Font License 1.1. The texts of these licences travel with the app, in [frontend/public/licenses](frontend/public/licenses), and the “About” tab of the guide links to them.
+The bundled icons keep their own licences: Material Design Icons (Apache 2.0) and Lucide (ISC), obtained through [Iconify](https://iconify.design). So do the typefaces of the interface: Inter and JetBrains Mono, and Caveat, the handwriting of the marker, all under the SIL Open Font License 1.1. The texts of these licences travel with the app, in [frontend/public/licenses](frontend/public/licenses), and the “About” tab of the guide links to them.
 
 ## Contact
 

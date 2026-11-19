@@ -41,12 +41,17 @@ import CustomEdge from './CustomEdge';
 import ParticleEdge from './ParticleEdge';
 import PacketAnimation from './PacketAnimation';
 import DeviceNote from './DeviceNote';
+import MarksLayer from './MarksLayer';
+import MarkerSurface from './MarkerSurface';
+import MarkerToolbar from './MarkerToolbar';
+import { useMarkerKeys } from './useMarkerKeys';
 import WelcomeScreen from '@/components/WelcomeScreen';
 import { useNetworkStore } from '@/store/networkStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useUIStore } from '@/store/uiStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
+import { useMarkerStore } from '@/store/markerStore';
 import type { CanvasArea, NetworkDevice as NetworkDeviceType } from '@/types/network';
 import { getT, useLanguage, useT } from '@/i18n';
 import { shortcutLetter } from '@/utils/shortcutKey';
@@ -148,6 +153,7 @@ const NetworkCanvas = () => {
   const devices = useNetworkStore((state) => state.devices);
   const connections = useNetworkStore((state) => state.connections);
   const areas = useNetworkStore((state) => state.areas);
+  const markCount = useNetworkStore((state) => state.marks.length);
   // (hidden from the View menu, the areas are not on the board at all)
   const areasShown = useUIStore((state) => state.areasShown);
   const selectedAreaId = useNetworkStore((state) => state.selectedAreaId);
@@ -176,6 +182,9 @@ const NetworkCanvas = () => {
   // Presentation mode: the drawing is shown, not edited
   const presenting = usePresentationStore((state) => state.active);
   const panelOpen = usePresentationStore((state) => state.panelOpen);
+  // The marker in use: the pointer writes on the board (MarkerSurface)
+  const markerActive = useMarkerStore((state) => state.active);
+  useMarkerKeys();
 
   const reactFlowInstance = useReactFlow();
   const reactFlowStore = useStoreApi();
@@ -683,6 +692,13 @@ const NetworkCanvas = () => {
     return () => window.removeEventListener('keydown', handleDeleteKey);
   }, [reactFlowStore]);
 
+  // The marker taken up: the menus open on the board close, as at a click on it
+  useEffect(() => {
+    if (!markerActive) return;
+    closeContextMenu();
+    usePresentationStore.getState().closeMenu();
+  }, [markerActive, closeContextMenu]);
+
   // Close the context menu when clicking on the canvas
   // Note: React Flow handles selection clearing automatically
   const handleCanvasClick = useCallback(() => {
@@ -762,16 +778,21 @@ const NetworkCanvas = () => {
   // canvas). Asked for from the Aiuto menu, it shows on any empty canvas
   const shouldShowWelcome =
     !presenting &&
+    !markerActive &&
     showWelcomeScreen &&
     devices.length === 0 &&
-    // (a canvas with an area drawn on it is not an empty one)
+    // (a canvas with an area drawn on it, or something written, is not an empty one)
     areas.length === 0 &&
+    markCount === 0 &&
     (canvasCount === 1 || welcomeRequested);
 
   return (
     <div className="relative w-full h-full">
       {/* Welcome Screen: drawn inside the canvas */}
       {shouldShowWelcome && <WelcomeScreen />}
+
+      {/* The tools of the marker, over the top of the board while it is in use */}
+      {markerActive && <MarkerToolbar />}
 
       {/* React Flow Canvas */}
       <div
@@ -864,6 +885,10 @@ const NetworkCanvas = () => {
         {/* Packet Animation Logic */}
         <PacketAnimation />
         <DeviceNote />
+        {/* What is written with the marker, over the devices and the cables;
+            and, while the marker is in use, the sheet that takes the pointer */}
+        <MarksLayer />
+        {markerActive && <MarkerSurface />}
       </ReactFlow>
       </div>
     </div>

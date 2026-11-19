@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import {
+  Highlighter,
   ImageDown,
   LogOut,
   Maximize,
@@ -16,6 +17,7 @@ import {
   Terminal,
 } from 'lucide-react';
 import { usePresentationStore } from '@/store/presentationStore';
+import { useMarkerStore } from '@/store/markerStore';
 import { useProjectStore } from '@/store/projectStore';
 import { SIMULATION_SPEEDS, useSimulationStore, type SimulationSpeed } from '@/store/simulationStore';
 import { useUIStore } from '@/store/uiStore';
@@ -49,6 +51,9 @@ const PresentationBar = () => {
   const openModal = useUIStore((state) => state.openModal);
   const darkMode = useUIStore((state) => state.darkMode);
   const toggleDarkMode = useUIStore((state) => state.toggleDarkMode);
+  // The presenter's pen: what it writes is on top, and goes with the presentation
+  const penActive = useMarkerStore((state) => state.active);
+  const togglePen = useMarkerStore((state) => state.toggle);
 
   const [isFullscreen, setIsFullscreen] = useState(() => document.fullscreenElement != null);
 
@@ -82,6 +87,8 @@ const PresentationBar = () => {
       }
       if (isTyping(event.target)) return;
       if (Object.values(useUIStore.getState().modals).some(Boolean)) return;
+      // (the pen in use is put away first: that press is the marker's)
+      if (useMarkerStore.getState().active) return;
       presentation.exit();
     };
     window.addEventListener('keydown', onKeyDown);
@@ -142,6 +149,17 @@ const PresentationBar = () => {
           ))}
         </div>
 
+        {/* The pen: write over the drawing while presenting it (P) */}
+        <button
+          type="button"
+          className={penActive ? 'presentation-icon-button active' : 'presentation-icon-button'}
+          title={t.marker.hint}
+          aria-label={t.marker.name}
+          aria-pressed={penActive}
+          onClick={togglePen}
+        >
+          <Highlighter size={18} />
+        </button>
         <button
           type="button"
           className="presentation-icon-button"

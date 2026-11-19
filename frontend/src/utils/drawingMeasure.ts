@@ -13,6 +13,7 @@ import {
   type Size,
   type TextMeasure,
 } from './drawingImage';
+import { HAND_FONT } from './canvasMarks';
 
 /**
  * The size of every device on the canvas, as it is laid out (zoom does not
@@ -47,7 +48,8 @@ export function createTextMeasure(): TextMeasure {
 
   const canvas = context;
   return (text, font) => {
-    canvas.font = `${font.weight} ${font.size}px ${font.mono ? MONO_FONT_FAMILY : FONT_FAMILY}`;
+    const family = font.hand ? HAND_FONT.family : font.mono ? MONO_FONT_FAMILY : FONT_FAMILY;
+    canvas.font = `${font.weight} ${font.size}px ${family}`;
     return canvas.measureText(text).width;
   };
 }

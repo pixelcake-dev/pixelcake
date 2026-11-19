@@ -17,6 +17,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { useTemplateStore } from '@/store/templateStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
+import { useMarkerStore } from '@/store/markerStore';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { hasFailures, planAndEvaluateFlow, withFailures } from '@/engine';
@@ -35,6 +36,7 @@ import {
   type ImageTheme,
 } from '@/utils/drawingImage';
 import { createTextMeasure } from '@/utils/drawingMeasure';
+import { loadHandFont } from '@/utils/handFont';
 import {
   PNG_SCALES,
   canChooseWhereToSave,
@@ -71,6 +73,10 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
   const allAreas = useNetworkStore((state) => state.areas);
   const areasShown = useUIStore((state) => state.areasShown);
   const areas = useMemo(() => (areasShown ? allAreas : []), [allAreas, areasShown]);
+  // What is written with the marker, over the drawing; while presenting, what
+  // the presenter wrote over it too: the image shows what the board shows
+  const canvasMarks = useNetworkStore((state) => state.marks);
+  const presenterMarks = useMarkerStore((state) => state.presenterMarks);
   const emailMode = useNetworkStore((state) => state.globalNetworkSettings.emailMode ?? 'auto');
   const deviceTemplates = useTemplateStore((state) => state.templates);
   const connectionTemplates = useTemplateStore((state) => state.connectionTemplates);
@@ -86,6 +92,25 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
   const failedDevices = usePresentationStore((state) => state.failedDevices);
   const failedConnections = usePresentationStore((state) => state.failedConnections);
   const route = usePresentationStore((state) => state.route);
+  const writing = useMemo(
+    () => (presenting && presenterMarks.length > 0 ? [...canvasMarks, ...presenterMarks] : canvasMarks),
+    [presenting, canvasMarks, presenterMarks]
+  );
+
+  // The handwriting goes inside the picture, read once from the app when
+  // there are words to write; meanwhile the words are in the computer's
+  const hasWords = writing.some((mark) => mark.kind === 'text');
+  const [handFont, setHandFont] = useState<string | null>(null);
+  useEffect(() => {
+    if (!hasWords || handFont) return;
+    let cancelled = false;
+    void loadHandFont().then((font) => {
+      if (!cancelled && font) setHandFont(font);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasWords, handFont]);
 
   const [format, setFormat] = useState<ImageFormat>('png');
   const [theme, setTheme] = useState<ImageTheme>(darkMode ? 'dark' : 'light');
@@ -213,6 +238,8 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
           waiting,
           conflicts: inConflict,
           answer,
+          writing,
+          handFont: handFont ?? undefined,
         },
         {
           theme,
@@ -233,6 +260,8 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
       waiting,
       inConflict,
       answer,
+      writing,
+      handFont,
       theme,
       transparent,
       withTitle,

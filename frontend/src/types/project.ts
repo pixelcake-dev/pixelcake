@@ -6,6 +6,7 @@
 
 import type {
   CanvasArea,
+  CanvasMark,
   ConnectionTemplate,
   DeviceTemplate,
   GlobalNetworkSettings,
@@ -25,6 +26,8 @@ export interface CanvasData {
   connections: NetworkConnection[];
   /** The areas drawn behind the devices; left out when the canvas has none */
   areas?: CanvasArea[];
+  /** What was written on it with the marker; left out when nothing was */
+  marks?: CanvasMark[];
   viewport: CanvasViewport;
   /** Number used by the next `dev-N` id */
   deviceCounter: number;

@@ -1,7 +1,7 @@
 /**
  * What the app bundles from others travels with the texts of its licences:
- * the two typefaces of the interface and every icon set still bundled have
- * their text in public/licenses/, which the build copies as it is, and the
+ * the typefaces of the interface (the handwriting of the marker among them)
+ * and every icon set still bundled have their text in public/licenses/, which the build copies as it is, and the
  * README names exactly what is bundled. When this fails after updating a
  * package, run `pnpm licenses:fonts`; after changing the icons, `pnpm
  * icons:bundle`, which writes the texts of the icon sets too.
@@ -12,6 +12,7 @@ import { BUNDLED_ICON_SETS, BUNDLED_ICON_SET_INFO } from '@/data/bundledIcons';
 import { BUNDLED_FONTS } from '@/constants/thirdParty';
 import inter from '../../node_modules/@fontsource-variable/inter/LICENSE?raw';
 import jetbrainsMono from '../../node_modules/@fontsource/jetbrains-mono/LICENSE?raw';
+import caveat from '../../node_modules/@fontsource/caveat/LICENSE?raw';
 import readme from '../../../README.md?raw';
 
 /** The files under public/licenses/, by the path the built app has them at */
@@ -22,16 +23,17 @@ const shipped = Object.fromEntries(
 );
 
 /** The licence of each package the typefaces come from, as the package has it */
-const PACKAGES: Record<string, string> = { Inter: inter, 'JetBrains Mono': jetbrainsMono };
+const PACKAGES: Record<string, string> = { Inter: inter, 'JetBrains Mono': jetbrainsMono, Caveat: caveat };
 
 describe('the licences of the typefaces', () => {
-  it('are the two the interface is set in, each with the notice its project writes', () => {
+  it('are the two the interface is set in and the handwriting of the marker, each with the notice its project writes', () => {
     expect(BUNDLED_FONTS.map((font) => [font.name, font.notice])).toEqual([
       ['Inter', 'Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)'],
       [
         'JetBrains Mono',
         'Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)',
       ],
+      ['Caveat', 'Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)'],
     ]);
     for (const font of BUNDLED_FONTS) expect(font.license).toBe('SIL OFL 1.1');
   });
@@ -42,9 +44,8 @@ describe('the licences of the typefaces', () => {
       const text = shipped[font.file];
       expect(text, `${font.file} is not in public/`).toBeDefined();
       const [first, ...rest] = PACKAGES[name].replace(/\r\n/g, '\n').split('\n');
-      // (the package repeats the notice once for each font file it has)
+      // (a package may repeat the notice once for each font file it has)
       expect(first.startsWith(font.notice)).toBe(true);
-      expect(first.length).toBeGreaterThan(font.notice.length);
       expect(text).toBe([font.notice, ...rest].join('\n'));
       expect(text).toContain('SIL OPEN FONT LICENSE Version 1.1');
     }

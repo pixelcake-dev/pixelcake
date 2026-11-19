@@ -170,7 +170,7 @@ describe('HelpModal', () => {
       const row = within(panel).getByText('Licenze di terzi').nextElementSibling as HTMLElement;
 
       expect(row.textContent).toBe(
-        'Caratteri Inter (SIL OFL 1.1) e JetBrains Mono (SIL OFL 1.1), icone Material Design Icons (Apache 2.0) e Lucide (ISC)'
+        'Caratteri Inter (SIL OFL 1.1), JetBrains Mono (SIL OFL 1.1) e Caveat (SIL OFL 1.1), icone Material Design Icons (Apache 2.0) e Lucide (ISC)'
       );
       const links = within(row).getAllByRole('link');
       expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
@@ -189,7 +189,7 @@ describe('HelpModal', () => {
         const panel = screen.getByRole('tabpanel');
         const row = within(panel).getByText('Third-party licences').nextElementSibling as HTMLElement;
         expect(row.textContent).toBe(
-          'Fonts Inter (SIL OFL 1.1) and JetBrains Mono (SIL OFL 1.1), icons Material Design Icons (Apache 2.0) and Lucide (ISC)'
+          'Fonts Inter (SIL OFL 1.1), JetBrains Mono (SIL OFL 1.1) and Caveat (SIL OFL 1.1), icons Material Design Icons (Apache 2.0) and Lucide (ISC)'
         );
         expect(within(row).getAllByRole('link')).toHaveLength(BUNDLED_FONTS.length + BUNDLED_ICON_SET_INFO.length);
       } finally {

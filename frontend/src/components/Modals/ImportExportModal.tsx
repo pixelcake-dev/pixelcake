@@ -167,7 +167,8 @@ const ImportExportModal = () => {
     if (importMode === 'replace') {
       // (the canvas is emptied, areas included, and there is no undo: say what goes)
       const current = useNetworkStore.getState();
-      if (current.devices.length + current.connections.length + current.areas.length > 0) {
+      // (what is written with the marker goes too: it was written over the old drawing)
+      if (current.devices.length + current.connections.length + current.areas.length + current.marks.length > 0) {
         const confirmed = await askConfirm({
           title: t.importExport.importTab.replaceTitle,
           detail: t.importExport.importTab.replaceDetail(

@@ -41,7 +41,7 @@ Un progetto ha uno o più canvas, ognuno con il suo disegno. Apri l'Explorer, il
 
 - aggiungere un canvas con «Nuovo canvas»: scrivi un nome nel campo e conferma;
 - rinominare un canvas, con la sua matita o con un doppio clic sul nome, oppure eliminarlo (un progetto ne conserva sempre almeno uno, e l'applicazione chiede conferma prima di eliminarne uno, dicendo quanti dispositivi contiene);
-- duplicare un canvas con «Duplica il canvas», il pulsante con due fogli: la copia compare subito dopo, con il nome dell'originale seguito da "(copia)", con i suoi dispositivi, cavi, riquadri, note e vista, ed è un canvas a sé;
+- duplicare un canvas con «Duplica il canvas», il pulsante con due fogli: la copia compare subito dopo, con il nome dell'originale seguito da "(copia)", con i suoi dispositivi, cavi, riquadri, note, quello che c'è scritto con il pennarello e la vista, ed è un canvas a sé;
 - cambiare il nome e la descrizione del progetto;
 - passare da un canvas all'altro con un clic.
 

@@ -19,11 +19,11 @@ Quando entri, la selezione viene tolta, il menu del tasto destro si chiude e un 
 - il contrassegno **«Presentazione»** e il nome del progetto;
 - i canvas del progetto, in «Canvas del progetto», quando ne ha più di uno. Cambiare canvas fa dimenticare la domanda e i guasti, perché riguardavano l'altro;
 - **«Velocità del pacchetto»**: «Lenta», «Normale», «Veloce»;
-- **«Terminale»**, **«Esporta immagine»** e **«Schermo intero»**;
+- **«Pennarello»**, per [scrivere sopra il disegno](#marker), poi **«Terminale»**, **«Esporta immagine»** e **«Schermo intero»**;
 - la lingua e il tema, come nella barra dei menu;
 - **«Esci»**.
 
-Per uscire premi «Esci» oppure Esc. Esc chiude prima il piccolo menu, se ce n'è uno aperto; non fa nulla mentre scrivi in un campo o c'è una finestra aperta. Uscendo si dimenticano la domanda e ogni guasto simulato, e si esce dallo schermo intero.
+Per uscire premi «Esci» oppure Esc. Esc chiude prima il piccolo menu, se ce n'è uno aperto, o mette via il pennarello, se è attivo; non fa nulla mentre scrivi in un campo o c'è una finestra aperta. Uscendo si dimenticano la domanda e ogni guasto simulato, e si esce dallo schermo intero.
 
 I riquadri si vedono ma non si possono modificare. Il doppio clic su un dispositivo non apre la sua finestra: qui nulla modifica il disegno.
 
@@ -77,6 +77,12 @@ Il pannello lo scrive come una frase, "Ping tra i 5 dispositivi finali: 20 comun
 Il tipo di comunicazione contata è quello scelto nella domanda, «Ping», «Web» o «Email»: cambialo per contarne un altro. Un disegno grande richiede un momento, e il pannello dice «Calcolo l'effetto sul resto della rete…». Con meno di due dispositivi finali che hanno un indirizzo dice «Per misurare l'effetto servono almeno due dispositivi finali (PC, server…) con un indirizzo.»
 
 Il motore prende la strada più corta che funziona. Lo spanning tree e protocolli simili non sono simulati, quindi una comunicazione che "passa da un'altra strada" prende la più corta che i cavi permettono, non quella che avrebbe scelto uno switch vero.
+
+## Scrivere sopra il disegno {#marker}
+
+Mentre presenti, il [pennarello](../building/marker.md) è una penna: premi «Pennarello» nella barra, oppure P, e scrivi sopra il disegno mentre rompi uno switch o tagli una connessione: un cerchio intorno a ciò che si ferma, una freccia, una parola. Quello che il canvas ha già di scritto resta sotto. Gli strumenti dicono «Solo per questa presentazione»: quello che la penna scrive non cambia nulla del canvas e non viene salvato. Sparisce quando esci dalla presentazione, e quando mostri un altro canvas; «Cancella tutto» lo toglie subito.
+
+Finché la penna è attiva, un clic scrive invece di aprire il menu di un dispositivo. Mettila via (P, Esc o il suo pulsante) per fare una domanda o rompere qualcosa, e riprendila per scrivere. Con la penna attiva, il primo Esc la mette via e il secondo esce dalla presentazione.
 
 ## Il terminale durante la presentazione {#terminal}
 

@@ -36,12 +36,15 @@ import {
 import type {
   AreaColour,
   CanvasArea,
+  CanvasMark,
   ConnectionTemplate,
   DeviceTemplate,
   NetworkConnection,
   NetworkDevice,
 } from '@/types/network';
 import { AREA_PALETTE, AREA_TINT } from '@/utils/canvasAreas';
+import { HAND_FONT, MARK_PALETTE } from '@/utils/canvasMarks';
+import { drawMark, markBox, textBaseline, type HandMeasure } from '@/utils/handDrawing';
 // (the few words written into the picture: plain data, read when it is drawn)
 import { getT } from '@/i18n';
 
@@ -69,6 +72,8 @@ export interface FontSpec {
   weight: 400 | 600 | 700;
   /** In the letters of equal width (an address) */
   mono?: boolean;
+  /** In the handwriting of the marker */
+  hand?: boolean;
 }
 
 /** Width of a piece of text, in the units of the drawing */
@@ -98,6 +103,15 @@ export interface DrawingInput {
   conflicts?: readonly string[];
   /** Outside a presentation: the answer the last question asked left on a device */
   answer?: { arrives: boolean; deviceId: string } | null;
+  /** What is written with the marker, first written first: drawn over everything else */
+  writing?: CanvasMark[];
+  /**
+   * The handwriting of the marker, as the `src` of a font (a `data:` address):
+   * a picture cannot use the fonts of the page, so it carries this one in
+   * itself when there are words to write. Without it, the words are written
+   * in the handwriting the computer has
+   */
+  handFont?: string;
 }
 
 export interface ImageTitle {
@@ -318,6 +332,8 @@ export interface Scene {
   areas: SceneArea[];
   devices: SceneDevice[];
   cables: SceneCable[];
+  /** What is written with the marker: drawn last, over everything */
+  writing: CanvasMark[];
   /** The smallest box that holds everything drawn */
   bounds: Box;
 }
@@ -328,7 +344,12 @@ export interface Scene {
  * measures with the browser.
  */
 export const approximateTextWidth: TextMeasure = (text, font) =>
-  [...text].length * font.size * (font.mono ? 0.6 : font.weight === 400 ? 0.54 : 0.58);
+  [...text].length * font.size * (font.mono ? 0.6 : font.hand ? 0.42 : font.weight === 400 ? 0.54 : 0.58);
+
+/** The width of words of the marker, measured as the caller measures text */
+function handMeasure(measure: TextMeasure): HandMeasure {
+  return (text, size) => measure(text, { size, weight: HAND_FONT.weight, hand: true });
+}
 
 /**
  * The size the screen gives a device: its frame, the same for every device
@@ -548,7 +569,12 @@ export function layoutDrawing(input: DrawingInput): Scene {
     });
   }
 
-  return { areas, devices, cables, bounds: bounds.box() };
+  // What is written with the marker, wherever it is: the picture holds it
+  const writing = input.writing ?? [];
+  const measureHand = handMeasure(measureText);
+  for (const mark of writing) bounds.addBox(markBox(mark, measureHand), mark.kind === 'text' ? 4 : 0);
+
+  return { areas, devices, cables, writing, bounds: bounds.box() };
 }
 
 /** The width of a label of an area, with the space between its letters */
@@ -769,6 +795,38 @@ const ZAP_OFF =
   '<path d="M16.273 16.273 10.88 21.83a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14H4a1 1 0 0 1-.78-1.63l4.507-4.643"/>' +
   '<path d="m2 2 20 20"/>';
 
+/**
+ * A mark of the marker, as the screen draws it (utils/handDrawing): its
+ * lines in its colour and thickness, round at the ends; words in the
+ * handwriting, with a halo of the canvas so that they read over a cable
+ */
+function markSvg(mark: CanvasMark, theme: ImageTheme, halo: string | null): string {
+  const drawing = drawMark(mark);
+  const colour = MARK_PALETTE[theme][mark.color] ?? MARK_PALETTE[theme].ink;
+  if (drawing.text) {
+    const { text } = drawing;
+    const around = halo
+      ? ` paint-order="stroke" stroke="${halo}" stroke-width="${num(Math.max(4, text.size / 5))}" stroke-linejoin="round"`
+      : '';
+    const lines = text.lines.map(
+      (line, index) =>
+        `<tspan x="${num(text.x)}" y="${num(textBaseline(text, index))}">${escapeXml(line)}</tspan>`
+    );
+    return `<text font-family="${escapeXml(HAND_FONT.family)}" font-size="${num(text.size)}" font-weight="${HAND_FONT.weight}" fill="${colour}"${around} transform="rotate(${num(text.rotate)} ${num(text.x)} ${num(text.y)})">${lines.join('')}</text>`;
+  }
+  return drawing.paths
+    .map(
+      (path) =>
+        `<path d="${path}" fill="none" stroke="${colour}" stroke-width="${num(drawing.stroke)}" stroke-linecap="round" stroke-linejoin="round"/>`
+    )
+    .join('');
+}
+
+/** The handwriting carried by the picture itself, for its words */
+function handFontFace(source: string): string {
+  return `<style>@font-face{font-family:'${HAND_FONT.name}';font-weight:${HAND_FONT.weight};src:url(${JSON.stringify(source)}) format('woff2');}</style>`;
+}
+
 function cableSvg(cable: SceneCable, palette: Palette): string {
   const style = (() => {
     switch (cable.look) {
@@ -925,6 +983,10 @@ export function renderDrawingImage(input: DrawingInput, options: ImageOptions): 
     ...scene.devices.map(device =>
       deviceSvg(device, { palette, accents, measureText: measure, bare: Boolean(options.transparent) })
     ),
+    // (what is written with the marker, last: over everything)
+    scene.writing.length > 0
+      ? `<g>${scene.writing.map(mark => markSvg(mark, options.theme, options.transparent ? null : palette.canvas)).join('')}</g>`
+      : '',
     '</g>'
   );
   cursor += Math.ceil(scene.bounds.height);
@@ -975,11 +1037,14 @@ export function renderDrawingImage(input: DrawingInput, options: ImageOptions): 
   const name = title?.name ?? getT().exportImage.picture.untitled;
   // The windows of the drawings that are in the picture, once each
   const drawings = [...new Set(scene.devices.map(device => device.drawing))];
+  // The handwriting, only when there are words to write in it
+  const handFont =
+    input.handFont && scene.writing.some(mark => mark.kind === 'text') ? handFontFace(input.handFont) : '';
   const svg = [
     `${SVG_OPEN} width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" font-family="${FONT_FAMILY}" role="img" aria-label="${escapeXml(name)}">`,
     `<title>${escapeXml(name)}</title>`,
-    drawings.length > 0
-      ? `<defs>${drawings.map(drawing => drawingWindows(drawing, ID_PREFIX)).join('')}</defs>`
+    drawings.length > 0 || handFont
+      ? `<defs>${handFont}${drawings.map(drawing => drawingWindows(drawing, ID_PREFIX)).join('')}</defs>`
       : '',
     options.transparent ? '' : `<rect width="${width}" height="${height}" fill="${palette.canvas}"/>`,
     ...body,

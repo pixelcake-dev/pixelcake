@@ -28,6 +28,7 @@ const DevicePanel = () => {
 
   const devices = useNetworkStore((state) => state.devices);
   const areaCount = useNetworkStore((state) => state.areas.length);
+  const markCount = useNetworkStore((state) => state.marks.length);
   const loadSample = useNetworkStore((state) => state.loadSample);
   // (the size of the largest sample is said with its entry, counted on the sample itself)
   const multinationalDevices = useMemo(() => createMultinationalSample().devices.length, []);
@@ -76,7 +77,7 @@ const DevicePanel = () => {
   const handleLoadSample = async (create: typeof createSampleTopology) => {
     // (an area drawn on a canvas without devices is something to lose, too)
     const shouldLoad =
-      (devices.length === 0 && areaCount === 0) ||
+      (devices.length === 0 && areaCount === 0 && markCount === 0) ||
       (await askConfirm({
         title: t.devicePanel.samples.replaceQuestion.title,
         detail: t.devicePanel.samples.replaceQuestion.detail,

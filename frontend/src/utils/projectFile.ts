@@ -25,6 +25,7 @@ import { isValidIP } from '@/utils/ipHelpers';
 import { tidyNotes } from '@/utils/deviceNotes';
 import { isVlanId, tidyVlanName, VLAN_NAME_MAX_LENGTH } from '@/utils/vlanNames';
 import { readAreas } from '@/utils/canvasAreas';
+import { readMarks } from '@/utils/canvasMarks';
 import { getT } from '@/i18n';
 
 export const PROJECT_FILE_EXTENSION = '.pixelcake.json';
@@ -192,6 +193,7 @@ const CONNECTION_KEYS = [
   'stpPortPriority',
 ];
 const AREA_KEYS = ['id', 'label', 'color', 'position', 'size'];
+const MARK_KEYS = ['id', 'kind', 'color', 'width', 'points', 'text', 'seed'];
 const DEVICE_TEMPLATE_KEYS = [
   'id',
   'name',
@@ -314,6 +316,10 @@ export function serializeProject(project: ProjectFile): string {
       ...(canvas.areas && canvas.areas.length > 0
         ? { areas: canvas.areas.map(area => ordered(area, AREA_KEYS, AREA_NESTED)) }
         : {}),
+      // (what was written with the marker, the same: no list when nothing was)
+      ...(canvas.marks && canvas.marks.length > 0
+        ? { marks: canvas.marks.map(mark => ordered(mark, MARK_KEYS)) }
+        : {}),
       viewport: { x: canvas.viewport.x, y: canvas.viewport.y, zoom: canvas.viewport.zoom },
       deviceCounter: canvas.deviceCounter,
       connectionCounter: canvas.connectionCounter,
@@ -325,7 +331,19 @@ export function serializeProject(project: ProjectFile): string {
       ),
     },
   };
-  return `${JSON.stringify(document, null, 2)}\n`;
+  // (the points of a mark on one line: a line drawn by hand has many)
+  return `${JSON.stringify(document, null, 2).replace(POINTS_LIST, onOneLine)}\n`;
+}
+
+/**
+ * The list of the points of a mark, as JSON.stringify spreads it over many
+ * lines. A key starts its own line: words typed by the user that look the
+ * same are inside a string, on the line of their key, and never match
+ */
+const POINTS_LIST = /^([ \t]*)"points": \[([-\d.eE+,\s]*)\]/gm;
+
+function onOneLine(_list: string, indent: string, numbers: string): string {
+  return `${indent}"points": [${numbers.split(',').map(number => number.trim()).filter(Boolean).join(', ')}]`;
 }
 
 // ---------- parsing ----------
@@ -677,6 +695,10 @@ function parseCanvas(value: unknown, index: number, warnings: string[]): StoredC
   const drawn = readAreas(value.areas);
   if (drawn.dropped > 0) warnings.push(words().repairs.areasDropped(name, drawn.dropped));
   if (drawn.repaired > 0) warnings.push(words().repairs.areasRepaired(name, drawn.repaired));
+  // What was written with the marker: the same
+  const written = readMarks(value.marks);
+  if (written.dropped > 0) warnings.push(words().repairs.marksDropped(name, written.dropped));
+  if (written.repaired > 0) warnings.push(words().repairs.marksRepaired(name, written.repaired));
   const viewport = parseViewport(value.viewport, name, warnings);
 
   const [deviceCounter, deviceCounterRaised] = parseCounter(
@@ -699,6 +721,7 @@ function parseCanvas(value: unknown, index: number, warnings: string[]): StoredC
     devices,
     connections,
     ...(drawn.areas.length > 0 ? { areas: drawn.areas } : {}),
+    ...(written.marks.length > 0 ? { marks: written.marks } : {}),
     viewport,
     deviceCounter,
     connectionCounter,

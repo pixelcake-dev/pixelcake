@@ -96,6 +96,20 @@ export const projectFile = {
           ? '1 riquadro incompleto corretto.'
           : `${amount(count)} riquadri incompleti corretti.`
       ),
+    marksDropped: (canvasName: string, count: number) =>
+      inCanvas(
+        canvasName,
+        count === 1
+          ? '1 segno del pennarello non valido ignorato.'
+          : `${amount(count)} segni del pennarello non validi ignorati.`
+      ),
+    marksRepaired: (canvasName: string, count: number) =>
+      inCanvas(
+        canvasName,
+        count === 1
+          ? '1 segno del pennarello incompleto corretto.'
+          : `${amount(count)} segni del pennarello incompleti corretti.`
+      ),
     viewReset: (canvasName: string) =>
       inCanvas(canvasName, 'vista mancante o non valida, riportata alla posizione iniziale.'),
     countersRaised: (canvasName: string) =>

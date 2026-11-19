@@ -1,6 +1,7 @@
 /**
  * What the app bundles from others besides the icon sets (which are in
- * data/bundledIcons.ts): the two typefaces of the interface. The text of
+ * data/bundledIcons.ts): the typefaces of the interface, the two of its
+ * text and the handwriting of the marker («Pennarello»). The text of
  * each licence is in public/licenses/ and travels with the built app;
  * `pnpm licenses:fonts` (scripts/font-licenses.mjs) writes it from the
  * package the typeface comes from, and a test holds the two together.
@@ -27,5 +28,11 @@ export const BUNDLED_FONTS: readonly BundledFont[] = [
     notice: 'Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)',
     license: 'SIL OFL 1.1',
     file: 'licenses/jetbrains-mono.txt',
+  },
+  {
+    name: 'Caveat',
+    notice: 'Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)',
+    license: 'SIL OFL 1.1',
+    file: 'licenses/caveat.txt',
   },
 ];
