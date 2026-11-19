@@ -1,11 +1,12 @@
-// Writes the licence texts of the two typefaces of the interface to
-// public/licenses/, so that they travel with the built app as the SIL Open
-// Font License asks: the font files are bundled, and so is their licence.
+// Writes the licence texts of the typefaces of the interface (the two of its
+// text, and the handwriting of the marker) to public/licenses/, so that they
+// travel with the built app as the SIL Open Font License asks: the font
+// files are bundled, and so is their licence.
 //
 //   pnpm licenses:fonts
 //
-// The texts are the LICENSE files of the two packages the fonts come from.
-// Each opens with a line that repeats the copyright notice once for every
+// The texts are the LICENSE files of the packages the fonts come from.
+// Each opens with the copyright notice, which some repeat once for every
 // font file of the package: here it is the one notice, as the projects
 // write it. A test fails when what is in public/licenses/ is not what this
 // script would write: run it again after updating the packages.
@@ -29,6 +30,12 @@ export const FONT_LICENSES = [
     source: 'node_modules/@fontsource/jetbrains-mono/LICENSE',
     file: 'public/licenses/jetbrains-mono.txt',
     notice: 'Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)',
+  },
+  {
+    name: 'Caveat',
+    source: 'node_modules/@fontsource/caveat/LICENSE',
+    file: 'public/licenses/caveat.txt',
+    notice: 'Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)',
   },
 ];
 
