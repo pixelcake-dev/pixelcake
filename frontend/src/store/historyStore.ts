@@ -14,8 +14,11 @@
  * nothing written here. A step is the state of those fields before it: the
  * stores never change an object in place, so a step holds references, and
  * what it did not change is shared with the steps around it rather than
- * copied (a drag of one device on a board of two hundred costs a new list
- * and one device).
+ * copied (a drag of one device on a board of two hundred costs a list and
+ * one device). A list is held as a list of its own, with the same things in
+ * it: the engine keeps what it worked out for a list of the store (the
+ * leases of DHCP, keyed by the list) for as long as the list is around, and
+ * a history holding the lists themselves would keep all of that alive.
  *
  * **What a step is.** Whatever changes those fields, wherever it comes from
  * (the canvas, a window, the terminal, a menu), is seen here through a
@@ -99,9 +102,12 @@ function boardFields(state: NetworkState): string[] {
   return Object.keys(state.getCanvasSnapshot()).filter((key) => key !== 'viewport' && key in state);
 }
 
+/** A field as a step holds it: a list of its own, with the same things in it (see above) */
+const held = (value: unknown): unknown => (Array.isArray(value) ? value.slice() : value);
+
 function pick(state: NetworkState, keys: Iterable<string>): BoardState {
   const board: BoardState = {};
-  for (const key of keys) board[key] = fieldOf(state, key);
+  for (const key of keys) board[key] = held(fieldOf(state, key));
   return board;
 }
 
@@ -186,7 +192,7 @@ useNetworkStore.subscribe((state, previous) => {
     if (pressed.size === 0) queueMicrotask(closeWhenLetGo);
   } else {
     // (a field seen for the first time in this step had not changed before it)
-    for (const key of fields) if (!(key in pending.before)) pending.before[key] = fieldOf(previous, key);
+    for (const key of fields) if (!(key in pending.before)) pending.before[key] = held(fieldOf(previous, key));
   }
 });
 

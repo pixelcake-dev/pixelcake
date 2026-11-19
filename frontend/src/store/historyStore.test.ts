@@ -376,7 +376,9 @@ describe('the history', () => {
     // (the very objects of before: a step holds the parts it changed, and shares the rest)
     const back = app.network.getState().devices.filter((d) => d.id !== pcs[0]);
     back.forEach((device, index) => expect(device).toBe(untouched[index]));
-    expect(app.network.getState().connections).toBe(links);
+    app.network.getState().connections.forEach((connection, index) => expect(connection).toBe(links[index]));
+    // (in lists of its own: what the engine keeps for a list of the store goes with that list)
+    expect(app.network.getState().connections).not.toBe(links);
   });
 
   it('is an edit of the project: undo sets the changed flag and is written to the browser', async () => {
