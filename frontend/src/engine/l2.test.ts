@@ -184,7 +184,7 @@ describe('more than one way between two devices', () => {
 // ---------- addresses ----------
 
 describe('addresses on the wire', () => {
-  it('notices an address used twice: the wrong device answers first', () => {
+  it('notices an address used twice: the conflict is said before the packet leaves (see conflicts.test)', () => {
     const t = topo(
       [
         host('pc1', '192.168.1.11', '', { label: 'PC-1' }),
@@ -199,11 +199,11 @@ describe('addresses on the wire', () => {
       ]
     );
     const result = traceRoute('pc1', 'pc3', t);
-    expect(result.verdict).toBe('blocked');
+    expect(result.verdict).toBe('error');
     expect(result.failureReason).toBe(
-      'PC-2 answers for 192.168.1.20 before PC-3: the address is used twice'
+      'address conflict: 192.168.1.20 is on both PC-2 and PC-3, so the answer cannot be trusted'
     );
-    expect(result.hops[result.hops.length - 1]).toMatchObject({ deviceId: 'pc2', status: 'blocked' });
+    expect(result.hops).toEqual([]);
   });
 
   /** A server with a NIC on the LAN (with the gateway) and one on a storage network */

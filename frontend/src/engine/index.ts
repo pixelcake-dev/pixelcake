@@ -110,6 +110,9 @@ export type {
   UnservedCause,
 } from './dhcp';
 
+export { addressConflicts, conflictAt, conflictOf, conflictReason, heldAddresses } from './conflicts';
+export type { AddressConflict, AddressConflicts } from './conflicts';
+
 export { planAndEvaluateFlow, traceToDevice } from './flows';
 export type { FlowLeg, FlowResult } from './flows';
 
