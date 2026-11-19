@@ -34,6 +34,8 @@ Ping failed (blocked): request: firewall FW-Edge: no rule matches, zone policy d
 
 Altre domande per cui questa rete è fatta: `show dhcp` elenca i due intervalli e i due indirizzi assegnati; `show vlans` ([VLAN](../building/vlans.md#trunk)) mostra il trunk; `browse Portale-Clienti from Cliente-Remoto` raggiunge il portale sul suo indirizzo pubblico, attraverso l'inoltro.
 
+La prima volta che la carichi in un browser, dalla schermata di benvenuto o da «Esempi», un suggerimento in cima al canvas propone una prima domanda: se PC-Vendite raggiunge Web-Gestionale, con il comando `ping Web-Gestionale from PC-Vendite`. «Prova nel terminale» apre il terminale e lo esegue, e il pacchetto attraversa il canvas fino al server, che diventa verde. Il suggerimento arriva dopo il [tour guidato](../getting-started/interface.md#tour), quando il tour compare, si vede una volta sola e la sua crocetta lo chiude. Caricata in inglese, chiede `ping Web-ERP from PC-Sales`.
+
 ## Ufficio {#office}
 
 «Ufficio: due reti e un router»: 7 dispositivi e 6 connessioni, senza riquadri e senza VLAN. Router-1 unisce gli uffici (192.168.10.0/24: SW-Office, PC-1 e PC-2) ai server (192.168.20.0/24: SW-Servers, Web-01 e Mail-01), e la porta del router in ogni rete è il gateway dei dispositivi di quella rete. È quella da cui cominciare: ogni domanda che la riguarda ha una risposta chiara. I suoi nomi sono uguali nelle due lingue, quindi basta un'immagine sola.

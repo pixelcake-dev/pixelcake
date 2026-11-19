@@ -14,6 +14,8 @@ Apri PixelCake in un browser, su [app.pixelcake.dev](https://app.pixelcake.dev).
 2. In «Nome del progetto» scrivi `Prima rete`. Lascia la rete com'è: «Rete» 192.168.1.0, «Subnet mask» 255.255.255.0 e «Gateway» 192.168.1.1.
 3. Premi «Crea progetto». Un avviso in basso a destra dice che il progetto è stato creato, e il suo nome compare al centro della barra dei menu.
 
+Alla prima visita, appena la finestra si chiude, parte un tour guidato: otto brevi fumetti, ognuno accanto a una parte dello schermo, da «Aggiungi dispositivo» a «Presenta». Leggilo con «Avanti», o chiudilo con «Salta»; Aiuto → «Tour guidato» lo riapre ([Il tour guidato](interface.md#tour)).
+
 Se la schermata di benvenuto non compare (hai chiesto di non vederla più), scegli invece File → «Nuovo progetto…».
 
 ## Disegna tre dispositivi {#draw}
@@ -108,5 +110,5 @@ Per eliminarla, riapri la scheda «Regole» e premi il cestino della regola (fer
 - Aggiungi una seconda rete e un router, e scopri a che cosa serve il gateway: [Indirizzi](../building/addresses.md) e [Rotte statiche e di riserva](../services/routes.md).
 - Dividi uno switch in VLAN: [VLAN](../building/vlans.md).
 - Impara i comandi del terminale: [il riferimento del terminale](../terminal/index.md).
-- Guarda all'opera un disegno più grande: le reti di esempio, in Aggiungi → Esempi, sono descritte in [Reti di esempio](../reference/samples.md).
+- Guarda all'opera un disegno più grande: le reti di esempio, in Aggiungi → Esempi, sono descritte in [Reti di esempio](../reference/samples.md). La prima volta che carichi la rete dell'azienda, un suggerimento in cima al canvas propone una prima domanda, `ping Web-Gestionale from PC-Vendite`, e «Prova nel terminale» la esegue.
 - Conserva quello che hai disegnato: [Salvare, aprire, i file](saving-and-files.md). La finestra e le sue parti hanno un nome in [L'interfaccia](interface.md).

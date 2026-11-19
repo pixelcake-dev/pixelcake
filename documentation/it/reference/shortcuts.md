@@ -1,6 +1,6 @@
 ---
 title: "Tastiera e mouse"
-description: "Ogni scorciatoia di tastiera e ogni gesto del mouse, sul canvas, nelle finestre, nel terminale e durante la presentazione."
+description: "Ogni scorciatoia di tastiera e ogni gesto del mouse, sul canvas, nelle finestre, nel terminale, durante la presentazione e nel tour guidato."
 order: 3
 ---
 
@@ -97,6 +97,17 @@ Durante la presentazione nulla si può selezionare, spostare, collegare, copiare
 | Spostare la vista mentre scrivi | Tasto destro + trascina, rotellina del mouse. |
 
 Con il pennarello attivo, il tasto sinistro, una penna o un dito scrivono: nulla si seleziona, si sposta o si collega. [Scrivere sul canvas](../building/marker.md) dice che cosa fa ogni strumento.
+
+## Nel tour guidato {#tour}
+
+| Per | Fai |
+|---|---|
+| Andare al passo successivo | Freccia destra, Invio. Invio su un pulsante preme quel pulsante. |
+| Tornare al passo precedente | Freccia sinistra. |
+| Chiudere il tour, a qualsiasi passo | Esc, oppure «Salta». |
+| Passare da un pulsante del tour all'altro | Tab, Maiusc + Tab: il focus resta nel fumetto. |
+
+Mentre il tour è aperto gli altri tasti dell'app non fanno nulla, e nemmeno un clic fuori dal fumetto. Il tour si riapre da Aiuto → «Tour guidato»: vedi [Il tour guidato](../getting-started/interface.md#tour).
 
 > [!LIMITS]
 > - Non ci sono "seleziona tutto" e "taglia": Ctrl + A e Ctrl + X non fanno nulla.
