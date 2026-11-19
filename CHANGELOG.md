@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-19
+
+Corrections: what writing the documentation and the first days online found, in the board, the engine, the terminal, the YAML and the templates.
+
 ### Added
 - **Duplicate a board**, from the Explorer: the copy comes right after the original, with all it holds (devices, cables, areas, notes, settings), named as a copy.
 - **Rules on a router.** A router has the «Regole» tab (“Rules”) in its window, with the editor of a firewall, and `show rules` and `add rule` in the terminal: its access list. The engine already applied rules written on a router; now they can be seen and changed. As before, what no rule matches goes through.
@@ -22,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Templates.** A template can be made for a kind of device the generic templates cover already. «Ripristina i template di serie» (“Restore built-in templates”) brings back the built-in templates that were deleted, and leaves the others. The card of the custom templates no longer promises Terraform fields.
 - **Impostazioni → Avanzate** (“Settings → Advanced”) lists every shortcut, 36 in five groups, as the documentation does; a test holds the list, the page and the keys the code listens to together.
 - **Ctrl + C, Ctrl + V and Ctrl + S** work with Caps Lock on, and on a keyboard whose letters are not Latin.
+- **The small map** draws a plain square for each device, and no longer the areas.
 
 ### Fixed
 - **A port switched off takes its line down at both ends.** The router at the other end of the cable now sends its replies by its backup route too, as a real router noticing the dead line would; `show routes` marks the routes left with no link. Through a switch the far router does not notice, as with no routing protocol.
