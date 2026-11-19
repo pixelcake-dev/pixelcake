@@ -42,9 +42,19 @@ function compare<T extends { id: string }>(before: T[], after: T[]) {
   };
 }
 
-/** True when only the place changed */
-const movedOnly = <T extends { position: unknown }>({ before, after }: { before: T; after: T }) =>
-  same({ ...before, position: null }, { ...after, position: null });
+/** True when nothing but these fields changed */
+const onlyChanged =
+  (fields: string[]) =>
+  <T extends object>({ before, after }: { before: T; after: T }) => {
+    const without = (item: T) => ({ ...item, ...Object.fromEntries(fields.map((field) => [field, null])) });
+    return same(without(before), without(after));
+  };
+/** A device or an area moved, and nothing else */
+const movedOnly = onlyChanged(['position']);
+/** An area moved or drawn again around its devices (the automatic layout) */
+const followedOnly = onlyChanged(['position', 'size']);
+/** A link whose ends turned to other sides of its devices (the automatic layout) */
+const turnedOnly = onlyChanged(['sourceHandle', 'targetHandle']);
 
 /** What took the board from `before` to `after`, when it can be said in a few words */
 export function describeStep(before: Board, after: Board): StepName | null {
@@ -88,21 +98,26 @@ export function describeStep(before: Board, after: Board): StepName | null {
     if (areas.added.length > 0 || areas.removed.length > 0 || links.added.length > 0 || links.removed.length > 0) {
       return null;
     }
-    if (devices.changed.every(movedOnly) && areas.changed.every(movedOnly)) {
-      if (devices.changed.length + areas.changed.length === 1) {
-        return devices.changed.length === 1
-          ? { kind: 'moveDevice', name: devices.changed[0].after.label }
-          : { kind: 'moveArea', name: areas.changed[0].after.label };
-      }
-      // (the areas of a selection move with its devices)
-      return devices.changed.length > 0 ? { kind: 'moveDevices', count: devices.changed.length } : null;
+    // Devices moved: the areas of a selection move with them, and an automatic
+    // layout draws the areas again around them and turns the ends of the links
+    if (
+      devices.changed.length > 0 &&
+      devices.changed.every(movedOnly) &&
+      areas.changed.every(followedOnly) &&
+      links.changed.every(turnedOnly)
+    ) {
+      return devices.changed.length === 1 && areas.changed.length === 0
+        ? { kind: 'moveDevice', name: devices.changed[0].after.label }
+        : { kind: 'moveDevices', count: devices.changed.length };
+    }
+    if (devices.changed.length === 0 && areas.changed.length === 1 && links.changed.length === 0) {
+      return movedOnly(areas.changed[0])
+        ? { kind: 'moveArea', name: areas.changed[0].after.label }
+        : { kind: 'editArea', name: areas.changed[0].after.label };
     }
     // (a device edited: the links of a port taken away may change with it)
     if (devices.changed.length === 1 && areas.changed.length === 0) {
       return { kind: 'editDevice', name: devices.changed[0].after.label };
-    }
-    if (devices.changed.length === 0 && areas.changed.length === 1 && links.changed.length === 0) {
-      return { kind: 'editArea', name: areas.changed[0].after.label };
     }
     return null;
   }

@@ -67,6 +67,20 @@ describe('the name of a step', () => {
     });
   });
 
+  it('an automatic layout: devices moved, the areas drawn again around them, the ends of links turned', () => {
+    const before = board([a, b, c], [link('l', 'dev-0', 'dev-2')], [area('area-1', 'Core')]);
+    const after = board(
+      [a, b, c].map((device, index) => ({ ...device, position: { x: index * 300, y: 400 } })),
+      [{ ...link('l', 'dev-0', 'dev-2'), sourceHandle: 'bottom', targetHandle: 'top' }],
+      [{ ...area('area-1', 'Core', 20), size: { width: 640, height: 200 } }]
+    );
+    expect(describeStep(before, after)).toEqual({ kind: 'moveDevices', count: 3 });
+    // (an area resized alone is an edit of the area)
+    expect(
+      describeStep(board([], [], [area('area-1', 'Core')]), board([], [], [{ ...area('area-1', 'Core'), size: { width: 400, height: 120 } }]))
+    ).toEqual({ kind: 'editArea', name: 'Core' });
+  });
+
   it('a link added, deleted or edited: by the devices at its ends; several added: how many', () => {
     expect(describeStep(board([a, c]), board([a, c], [link('l', 'dev-0', 'dev-2')]))).toEqual({
       kind: 'addLink',
