@@ -1,6 +1,6 @@
 ---
 title: "The interface"
-description: "The menu bar, the panels on the left, the board, the window of a device, presentation mode and the terminal."
+description: "The menu bar, the panels on the left, the board, undo and redo, the window of a device, presentation mode and the terminal."
 order: 3
 ---
 
@@ -26,7 +26,7 @@ On the left, the logo opens the PixelCake website in a new tab, and the four men
 | Menu | What is in it |
 |---|---|
 | File | “New project…”, “Open…”, “Save”, “Save as…” and “Export image…”. See [Saving, opening, files](saving-and-files.md) and [Exporting an image](../asking/exporting-an-image.md). |
-| Edit | “Copy”, “Paste” and “Enclose in an area”. |
+| Edit | “Undo”, “Redo”, “Copy”, “Paste” and “Enclose in an area”. See [Undo and redo](#undo). |
 | View | “Fit to window”, “Presentation mode”, “Auto-layout” (“Vertical” or “Horizontal”), “Connect devices with no cable”, “Magnify”, “Animation”, “Show areas” and “Marker”. |
 | Help | “Guide”, “Documentation”, “Terminal commands”, “Show the welcome screen”, “About” and “The PixelCake website”. |
 
@@ -62,6 +62,25 @@ The board is where the drawing is. What the mouse does on it:
 - click an empty spot to clear the colours left by the last question.
 
 At the bottom left are the buttons that zoom in, zoom out, fit the drawing to the window and lock the devices in place. At the bottom right the small map shows the whole drawing as coloured squares, with the part in view in white. View → “Fit to window” brings every device into view. Every shortcut is listed in [Keyboard and mouse](../reference/shortcuts.md).
+
+## Undo and redo {#undo}
+
+Edit → “Undo”, or Ctrl + Z, takes back the last change to the drawing. Edit → “Redo”, Ctrl + Y or Ctrl + Shift + Z, makes it again. On a Mac the keys are Cmd + Z and Cmd + Shift + Z. With the pointer on “Undo” or “Redo”, the menu says which change it is, with the name of the device, the link or the area. An entry is grey while there is nothing to take back or to make again.
+
+One action is one step:
+
+- a device added, pasted or deleted, with the cables and the areas that went with it;
+- a drag, from the press of the button to its release, also of several devices together, and a step of the arrow keys;
+- a cable drawn or deleted; an area made, moved, resized, renamed, recoloured or deleted;
+- “Save” in the window of a device or of a link, with everything changed there;
+- a command of the terminal that changes the drawing, such as `set ip` or `connect`;
+- a YAML import, a bulk add, an auto-layout, a “Connect devices with no cable”.
+
+These are not steps, and are not undone: moving or zooming the view, the selection, opening and closing windows, a question and its answer, the failures simulated in a presentation, the network settings of the project (Settings → Network), the theme and the language. The boards themselves are not either: adding, renaming, duplicating or deleting a board.
+
+Each board keeps its own steps, the last 100, for as long as the page is open: switch to another board and back, and they are still there. A new change after an undo takes away what could have been redone. Opening or creating a project starts again with no steps, and so does loading a sample on a board. The steps are not saved, neither in the browser nor in the project file: after a reload of the page there are none. An undo is a change of the project like any other, and leaves it with changes not saved to a file.
+
+In a text field, and in the line of the terminal, Ctrl + Z undoes the text typed, as anywhere. While a window is open over the board, and while presenting, the keys do nothing.
 
 ## The window of a device {#device-window}
 

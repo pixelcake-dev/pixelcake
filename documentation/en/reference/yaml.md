@@ -20,12 +20,12 @@ The second tab takes a file: drop it on the box, or click the box to choose it. 
 
 “Mode:” says where the devices go:
 
-- “Replace the topology” empties the board first, devices, links and areas, and loads the file in its place. When the board holds something, a question comes first: “Replace the topology?”, which says how many devices, links and areas will be removed. “Replace” goes on, “Cancel” or Esc leaves the board as it is. There is no undo after it: save the project to a file before, if the board is worth keeping. The network settings of the project and the names of its VLANs are not touched.
+- “Replace the topology” empties the board first, devices, links and areas, and loads the file in its place. When the board holds something, a question comes first: “Replace the topology?”, which says how many devices, links and areas will be removed. “Replace” goes on, “Cancel” or Esc leaves the board as it is. Edit → “Undo”, or Ctrl + Z, brings the board back as it was, in one step. The network settings of the project and the names of its VLANs are not touched.
 - “Add to the topology” keeps what is on the board and adds the devices, links and areas of the file, with new ids. The new group is put to the right of the drawing that is there, level with its top and 120 units away from it, so it never lies over what you have drawn; the layout inside the group, and the areas around its devices, are kept. A device whose name the board has already is given the first free name (`PC-1` becomes `PC-1-1`), and a notice says which.
 
 “Import” does it, and a notice says how many devices and links came in. The button is off while the file holds no device.
 
-A file written by the app says where each device is drawn (`position`). A file that does not, such as one written by hand or by a script, has its devices laid out on a grid: as many columns as the square root of the number, rounded up, 250 units apart across and 200 down, starting at 100, 100, in the order of the file. View → Auto-layout puts the drawing in order again (it asks first, and cannot be undone).
+A file written by the app says where each device is drawn (`position`). A file that does not, such as one written by hand or by a script, has its devices laid out on a grid: as many columns as the square root of the number, rounded up, 250 units apart across and 200 down, starting at 100, 100, in the order of the file. View → Auto-layout puts the drawing in order again (it asks first, and Ctrl + Z undoes it).
 
 The reader accepts the file as the app writes it, with everything under a `pixelcake:` key, and also the same lists at the top of the file with no `pixelcake:` around them. What it does not need is read as a default: a device with no name is `Device-1`, `Device-2`…, one with no type is a `PC`, an interface with no state is on. What is wrong is said in the warnings:
 

@@ -36,4 +36,4 @@ Alla fine i dispositivi nuovi sono selezionati, così tutta la serie si può tra
 > [!LIMITS]
 > - Una serie è creata con i template generici, non con quelli personalizzati, e senza un vendor, una posizione o una nota propri.
 > - Non c'è un campo per l'indirizzo: gli indirizzi sono i successivi liberi, in ordine, e dopo si cambiano un dispositivo alla volta.
-> - Ogni volta la finestra crea una serie sola. Non si può annullare: una serie sbagliata si elimina premendo Canc, perché è già selezionata.
+> - Ogni volta la finestra crea una serie sola. Una serie sbagliata si toglie con Modifica → «Annulla» (Ctrl + Z), che la toglie tutta, oppure con Canc, perché è già selezionata.

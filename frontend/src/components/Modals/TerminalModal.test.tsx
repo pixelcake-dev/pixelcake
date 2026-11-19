@@ -313,6 +313,28 @@ describe('TerminalModal', () => {
     }
   });
 
+  it('leaves the context of a device that is no longer on the board (deleted, or taken back by an undo)', () => {
+    const before = useNetworkStore.getState().devices;
+    useNetworkStore.setState({
+      devices: [{ id: 'pc-a', label: 'PC-1', type: 'PC', position: { x: 0, y: 0 } } as NetworkDevice],
+    });
+    try {
+      const input = openTerminal();
+      executeCommandMock.mockReturnValueOnce({ lines: [], context: { deviceLabel: 'PC-1' } });
+      typeCommand(input, 'use PC-1');
+      expect(screen.getByText('PC-1>')).toBeInTheDocument();
+
+      act(() => useNetworkStore.setState({ devices: [] }));
+
+      expect(screen.getByText('left PC-1 — it is no longer on the board')).toBeInTheDocument();
+      expect(screen.getByText('pixelcake>')).toBeInTheDocument();
+      typeCommand(input, 'show devices');
+      expect(executeCommandMock).toHaveBeenLastCalledWith('show devices', { deviceLabel: null });
+    } finally {
+      useNetworkStore.setState({ devices: before });
+    }
+  });
+
   it('reveals live trace output as the packet animation advances', () => {
     const input = openTerminal();
     executeCommandMock.mockImplementationOnce((_rawInput, context) => ({

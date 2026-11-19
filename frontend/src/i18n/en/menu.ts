@@ -16,6 +16,31 @@ export const menu: Dictionary['menu'] = {
 
   edit: {
     title: 'Edit',
+    undo: 'Undo',
+    redo: 'Redo',
+    /** Under the pointer: what undo would take back, “Undo: delete “PC-3”” */
+    undoNamed: (text: string) => `Undo: ${text}`,
+    /** Under the pointer: what redo would do again */
+    redoNamed: (text: string) => `Redo: ${text}`,
+    /** What a step did, after “Undo:” or “Redo:” (utils/historySteps.ts) */
+    steps: {
+      addDevice: (name: string) => `add “${name}”`,
+      deleteDevice: (name: string) => `delete “${name}”`,
+      moveDevice: (name: string) => `move “${name}”`,
+      editDevice: (name: string) => `edit “${name}”`,
+      addDevices: (count: number) => (count === 1 ? 'add 1 device' : `add ${amount(count)} devices`),
+      deleteDevices: (count: number) => (count === 1 ? 'delete 1 device' : `delete ${amount(count)} devices`),
+      moveDevices: (count: number) => (count === 1 ? 'move 1 device' : `move ${amount(count)} devices`),
+      addLinks: (count: number) => (count === 1 ? 'add 1 link' : `add ${amount(count)} links`),
+      addLink: (source: string, target: string) => `add the link between “${source}” and “${target}”`,
+      deleteLink: (source: string, target: string) => `delete the link between “${source}” and “${target}”`,
+      editLink: (source: string, target: string) => `edit the link between “${source}” and “${target}”`,
+      /** `name` is empty for an area without a name */
+      addArea: (name: string) => (name ? `add the area “${name}”` : 'add an area'),
+      deleteArea: (name: string) => (name ? `delete the area “${name}”` : 'delete an area'),
+      moveArea: (name: string) => (name ? `move the area “${name}”` : 'move an area'),
+      editArea: (name: string) => (name ? `edit the area “${name}”` : 'edit an area'),
+    },
     copy: 'Copy',
     paste: 'Paste',
     enclose: 'Enclose in an area',
@@ -64,10 +89,10 @@ export const menu: Dictionary['menu'] = {
   lightTheme: 'Switch to light theme',
   darkTheme: 'Switch to dark theme',
 
-  /** Asked before the automatic layout: it moves every device, and cannot be undone */
+  /** Asked before the automatic layout: it moves every device (Edit → Undo puts them back) */
   layoutQuestion: {
     title: 'Lay the drawing out again?',
-    detail: 'Every device will be moved, and the areas drawn again around their devices. This cannot be undone.',
+    detail: 'Every device will be moved, and the areas drawn again around their devices. Edit → Undo puts everything back.',
     confirm: 'Lay out',
   },
 

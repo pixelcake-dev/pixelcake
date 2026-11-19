@@ -185,7 +185,7 @@ Un template salvato prima che esistessero i disegni dei dispositivi ha in `icon`
 I campi che la specifica non elenca si conservano su dispositivi, porte, schede, connessioni e template quando un file viene aperto e salvato di nuovo; al livello più alto, in un canvas, nelle impostazioni e su un riquadro no.
 
 > [!LIMITS]
-> - Il file contiene il progetto, non la cronologia: non c'è l'annullamento, e un file salvato è lo stato intero, non un elenco di modifiche.
+> - Il file contiene il progetto, non la cronologia: i passi da annullare restano nella pagina, e un file salvato è lo stato intero, non un elenco di modifiche.
 > - Due schede del browser aperte sullo stesso progetto non vedono le modifiche l'una dell'altra: vince l'ultima che scrive. Il file è aggiornato solo all'ultimo salvataggio.
 > - I guasti simulati appartengono a una presentazione e non sono nel file.
 > - Il formato è proprio di PixelCake. [L'esportazione in YAML](yaml.md) è la via per passare la rete ad altri strumenti; non contiene le posizioni, i riquadri né le impostazioni.

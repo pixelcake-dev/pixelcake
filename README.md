@@ -23,7 +23,7 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 
 ## What it does
 
-- **Draw.** Devices, links, ports and network cards on an interactive canvas. 24 device types and 5 link types are built in and can be customised, each device type with a drawing of its own: PC, laptop, smartphone, tablet, IP phone, printer and IP camera; switch, router, firewall, access point, IoT gateway, load balancer and the Internet; a server and six kinds of it (mail, web, DNS, DHCP, proxy, VPS); database, NAS and S3 storage. The upper part of a drawing says the state of the device by its colour: selected, where an answer arrives or stops, waiting for an address, taken as broken. Labelled areas behind groups of devices (Core, Edge, Offices), auto-layout, multi-selection, copy and paste, and several boards per project.
+- **Draw.** Devices, links, ports and network cards on an interactive canvas. 24 device types and 5 link types are built in and can be customised, each device type with a drawing of its own: PC, laptop, smartphone, tablet, IP phone, printer and IP camera; switch, router, firewall, access point, IoT gateway, load balancer and the Internet; a server and six kinds of it (mail, web, DNS, DHCP, proxy, VPS); database, NAS and S3 storage. The upper part of a drawing says the state of the device by its colour: selected, where an answer arrives or stops, waiting for an address, taken as broken. Labelled areas behind groups of devices (Core, Edge, Offices), auto-layout, multi-selection, copy and paste, undo and redo, and several boards per project.
 - **Configure.** Addresses on every router port and network card, static routes, VLANs port by port (access and trunk), each with a name given once for the whole project, firewall zones and ordered rules, NAT towards the Internet and port forwards for what is reached from it, DHCP for the devices that take their address by themselves, DNS records on a server so that a device can be called by name, and a DNS server of the project that new devices start with. A free note on any device, read by resting the pointer on it.
 - **Test.** Ping, web, download and email flows are followed hop by hop and animated on the drawing. When a flow fails, the packet stops at the device that drops it and the reason names the port, the route or the rule.
 - **Type.** A built-in terminal with a small vendor-neutral command language: `ping`, `trace`, `browse`, `resolve`, `show routes`, `add route`, `add rule`, `interface 3 access 10` and more. Commands that change the network edit the same drawing you see.
@@ -165,7 +165,7 @@ Opened from a presentation (the “Export image” button on its bar), it shows 
 - **A DHCP lease is worked out, not negotiated.** It depends on the drawing alone: there are no lease times, no renewal and no reservations, so the addresses follow the drawing: putting on DHCP a device that was drawn before the others moves the addresses of those after it. A server gives addresses to its own network only (no relay through a router), and a router or firewall port cannot take its own address from DHCP. A simulated failure does not take an address away.
 - **DNS is one server, asked every time.** A network card names one DNS server: there is no second one to fall back on. A server answers only for the names written on it: it does not pass a question on to another server, and a public DNS server that is not in the drawing is nobody. Nothing is cached, so every question that uses a name looks it up again. There is no reverse lookup, and there are no aliases or wildcards. Names are for the terminal: the simulation panel and the presentation choose devices from menus.
 - **The Internet symbol is a stand-in.** It carries public addresses, with a note, and refuses private ones, as the Internet does. A Cloud symbol with any other name carries everything, with a note.
-- **No undo.** It does not exist yet.
+- **Undo lives in the page.** Each board keeps its last 100 steps while the page is open: a reload, opening a project or loading a sample starts with none. The network settings of the project and the boards themselves (added, renamed, deleted) are not undone.
 - **An image is one board.** A project with several boards is exported one board at a time. Its texts are set in the typeface of the computer, not in the one of the interface, which an image cannot carry along: the same image opened on another computer can have slightly different letters. A PNG of a very large drawing is reduced to what the browser can paint, and the dialog says so.
 - **The YAML format is PixelCake's own.** Device names that look like numbers or booleans, and duplicate names, do not survive an export and import.
 - **The Terraform export cannot be applied.** It uses placeholder resource types and no provider. Reading existing Terraform state is not implemented.
@@ -224,8 +224,7 @@ Today the first two exist in a basic form and the third is only a sketch. The st
 
 ## What is next
 
-1. Undo and redo.
-2. In the engine: spanning tree.
+1. In the engine: spanning tree.
 
 ## Contributing
 

@@ -12,6 +12,7 @@ import { createRedundancySample } from '@/utils/sampleRedundancy';
 import { createMultinationalSample } from '@/utils/sampleMultinational';
 import { Plug, Package, SquareDashed } from 'lucide-react';
 import { addAreaInView } from '@/utils/areaActions';
+import { loadSampleNetwork } from '@/utils/sampleActions';
 import type { DeviceType } from '@/types/network';
 import { askConfirm } from '@/store/confirmStore';
 import { useT } from '@/i18n';
@@ -29,11 +30,8 @@ const DevicePanel = () => {
   const devices = useNetworkStore((state) => state.devices);
   const areaCount = useNetworkStore((state) => state.areas.length);
   const markCount = useNetworkStore((state) => state.marks.length);
-  const loadSample = useNetworkStore((state) => state.loadSample);
   // (the size of the largest sample is said with its entry, counted on the sample itself)
   const multinationalDevices = useMemo(() => createMultinationalSample().devices.length, []);
-  const clearAllDevices = useNetworkStore((state) => state.clearAllDevices);
-  const triggerFitView = useNetworkStore((state) => state.triggerFitView);
 
   const [activeTab, setActiveTab] = useState<'devices' | 'templates'>('devices');
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,10 +83,8 @@ const DevicePanel = () => {
       }));
 
     if (shouldLoad) {
-      clearAllDevices();
-      loadSample(create());
-      // Whole in the window, whatever part of the board was on screen
-      triggerFitView();
+      // (whole in the window; the steps of the drawing it replaces cannot be undone over it)
+      loadSampleNetwork(create());
     }
   };
 

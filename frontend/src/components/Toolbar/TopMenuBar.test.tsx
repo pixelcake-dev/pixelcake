@@ -147,9 +147,9 @@ describe('TopMenuBar', () => {
     it('are not in the menus any more', () => {
       render(<TopMenuBar />);
 
+      // (Annulla came back in 0.9.2, as an entry that works: TopMenuBar.undo.test.tsx)
       for (const removed of [
         'Esporta come PNG',
-        'Annulla',
         'Ripristina',
         'Taglia',
         'Note Programma',
@@ -163,7 +163,7 @@ describe('TopMenuBar', () => {
         'Salva con nome…',
         'Esporta immagine…',
       ]);
-      expect(entriesOf('Modifica')).toEqual(['Copia', 'Incolla', 'Racchiudi in un riquadro']);
+      expect(entriesOf('Modifica')).toEqual(['Annulla', 'Ripeti', 'Copia', 'Incolla', 'Racchiudi in un riquadro']);
       expect(entriesOf('Aiuto')).toEqual([
         'Guida',
         'Documentazione',
@@ -190,8 +190,9 @@ describe('TopMenuBar', () => {
     it('the entries of Modifica are the only ones that can be off, and only while they cannot work', () => {
       drawTwoDevices();
       const { container } = render(<TopMenuBar />);
+      // (Annulla and Ripeti follow the history of the board: TopMenuBar.undo.test.tsx)
       const disabled = () =>
-        Array.from(container.querySelectorAll('li.disabled')).map(li => li.textContent);
+        Array.from(container.querySelectorAll('li.disabled:not(.menu-entry-keys)')).map(li => li.textContent);
 
       // nothing selected, nothing copied
       expect(disabled()).toEqual(['Copia', 'Incolla', 'Racchiudi in un riquadro']);

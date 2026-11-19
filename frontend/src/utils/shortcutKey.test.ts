@@ -32,6 +32,15 @@ describe('shortcutLetter', () => {
     expect(shortcutLetter(key({ key: 'c', code: 'KeyC', ctrlKey: true, altKey: true }))).toBeNull();
   });
 
+  it('with Shift, only for a shortcut that has Shift too (Ctrl+Shift+Z): Caps Lock does not count', () => {
+    const withShift = { withShift: true };
+    expect(shortcutLetter(key({ key: 'Z', code: 'KeyZ', ctrlKey: true, shiftKey: true }), withShift)).toBe('z');
+    expect(shortcutLetter(key({ key: 'z', code: 'KeyZ', ctrlKey: true, shiftKey: true }), withShift)).toBe('z');
+    expect(shortcutLetter(key({ key: 'Я', code: 'KeyZ', metaKey: true, shiftKey: true }), withShift)).toBe('z');
+    expect(shortcutLetter(key({ key: 'z', code: 'KeyZ', ctrlKey: true }), withShift)).toBe('z');
+    expect(shortcutLetter(key({ key: 'z', code: 'KeyZ', ctrlKey: true, altKey: true, shiftKey: true }), withShift)).toBeNull();
+  });
+
   it('is none for a key that is not a letter', () => {
     expect(shortcutLetter(key({ key: 'Delete', code: 'Delete', ctrlKey: true }))).toBeNull();
     expect(shortcutLetter(key({ key: '1', code: 'Digit1', ctrlKey: true }))).toBeNull();

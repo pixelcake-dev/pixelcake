@@ -165,7 +165,7 @@ const ImportExportModal = () => {
     }
 
     if (importMode === 'replace') {
-      // (the canvas is emptied, areas included, and there is no undo: say what goes)
+      // (the canvas is emptied, areas included: say what goes; Modifica → Annulla brings it back)
       const current = useNetworkStore.getState();
       // (what is written with the marker goes too: it was written over the old drawing)
       if (current.devices.length + current.connections.length + current.areas.length + current.marks.length > 0) {

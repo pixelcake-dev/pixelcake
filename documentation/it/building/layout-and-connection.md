@@ -10,7 +10,7 @@ Due voci del menu Vista lavorano su tutto il disegno. «Disposizione automatica�
 
 ![La rete di esempio della sede viene disposta in orizzontale, poi in verticale. Ogni volta compare la domanda Disporre di nuovo il disegno?, e i suoi riquadri, Internet, DMZ e Rete interna, si spostano insieme ai loro dispositivi.](../../media/layout-and-connection/layout.it.mp4 "Vista → Disposizione automatica → Orizzontale, poi Verticale, sulla rete di esempio della sede. I riquadri seguono i loro dispositivi.")
 
-Scegli Vista → «Disposizione automatica» e poi «Verticale» o «Orizzontale». Prima PixelCake chiede «Disporre di nuovo il disegno?», perché ogni dispositivo viene spostato e **non si può annullare**. Premi «Disponi» per andare avanti, oppure «Annulla». Alla fine il disegno viene inquadrato per intero.
+Scegli Vista → «Disposizione automatica» e poi «Verticale» o «Orizzontale». Prima PixelCake chiede «Disporre di nuovo il disegno?», perché ogni dispositivo viene spostato. Premi «Disponi» per andare avanti, oppure «Annulla». Alla fine il disegno viene inquadrato per intero. Modifica → «Annulla», o Ctrl + Z, rimette ogni dispositivo dov'era, in un passo solo.
 
 La disposizione segue la rete, non il modo in cui era stato fatto il disegno:
 
@@ -57,4 +57,3 @@ Mai collegati in automatico: router e firewall tra loro, Internet, e i dispositi
 > [!LIMITS]
 > - La disposizione è una buona ipotesi di dove un tecnico di rete metterebbe i dispositivi, non una promessa: segue i cavi e i riquadri, e non sa nulla di armadi, piani o distanze.
 > - Il collegamento automatico sceglie per indirizzo, VLAN e distanza. Non sa che cosa intendevi: controlla i cavi che ha fatto, nella finestra di un dispositivo o con `show connections`.
-> - Nessuno dei due si può annullare.

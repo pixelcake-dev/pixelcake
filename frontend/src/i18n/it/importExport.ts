@@ -56,7 +56,7 @@ export const importExport = {
     /** The question before «Sostituisci topologia» empties the canvas: what will be removed */
     replaceTitle: 'Sostituire la topologia?',
     replaceDetail: (deviceCount: number, connectionCount: number, areaCount: number) =>
-      `Sul canvas ci sono ${devices(deviceCount)}, ${connections(connectionCount)} e ${areas(areaCount)}: verranno tolti e sostituiti dal contenuto del file. Non si può annullare.`,
+      `Sul canvas ci sono ${devices(deviceCount)}, ${connections(connectionCount)} e ${areas(areaCount)}: verranno tolti e sostituiti dal contenuto del file. Modifica → Annulla li rimette.`,
     replaceConfirm: 'Sostituisci',
     /** After «Aggiungi alla topologia»: devices of the file that had a name already on the canvas */
     renamedNotice: (renamed: string) =>

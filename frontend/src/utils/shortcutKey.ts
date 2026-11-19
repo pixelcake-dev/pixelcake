@@ -7,10 +7,13 @@
  * the same key all the same, so the letter is read in lower case, and from
  * the place of the key (`event.code`, KeyC) when what it writes is not a
  * Latin letter. With Shift or Alt it is another shortcut, which belongs to
- * the browser (Ctrl+Shift+V pastes plain text): there is no letter then.
+ * the browser (Ctrl+Shift+V pastes plain text): there is no letter then,
+ * unless the shortcut is one with Shift too (`withShift`: Ctrl+Shift+Z
+ * redoes), and the caller reads `event.shiftKey` itself.
  */
-export function shortcutLetter(event: KeyboardEvent): string | null {
-  if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey) return null;
+export function shortcutLetter(event: KeyboardEvent, options: { withShift?: boolean } = {}): string | null {
+  if (!(event.ctrlKey || event.metaKey) || event.altKey) return null;
+  if (event.shiftKey && !options.withShift) return null;
   return letterOf(event);
 }
 
@@ -30,4 +33,9 @@ function letterOf(event: KeyboardEvent): string | null {
   if (/^[a-z]$/i.test(event.key)) return event.key.toLowerCase();
   const place = /^Key([A-Z])$/.exec(event.code ?? '');
   return place ? place[1].toLowerCase() : null;
+}
+
+/** True on a Mac (and an iPad, an iPhone): Cmd takes the place of Ctrl there */
+export function isApple(): boolean {
+  return /Mac|iPhone|iPad|iPod/.test(window.navigator.platform ?? '');
 }

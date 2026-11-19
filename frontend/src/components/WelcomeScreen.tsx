@@ -6,8 +6,8 @@
 
 import { useState, useEffect } from 'react';
 import { useUIStore } from '@/store/uiStore';
-import { useNetworkStore } from '@/store/networkStore';
 import { createCompanySample } from '@/utils/sampleCompany';
+import { loadSampleNetwork } from '@/utils/sampleActions';
 import { openProject, requestNewProject } from '@/utils/projectFileAccess';
 import Logo from '@/components/ui/Logo';
 import { GITHUB_REPO, GITHUB_ISSUES, siteUrl } from '@/constants/links';
@@ -51,9 +51,7 @@ const WelcomeScreen = () => {
 
     // The network of a small company, whole in the window whatever part of
     // the board was on screen before
-    const networkStore = useNetworkStore.getState();
-    networkStore.loadSample(createCompanySample());
-    networkStore.triggerFitView();
+    loadSampleNetwork(createCompanySample());
   };
 
   const handleDocumentation = (e: React.MouseEvent) => {

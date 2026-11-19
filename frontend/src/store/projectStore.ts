@@ -23,6 +23,7 @@ import { safeJSONStorage } from '@/utils/safeStorage';
 import { getT } from '@/i18n';
 import { useNetworkStore } from './networkStore';
 import { useSimulationStore } from './simulationStore';
+import { clearHistory, forgetCanvasHistory, nameUnnamedBoard } from './historyStore';
 import { useTemplateStore } from './templateStore';
 
 export interface NewProjectInput {
@@ -152,6 +153,8 @@ export const useProjectStore = create<ProjectStore>()(
         const network = useNetworkStore.getState();
         network.replaceCanvas(canvas.id, canvas, { ...DEFAULT_NETWORK_SETTINGS, ...settings });
         network.markSaved();
+        // (nothing of another project is undone over this one)
+        clearHistory();
       },
 
       loadProject: project => {
@@ -172,6 +175,7 @@ export const useProjectStore = create<ProjectStore>()(
         const network = useNetworkStore.getState();
         network.replaceCanvas(active.id, active, project.settings);
         network.markSaved();
+        clearHistory();
       },
 
       renameProject: name => {
@@ -246,6 +250,8 @@ export const useProjectStore = create<ProjectStore>()(
         } else {
           set({ canvases: remaining });
         }
+        // (its steps go with it: a canvas added later may get its id)
+        forgetCanvasHistory(canvasId);
         network.markChanged();
         return true;
       },
@@ -368,3 +374,6 @@ function adoptLiveCanvas() {
 }
 
 adoptLiveCanvas();
+// (a canvas on screen with no id of its own is the active one: its steps of
+// undo are kept under that id, and found again after a switch of canvas)
+nameUnnamedBoard(useProjectStore.getState().activeCanvasId);

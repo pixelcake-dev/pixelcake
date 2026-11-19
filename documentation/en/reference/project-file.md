@@ -185,7 +185,7 @@ A template saved before the drawings of the devices existed has the name of an i
 Fields the specification does not list are kept on devices, ports, cards, links and templates when a file is opened and saved again; at the top level, in a board, in the settings and on an area they are not.
 
 > [!LIMITS]
-> - The file holds the project, not the history: there is no undo, and a file saved is the whole state, not a list of changes.
+> - The file holds the project, not the history: the steps of undo stay in the page, and a file saved is the whole state, not a list of changes.
 > - Two browser tabs open on the same project do not see each other's changes: the last one to write wins. The file is only as new as its last save.
 > - Simulated failures belong to a presentation and are not in the file.
 > - The format is PixelCake's own. [The YAML export](yaml.md) is the way to hand the network to other tools; it does not carry the positions, the areas or the settings.

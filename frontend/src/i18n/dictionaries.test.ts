@@ -51,6 +51,7 @@ const SAME_IN_BOTH = new Set([
   'networkSettings.simulation.cloud',
   'newProject.network.mask',
   'advanced.shortcuts.rows.save.keys',
+  'advanced.shortcuts.rows.undo.keys',
   'advanced.shortcuts.rows.copy.keys',
   'advanced.shortcuts.rows.paste.keys',
   'advanced.shortcuts.rows.release.keys',

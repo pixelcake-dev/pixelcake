@@ -18,7 +18,7 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 - `marks`: what is written on the canvas with the marker («Pennarello», see [The marker](#the-marker-pennarello)); `addMark` (a mark finished; refused, with null, when it is no mark), `removeMarks` (one sweep of the eraser) and `clearMarks` are one edit each. Persisted, in the snapshot of the canvas (left out when empty) and so in the project file; `clearAllDevices` and `loadTopology` take them away with the drawing they were written on
 - `canvasId`: which canvas of the project this data is. Persisted next to the data, so the two stores cannot be paired wrongly after a reload
 - `hasUnsavedChanges`: true when the project changed since it was last saved to, or opened from, a file. Every edit sets it through `markChanged()`; moving the viewport does not. `getChangeToken()` / `markSaved(token)` keep it set when an edit lands while a file is being written
-- `getCanvasSnapshot()` / `replaceCanvas()`: used by projectStore to take the canvas off the screen and put another one on
+- `getCanvasSnapshot()` / `replaceCanvas()`: used by projectStore to take the canvas off the screen and put another one on. Every key the snapshot has (but `viewport`) is a field of the store with the same name: it is what the history of undo covers (see historyStore), so a field added to a board there is undone and redone with nothing else written for it
 - LocalStorage key: `pixelcake-network-v2`
 
 ### projectStore (`frontend/src/store/projectStore.ts`)
@@ -44,6 +44,15 @@ All stores use Zustand. There is no server: what must survive a reload is kept i
 ### markerStore (`frontend/src/store/markerStore.ts`)
 - The marker («Pennarello»): `active`, the `tool` (a kind of mark or the eraser), `color`, `width`; `erasing` (the marks the eraser is passing over, shown faded). Not persisted
 - `presenterMarks`: what the presenter writes while presenting (`addPresenterMark`, `removePresenterMarks`, `clearPresenterMarks`), never in the canvas nor in a file. presentationStore puts the pen away and forgets them on `enter()` and `exit()`, and forgets them in `resetCanvasState()` (another canvas on screen)
+
+### historyStore (`frontend/src/store/historyStore.ts`)
+- Undo and redo of the drawing: `undo()`, `redo()`, and `useHistoryStore` for the menu (`canUndo`, `canRedo`, and what each would take back or do again, `undoStep`, `redoStep`, named by `utils/historySteps.ts` from the board before and after: one device, link or area added, deleted, moved or edited, several devices, several links; anything else has no name). Not persisted: the history lives in the page, for the session, and is not in the project file
+- **What a step holds**: the board as the project file keeps it, every field of `getCanvasSnapshot()` but the viewport, read from networkStore under the same name (devices, connections, areas, the counters, and whatever a board is given later). A step is the board before it, by reference: the stores never change an object in place, so what a step did not change is shared with the steps around it, not copied (a drag of one device on the multinational costs a list of 181 and one device). A step holds lists of its own, with the same things in them: the engine keeps what it worked out for a list of the store (the leases of DHCP, in a `WeakMap` keyed by the list) for as long as the list is around, and the history would keep it alive otherwise. On the multinational 100 steps take about 1.6 MB of the heap
+- **What a step is**: historyStore listens to networkStore (`subscribe`), so whatever changes those fields is recorded without being asked, from the canvas, a window, the terminal or a menu. The changes made in one task of the page are one step (closed in a microtask): a save in a window, a paste, a bulk add, an import, a command of the terminal, the automatic layout or connection, however many writes each makes. While a button of the pointer is held, everything until it is let go is one step (`beginGesture`, `endGesture`: a drag of devices, an area moved or resized). A step that leaves the board as it was (a window saved with nothing changed) is dropped
+- **Not a step**: what is not in those fields: the view, the selection, the windows, the network settings of the project (`globalNetworkSettings`: project-wide, like the canvases themselves, which are added, renamed, duplicated and deleted without a step), presentation mode, the preferences of the browser. A board that takes the place of another (a change of `canvasId` or of `canvasRevision`: a switch of canvas, a project opened) is not a step: the step under way is closed on the board it was made on
+- **A history for each board**, by canvas id, the last `HISTORY_LIMIT` (100) steps; switching canvas keeps it for the session. `clearHistory()` when a project is opened or created (projectStore), `clearCanvasHistory()` when a sample takes the place of the board (`loadSampleNetwork`, `utils/sampleActions.ts`), `forgetCanvasHistory(id)` when a canvas is deleted. While networkStore keeps no id for the board on screen (a first start, a drawing older than projects) it is the active canvas, which projectStore names at start-up (`nameUnnamedBoard`)
+- **Undo and redo** are refused while presenting and while a button of the pointer is held. The board is put back with `setState`; the counters only go up (an id is never given twice on a board), the selection keeps what is still there, the context menus close, and so does the window of a device or a link that is gone. It is an edit like any other: `markChanged()`, and localStorage is written
+- **The keys** (`utils/undoActions.ts`, `registerUndoShortcuts`, mounted by App with the presses of the pointer): Ctrl+Z undoes, Ctrl+Y and Ctrl+Shift+Z redo, Cmd on a Mac (`shortcutLetter(event, { withShift: true })`). In a text field, a text area or the line of the terminal the keys are the browser's; nothing happens while presenting, or while a question or a window other than the terminal is open
 
 ### uiStore (`frontend/src/store/uiStore.ts`)
 - UI state, modal controls (including `newProject`), context menus, the tab the guide opens on (`helpTab`, `openHelp(tab)`)
@@ -167,6 +176,7 @@ Writing and drawing by hand over the drawing, as on a whiteboard: a line, words,
 
 ### Top Menu Bar (`frontend/src/components/Toolbar/TopMenuBar.tsx`)
 - File Menu: Nuovo progetto…, Apri…, Salva (Ctrl+S), Salva con nome…, Esporta immagine…
+- Modifica Menu: Annulla and Ripeti, each with its keys beside it (`.menu-entry-shortcut`: `Ctrl+Z`, `Ctrl+Y`; `⌘Z`, `⇧⌘Z` on a Mac) and, under the pointer, the step it would take back or do again («Annulla: elimina «PC-3»»); Copia, Incolla, Racchiudi in un riquadro
 - Aiuto Menu: Guida, Documentazione (the documentation in a new tab, `docsUrl` of `constants/links.ts`), Comandi del terminale, Mostra la schermata di benvenuto, Informazioni, Il sito di PixelCake
 - In the middle of the bar, the project that is open: its name, the canvas on screen when there is more than one, a dot while there are changes not saved to a file. A click opens the Explorer
 - No entry is there to announce a feature: an entry that cannot act (nothing selected to copy) is disabled only for as long as that is true
@@ -414,6 +424,10 @@ before routing existed gives the answers it gave.
   language is `NCL_VERSION` in `types.ts`: the banner of `help` reads it, and
   a test holds the title of the document to it. The last line of `help` is the
   address of the terminal reference (`REFERENCE_URL`), a page a test holds it to.
+- A command that changes the drawing is one step of undo, like any edit
+  (see historyStore). A device that leaves the board while the terminal is in
+  its context (deleted, or taken back by an undo) takes the context with it:
+  `TerminalModal` says so and the prompt is `pixelcake>` again.
 - Commands that only read (`show`, `ping`, `trace`…) look at the drawing with
   its leases filled in; commands that write work on the drawing as it is
   kept, so that a leased address is never written back.
@@ -474,7 +488,7 @@ light or dark whatever the theme, a vector file, and a sharp PNG of any size.
   the caption (`captionOf` in `utils/presentation.ts`).
 
 ### Automatic layout (`frontend/src/utils/autoLayout.ts`, `layoutRoom.ts`)
-Vista → «Disposizione automatica» → «Verticale» / «Orizzontale» (`arrangeDrawing(input, 'TB' | 'LR', templates)`). The menu asks first (`askConfirm`): every device is moved and it cannot be undone; afterwards the view is fitted to the drawing.
+Vista → «Disposizione automatica» → «Verticale» / «Orizzontale» (`arrangeDrawing(input, 'TB' | 'LR', templates)`). The menu asks first (`askConfirm`): every device is moved (one step, which Modifica → Annulla takes back); afterwards the view is fitted to the drawing.
 - **Levels from the network** (`networkLevels`). In each group of devices cabled together the top is where its traffic leaves: its clouds; without one, its firewalls; then its routers; then the switch with the most cables (or, with no switch, the device with the most). When some routers or firewalls are cabled only to routers, firewalls and clouds (the backup router between two sites), those alone are the top. A device is one level lower for each cable from the nearest top; a device with no cable has no level.
 - **Every cable from its upper end down**, whichever end it was drawn from (dagre's `minlen` is the difference of the levels). A cable between two devices of one level is not given to dagre: with a `minlen` of 0 its ranker puts one end a rank under the other, and the other rankers fail on it. Each end stays on its level, held there by its cable to the level above, and the two are side by side.
 - **Areas are groups of the layout** (dagre compound graph). A device belongs to the smallest area that holds it, an area to the smallest area around it. Each area is drawn again around what it holds, with the margins of «Racchiudi in un riquadro» (`areaAround`), the inner ones first, whether areas are shown or hidden. Devices with no cable (and in no area) are put in rows under the rest, and areas with no device under them, as large as they were.
@@ -677,7 +691,8 @@ PixelCake has no server. A project lives in the browser while you work and is sa
 Edit           -> networkStore -> localStorage (at once), hasUnsavedChanges = true
 Switch canvas  -> projectStore commits the canvas on screen, then loads the other one
 Save           -> projectStore.buildProjectFile() -> serializeProject() -> file, hasUnsavedChanges = false
-Open           -> file -> parseProjectFile() -> projectStore.loadProject() -> networkStore.replaceCanvas()
+Open           -> file -> parseProjectFile() -> projectStore.loadProject() -> networkStore.replaceCanvas(), history cleared
+Undo, redo     -> historyStore puts the board back -> networkStore -> localStorage, hasUnsavedChanges = true
 ```
 
 ### Icons and what travels with them

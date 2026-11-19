@@ -10,7 +10,7 @@ Two entries of the View menu work on the whole drawing. “Auto-layout” moves 
 
 ![The site sample network is laid out horizontally, then vertically. The question Lay the drawing out again? appears each time, and its areas, Internet, DMZ and Internal network, move together with their devices.](../../media/layout-and-connection/layout.en.mp4 "View → Auto-layout → Horizontal, then Vertical, on the site sample. The areas follow their devices.")
 
-Choose View → “Auto-layout” and then “Vertical” or “Horizontal”. PixelCake asks first, “Lay the drawing out again?”, because every device is moved and **this cannot be undone**: there is no undo on the board. Press “Lay out” to go on, or “Cancel”. When it is done the whole drawing is brought into view.
+Choose View → “Auto-layout” and then “Vertical” or “Horizontal”. PixelCake asks first, “Lay the drawing out again?”, because every device is moved. Press “Lay out” to go on, or “Cancel”. When it is done the whole drawing is brought into view. Edit → “Undo”, or Ctrl + Z, puts every device back where it was, in one step.
 
 The layout reads the network and not how the drawing was made:
 
@@ -57,4 +57,3 @@ Never cabled automatically: routers and firewalls between themselves, the Intern
 > [!LIMITS]
 > - The layout is a good guess at where a network engineer would put the devices, not a promise: it follows the cables and the areas, and knows nothing of racks, floors or distances.
 > - The automatic connection chooses by address, VLAN and distance. It does not know what you meant: check the cables it made, in the window of a device or with `show connections`.
-> - Neither can be undone.

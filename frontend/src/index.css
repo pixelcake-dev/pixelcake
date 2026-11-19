@@ -1172,6 +1172,19 @@ body.react-flow-connecting .connect-point:hover::before {
   pointer-events: none;
 }
 
+/* An entry with its keys beside it: Modifica → Annulla, Ripeti */
+.dropdown-content li.menu-entry-keys {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.menu-entry-shortcut {
+  color: var(--text-color-light);
+  font-size: 12px;
+}
+
 /* Dropdown item - Enabled state (explicit for clarity) */
 .dropdown-content li:not(.disabled) {
   color: var(--text-color);

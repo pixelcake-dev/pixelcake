@@ -1,6 +1,6 @@
 ---
 title: "L'interfaccia"
-description: "La barra dei menu, i pannelli a sinistra, il canvas, la finestra di un dispositivo, la presentazione e il terminale."
+description: "La barra dei menu, i pannelli a sinistra, il canvas, annullare e ripetere, la finestra di un dispositivo, la presentazione e il terminale."
 order: 3
 ---
 
@@ -26,7 +26,7 @@ A sinistra, il logo apre il sito di PixelCake in una nuova scheda, e i quattro m
 | Menu | Che cosa contiene |
 |---|---|
 | File | «Nuovo progetto…», «Apri…», «Salva», «Salva con nome…» ed «Esporta immagine…». Vedi [Salvare, aprire, i file](saving-and-files.md) e [Esportare un'immagine](../asking/exporting-an-image.md). |
-| Modifica | «Copia», «Incolla» e «Racchiudi in un riquadro». |
+| Modifica | «Annulla», «Ripeti», «Copia», «Incolla» e «Racchiudi in un riquadro». Vedi [Annullare e ripetere](#undo). |
 | Vista | «Adatta alla finestra», «Modalità presentazione», «Disposizione automatica» («Verticale» od «Orizzontale»), «Collega i dispositivi senza cavo», «Ingrandisci», «Animazione rete», «Mostra i riquadri» e «Pennarello». |
 | Aiuto | «Guida», «Documentazione», «Comandi del terminale», «Mostra la schermata di benvenuto», «Informazioni» e «Il sito di PixelCake». |
 
@@ -62,6 +62,25 @@ Il canvas è dove sta il disegno. Con il mouse:
 - un clic su un punto vuoto toglie i colori lasciati dall'ultima domanda.
 
 In basso a sinistra ci sono i pulsanti che ingrandiscono, rimpiccioliscono, adattano il disegno alla finestra e bloccano i dispositivi dove sono. In basso a destra la mappa piccola mostra tutto il disegno come quadratini colorati, con la parte in vista in bianco. Vista → «Adatta alla finestra» porta ogni dispositivo in vista. Tutte le scorciatoie sono in [Tastiera e mouse](../reference/shortcuts.md).
+
+## Annullare e ripetere {#undo}
+
+Modifica → «Annulla», o Ctrl + Z, disfa l'ultima modifica del disegno. Modifica → «Ripeti», Ctrl + Y o Ctrl + Maiusc + Z, la rifà. Su un Mac i tasti sono Cmd + Z e Cmd + Maiusc + Z. Con il puntatore su «Annulla» o su «Ripeti», il menu dice di quale modifica si tratta, con il nome del dispositivo, della connessione o del riquadro. Una voce è grigia finché non c'è niente da annullare o da ripetere.
+
+Un'azione è un passo:
+
+- un dispositivo aggiunto, incollato o eliminato, con i cavi e i riquadri che sono andati con lui;
+- un trascinamento, da quando premi il tasto a quando lo lasci, anche di più dispositivi insieme, e un passo dei tasti freccia;
+- un cavo tracciato o eliminato; un riquadro creato, spostato, ridimensionato, rinominato, ricolorato o eliminato;
+- «Salva» nella finestra di un dispositivo o di una connessione, con tutto quello che hai cambiato lì;
+- un comando del terminale che cambia il disegno, come `set ip` o `connect`;
+- un'importazione YAML, un'aggiunta in blocco, una disposizione automatica, un «Collega i dispositivi senza cavo».
+
+Non sono passi, e non si annullano: spostare o ingrandire la vista, la selezione, aprire e chiudere le finestre, una domanda e la sua risposta, i guasti simulati in una presentazione, le impostazioni di rete del progetto (Impostazioni → Rete), il tema e la lingua. Non lo sono neanche i canvas: aggiungere, rinominare, duplicare o eliminare un canvas.
+
+Ogni canvas tiene i suoi passi, gli ultimi 100, finché la pagina resta aperta: passa a un altro canvas e torna indietro, e sono ancora lì. Una modifica nuova dopo un annullamento toglie quello che si poteva ripetere. Aprire o creare un progetto riparte senza passi, e così caricare una rete di esempio su un canvas. I passi non vengono salvati, né nel browser né nel file del progetto: dopo aver ricaricato la pagina non ce ne sono. Un annullamento è una modifica del progetto come le altre, e lo lascia con modifiche non salvate su file.
+
+In un campo di testo, e nella riga del terminale, Ctrl + Z annulla il testo scritto, come ovunque. Mentre una finestra è aperta sopra il canvas, e durante la presentazione, i tasti non fanno nulla.
 
 ## La finestra di un dispositivo {#device-window}
 
