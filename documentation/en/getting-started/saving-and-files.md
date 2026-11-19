@@ -58,7 +58,7 @@ If you open PixelCake in two tabs of the same browser, both read and write the s
 ## Limits {#limits}
 
 > [!LIMITS]
-> - There is no undo yet: a change that is made is made, so save to a file before a large one.
+> - Undo goes back 100 steps on each board, and only while the page is open ([Undo and redo](interface.md#undo)): the steps are not in the file. Save to a file before a large change you may want to take back later.
 > - There are no accounts and no sharing: to give a project to someone, send the file.
 > - A project in the browser is not a backup. Clearing the browser's data empties it.
 > - A project file is read as a whole: there is no merging of two files.

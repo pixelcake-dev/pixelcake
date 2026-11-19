@@ -58,7 +58,7 @@ Se apri PixelCake in due schede dello stesso browser, tutte e due leggono e scri
 ## Limiti {#limits}
 
 > [!LIMITS]
-> - Non si può ancora annullare: una modifica fatta è fatta, quindi salva su file prima di una modifica grande.
+> - Si annullano al massimo 100 passi per canvas, e solo finché la pagina resta aperta ([Annullare e ripetere](interface.md#undo)): i passi non sono nel file. Salva su file prima di una modifica grande che potresti voler disfare più tardi.
 > - Non ci sono account né condivisione: per dare un progetto a qualcuno, manda il file.
 > - Un progetto nel browser non è una copia di sicurezza. Cancellare i dati del browser lo svuota.
 > - Un file di progetto si legge per intero: non c'è modo di unire due file.

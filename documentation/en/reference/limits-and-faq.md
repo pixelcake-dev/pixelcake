@@ -26,7 +26,7 @@ PixelCake is an early prototype. It is good for exploring and explaining a small
 
 **Images.** An image is one board: a project with several boards is exported one board at a time. Its texts are set in the typeface of the computer, not in the one of the interface, which an image cannot carry along, so the same image on another computer can have slightly different letters. A PNG of a very large drawing is reduced to what the browser can paint, and the window says so. See [Exporting an image](../asking/exporting-an-image.md#limits).
 
-**The project.** There is no undo and no redo. There are no accounts and no sharing: a project is a file on your disk, and two browser tabs open on the same project do not see each other's changes, the last one to write wins ([saving](../getting-started/saving-and-files.md#two-tabs)). The YAML format is PixelCake's own, and holds the network, its places and its areas, not the settings of the project. The Terraform export is a sketch that cannot be applied, and a Terraform state cannot be read ([YAML](yaml.md#limits)). The keyboard and the mouse have their own gaps ([shortcuts](shortcuts.md#board)).
+**The project.** Undo goes back 100 steps on each board, and only while the page is open: a reload forgets them ([Undo and redo](../getting-started/interface.md#undo)). There are no accounts and no sharing: a project is a file on your disk, and two browser tabs open on the same project do not see each other's changes, the last one to write wins ([saving](../getting-started/saving-and-files.md#two-tabs)). The YAML format is PixelCake's own, and holds the network, its places and its areas, not the settings of the project. The Terraform export is a sketch that cannot be applied, and a Terraform state cannot be read ([YAML](yaml.md#limits)). The keyboard and the mouse have their own gaps ([shortcuts](shortcuts.md#board)).
 
 ## Questions {#faq}
 
@@ -44,7 +44,7 @@ PixelCake is an early prototype. It is good for exploring and explaining a small
 
 **Can I use it at work?** Yes, the licence allows it. What you draw stays on your computer. Remember that its answers are not a validation of a real network.
 
-**Can I undo?** Not yet: there is no undo and no redo. Save the project to a file before a change you may want to take back, and open it again to return.
+**Can I undo?** Yes: Edit → “Undo” or Ctrl + Z, and Edit → “Redo” or Ctrl + Y. Each board keeps its last 100 steps while the page is open; what is and is not a step is in [Undo and redo](../getting-started/interface.md#undo). To go back further, or after a reload, save the project to a file before the change and open it again.
 
 **Why does a ping stop at a switch?** The reason says. A switch stops a flow when the port it should leave by is down, when a cable is missing, or when the ports are in different VLANs: the answer names the port and the VLAN ([VLANs](../building/vlans.md#vlan-1)).
 

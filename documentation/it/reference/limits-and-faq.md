@@ -26,7 +26,7 @@ PixelCake è un prototipo in fase iniziale. Va bene per esplorare e spiegare una
 
 **Le immagini.** Un'immagine contiene un canvas solo: un progetto con più canvas si esporta un canvas alla volta. I suoi testi sono composti con il carattere del computer, non con quello dell'interfaccia, che un'immagine non può portarsi dietro, quindi la stessa immagine su un altro computer può avere lettere un po' diverse. Un PNG di un disegno molto grande viene ridotto a ciò che il browser riesce a creare, e la finestra lo dice. Vedi [Esportare un'immagine](../asking/exporting-an-image.md#limits).
 
-**Il progetto.** Non si può annullare né ripristinare. Non ci sono account né condivisione: un progetto è un file sul tuo disco, e due schede del browser aperte sullo stesso progetto non vedono le modifiche l'una dell'altra, vince l'ultima che scrive ([salvare](../getting-started/saving-and-files.md#two-tabs)). Il formato YAML è proprio di PixelCake, e contiene la rete, le sue posizioni e i suoi riquadri, non le impostazioni del progetto. L'esportazione Terraform è una bozza che non si può applicare, e uno stato Terraform non si può leggere ([YAML](yaml.md#limits)). Anche tastiera e mouse hanno le loro lacune ([scorciatoie](shortcuts.md#board)).
+**Il progetto.** Si annullano al massimo 100 passi per canvas, e solo finché la pagina resta aperta: ricaricandola si perdono ([Annullare e ripetere](../getting-started/interface.md#undo)). Non ci sono account né condivisione: un progetto è un file sul tuo disco, e due schede del browser aperte sullo stesso progetto non vedono le modifiche l'una dell'altra, vince l'ultima che scrive ([salvare](../getting-started/saving-and-files.md#two-tabs)). Il formato YAML è proprio di PixelCake, e contiene la rete, le sue posizioni e i suoi riquadri, non le impostazioni del progetto. L'esportazione Terraform è una bozza che non si può applicare, e uno stato Terraform non si può leggere ([YAML](yaml.md#limits)). Anche tastiera e mouse hanno le loro lacune ([scorciatoie](shortcuts.md#board)).
 
 ## Domande {#faq}
 
@@ -44,7 +44,7 @@ PixelCake è un prototipo in fase iniziale. Va bene per esplorare e spiegare una
 
 **Posso usarlo al lavoro?** Sì, la licenza lo permette. Quello che disegni resta sul tuo computer. Ricorda che le sue risposte non validano una rete vera.
 
-**Posso annullare?** Non ancora. Salva il progetto su file prima di una modifica che potresti voler disfare, e riaprilo per tornare indietro.
+**Posso annullare?** Sì: Modifica → «Annulla» o Ctrl + Z, e Modifica → «Ripeti» o Ctrl + Y. Ogni canvas tiene i suoi ultimi 100 passi finché la pagina resta aperta; che cosa è un passo e che cosa no è in [Annullare e ripetere](../getting-started/interface.md#undo). Per tornare più indietro, o dopo aver ricaricato la pagina, salva il progetto su file prima della modifica e riaprilo.
 
 **Perché un ping si ferma a uno switch?** Lo dice il motivo. Uno switch ferma un flusso quando la porta da cui dovrebbe uscire è spenta, quando manca un cavo, o quando le porte sono in VLAN diverse: la risposta nomina la porta e la VLAN ([VLAN](../building/vlans.md#vlan-1)).
 

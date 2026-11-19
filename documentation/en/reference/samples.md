@@ -164,6 +164,6 @@ Then break something, in a presentation: cut the cable labelled “Main line” 
 
 > [!LIMITS]
 > - A sample is a starting point, not a model of a real company. Its addresses are made for the example, and what it leaves out is what the app leaves out ([Limits and questions](limits-and-faq.md#not-simulated)).
-> - Loading a sample replaces the board and the network settings of the project, with no undo. Save the project to a file before, if the board is worth keeping.
+> - Loading a sample replaces the board and the network settings of the project, and cannot be undone: the steps of undo of that board start again from the sample. Save the project to a file before, if the board is worth keeping.
 > - The Internet and the MPLS network are stand-ins: the engine says so in a note and lets traffic through. A real carrier is not simulated.
 > - The language a sample is loaded in is the language of its device names for good: loading a sample in English and then switching the interface to Italian does not rename `PC-Sales`.

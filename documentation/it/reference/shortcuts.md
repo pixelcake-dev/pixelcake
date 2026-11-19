@@ -4,13 +4,15 @@ description: "Ogni scorciatoia di tastiera e ogni gesto del mouse, sul canvas, n
 order: 3
 ---
 
-Questi sono tutti i tasti e i gesti dell'app. Sono tutti elencati anche in Impostazioni → Avanzate, sotto «Scorciatoie da tastiera e mouse», con i tasti di Windows e Linux; i tasti del Mac sono solo qui. Dove i tasti cambiano da un computer all'altro, la prima colonna è per Windows e Linux e la seconda per un Mac. I menu non hanno scorciatoie.
+Questi sono tutti i tasti e i gesti dell'app. Sono tutti elencati anche in Impostazioni → Avanzate, sotto «Scorciatoie da tastiera e mouse», con i tasti di Windows e Linux; i tasti del Mac sono solo qui. Dove i tasti cambiano da un computer all'altro, la prima colonna è per Windows e Linux e la seconda per un Mac. Dei menu, solo Modifica → «Annulla» e «Ripeti» mostrano accanto i loro tasti.
 
 ## Sul canvas {#board}
 
 | Per | Windows, Linux | Mac |
 |---|---|---|
 | Salvare il progetto su file | Ctrl + S | Cmd + S |
+| Annullare l'ultima modifica del disegno | Ctrl + Z | Cmd + Z |
+| Ripetere la modifica annullata | Ctrl + Y, Ctrl + Maiusc + Z | Cmd + Maiusc + Z, Cmd + Y |
 | Copiare i dispositivi e i riquadri selezionati | Ctrl + C | Cmd + C |
 | Incollarli | Ctrl + V | Cmd + V |
 | Eliminare i dispositivi, i cavi e i riquadri selezionati, dopo una domanda | Canc | Fn + cancella (il tasto cancella di un portatile) |
@@ -29,6 +31,7 @@ Questi sono tutti i tasti e i gesti dell'app. Sono tutti elencati anche in Impos
 Qualche precisazione:
 
 - **Salvare** funziona da qualunque punto dell'app, anche mentre scrivi in un campo. Non si apre mai il "salva pagina" del browser.
+- **Annullare e ripetere** disfano l'ultima modifica del disegno, e la rifanno: un'azione è un passo, un trascinamento da quando premi a quando lasci, un salvataggio in una finestra con tutti i suoi campi, un comando del terminale. In un campo, e nella riga del terminale, i tasti annullano il testo, come ovunque; mentre una finestra è aperta sopra il canvas non fanno nulla. [Annullare e ripetere](../getting-started/interface.md#undo) dice che cosa è un passo e che cosa no. Funzionano anche con il blocco maiuscole acceso, e su una tastiera con lettere non latine.
 - **Copia e incolla** agiscono sul disegno solo quando nessun testo è selezionato e non si sta scrivendo in un campo. Con del testo selezionato (l'output del terminale, per esempio) Ctrl + C copia quel testo, come ovunque. I dispositivi incollati compaiono 50 unità più in basso e a destra degli originali, o più in là se lì c'è già una copia incollata prima, con le connessioni che c'erano tra loro e i riquadri selezionati; [Dispositivi](../building/devices.md#copy-delete) dice che cosa ricevono di nuovo le copie. I tasti funzionano anche con il blocco maiuscole acceso, e su una tastiera con lettere non latine.
 - **Eliminare** è il tasto Canc. Backspace non fa nulla. Chiede prima conferma, in una finestra dell'applicazione, come il menu del clic destro: per una cosa sola la domanda del suo menu, per più cose quante ce ne sono di ciascuna. Invio o un clic su «Elimina» elimina; Esc non elimina nulla.
 - **Selezionare più di uno**: un clic su un dispositivo lo seleziona da solo; Ctrl + clic ne aggiunge o ne toglie uno; un riquadro di selezione tracciato su un'area vuota seleziona i dispositivi e i riquadri che ci stanno interamente dentro. Ctrl + clic sul nome o sul bordo di un riquadro lo aggiunge o lo toglie. Un clic su un'area vuota toglie la selezione.
@@ -81,9 +84,9 @@ Il terminale è una finestra mobile sopra il canvas: si sposta trascinandola dal
 | Fare una domanda o simulare un guasto | Clic su un dispositivo o su un cavo: un menu offre «Parti da qui», «Arriva qui», «Simula un guasto» e «Ripara». |
 | Spostare la vista | Trascina con il tasto sinistro; la rotellina fa zoom. Un doppio clic non fa zoom. |
 
-Durante la presentazione nulla si può selezionare, spostare, collegare, copiare o eliminare, quindi i tasti del [canvas](#board) non fanno niente, tranne Ctrl + S, che salva ancora.
+Durante la presentazione nulla si può selezionare, spostare, collegare, copiare, eliminare o annullare, quindi i tasti del [canvas](#board) non fanno niente, tranne Ctrl + S, che salva ancora.
 
 > [!LIMITS]
-> - Non ci sono l'annullamento, il ripristino, "seleziona tutto" e "taglia": Ctrl + Z, Ctrl + Y, Ctrl + A e Ctrl + X non fanno nulla.
+> - Non ci sono "seleziona tutto" e "taglia": Ctrl + A e Ctrl + X non fanno nulla.
 > - La vista non si sposta con la tastiera, né con il tasto sinistro sul canvas fuori da una presentazione: le frecce spostano i dispositivi, non la vista.
-> - Salvare, copiare e incollare usano Cmd su un Mac. La selezione multipla, invece, usa anche lì il tasto Control, non Cmd.
+> - Salvare, annullare, ripetere, copiare e incollare usano Cmd su un Mac. La selezione multipla, invece, usa anche lì il tasto Control, non Cmd.

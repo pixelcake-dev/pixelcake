@@ -4,13 +4,15 @@ description: "Every shortcut of the keyboard and every gesture of the mouse, on 
 order: 3
 ---
 
-These are all the keys and gestures the app has. All of them are also listed in Settings → Advanced, under “Keyboard and mouse shortcuts”, with the Windows and Linux keys; the Mac keys are only here. Where the keys differ between computers, the first column is for Windows and Linux and the second for a Mac. The menus have no shortcuts.
+These are all the keys and gestures the app has. All of them are also listed in Settings → Advanced, under “Keyboard and mouse shortcuts”, with the Windows and Linux keys; the Mac keys are only here. Where the keys differ between computers, the first column is for Windows and Linux and the second for a Mac. Of the menus, only Edit → “Undo” and “Redo” show their keys beside them.
 
 ## On the board {#board}
 
 | To | Windows, Linux | Mac |
 |---|---|---|
 | Save the project to a file | Ctrl + S | Cmd + S |
+| Undo the last change to the drawing | Ctrl + Z | Cmd + Z |
+| Redo the change undone | Ctrl + Y, Ctrl + Shift + Z | Cmd + Shift + Z, Cmd + Y |
 | Copy the selected devices and areas | Ctrl + C | Cmd + C |
 | Paste them | Ctrl + V | Cmd + V |
 | Delete the selected devices, cables and areas, after a question | Delete | Fn + Delete (the Delete key of a laptop) |
@@ -29,6 +31,7 @@ These are all the keys and gestures the app has. All of them are also listed in 
 A few things about these:
 
 - **Save** works from anywhere in the app, also with a field in focus. The browser's own "save page" never opens.
+- **Undo and redo** take back the last change to the drawing, and make it again: one action is one step, a drag from the press to the release, a save in a window with all its fields, a command of the terminal. In a field, and in the line of the terminal, the keys undo the text, as anywhere; while a window is open over the board they do nothing. [Undo and redo](../getting-started/interface.md#undo) says what is a step and what is not. They work with Caps Lock on too, and on a keyboard whose letters are not Latin.
 - **Copy and paste** act on the drawing only while no text is selected and no field is being typed in. With text selected (the output of the terminal, say) Ctrl + C copies that text, as anywhere. The pasted devices appear 50 units down and to the right of the originals, or further when a copy pasted before is there, with the links that were among them and the areas that were selected; [Devices](../building/devices.md#copy-delete) says what a copy is given anew. The keys work with Caps Lock on too, and on a keyboard whose letters are not Latin.
 - **Delete** is the Delete key. Backspace does nothing. It asks first, in a window of the app, as the right-click menu does: for one thing alone the question of its menu, for more how many of each. Enter or a click on “Delete” deletes; Esc deletes nothing.
 - **Selecting more than one**: a click on a device selects it alone; Ctrl + click adds or removes one; a box drawn on empty space selects the devices and the areas that are wholly inside it. Ctrl + click on the name or the border of an area adds it or removes it. A click on empty space lets go.
@@ -81,9 +84,9 @@ The terminal is a window that floats over the board: drag it by its top bar to m
 | Ask or break | Click a device or a cable: a menu offers “Start here”, “Arrive here”, “Simulate a failure” and “Repair”. |
 | Move the view | Drag with the left button; the wheel zooms. A double click does not zoom. |
 
-While presenting, nothing can be selected, moved, joined, copied or deleted, so the keys of [the board](#board) do nothing but Ctrl + S, which still saves.
+While presenting, nothing can be selected, moved, joined, copied, deleted or undone, so the keys of [the board](#board) do nothing but Ctrl + S, which still saves.
 
 > [!LIMITS]
-> - There is no undo, no redo, no select all and no cut: Ctrl + Z, Ctrl + Y, Ctrl + A and Ctrl + X do nothing.
+> - There is no select all and no cut: Ctrl + A and Ctrl + X do nothing.
 > - The view cannot be moved with the keyboard, nor with the left button on the board outside a presentation: the arrow keys move devices, not the view.
-> - Save, copy and paste take Cmd on a Mac. The multiple selection takes the Control key there as well, not Cmd.
+> - Save, undo, redo, copy and paste take Cmd on a Mac. The multiple selection takes the Control key there as well, not Cmd.

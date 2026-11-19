@@ -36,4 +36,4 @@ The new devices are the selection afterwards, so the whole batch can be dragged 
 > [!LIMITS]
 > - A batch is made from the generic templates, not the custom ones, and without a vendor, a location or a note of its own.
 > - There is no address field: the addresses are the next free ones in order, and are changed one device at a time afterwards.
-> - One window makes one batch: the board has no undo, so a wrong batch is deleted by selecting it, which it already is, and pressing Delete.
+> - One window makes one batch. A wrong batch goes with Edit → “Undo” (Ctrl + Z), which takes it away whole, or with the Delete key, since it is selected already.
