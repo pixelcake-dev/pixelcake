@@ -15,7 +15,10 @@
  *     firewall, a packet like any other: its rules and zones decide.
  *
  * A router filters too when it carries rules: its access list. They are read
- * the same way; a router has no zones, so what no rule matches passes.
+ * the same way; a router has no zones, and its list ends, as on real routers,
+ * with an implicit deny: once it has a rule switched on, what no rule allows
+ * is blocked. A router with no rules, or with all of them switched off,
+ * filters nothing.
  *
  * Zones are a property of the firewall's ports, so a rule naming a zone can
  * only be evaluated when the link is attached to a port that is in a zone:
@@ -179,10 +182,18 @@ export function evaluateFirewall(
           replyText: `firewall policy: ${transition} allowed (reply to an allowed flow)`,
         };
       }
+    } else if (!isFirewall(device) && hasRules) {
+      // A router has no zones: its access list ends with an implicit deny,
+      // as on real routers. What no rule allows is blocked
+      decision = {
+        allowed: false,
+        text: `${name}: no rule allows it`,
+        replyText: `${name}: no rule matches, allowed as the reply to an allowed flow`,
+      };
     } else {
-      // (a router has no zones: what no rule of its list matches passes)
+      // (a router whose rules are all switched off filters nothing, as one with none)
       const text = !isFirewall(device)
-        ? `${name}: no rule matches: allowed`
+        ? `${name}: no rule is switched on: allowed`
         : hasRules
           ? `${name}: no rule matches and no zone binding: allowed`
           : `${name} has no zone binding: allowed`;

@@ -221,24 +221,51 @@ describe('who filters, and what a rule may name', () => {
     expect(evaluateFirewall(router, undefined, undefined, packet())).toBeUndefined();
   });
 
-  it('a router with rules is named as a router, and lets through what no rule matches', () => {
-    const router = device({
-      id: 'r1',
-      label: 'R1',
-      type: 'Router',
-      ports: [port(1), port(2)],
-      firewallRules: [rule('deny', 'ping', 'any', '172.16.0.10')],
-    });
+  /** A router with two ports and these rules, and its port `id` */
+  function routerWith(rules: FirewallRule[]) {
+    const router = device({ id: 'r1', label: 'R1', type: 'Router', ports: [port(1), port(2)], firewallRules: rules });
     const iface = (id: number) =>
       listInterfaces(router).find(candidate => candidate.kind === 'port' && candidate.port.id === id);
+    return { router, iface };
+  }
+
+  it('a router with rules is named as a router, and blocks what no rule allows, as a real access list', () => {
+    const { router, iface } = routerWith([rule('deny', 'ping', 'any', '172.16.0.10')]);
     expect(evaluateFirewall(router, iface(1), iface(2), packet())).toEqual({
       allowed: false,
       text: 'router R1: denied by rule 1 (deny ping from any to 172.16.0.10)',
       skipped: [],
     });
     expect(evaluateFirewall(router, iface(1), iface(2), packet({ service: 'web' }))).toEqual({
+      allowed: false,
+      text: 'router R1: no rule allows it',
+      skipped: [],
+    });
+  });
+
+  it('a router lets through what one of its rules allows, and the reply to a flow it allowed', () => {
+    const { router, iface } = routerWith([rule('allow', 'web', 'any', '172.16.0.10')]);
+    expect(evaluateFirewall(router, iface(1), iface(2), packet({ service: 'web' }))).toMatchObject({
       allowed: true,
-      text: 'router R1: no rule matches: allowed',
+      text: 'router R1: allowed by rule 1 (allow web from any to 172.16.0.10)',
+    });
+    // the response matches no rule: it passes as the reply of a flow the router saw
+    const response = packet({ service: 'web', sourceIp: '172.16.0.10', destinationIp: '203.0.113.50', returnTraffic: true });
+    expect(evaluateFirewall(router, iface(2), iface(1), response)).toMatchObject({
+      allowed: true,
+      text: 'router R1: no rule matches, allowed as the reply to an allowed flow',
+    });
+    // a reply whose request went another way is a new packet: nothing allows it
+    expect(
+      evaluateFirewall(router, iface(2), iface(1), { ...response, requestPath: new Set(['other']) })
+    ).toMatchObject({ allowed: false, text: 'router R1: no rule allows it, and it never saw the request' });
+  });
+
+  it('a router whose rules are all switched off lets everything through, as one with none', () => {
+    const { router, iface } = routerWith([rule('allow', 'web', 'any', '172.16.0.10', { enabled: false })]);
+    expect(evaluateFirewall(router, iface(1), iface(2), packet())).toEqual({
+      allowed: true,
+      text: 'router R1: no rule is switched on: allowed',
       skipped: [],
     });
   });
@@ -385,6 +412,54 @@ describe('traceRoute through a routed firewall', () => {
     ]);
     expect(exchange.legs[1].trace.sourceIp).toBe('172.16.0.10');
     expect(exchange.legs[1].trace.targetIp).toBe('192.168.10.11');
+  });
+});
+
+// ---------- a router with rules on the path ----------
+
+describe('traceRoute through a router with rules', () => {
+  /** PC-1 (192.168.1.0/24) ── R-1 ── Srv (192.168.2.0/24) */
+  function routed(rules: FirewallRule[]): Topology {
+    return topo(
+      [
+        host('pc1', '192.168.1.10', '192.168.1.1', { label: 'PC-1' }),
+        device({
+          id: 'r1',
+          label: 'R-1',
+          type: 'Router',
+          ports: [port(1, { ip: '192.168.1.1' }), port(2, { ip: '192.168.2.1' })],
+          firewallRules: rules,
+        }),
+        host('srv', '192.168.2.10', '192.168.2.1', { label: 'Srv', type: 'Server' }),
+      ],
+      [
+        link('pc1', 'r1', { sourceNic: 'nic-1', targetPort: 1 }),
+        link('r1', 'srv', { sourcePort: 2, targetNic: 'nic-1' }),
+      ]
+    );
+  }
+
+  it('with no rules it routes everything', () => {
+    expect(planAndEvaluateFlow('ping', 'pc1', 'srv', routed([])).verdict).toBe('success');
+  });
+
+  it('with one rule that allows the web, the web passes both ways and a ping stops at the router', () => {
+    const t = routed([rule('allow', 'web', '192.168.1.0/24', '192.168.2.10')]);
+
+    const web = planAndEvaluateFlow('web', 'pc1', 'srv', t);
+    expect(web.verdict).toBe('success');
+    expect(web.notes).toEqual([
+      'HTTP request: router R-1: allowed by rule 1 (allow web from 192.168.1.0/24 to 192.168.2.10)',
+      'HTTP response: router R-1: no rule matches, allowed as the reply to an allowed flow',
+    ]);
+
+    const ping = planAndEvaluateFlow('ping', 'pc1', 'srv', t);
+    expect(ping.verdict).toBe('blocked');
+    expect(ping.failureReason).toBe('request: router R-1: no rule allows it');
+    expect(ping.legs[0].trace.hops.map(h => [h.deviceId, h.status])).toEqual([
+      ['pc1', 'forwarded'],
+      ['r1', 'blocked'],
+    ]);
   });
 });
 
