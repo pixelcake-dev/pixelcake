@@ -607,5 +607,10 @@ export function createCompanySample(): SampleNetwork {
     devices
   );
 
-  return { devices, connections, settings, areas };
+  // The first thing to try, suggested once after the sample is loaded: the
+  // sales PC reaches the web server of the management software, through the
+  // trunk, the router and the switch of the servers
+  const firstQuestion = { from: 'pc-vendite', to: 'web-gestionale' };
+
+  return { devices, connections, settings, areas, firstQuestion };
 }

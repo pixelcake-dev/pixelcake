@@ -168,6 +168,7 @@ describe('TopMenuBar', () => {
         'Guida',
         'Documentazione',
         'Comandi del terminale',
+        'Tour guidato',
         'Mostra la schermata di benvenuto',
         'Informazioni',
         'Il sito di PixelCake',

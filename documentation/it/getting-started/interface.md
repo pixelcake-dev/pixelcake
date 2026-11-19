@@ -1,6 +1,6 @@
 ---
 title: "L'interfaccia"
-description: "La barra dei menu, i pannelli a sinistra, il canvas, annullare e ripetere, la finestra di un dispositivo, la presentazione e il terminale."
+description: "La barra dei menu, i pannelli a sinistra, il canvas, annullare e ripetere, la finestra di un dispositivo, la presentazione, il terminale e il tour guidato."
 order: 3
 ---
 
@@ -28,9 +28,9 @@ A sinistra, il logo apre il sito di PixelCake in una nuova scheda, e i quattro m
 | File | «Nuovo progetto…», «Apri…», «Salva», «Salva con nome…» ed «Esporta immagine…». Vedi [Salvare, aprire, i file](saving-and-files.md) e [Esportare un'immagine](../asking/exporting-an-image.md). |
 | Modifica | «Annulla», «Ripeti», «Copia», «Incolla» e «Racchiudi in un riquadro». Vedi [Annullare e ripetere](#undo). |
 | Vista | «Adatta alla finestra», «Modalità presentazione», «Disposizione automatica» («Verticale» od «Orizzontale»), «Collega i dispositivi senza cavo», «Ingrandisci», «Animazione rete», «Mostra i riquadri» e «Pennarello». |
-| Aiuto | «Guida», «Documentazione», «Comandi del terminale», «Mostra la schermata di benvenuto», «Informazioni» e «Il sito di PixelCake». |
+| Aiuto | «Guida», «Documentazione», «Comandi del terminale», «Tour guidato», «Mostra la schermata di benvenuto», «Informazioni» e «Il sito di PixelCake». |
 
-«Guida» è la guida breve dentro l'applicazione. «Documentazione» apre queste pagine, nella lingua dell'interfaccia, in una nuova scheda del browser. «Mostra la schermata di benvenuto» fa ricomparire la schermata di benvenuto, ma solo su un canvas vuoto.
+«Guida» è la guida breve dentro l'applicazione. «Tour guidato» riapre il [tour della prima visita](#tour). «Documentazione» apre queste pagine, nella lingua dell'interfaccia, in una nuova scheda del browser. «Mostra la schermata di benvenuto» fa ricomparire la schermata di benvenuto, ma solo su un canvas vuoto.
 
 Al centro della barra c'è il nome del progetto aperto. Un clic sul nome apre l'Explorer. Un puntino arancione davanti al nome dice che il progetto ha modifiche non ancora salvate su file.
 
@@ -97,3 +97,9 @@ Non cambia niente finché non premi «Salva». «Annulla» chiude la finestra e 
 «Console» apre il terminale in una finestra mobile, che si intitola «Terminale», sopra il canvas. La si trascina dalla barra del titolo, si ridimensiona dalla maniglia nell'angolo in basso a destra e si chiude con la croce. Il canvas resta utilizzabile intorno, e quello che scrivi cambia il disegno che vedi. La finestra è sempre scura, in tutti e due i temi.
 
 Con un clic destro su un dispositivo e poi «Console», il terminale si apre già posizionato su quel dispositivo. I comandi sono in inglese in tutte e due le lingue dell'interfaccia. Vedi il [riferimento del terminale](../terminal/index.md).
+
+## Il tour guidato {#tour}
+
+Alla prima visita, appena lasci la schermata di benvenuto, un tour guidato di otto passi percorre lo schermo: aggiungere un dispositivo, collegare due dispositivi con un cavo, fare una domanda dal pannello «Simulazione», il terminale, annullare e ripetere, salvare il progetto in un file, il pennarello e la presentazione. Ogni passo incornicia in arancione una parte dello schermo e scurisce il resto, con accanto un fumetto di una o due frasi. «Avanti» e «Indietro» scorrono i passi, «Salta» chiude il tour a qualsiasi passo; le frecce, Invio ed Esc fanno lo stesso ([Tastiera e mouse](../reference/shortcuts.md#tour)).
+
+Compare da solo una volta in un browser, e non in un browser che contiene già un disegno fatto prima che il tour esistesse. Aiuto → «Tour guidato» lo riapre dal primo passo, in qualsiasi momento. In una finestra più stretta di 600 pixel il fumetto sta in fondo allo schermo, e un passo il cui pulsante lì non è nella barra indica il menu Vista, dove c'è la stessa voce.

@@ -14,6 +14,8 @@ Open PixelCake in a browser, at [app.pixelcake.dev](https://app.pixelcake.dev). 
 2. In “Project name” type `First network`. Leave the network as it is: “Network” 192.168.1.0, “Subnet mask” 255.255.255.0 and “Gateway” 192.168.1.1.
 3. Click “Create project”. A notice at the bottom right says the project was created, and its name is in the middle of the menu bar.
 
+On your first visit a guided tour starts as the window closes: eight short balloons, each beside a part of the screen, from “Add device” to “Present”. Read it with “Next”, or close it with “Skip”; Help → “Guided tour” brings it back ([The guided tour](interface.md#tour)).
+
 If the welcome screen does not appear (you asked not to see it again), choose File → “New project…” instead.
 
 ## Draw three devices {#draw}
@@ -108,5 +110,5 @@ To undo it, open the Rules tab again and click the bin of the rule, which reads 
 - Add a second network and a router, and see what the gateway is for: [Addresses](../building/addresses.md) and [Static and backup routes](../services/routes.md).
 - Split a switch into VLANs: [VLANs](../building/vlans.md).
 - Learn the commands of the terminal: [the terminal reference](../terminal/index.md).
-- See a larger drawing at work: the sample networks, from Add → Samples, are described in [Sample networks](../reference/samples.md).
+- See a larger drawing at work: the sample networks, from Add → Samples, are described in [Sample networks](../reference/samples.md). The first time you load the company sample, a suggestion over the top of the board offers a first question, `ping Web-ERP from PC-Sales`, and “Try it in the terminal” runs it.
 - Keep what you drew: [Saving, opening, files](saving-and-files.md). The window and its parts are named in [The interface](interface.md).

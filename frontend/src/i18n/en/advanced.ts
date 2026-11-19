@@ -35,6 +35,7 @@ export const advanced: Dictionary['advanced'] = {
       terminal: 'In the terminal',
       presenting: 'While presenting',
       marker: 'With the marker',
+      tour: 'In the guided tour',
     },
     /** What each shortcut does, and the keys (or the gesture) that do it */
     rows: {
@@ -107,6 +108,11 @@ export const advanced: Dictionary['advanced'] = {
       markerText: { action: 'Write the words typed on the board (Esc gives them up)', keys: 'Enter' },
       markerNewLine: { action: 'Start a new line in the words', keys: 'Shift + Enter' },
       markerView: { action: 'Move the view while writing', keys: 'Right button + drag, mouse wheel' },
+
+      tourNext: { action: 'Go to the next step', keys: 'Right arrow, Enter' },
+      tourBack: { action: 'Go back a step', keys: 'Left arrow' },
+      tourClose: { action: 'Close the tour, at any step', keys: 'Esc' },
+      tourButtons: { action: 'Move between the buttons of the tour', keys: 'Tab, Shift + Tab' },
     },
   },
 };

@@ -1,6 +1,6 @@
 ---
 title: "Keyboard and mouse"
-description: "Every shortcut of the keyboard and every gesture of the mouse, on the board, in the windows, in the terminal and while presenting."
+description: "Every shortcut of the keyboard and every gesture of the mouse, on the board, in the windows, in the terminal, while presenting and in the guided tour."
 order: 3
 ---
 
@@ -97,6 +97,17 @@ While presenting, nothing can be selected, moved, joined, copied, deleted or und
 | Move the view while writing | Right button + drag, mouse wheel. |
 
 While the marker is on, the left button, a pen or a finger writes: nothing is selected, moved or joined. [Writing on the board](../building/marker.md) says what each tool does.
+
+## In the guided tour {#tour}
+
+| To | Do |
+|---|---|
+| Go to the next step | Right arrow, Enter. Enter on a button presses that button. |
+| Go back a step | Left arrow. |
+| Close the tour, at any step | Esc, or “Skip”. |
+| Move between the buttons of the tour | Tab, Shift + Tab: the focus stays in the balloon. |
+
+While the tour is open the other keys of the app do nothing, and neither does a click outside the balloon. The tour opens again from Help → “Guided tour”: see [The guided tour](../getting-started/interface.md#tour).
 
 > [!LIMITS]
 > - There is no select all and no cut: Ctrl + A and Ctrl + X do nothing.

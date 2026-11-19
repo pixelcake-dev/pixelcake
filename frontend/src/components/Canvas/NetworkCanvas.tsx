@@ -46,8 +46,8 @@ import MarkerSurface from './MarkerSurface';
 import MarkerToolbar from './MarkerToolbar';
 import { useMarkerKeys } from './useMarkerKeys';
 import WelcomeScreen from '@/components/WelcomeScreen';
+import { useWelcomeShown } from '@/components/useWelcomeShown';
 import { useNetworkStore } from '@/store/networkStore';
-import { useProjectStore } from '@/store/projectStore';
 import { useUIStore } from '@/store/uiStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useSimulationStore } from '@/store/simulationStore';
@@ -153,7 +153,6 @@ const NetworkCanvas = () => {
   const devices = useNetworkStore((state) => state.devices);
   const connections = useNetworkStore((state) => state.connections);
   const areas = useNetworkStore((state) => state.areas);
-  const markCount = useNetworkStore((state) => state.marks.length);
   // (hidden from the View menu, the areas are not on the board at all)
   const areasShown = useUIStore((state) => state.areasShown);
   const selectedAreaId = useNetworkStore((state) => state.selectedAreaId);
@@ -175,10 +174,9 @@ const NetworkCanvas = () => {
   const closeContextMenu = useUIStore((state) => state.closeContextMenu);
   const magnifiedConnectionTypes = useUIStore((state) => state.magnifiedConnectionTypes);
   const particleAnimationEnabled = useUIStore((state) => state.particleAnimationEnabled);
-  const showWelcomeScreen = useUIStore((state) => state.showWelcomeScreen);
-  const welcomeRequested = useUIStore((state) => state.welcomeRequested);
+  // The welcome screen, drawn inside the canvas while it is an empty project
+  const shouldShowWelcome = useWelcomeShown();
   const canvasRevision = useNetworkStore((state) => state.canvasRevision);
-  const canvasCount = useProjectStore((state) => state.canvases.length);
   // Presentation mode: the drawing is shown, not edited
   const presenting = usePresentationStore((state) => state.active);
   const panelOpen = usePresentationStore((state) => state.panelOpen);
@@ -772,19 +770,6 @@ const NetworkCanvas = () => {
     // Our code is correct - warnings are due to Strict Mode double-rendering
     return;
   }, []);
-
-  // The welcome screen shows by itself only on an empty project: one canvas
-  // with nothing on it (an empty canvas added to a project is just an empty
-  // canvas). Asked for from the Aiuto menu, it shows on any empty canvas
-  const shouldShowWelcome =
-    !presenting &&
-    !markerActive &&
-    showWelcomeScreen &&
-    devices.length === 0 &&
-    // (a canvas with an area drawn on it, or something written, is not an empty one)
-    areas.length === 0 &&
-    markCount === 0 &&
-    (canvasCount === 1 || welcomeRequested);
 
   return (
     <div className="relative w-full h-full">

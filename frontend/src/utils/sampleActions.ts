@@ -6,7 +6,9 @@
 
 import { useNetworkStore } from '@/store/networkStore';
 import { clearCanvasHistory } from '@/store/historyStore';
+import { useGuideStore } from '@/store/guideStore';
 import type { SampleNetwork } from './sampleNetwork';
+import { firstTryOf } from './firstSteps';
 
 export function loadSampleNetwork(sample: SampleNetwork): void {
   const network = useNetworkStore.getState();
@@ -17,4 +19,7 @@ export function loadSampleNetwork(sample: SampleNetwork): void {
   clearCanvasHistory();
   // Whole in the window, whatever part of the board was on screen
   network.triggerFitView();
+  // The first thing to try on it, once in a browser (after the tour, when one is due)
+  const question = firstTryOf(sample);
+  if (question) useGuideStore.getState().offerFirstTry(question);
 }

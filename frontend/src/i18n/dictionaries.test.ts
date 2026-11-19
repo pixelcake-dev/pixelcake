@@ -62,6 +62,7 @@ const SAME_IN_BOTH = new Set([
   'advanced.shortcuts.rows.leavePresentation.keys',
   'advanced.shortcuts.rows.markerToggle.keys',
   'advanced.shortcuts.rows.markerOff.keys',
+  'advanced.shortcuts.rows.tourClose.keys',
   'help.about.licenceText',
   'help.about.repository',
   'presentation.caption.failuresLine',

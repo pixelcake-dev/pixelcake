@@ -34,6 +34,8 @@ Ping failed (blocked): request: firewall FW-Edge: no rule matches, zone policy d
 
 Other questions the sample is made for: `show dhcp` lists the two pools and the two leases; `show vlans` ([VLANs](../building/vlans.md#trunk)) shows the trunk; `browse Customer-Portal from Remote-Customer` reaches the portal at its public address, through the port forward.
 
+The first time it is loaded in a browser, from the welcome screen or from “Samples”, a suggestion over the top of the board offers a first question: whether PC-Sales reaches Web-ERP, with the command `ping Web-ERP from PC-Sales`. “Try it in the terminal” opens the terminal and runs it there, and the packet goes over the board to the server, which turns green. The suggestion comes after the [guided tour](../getting-started/interface.md#tour) when the tour is shown, is shown once, and its cross puts it away. Loaded in Italian, it asks `ping Web-Gestionale from PC-Vendite`.
+
 ## Office {#office}
 
 “Office: two networks and a router”: 7 devices and 6 links, no areas and no VLANs. Router-1 joins the offices (192.168.10.0/24: SW-Office, PC-1 and PC-2) to the servers (192.168.20.0/24: SW-Servers, Web-01 and Mail-01), and the port of the router in each network is the gateway of the devices of that network. It is the one to start with: every question about it has a clear answer. Its names are the same in both languages, so one picture serves both.

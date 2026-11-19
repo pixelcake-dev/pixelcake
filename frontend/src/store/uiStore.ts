@@ -42,6 +42,9 @@ interface UIStore {
   // Terminal: device context to start in when opened from a device
   // (not persisted; consumed once by TerminalModal on open, then cleared)
   terminalContextDevice: string | null;
+  // Terminal: a command to type and run as it opens (the first question a
+  // sample suggests); not persisted, consumed once by TerminalModal
+  terminalCommand: string | null;
 
   // Guide: the tab it shows (not persisted; set by whoever opens it)
   helpTab: HelpTab;
@@ -86,6 +89,9 @@ interface UIStore {
   setContextMenuArea: (areaId: string | null, x?: number, y?: number) => void;
   closeContextMenu: () => void;
   setTerminalContextDevice: (label: string | null) => void;
+  /** Open the terminal with a command typed and run, as if the user had */
+  runInTerminal: (command: string) => void;
+  setTerminalCommand: (command: string | null) => void;
 
   // Magnification Actions
   toggleMagnifyDevice: (deviceType: string) => void;
@@ -142,6 +148,7 @@ export const useUIStore = create<UIStore>()(
       contextMenuArea: null,
       contextMenuPosition: null,
       terminalContextDevice: null,
+      terminalCommand: null,
       helpTab: 'guide',
 
       // Magnification State
@@ -276,6 +283,17 @@ export const useUIStore = create<UIStore>()(
 
       setTerminalContextDevice: (label) => {
         set({ terminalContextDevice: label });
+      },
+
+      runInTerminal: (command) => {
+        set((state) => ({
+          terminalCommand: command,
+          modals: { ...state.modals, codeTerminal: true },
+        }));
+      },
+
+      setTerminalCommand: (command) => {
+        set({ terminalCommand: command });
       },
 
       // Magnification Actions
