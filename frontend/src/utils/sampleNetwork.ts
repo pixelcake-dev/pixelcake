@@ -27,6 +27,12 @@ export interface SampleNetwork {
   settings: GlobalNetworkSettings;
   /** The areas behind its groups of devices (the canvas gives each its id when the sample is loaded) */
   areas: SampleArea[];
+  /**
+   * A first question to try on it, suggested once in a browser when it is
+   * loaded (utils/firstSteps.ts): a ping between two of its devices, named
+   * by their ids in the sample. It must be answered: a test asks it
+   */
+  firstQuestion?: { from: string; to: string };
 }
 
 /** An area of a sample, before the canvas has given it an id */

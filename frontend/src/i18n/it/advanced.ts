@@ -33,6 +33,7 @@ export const advanced = {
       terminal: 'Nel terminale',
       presenting: 'Durante la presentazione',
       marker: 'Con il pennarello',
+      tour: 'Nel tour guidato',
     },
     /** What each shortcut does, and the keys (or the gesture) that do it */
     rows: {
@@ -105,6 +106,11 @@ export const advanced = {
       markerText: { action: 'Scrivi sul canvas le parole digitate (Esc le lascia perdere)', keys: 'Invio' },
       markerNewLine: { action: 'Vai a capo nelle parole', keys: 'Maiusc + Invio' },
       markerView: { action: 'Sposta la vista mentre scrivi', keys: 'Tasto destro + trascina, rotellina del mouse' },
+
+      tourNext: { action: 'Vai al passo successivo', keys: 'Freccia destra, Invio' },
+      tourBack: { action: 'Torna al passo precedente', keys: 'Freccia sinistra' },
+      tourClose: { action: 'Chiudi il tour, a qualsiasi passo', keys: 'Esc' },
+      tourButtons: { action: "Passa da un pulsante del tour all'altro", keys: 'Tab, Maiusc + Tab' },
     },
   },
 };

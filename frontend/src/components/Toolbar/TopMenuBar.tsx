@@ -7,6 +7,7 @@ import type { ConnectionSummary, LeftAloneReason } from '@/utils/autoConnect';
 import type { NetworkDevice } from '@/types';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useMarkerStore } from '@/store/markerStore';
+import { useGuideStore } from '@/store/guideStore';
 import {
   openProject,
   requestNewProject,
@@ -100,6 +101,7 @@ const TopMenuBar = () => {
   // The marker («Pennarello»): taken up and put away from its button, from the View menu, with P
   const markerActive = useMarkerStore((state) => state.active);
   const toggleMarker = useMarkerStore((state) => state.toggle);
+  const openTour = useGuideStore((state) => state.openTour);
   const applyAutoLayout = useNetworkStore((state) => state.applyAutoLayout);
   const autoConnectDevices = useNetworkStore((state) => state.autoConnectDevices);
   const triggerFitView = useNetworkStore((state) => state.triggerFitView);
@@ -250,7 +252,7 @@ const TopMenuBar = () => {
       </a>
 
       {/* File Menu */}
-      <div className="menu-item">
+      <div className="menu-item" data-tour="file-menu">
         <span>{t.menu.file.title}</span>
         <div className="dropdown-content">
           <ul>
@@ -266,7 +268,7 @@ const TopMenuBar = () => {
       </div>
 
       {/* Modifica Menu: every entry is enabled only when it can do something */}
-      <div className="menu-item">
+      <div className="menu-item" data-tour="edit-menu">
         <span>{t.menu.edit.title}</span>
         <div className="dropdown-content">
           <ul>
@@ -312,7 +314,7 @@ const TopMenuBar = () => {
       </div>
 
       {/* Vista Menu */}
-      <div className="menu-item">
+      <div className="menu-item" data-tour="view-menu">
         <span>{t.menu.view.title}</span>
         <div className="dropdown-content">
           <ul>
@@ -476,6 +478,8 @@ const TopMenuBar = () => {
         <div className="dropdown-content">
           <ul>
             <li onClick={() => openHelp('guide')}>{t.menu.help.guide}</li>
+            {/* The guided tour again, from its first step, whenever asked */}
+            <li onClick={openTour}>{t.guide.tour.name}</li>
             {/* The documentation, in a new tab: the drawing stays where it is */}
             <li onClick={() => window.open(docsUrl(language), '_blank', 'noopener,noreferrer')}>
               {t.menu.help.docs}
@@ -517,6 +521,7 @@ const TopMenuBar = () => {
       <button
         type="button"
         className={markerActive ? 'marker-toggle active' : 'marker-toggle'}
+        data-tour="marker"
         onClick={toggleMarker}
         aria-pressed={markerActive}
         aria-label={t.marker.name}
@@ -529,6 +534,7 @@ const TopMenuBar = () => {
       <button
         type="button"
         className="present-button"
+        data-tour="present"
         onClick={handlePresent}
         title={t.menu.presentHint}
         aria-label={t.menu.present}

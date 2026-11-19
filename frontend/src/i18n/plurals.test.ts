@@ -108,6 +108,13 @@ const NEITHER: Record<string, unknown> = {
       'side',
       'site',
       'source',
+      // (the guided tour: a step, and the keys of undo and redo; `last` is above)
+      'step',
+      'undo',
+      'redo',
+      // (two devices, by their names)
+      'from',
+      'to',
       'state',
       'subnet',
       'target',

@@ -17,12 +17,15 @@ const SidebarButton = ({
   label,
   active = false,
   className = '',
+  tour,
   onClick,
   children,
 }: {
   label: string;
   active?: boolean;
   className?: string;
+  /** The name the guided tour points at it by (`data-tour`) */
+  tour?: string;
   onClick: () => void;
   children: ReactNode;
 }) => {
@@ -41,6 +44,7 @@ const SidebarButton = ({
         ref={button}
         className={`sidebar-icon ${className} ${active ? 'active' : ''}`}
         aria-label={label}
+        data-tour={tour}
         onClick={() => {
           // What the button opens appears where the name is: the name has done its job
           hideName();
@@ -99,6 +103,7 @@ const Sidebar = () => {
         {/* Simulation */}
         <SidebarButton
           label={t.sidebar.buttons.simulation}
+          tour="simulation"
           active={activeSidebarPanel === 'simulation'}
           onClick={() => handleSectionClick('simulation')}
         >
@@ -108,6 +113,7 @@ const Sidebar = () => {
         {/* Add Device */}
         <SidebarButton
           label={t.sidebar.buttons.addDevice}
+          tour="add-device"
           active={activeSidebarPanel === 'devices'}
           onClick={() => handleSectionClick('devices')}
         >
@@ -115,7 +121,7 @@ const Sidebar = () => {
         </SidebarButton>
 
         {/* Console */}
-        <SidebarButton label={t.sidebar.buttons.console} onClick={() => openModal('codeTerminal')}>
+        <SidebarButton label={t.sidebar.buttons.console} tour="console" onClick={() => openModal('codeTerminal')}>
           <Terminal size={20} strokeWidth={1.75} />
         </SidebarButton>
 

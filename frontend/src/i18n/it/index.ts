@@ -38,6 +38,7 @@ import { help } from './help';
 import { ui } from './ui';
 import { samples } from './samples';
 import { marker } from './marker';
+import { guide } from './guide';
 
 export const it = {
   common,
@@ -75,4 +76,5 @@ export const it = {
   ui,
   samples,
   marker,
+  guide,
 };

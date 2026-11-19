@@ -68,6 +68,8 @@ export const SHORTCUT_GROUPS: ReadonlyArray<{ id: ShortcutGroup; rows: readonly 
   { id: 'presenting', rows: ['leavePresentation', 'askOrBreak', 'presentationView'] },
   // useMarkerKeys, MarkerSurface
   { id: 'marker', rows: ['markerToggle', 'markerOff', 'markerText', 'markerNewLine', 'markerView'] },
+  // components/Guide/GuidedTour
+  { id: 'tour', rows: ['tourNext', 'tourBack', 'tourClose', 'tourButtons'] },
 ];
 
 /**
@@ -77,8 +79,17 @@ export const SHORTCUT_GROUPS: ReadonlyArray<{ id: ShortcutGroup; rows: readonly 
  * shortcut nobody wrote down.
  */
 export const KEYS_HEARD: Record<string, readonly ShortcutRow[]> = {
-  Enter: ['confirm', 'vlans', 'run', 'renameArea', 'renameProject', 'markerText', 'markerNewLine'],
-  Escape: ['closeWindow', 'closeTerminal', 'leavePresentation', 'readNote', 'release', 'markerOff', 'markerText'],
+  Enter: ['confirm', 'vlans', 'run', 'renameArea', 'renameProject', 'markerText', 'markerNewLine', 'tourNext'],
+  Escape: [
+    'closeWindow',
+    'closeTerminal',
+    'leavePresentation',
+    'readNote',
+    'release',
+    'markerOff',
+    'markerText',
+    'tourClose',
+  ],
   Delete: ['delete'],
   Control: ['toggleSelection'],
   c: ['copy', 'interrupt'],
@@ -88,6 +99,9 @@ export const KEYS_HEARD: Record<string, readonly ShortcutRow[]> = {
   y: ['redo'],
   ArrowUp: ['history'],
   ArrowDown: ['history'],
+  ArrowRight: ['tourNext'],
+  ArrowLeft: ['tourBack'],
+  Tab: ['tourButtons'],
   ',': ['vlans'],
   Backspace: ['vlans'],
   p: ['markerToggle'],

@@ -166,6 +166,7 @@ const TerminalModal = () => {
   const isOpen = useUIStore((state) => state.modals.codeTerminal);
   const closeModal = useUIStore((state) => state.closeModal);
   const terminalContextDevice = useUIStore((state) => state.terminalContextDevice);
+  const terminalCommand = useUIStore((state) => state.terminalCommand);
 
   const [lines, setLines] = useState<TerminalLine[]>(WELCOME_LINES);
   const [input, setInput] = useState('');
@@ -332,8 +333,8 @@ const TerminalModal = () => {
     inputRef.current?.focus();
   };
 
-  const runCommand = () => {
-    const raw = input;
+  /** Run a line: what is typed at the prompt, or a command handed over */
+  const runCommand = (raw: string = input) => {
     const echo: TerminalLine = { text: prompt + raw, tone: 'command' };
     flushLiveSession();
     const result = executeCommand(raw, context);
@@ -374,6 +375,21 @@ const TerminalModal = () => {
     setHistoryIndex(null);
     draftRef.current = '';
   };
+
+  // A command handed over as the window opens (the first question a sample
+  // suggests): typed and run as if the user had, once. Read from the store,
+  // not from this render, so that it is never run twice
+  const runCommandRef = useRef(runCommand);
+  useEffect(() => {
+    runCommandRef.current = runCommand;
+  });
+  useEffect(() => {
+    if (!isOpen) return;
+    const command = useUIStore.getState().terminalCommand;
+    if (!command) return;
+    useUIStore.getState().setTerminalCommand(null);
+    runCommandRef.current(command);
+  }, [isOpen, terminalCommand]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {

@@ -29,6 +29,7 @@ import NewProjectModal from '@/components/Modals/NewProjectModal';
 import ImportExportModal from '@/components/Modals/ImportExportModal';
 import ExportImageModal from '@/components/Modals/ExportImageModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import FirstSteps from '@/components/Guide/FirstSteps';
 import 'reactflow/dist/style.css';
 
 function App() {
@@ -77,6 +78,8 @@ function App() {
           {/* Canvas Area (right) */}
           <main className="canvas-area">
             <NetworkCanvas />
+            {/* The guided tour of a first visit, and the first question of a sample */}
+            <FirstSteps />
           </main>
         </div>
 

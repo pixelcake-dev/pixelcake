@@ -34,3 +34,29 @@ const safeLocalStorage: StateStorage = {
 export function safeJSONStorage<S>() {
   return createJSONStorage<S>(() => safeLocalStorage);
 }
+
+/**
+ * A value this browser keeps, or null: never throws (storage refused, a
+ * private window). For the small things the app remembers outside the
+ * stores, such as what a visitor has already been shown.
+ */
+export function readStored(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Keep a small value in this browser. A write that fails is let go without a
+ * word: it is a preference of this browser, not the work, and at worst it is
+ * asked again at the next visit.
+ */
+export function writeStored(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // (storage full or refused: remembered for this visit only)
+  }
+}

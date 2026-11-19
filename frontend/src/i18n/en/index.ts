@@ -39,6 +39,7 @@ import { help } from './help';
 import { ui } from './ui';
 import { samples } from './samples';
 import { marker } from './marker';
+import { guide } from './guide';
 
 export const en: Dictionary = {
   common,
@@ -76,4 +77,5 @@ export const en: Dictionary = {
   ui,
   samples,
   marker,
+  guide,
 };
