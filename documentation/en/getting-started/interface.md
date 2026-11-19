@@ -27,14 +27,14 @@ On the left, the logo opens the PixelCake website in a new tab, and the four men
 |---|---|
 | File | “New project…”, “Open…”, “Save”, “Save as…” and “Export image…”. See [Saving, opening, files](saving-and-files.md) and [Exporting an image](../asking/exporting-an-image.md). |
 | Edit | “Copy”, “Paste” and “Enclose in an area”. |
-| View | “Fit to window”, “Presentation mode”, “Auto-layout” (“Vertical” or “Horizontal”), “Connect devices with no cable”, “Magnify”, “Animation” and “Show areas”. |
+| View | “Fit to window”, “Presentation mode”, “Auto-layout” (“Vertical” or “Horizontal”), “Connect devices with no cable”, “Magnify”, “Animation”, “Show areas” and “Marker”. |
 | Help | “Guide”, “Documentation”, “Terminal commands”, “Show the welcome screen”, “About” and “The PixelCake website”. |
 
 “Guide” is the short guide inside the app. “Documentation” opens these pages, in the language of the interface, in a new tab. “Show the welcome screen” brings back the first screen, on an empty board only.
 
 In the middle of the bar is the name of the open project. A click on it opens the Explorer. A small orange dot before the name says that the project has changes not saved to a file yet.
 
-On the right are “Present”, the switch between IT and EN, and the button of the theme.
+On the right are “Marker”, the button with the marker that writes and draws on the board ([Writing on the board](../building/marker.md)), “Present”, the switch between IT and EN, and the button of the theme.
 
 ## The panels on the left {#panels}
 

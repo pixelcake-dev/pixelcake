@@ -64,6 +64,8 @@ export const SHORTCUT_GROUPS: ReadonlyArray<{ id: ShortcutGroup; rows: readonly 
   { id: 'terminal', rows: ['run', 'history', 'interrupt', 'closeTerminal'] },
   // PresentationBar
   { id: 'presenting', rows: ['leavePresentation', 'askOrBreak', 'presentationView'] },
+  // useMarkerKeys, MarkerSurface
+  { id: 'marker', rows: ['markerToggle', 'markerOff', 'markerText', 'markerNewLine', 'markerView'] },
 ];
 
 /**
@@ -73,8 +75,8 @@ export const SHORTCUT_GROUPS: ReadonlyArray<{ id: ShortcutGroup; rows: readonly 
  * shortcut nobody wrote down.
  */
 export const KEYS_HEARD: Record<string, readonly ShortcutRow[]> = {
-  Enter: ['confirm', 'vlans', 'run', 'renameArea', 'renameProject'],
-  Escape: ['closeWindow', 'closeTerminal', 'leavePresentation', 'readNote', 'release'],
+  Enter: ['confirm', 'vlans', 'run', 'renameArea', 'renameProject', 'markerText', 'markerNewLine'],
+  Escape: ['closeWindow', 'closeTerminal', 'leavePresentation', 'readNote', 'release', 'markerOff', 'markerText'],
   Delete: ['delete'],
   Control: ['toggleSelection'],
   c: ['copy', 'interrupt'],
@@ -84,4 +86,5 @@ export const KEYS_HEARD: Record<string, readonly ShortcutRow[]> = {
   ArrowDown: ['history'],
   ',': ['vlans'],
   Backspace: ['vlans'],
+  p: ['markerToggle'],
 };

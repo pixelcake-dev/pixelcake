@@ -32,6 +32,7 @@ export const advanced = {
       windows: 'Nelle finestre',
       terminal: 'Nel terminale',
       presenting: 'Durante la presentazione',
+      marker: 'Con il pennarello',
     },
     /** What each shortcut does, and the keys (or the gesture) that do it */
     rows: {
@@ -96,6 +97,12 @@ export const advanced = {
       leavePresentation: { action: 'Esci dalla presentazione', keys: 'Esc' },
       askOrBreak: { action: 'Fai una domanda o simula un guasto', keys: 'Clic su un dispositivo o su un cavo' },
       presentationView: { action: 'Sposta la vista', keys: 'Trascina con il tasto sinistro' },
+
+      markerToggle: { action: 'Attiva o disattiva il pennarello, anche durante la presentazione', keys: 'P' },
+      markerOff: { action: 'Disattiva il pennarello', keys: 'Esc' },
+      markerText: { action: 'Scrivi sul canvas le parole digitate (Esc le lascia perdere)', keys: 'Invio' },
+      markerNewLine: { action: 'Vai a capo nelle parole', keys: 'Maiusc + Invio' },
+      markerView: { action: 'Sposta la vista mentre scrivi', keys: 'Tasto destro + trascina, rotellina del mouse' },
     },
   },
 };

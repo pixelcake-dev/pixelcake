@@ -16,12 +16,13 @@ I disegni dei dispositivi sono propri di PixelCake, con la stessa licenza dell'a
 
 ## Che cosa include {#bundled}
 
-L'app e queste pagine includono i due caratteri dell'interfaccia; l'app include anche due serie di icone. Il testo di ogni licenza è un file dell'app compilata, sotto `licenses/`.
+L'app e queste pagine includono i due caratteri dell'interfaccia; l'app include anche la grafia a mano del pennarello e due serie di icone. Il testo di ogni licenza è un file dell'app compilata, sotto `licenses/`.
 
 | Che cosa | Licenza | A che cosa serve | Testo |
 |---|---|---|---|
 | Inter | SIL Open Font License 1.1 | Il testo dell'interfaccia e di queste pagine. | [inter.txt](https://app.pixelcake.dev/licenses/inter.txt) |
 | JetBrains Mono | SIL Open Font License 1.1 | Gli indirizzi, il terminale e il codice. | [jetbrains-mono.txt](https://app.pixelcake.dev/licenses/jetbrains-mono.txt) |
+| Caveat | SIL Open Font License 1.1 | Le parole scritte con il [pennarello](../building/marker.md), sul canvas e nell'immagine esportata. | [caveat.txt](https://app.pixelcake.dev/licenses/caveat.txt) |
 | Material Design Icons, di Pictogrammers | Apache 2.0 | Le icone dell'interfaccia che vengono da questa serie. | [icons-mdi.txt](https://app.pixelcake.dev/licenses/icons-mdi.txt) |
 | Lucide | ISC | Le icone dell'interfaccia che vengono da questa serie. | [icons-lucide.txt](https://app.pixelcake.dev/licenses/icons-lucide.txt) |
 
@@ -34,6 +35,7 @@ L'app è fatta anche con librerie open source, ciascuna con la sua licenza, elen
 - **PixelCake**, il suo codice, i disegni dei suoi dispositivi, le sue reti di esempio e queste pagine: Copyright © 2025–2026 [@Phil-pje](https://github.com/Phil-pje).
 - **Inter**: Copyright 2016 The Inter Project Authors, [github.com/rsms/inter](https://github.com/rsms/inter).
 - **JetBrains Mono**: Copyright 2020 The JetBrains Mono Project Authors, [github.com/JetBrains/JetBrainsMono](https://github.com/JetBrains/JetBrainsMono).
+- **Caveat**: Copyright 2014 The Caveat Project Authors, [github.com/googlefonts/caveat](https://github.com/googlefonts/caveat).
 - **Material Design Icons**: il gruppo di icone Pictogrammers, [pictogrammers.com](https://pictogrammers.com/).
 - **Lucide**: Lucide Icons and Contributors, [lucide.dev](https://lucide.dev/).
 - Il canvas, con il suo zoom, la sua selezione e il disegno delle connessioni, è costruito su [React Flow](https://reactflow.dev/); la disposizione automatica di un disegno usa dagre.

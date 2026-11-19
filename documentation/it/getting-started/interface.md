@@ -27,14 +27,14 @@ A sinistra, il logo apre il sito di PixelCake in una nuova scheda, e i quattro m
 |---|---|
 | File | «Nuovo progetto…», «Apri…», «Salva», «Salva con nome…» ed «Esporta immagine…». Vedi [Salvare, aprire, i file](saving-and-files.md) e [Esportare un'immagine](../asking/exporting-an-image.md). |
 | Modifica | «Copia», «Incolla» e «Racchiudi in un riquadro». |
-| Vista | «Adatta alla finestra», «Modalità presentazione», «Disposizione automatica» («Verticale» od «Orizzontale»), «Collega i dispositivi senza cavo», «Ingrandisci», «Animazione rete» e «Mostra i riquadri». |
+| Vista | «Adatta alla finestra», «Modalità presentazione», «Disposizione automatica» («Verticale» od «Orizzontale»), «Collega i dispositivi senza cavo», «Ingrandisci», «Animazione rete», «Mostra i riquadri» e «Pennarello». |
 | Aiuto | «Guida», «Documentazione», «Comandi del terminale», «Mostra la schermata di benvenuto», «Informazioni» e «Il sito di PixelCake». |
 
 «Guida» è la guida breve dentro l'applicazione. «Documentazione» apre queste pagine, nella lingua dell'interfaccia, in una nuova scheda del browser. «Mostra la schermata di benvenuto» fa ricomparire la schermata di benvenuto, ma solo su un canvas vuoto.
 
 Al centro della barra c'è il nome del progetto aperto. Un clic sul nome apre l'Explorer. Un puntino arancione davanti al nome dice che il progetto ha modifiche non ancora salvate su file.
 
-A destra ci sono «Presenta», il selettore tra IT ed EN e il pulsante del tema.
+A destra ci sono «Pennarello», il pulsante con il pennarello che scrive e disegna sul canvas ([Scrivere sul canvas](../building/marker.md)), «Presenta», il selettore tra IT ed EN e il pulsante del tema.
 
 ## I pannelli a sinistra {#panels}
 

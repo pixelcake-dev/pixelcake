@@ -11,6 +11,22 @@
  */
 export function shortcutLetter(event: KeyboardEvent): string | null {
   if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey) return null;
+  return letterOf(event);
+}
+
+/**
+ * The letter of a key pressed alone, with no Ctrl, Cmd, Alt or Shift: P
+ * takes up the marker. Read as shortcutLetter reads it: in lower case, and
+ * from the place of the key when what it writes is not a Latin letter.
+ * Whoever listens leaves a key that is typed into a field to the field.
+ */
+export function plainLetter(event: KeyboardEvent): string | null {
+  if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return null;
+  return letterOf(event);
+}
+
+/** The Latin letter of a key, in lower case: what it writes, or where it is */
+function letterOf(event: KeyboardEvent): string | null {
   if (/^[a-z]$/i.test(event.key)) return event.key.toLowerCase();
   const place = /^Key([A-Z])$/.exec(event.code ?? '');
   return place ? place[1].toLowerCase() : null;

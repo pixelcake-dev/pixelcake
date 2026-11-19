@@ -6,6 +6,7 @@ import type { LayoutDirection } from '@/utils/autoLayout';
 import type { ConnectionSummary, LeftAloneReason } from '@/utils/autoConnect';
 import type { NetworkDevice } from '@/types';
 import { usePresentationStore } from '@/store/presentationStore';
+import { useMarkerStore } from '@/store/markerStore';
 import {
   openProject,
   requestNewProject,
@@ -17,6 +18,7 @@ import {
   Sun,
   ArrowDown,
   ArrowRight,
+  Highlighter,
   Network,
   Presentation,
   Sparkles,
@@ -74,6 +76,9 @@ const TopMenuBar = () => {
   const toggleParticleAnimation = useUIStore((state) => state.toggleParticleAnimation);
   const areasShown = useUIStore((state) => state.areasShown);
   const setAreasShown = useUIStore((state) => state.setAreasShown);
+  // The marker («Pennarello»): taken up and put away from its button, from the View menu, with P
+  const markerActive = useMarkerStore((state) => state.active);
+  const toggleMarker = useMarkerStore((state) => state.toggle);
   const applyAutoLayout = useNetworkStore((state) => state.applyAutoLayout);
   const autoConnectDevices = useNetworkStore((state) => state.autoConnectDevices);
   const triggerFitView = useNetworkStore((state) => state.triggerFitView);
@@ -135,8 +140,8 @@ const TopMenuBar = () => {
   // Aiuto → Mostra la schermata di benvenuto. It only exists on an empty
   // canvas; asking to see it must never empty a drawing.
   const handleShowWelcome = () => {
-    const { devices, areas } = useNetworkStore.getState();
-    const hasDrawing = devices.length > 0 || areas.length > 0;
+    const { devices, areas, marks } = useNetworkStore.getState();
+    const hasDrawing = devices.length > 0 || areas.length > 0 || marks.length > 0;
     if (hasDrawing) {
       toast.info(t.menu.notices.welcomeNeedsEmptyCanvas);
       return;
@@ -404,6 +409,18 @@ const TopMenuBar = () => {
               <SquareDashed size={14} style={{ display: 'inline', marginRight: '6px' }} />
               {t.menu.view.areas}
             </li>
+            {/* The marker: write and draw by hand on the board */}
+            <li
+              onClick={toggleMarker}
+              className="magnify-item"
+              role="menuitemcheckbox"
+              aria-checked={markerActive}
+            >
+              {markerActive && <Check size={14} style={{ display: 'inline', marginRight: '6px' }} />}
+              {!markerActive && <span style={{ display: 'inline-block', width: '14px', marginRight: '6px' }}></span>}
+              <Highlighter size={14} style={{ display: 'inline', marginRight: '6px' }} />
+              {t.marker.name}
+            </li>
           </ul>
         </div>
       </div>
@@ -449,6 +466,18 @@ const TopMenuBar = () => {
         {canvases.length > 1 && activeCanvas && (
           <span className="topbar-project-canvas">{activeCanvas.name}</span>
         )}
+      </button>
+
+      {/* The marker: write and draw by hand on the board (P) */}
+      <button
+        type="button"
+        className={markerActive ? 'marker-toggle active' : 'marker-toggle'}
+        onClick={toggleMarker}
+        aria-pressed={markerActive}
+        aria-label={t.marker.name}
+        title={t.marker.hint}
+      >
+        <Highlighter size={18} aria-hidden="true" />
       </button>
 
       {/* Presentation mode */}
