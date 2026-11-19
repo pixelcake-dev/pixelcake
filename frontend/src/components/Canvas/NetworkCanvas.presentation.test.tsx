@@ -44,7 +44,8 @@ function addPc(label: string, x = 0) {
   network().addDevice({
     type: 'PC',
     label,
-    ip: '192.168.1.10',
+    // (an address of its own: two devices with one address are in conflict, and their lamp says so)
+    ip: `192.168.1.${10 + network().devices.length}`,
     subnet: '255.255.255.0',
     gateway: '192.168.1.1',
     position: { x, y: 0 },
