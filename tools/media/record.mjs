@@ -124,6 +124,10 @@ try {
     Object.keys(localStorage).filter((k) => k.startsWith('pixelcake-')).forEach((k) => localStorage.removeItem(k));
     localStorage.setItem('pixelcake-language', ${JSON.stringify(opt.lang)});
     ${scenario.welcome ? '' : `localStorage.setItem('pixelcake-hide-welcome', 'true');`}
+    // (a new profile is a first visit: the guided tour and the first question
+    // of the company sample are marked as seen, so that neither is filmed)
+    localStorage.setItem('pixelcake-tour-seen', 'true');
+    localStorage.setItem('pixelcake-first-try-seen', 'true');
     for (const [k, v] of Object.entries(${JSON.stringify(scenario.storage ?? {})})) localStorage.setItem(k, v);
   `);
   await send('Page.navigate', { url: appUrl });

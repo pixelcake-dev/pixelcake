@@ -46,7 +46,8 @@ export default function scenario({ lang }) {
       { do: 'waitFor', until: `!!document.querySelector('${input}')` },
       { do: 'drag', from: '[data-testid="terminal-resize-handle"]', to: (p) => p.where('[data-testid="terminal-resize-handle"]').then((h) => ({ x: h.x + 100, y: h.y - 290 })), ms: 200, approach: 100 },
       { do: 'drag', from: { css: '[data-testid="terminal-drag-handle"]', at: [0.3, 0.5] }, to: (p) => p.where({ css: '[data-testid="terminal-drag-handle"]', at: [0.3, 0.5] }).then((h) => ({ x: h.x - 20, y: h.y + 420 })), ms: 200, approach: 100 },
-      { do: 'click', to: `[aria-label="${w.closeTerminal}"]`, ms: 100 },
+      // (put away with Esc: made wider, the window has its cross out of the window)
+      { do: 'key', key: 'Escape' },
     ],
     steps: [
       { do: 'click', to: { css: 'button', text: w.load }, ms: 200 },
@@ -64,8 +65,9 @@ export default function scenario({ lang }) {
       { do: 'wait', ms: 300 },
       ...typed(`ping ${w.server} from ${w.pc}`),
       { do: 'waitFor', until: said('dropped at'), after: 1500 },
-      // the terminal is put away: the board keeps the answer, the PC where the packet stopped is red
-      { do: 'click', to: `[aria-label="${w.closeTerminal}"]`, ms: 300 },
+      // the terminal is put away with Esc, as in the setup:
+      // the board keeps the answer, the PC where the packet stopped is red
+      { do: 'key', key: 'Escape' },
       { do: 'wait', ms: 600 },
       { do: 'hidePointer' },
       { do: 'wait', ms: 500 },

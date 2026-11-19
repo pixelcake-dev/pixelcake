@@ -106,6 +106,13 @@ Other keys of the returned object: `welcome: true` shows the welcome screen (it 
 hidden by default, so the board starts empty), `storage: { key: 'value' }` sets
 more keys before the app loads, `tailHold` adds seconds to the last frame.
 
+The profile of a run is new, so to the app it is a first visit. The two things a
+first visit brings up by themselves, the guided tour (once the welcome screen is
+left) and the first question of the company sample (once it is loaded), are marked
+as seen before the app loads (`pixelcake-tour-seen`, `pixelcake-first-try-seen`):
+neither is ever filmed. A scenario that wants to film the tour opens it from
+Help → “Guided tour”.
+
 ### Steps
 
 | step | what it does |
