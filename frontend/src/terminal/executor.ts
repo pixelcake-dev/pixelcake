@@ -1389,8 +1389,10 @@ function runConnect(action: 'connect' | 'disconnect', aQuery: string, bQuery: st
     ] as const) {
       if (iface) continue;
       if (requiresExplicitBinding(device)) {
-        // (with a rule switched on, what no rule allows does not cross an end with no zone)
-        const blocks = deniesTheRest(device.firewallRules ?? []) ? ', and what no rule allows is blocked there' : '';
+        // (with a rule switched on, what comes in by an end with no zone needs a rule)
+        const blocks = deniesTheRest(device.firewallRules ?? [])
+          ? ', and what comes in by it is blocked unless a rule allows it'
+          : '';
         lines.push(
           muted(
             `  ${device.label} has security zones, so the port of a new link is chosen by hand ` +

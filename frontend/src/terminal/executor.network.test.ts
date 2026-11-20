@@ -686,7 +686,7 @@ describe('a firewall at the edge, from the terminal', () => {
     expect(output('connect Ext to FW-1')).toEqual([
       'connected Ext (eth0) ↔ FW-1 (unbound)',
       '  FW-1 has security zones, so the port of a new link is chosen by hand (right click on the link, Edit link, Interfaces): ' +
-        'until then that end is not bound, per-port rules are skipped there, and what no rule allows is blocked there',
+        'until then that end is not bound, per-port rules are skipped there, and what comes in by it is blocked unless a rule allows it',
     ]);
     expect(verdict('browse Web-01 from Ext')).toBe(
       'Browse failed (blocked): HTTP request: firewall FW-1: no rule allows it, and neither rule 1, which names ' +
