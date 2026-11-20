@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **The line under a device in conflict no longer runs over its neighbour.** «192.168.100.100 · in conflitto» (“· in conflict”) was wider than the device and covered the label of the one beside it. The address stays on the first line and the words go on a line of their own under it, centred, on the board, in presentation mode and in the exported image; the device is one line taller, and its cable ends, its frame, its note and the area around it follow.
+
 ## [0.9.2] - 2026-11-20
 
 The marker, undo and redo, a guided tour, and addresses that two devices cannot share.

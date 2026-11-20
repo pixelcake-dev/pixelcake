@@ -48,7 +48,7 @@ PixelCake è un prototipo in fase iniziale. Va bene per esplorare e spiegare una
 
 **Perché un ping si ferma a uno switch?** Lo dice il motivo. Uno switch ferma un flusso quando la porta da cui dovrebbe uscire è spenta, quando manca un cavo, o quando le porte sono in VLAN diverse: la risposta nomina la porta e la VLAN ([VLAN](../building/vlans.md#vlan-1)).
 
-**Perché un dispositivo è giallo, con `· in conflitto` dopo l'indirizzo?** Un altro dispositivo ha lo stesso indirizzo, e i due possono incontrarsi: una domanda verso di lui, o che parte da lui, non è affidabile. Succede dopo aver incollato un server, un router, un firewall o uno switch, che tengono gli indirizzi dell'originale. Dai a uno dei due un altro indirizzo ([due dispositivi con lo stesso indirizzo](../building/addresses.md#conflicts)).
+**Perché un dispositivo è giallo, con `in conflitto` sotto l'indirizzo?** Un altro dispositivo ha lo stesso indirizzo, e i due possono incontrarsi: una domanda verso di lui, o che parte da lui, non è affidabile. Succede dopo aver incollato un server, un router, un firewall o uno switch, che tengono gli indirizzi dell'originale. Dai a uno dei due un altro indirizzo ([due dispositivi con lo stesso indirizzo](../building/addresses.md#conflicts)).
 
 **Perché un dispositivo non ha un indirizzo?** Una scheda con il DHCP non ne ha finché un server della sua rete non risponde; una domanda che la coinvolge ne dice il motivo: nessun server sulla sua rete, un intervallo esaurito, un cavo che manca ([DHCP](../services/dhcp.md#no-address)).
 

@@ -48,7 +48,7 @@ PixelCake is an early prototype. It is good for exploring and explaining a small
 
 **Why does a ping stop at a switch?** The reason says. A switch stops a flow when the port it should leave by is down, when a cable is missing, or when the ports are in different VLANs: the answer names the port and the VLAN ([VLANs](../building/vlans.md#vlan-1)).
 
-**Why is a device yellow, with `· in conflict` after its address?** Another device has the same address, and the two can meet: a question to it, or from it, cannot be trusted. It happens after pasting a server, a router, a firewall or a switch, which keep the addresses of the original. Give one of the two another address ([two devices with one address](../building/addresses.md#conflicts)).
+**Why is a device yellow, with `in conflict` under its address?** Another device has the same address, and the two can meet: a question to it, or from it, cannot be trusted. It happens after pasting a server, a router, a firewall or a switch, which keep the addresses of the original. Give one of the two another address ([two devices with one address](../building/addresses.md#conflicts)).
 
 **Why does a device have no address?** A card on DHCP has none until a server on its network answers; the question about it says why: no server on its network, a range used up, a cable that is missing ([DHCP](../services/dhcp.md#no-address)).
 
