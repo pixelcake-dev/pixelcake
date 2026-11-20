@@ -635,13 +635,79 @@ describe('a firewall at the edge, from the terminal', () => {
 
     run('add rule allow web from untrust to Web-01 on FW-1');
     run('add rule deny from 203.0.113.0/24 to any on FW-1');
-    expect(output('show rules of FW-1').slice(1, 3)).toEqual([
+    // where it cannot tell both zones, the list ends with the implicit deny
+    expect(output('show rules of FW-1')).toEqual([
+      'RULES of FW-1 (the first that matches decides)',
       '   1  allow web    from untrust            to 192.168.20.10',
       '   2  deny  any    from 203.0.113.0/24     to any',
+      '  then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed',
+      '  without a zone on both sides (a link not attached to a port, a port in no zone): what no rule allows is blocked',
+      '  the reply to a flow it allowed passes',
     ]);
     expect(output('show rules of PC-1')).toEqual([
       'PC-1 is not a router or a firewall and has no rules: it filters nothing',
     ]);
+  });
+
+  it('with a rule, blocks what no rule allows across a port in no zone, and the reason names the port', () => {
+    cableEdge();
+    run('interface 2 zone none on FW-1');
+    // the first rule says which links it now judges with no zone
+    expect(output('add rule allow web from any to Web-01 on FW-1')).toEqual([
+      'FW-1: rule 1 added — allow web from any to 192.168.20.10',
+      '  Web-01 → 192.168.20.10',
+      '  from now on FW-1 blocks what no rule allows where it cannot tell the zone of both sides:',
+      '    the link to Ext is on port 2, which is in no zone',
+    ]);
+    expect(transcript('ping Web-01 from Ext')).toEqual([
+      'Pinging Web-01 (192.168.20.10) from Ext...',
+      'Ping failed (blocked): request: firewall FW-1: no rule allows it, and the zone policy cannot decide: ' +
+        'port 2 is in no zone',
+      '  dropped at: FW-1',
+    ]);
+    // what a rule allows passes, and its response as the reply of a flow it allowed
+    expect(transcript('browse Web-01 from Ext').slice(-3)).toEqual([
+      'Page received from Web-01',
+      '  note: HTTP request: firewall FW-1: allowed by rule 1 (allow web from any to 192.168.20.10)',
+      '  note: HTTP response: firewall FW-1: no rule matches, allowed as the reply to an allowed flow',
+    ]);
+    // without its rule the firewall lets through again what its zones cannot judge
+    expect(output('remove rule 1 from FW-1')).toEqual([
+      'FW-1: rule 1 removed — allow web from any to 192.168.20.10',
+      '  FW-1 has no rules left: where it cannot tell the zone of both sides it lets the packet through',
+    ]);
+    expect(verdict('ping Web-01 from Ext')).toMatch(/^Reply from 192\.168\.20\.10/);
+  });
+
+  it('with a rule, blocks what crosses a link not attached to a port, and the reason names the rule it skipped', () => {
+    cableEdge();
+    run('add rule allow web from untrust to Web-01 on FW-1');
+    run('disconnect Ext from FW-1');
+    expect(output('connect Ext to FW-1')).toEqual([
+      'connected Ext (eth0) ↔ FW-1 (unbound)',
+      '  FW-1 has security zones, so the port of a new link is chosen by hand (right click on the link, Edit link, Interfaces): ' +
+        'until then that end is not bound, per-port rules are skipped there, and what no rule allows is blocked there',
+    ]);
+    expect(verdict('browse Web-01 from Ext')).toBe(
+      'Browse failed (blocked): HTTP request: firewall FW-1: no rule allows it, and neither rule 1, which names ' +
+        'a zone, nor the zone policy can decide: the link is not attached to a port'
+    );
+    expect(verdict('ping Web-01 from Ext')).toBe(
+      'Ping failed (blocked): request: firewall FW-1: no rule allows it, and the zone policy cannot decide: ' +
+        'the link is not attached to a port'
+    );
+    // a ping from inside leaves by port 2, the port of its route: the zones of both sides
+    // are known, and the reply comes back as the reply to a flow it allowed
+    const outwards = transcript('ping Ext from PC-1');
+    expect(verdict('ping Ext from PC-1')).toBe('Reply from 203.0.113.50: hops=5 time=7ms');
+    expect(outwards).toContain('  note: request: firewall FW-1: no rule matches, zone policy trust → untrust allowed');
+    expect(outwards).toContain('  note: reply: firewall FW-1: no rule matches, allowed as the reply to an allowed flow');
+
+    // attached to port 2, in zone untrust: the rule and the zone policy decide again
+    const link = useNetworkStore.getState().connections.find(c => c.source === device('Ext').id);
+    useNetworkStore.getState().updateConnection(link!.id, { targetPort: 2 });
+    expect(verdict('browse Web-01 from Ext')).toBe('Page received from Web-01');
+    expect(verdict('ping Ext from PC-1')).toMatch(/^Reply from 203\.0\.113\.50/);
   });
 
   it('takes rules on a router too, as its access list, which ends with an implicit deny', () => {
