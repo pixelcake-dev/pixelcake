@@ -82,11 +82,26 @@ export function cableRun(
   return {};
 }
 
-/** The height of a device: it is lower when it shows no address */
-export function deviceHeight(hasAddress: boolean): number {
+/**
+ * The lines under the name: nothing for a device with no address to show,
+ * else the address, and, on a line of its own, what is said of it (an
+ * address that another device has too is followed by "in conflict")
+ */
+export function addressLines(text: string): string[] {
+  return text === '' ? [] : text.split('\n');
+}
+
+/** The height of a device: it is lower when it shows no address, higher when what is under its name takes more lines */
+export function deviceHeight(hasAddress: boolean, lines = 1): number {
   const m = DEVICE_METRICS;
   return (
-    2 * m.border + m.paddingTop + m.icon + m.iconGap + m.nameLine + (hasAddress ? m.ipLine : 0) + m.paddingBottom
+    2 * m.border +
+    m.paddingTop +
+    m.icon +
+    m.iconGap +
+    m.nameLine +
+    (hasAddress ? lines * m.ipLine : 0) +
+    m.paddingBottom
   );
 }
 
