@@ -1,9 +1,17 @@
 import type { Dictionary } from '../dictionary';
 
-/** The marker: writing and drawing by hand on the board */
+import { formatCount } from '../numbers';
+
+const amount = (value: number) => formatCount('en', value);
+
+/** Annotation mode: writing and drawing by hand on the board; what is written is the annotations */
 export const marker: Dictionary['marker'] = {
-  name: 'Marker',
-  hint: 'Marker: write and draw by hand on the board (P)',
+  name: 'Annotation mode',
+  nameCount: (count) =>
+    `Annotation mode, ${count === 1 ? '1 annotation hidden' : `${amount(count)} annotations hidden`}`,
+  hint: 'Annotation mode: write and draw by hand on the board (A)',
+  hintHidden: (count) =>
+    `Annotation mode (A): ${count === 1 ? '1 annotation hidden' : `${amount(count)} annotations hidden`}`,
   groups: {
     tool: 'Tool',
     colour: 'Colour',
@@ -29,14 +37,12 @@ export const marker: Dictionary['marker'] = {
     thick: 'Thick',
   },
   clear: 'Clear all',
-  clearHint: 'Clear everything written on this board',
-  close: 'Close the marker',
-  presenting: 'Only for this presentation',
-  presentingHint: 'What you write now does not change the board, and is gone when you leave the presentation',
-  clearPresenterHint: 'Clear what you wrote during the presentation',
+  clearHint: 'Clear every annotation on this board',
+  close: 'Leave annotation mode',
+  notInImage: 'Annotations are not in the image: annotation mode is off.',
   clearQuestion: {
-    title: 'Clear everything written on the board?',
-    detail: 'Every mark of the marker on this board goes. Devices, cables and areas stay.',
+    title: 'Clear every annotation on the board?',
+    detail: 'Every annotation written by hand on this board goes. Devices, cables and areas stay.',
     confirm: 'Clear',
   },
   text: {

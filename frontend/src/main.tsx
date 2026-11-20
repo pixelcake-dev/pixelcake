@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/inter'
 import '@fontsource/jetbrains-mono/400.css'
 import '@fontsource/jetbrains-mono/500.css'
-// The handwriting of the marker («Pennarello»), one weight
+// The handwriting of annotation mode («Modalità appunti»), one weight
 import '@fontsource/caveat/600.css'
 import './index.css'
 import App from './App.tsx'

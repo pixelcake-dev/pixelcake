@@ -1,8 +1,7 @@
 /**
- * The marker in use: a sheet over the board that takes the pointer (mouse,
+ * Annotation mode on: a sheet over the board that takes the pointer (mouse,
  * pen or finger), so that it writes and selects, moves or joins nothing.
- * It is there only while the marker is in use; put away, the board is as it
- * always is.
+ * It is there only while the mode is on; off, the board is as it always is.
  *
  * - The pen draws a line through every point the pointer goes through.
  * - An arrow goes from where the pointer goes down to where it comes up; a
@@ -14,8 +13,7 @@
  * - The right button drags the view and the wheel zooms, as on the board.
  *
  * Each mark finished, and each sweep of the eraser, is one action of the
- * store: of the canvas (networkStore) while building, of the presenter's pen
- * (markerStore) while presenting.
+ * store of the canvas (networkStore), building or presenting.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -23,7 +21,6 @@ import { useReactFlow, useStore, useStoreApi, type ReactFlowState } from 'reactf
 import type { CanvasMark } from '@/types';
 import { useNetworkStore } from '@/store/networkStore';
 import { useMarkerStore } from '@/store/markerStore';
-import { usePresentationStore } from '@/store/presentationStore';
 import { HAND_FONT, MARK_COLOUR_VARS, MARK_TEXT_SIZE, newSeed, tidyMarkText } from '@/utils/canvasMarks';
 import { markHit, simplifyPoints, stampBox, type HandMeasure, type HandPoint } from '@/utils/handDrawing';
 import { createTextMeasure } from '@/utils/drawingMeasure';
@@ -59,7 +56,6 @@ const MarkerSurface = () => {
   const tool = useMarkerStore((state) => state.tool);
   const color = useMarkerStore((state) => state.color);
   const width = useMarkerStore((state) => state.width);
-  const presenting = usePresentationStore((state) => state.active);
   const [tx, ty, zoom] = useStore(transformOf);
   const flowStore = useStoreApi();
   const flow = useReactFlow();
@@ -85,14 +81,10 @@ const MarkerSurface = () => {
     [flowStore]
   );
 
-  /** A mark finished goes where the marker writes now: the canvas, or the presenter's pen */
-  const keep = useCallback(
-    (mark: Omit<CanvasMark, 'id'>) => {
-      if (usePresentationStore.getState().active) useMarkerStore.getState().addPresenterMark(mark);
-      else useNetworkStore.getState().addMark(mark);
-    },
-    []
-  );
+  /** A mark finished goes on the canvas: one sheet, building or presenting */
+  const keep = useCallback((mark: Omit<CanvasMark, 'id'>) => {
+    useNetworkStore.getState().addMark(mark);
+  }, []);
 
   /** The words typed, written on the canvas (none when nothing was typed) */
   const finishTyping = useCallback(
@@ -114,9 +106,8 @@ const MarkerSurface = () => {
   // Put away with words still in the field: they are written, as a click elsewhere would
   useEffect(() => () => finishTyping(true), [finishTyping]);
 
-  /** What the eraser can take: the canvas's while building, the presenter's while presenting */
-  const erasable = () =>
-    usePresentationStore.getState().active ? useMarkerStore.getState().presenterMarks : useNetworkStore.getState().marks;
+  /** What the eraser can take: every note of the canvas */
+  const erasable = () => useNetworkStore.getState().marks;
 
   /** The marks the eraser touches on its way from one point to the next */
   const touchedOn = (from: HandPoint, to: HandPoint, scale: number): string[] => {
@@ -248,8 +239,7 @@ const MarkerSurface = () => {
     if (now.kind === 'erase') {
       useMarkerStore.getState().setErasing([]);
       if (now.touched.length === 0) return;
-      if (usePresentationStore.getState().active) useMarkerStore.getState().removePresenterMarks(now.touched);
-      else useNetworkStore.getState().removeMarks(now.touched);
+      useNetworkStore.getState().removeMarks(now.touched);
       return;
     }
 
@@ -308,7 +298,6 @@ const MarkerSurface = () => {
       ref={surface}
       className="marker-surface nopan nodrag nowheel"
       data-tool={tool}
-      data-presenting={presenting || undefined}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={(event) => finish(event, false)}

@@ -40,8 +40,8 @@ export const guide = {
         text: 'File → Salva scrive il progetto in un file sul tuo computer. Non va su nessun server.',
       },
       marker: {
-        title: 'Il pennarello',
-        text: 'Scrivi a mano sopra il disegno, come su una lavagna: parole, frecce, cerchi. Si prende anche con il tasto P.',
+        title: 'Modalità appunti',
+        text: 'Scrivi a mano sopra il disegno: parole, frecce, cerchi. Gli appunti si vedono solo a modalità attiva (tasto A).',
       },
       present: {
         title: 'Presenta',

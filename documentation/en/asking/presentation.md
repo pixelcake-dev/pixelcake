@@ -19,11 +19,11 @@ On entering, the selection is let go, the right-click menu is closed and a packe
 - the badge **“Presentation”** and the name of the project;
 - the boards of the project, in “Project boards”, when it has more than one. Changing board forgets the question and the failures, because they belonged to the other;
 - **“Packet speed”**: “Slow”, “Normal”, “Fast”;
-- **“Marker”**, to [write over the drawing](#marker), then **“Terminal”**, **“Export image”** and **“Full screen”**;
+- **“Annotation mode”**, to [write over the drawing](#annotations), with a small number when annotations are hidden, then **“Terminal”**, **“Export image”** and **“Full screen”**;
 - the language and the theme, as in the menu bar;
 - **“Exit”**.
 
-To leave, press “Exit” or Esc. Esc first closes the small menu if one is open, or puts the marker away if it is on; it does nothing while you are typing in a field or a window is open. Leaving forgets the question and every simulated failure, and leaves full screen.
+To leave, press “Exit” or Esc. Esc first closes the small menu if one is open, or leaves annotation mode if it is on; it does nothing while you are typing in a field or a window is open. Leaving forgets the question and every simulated failure, and leaves full screen.
 
 Areas are shown, and cannot be edited. Double-clicking a device does not open its window: nothing here edits the drawing.
 
@@ -78,11 +78,13 @@ The kind of exchange counted is the one chosen in the question, “Ping”, “W
 
 The engine takes the shortest path that works. Spanning tree and similar protocols are not simulated, so a path that "takes another path" is the shortest one the cables allow, not the one a real switch would have chosen.
 
-## Writing over the drawing {#marker}
+## Writing over the drawing {#annotations}
 
-While you present, the [marker](../building/marker.md) is a pen: press “Marker” on the bar, or P, and write over the drawing while you break a switch or cut a link: a circle around what stops, an arrow, a word. What the board already has written stays underneath. The tools say “Only for this presentation”: what the pen writes changes nothing of the board and is not saved. It is gone when you leave the presentation, and when you show another board; “Clear all” takes it away at once.
+[Annotation mode](../building/annotations.md) works while you present too, on the same sheet as when you build. The presentation starts with it off and the drawing clean. Press “Annotation mode” on the bar, or A, and the annotations written beforehand appear; write over the drawing while you break a switch or cut a link: a circle around what stops, an arrow, a word. What you write stays on the board, saved with it, until you erase it. Turn the mode off and they are out of sight again; the button says how many are hidden.
 
-While the pen is on, a click writes instead of opening the menu of a device. Put it away (P, Esc or its button) to ask a question or to break something, and take it up again to write. With the pen on, the first Esc puts it away and the second leaves the presentation.
+While the mode is on, a click writes instead of opening the menu of a device. Turn it off (A, Esc or its button) to ask a question or to break something, and on again to write. With the mode on, the first Esc leaves it and the second leaves the presentation.
+
+Undo does not work while presenting, as for everything else: what was written during the presentation is taken back with Ctrl + Z after leaving it, or erased with the eraser.
 
 ## The terminal while presenting {#terminal}
 

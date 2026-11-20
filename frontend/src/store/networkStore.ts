@@ -36,7 +36,7 @@ interface NetworkStore {
    */
   areas: CanvasArea[];
   /**
-   * What is written on the canvas with the marker («Pennarello»), first
+   * What is written on the canvas with annotation mode («Modalità appunti»), first
    * written first: over the devices and the cables. A drawing and nothing
    * else, like the areas
    */

@@ -34,7 +34,7 @@ export const advanced: Dictionary['advanced'] = {
       windows: 'In the windows',
       terminal: 'In the terminal',
       presenting: 'While presenting',
-      marker: 'With the marker',
+      annotations: 'In annotation mode',
       tour: 'In the guided tour',
     },
     /** What each shortcut does, and the keys (or the gesture) that do it */
@@ -103,8 +103,8 @@ export const advanced: Dictionary['advanced'] = {
       askOrBreak: { action: 'Ask a question or simulate a failure', keys: 'Click a device or a cable' },
       presentationView: { action: 'Move the view', keys: 'Drag with the left button' },
 
-      markerToggle: { action: 'Turn the marker on or off, also while presenting', keys: 'P' },
-      markerOff: { action: 'Turn the marker off', keys: 'Esc' },
+      markerToggle: { action: 'Turn annotation mode on or off, also while presenting', keys: 'A' },
+      markerOff: { action: 'Leave annotation mode', keys: 'Esc' },
       markerText: { action: 'Write the words typed on the board (Esc gives them up)', keys: 'Enter' },
       markerNewLine: { action: 'Start a new line in the words', keys: 'Shift + Enter' },
       markerView: { action: 'Move the view while writing', keys: 'Right button + drag, mouse wheel' },

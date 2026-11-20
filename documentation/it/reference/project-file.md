@@ -111,15 +111,15 @@ Un canvas contiene:
 | `devices` | Ogni dispositivo: tipo, template, nome, indirizzi, posizione, note, le sue porte o schede di rete con VLAN, zone, NAT e intervalli DHCP, rotte statiche, regole del firewall, inoltri e record DNS. |
 | `connections` | Le connessioni: i due dispositivi e, a ciascuna estremità, la porta o la scheda di rete a cui è collegato il cavo; tipo, banda, etichetta, colore, VLAN. |
 | `areas` | I riquadri disegnati dietro i gruppi di dispositivi: etichetta, colore, posizione e dimensioni. Assente quando il canvas non ne ha. |
-| `marks` | Quello che è scritto sul canvas con il pennarello: vedi [più avanti](#marks). Assente quando non c'è niente di scritto. |
+| `marks` | Gli appunti del canvas, scritti in modalità appunti: vedi [più avanti](#marks). Assente quando non ce ne sono. |
 | `viewport` | La posizione e lo zoom del canvas, così che si apra dov'era stato lasciato. |
 | `deviceCounter`, `connectionCounter` | I numeri che avranno il prossimo dispositivo e la prossima connessione, perché uno nuovo non prenda mai l'ID di un altro. |
 
 Due cose non si scrivono mai, perché si ricavano dal disegno: l'indirizzo che una scheda riceve dal DHCP e l'indirizzo che corrisponde a un nome. Il motore le ricalcola ogni volta.
 
-### Quello che è scritto con il pennarello {#marks}
+### Gli appunti {#marks}
 
-Ogni segno del [pennarello](../building/marker.md) è una voce di `marks`, nell'ordine in cui è stato scritto:
+Ogni appunto della [modalità appunti](../building/annotations.md) è una voce di `marks`, nell'ordine in cui è stato scritto. Il file li porta sia che la modalità fosse accesa o spenta quando è stato salvato:
 
 ```json
 {
@@ -140,7 +140,7 @@ Ogni segno del [pennarello](../building/marker.md) è una voce di `marks`, nell'
 - `text`: le parole di un segno di parole, una riga o più;
 - `seed`: ciò da cui si ricava il suo leggero tremolio, perché sia disegnato ogni volta uguale.
 
-I segni che chi presenta scrive durante una presentazione non sono mai nel file. Un programma che non conosce `marks` apre il file lo stesso e li lascia fuori.
+Anche quello che si scrive durante una presentazione è nel file: è lo stesso foglio. Un programma che non conosce `marks` apre il file lo stesso e li lascia fuori.
 
 ## Aprire un file vecchio o danneggiato {#repairs}
 

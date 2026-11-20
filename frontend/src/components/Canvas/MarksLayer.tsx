@@ -1,12 +1,10 @@
 /**
- * What is written with the marker («Pennarello»), drawn over the devices and
- * the cables: one SVG over the board, in the coordinates of the canvas, that
- * follows the view as React Flow moves and zooms it. It never takes the
- * pointer: while the marker is put away the board is as if nothing were
- * written on it (MarkerSurface takes the pointer while it is in use).
- *
- * While presenting, what the presenter writes is drawn over what the canvas
- * has.
+ * The notes of annotation mode («Modalità appunti»), drawn over the devices
+ * and the cables: one SVG over the board, in the coordinates of the canvas,
+ * that follows the view as React Flow moves and zooms it. It exists only
+ * while the mode is on (off, the board is as if nothing were written on it),
+ * building and presenting alike, and it never takes the pointer
+ * (MarkerSurface takes it while the mode is on).
  */
 
 import { memo, useMemo } from 'react';
@@ -14,7 +12,6 @@ import { useStore, type ReactFlowState } from 'reactflow';
 import type { CanvasMark } from '@/types';
 import { useNetworkStore } from '@/store/networkStore';
 import { useMarkerStore } from '@/store/markerStore';
-import { usePresentationStore } from '@/store/presentationStore';
 import { HAND_FONT, MARK_COLOUR_VARS } from '@/utils/canvasMarks';
 import { drawMark, textBaseline } from '@/utils/handDrawing';
 
@@ -58,29 +55,21 @@ MarkShape.displayName = 'MarkShape';
 
 const MarksLayer = () => {
   const marks = useNetworkStore((state) => state.marks);
-  const presenterMarks = useMarkerStore((state) => state.presenterMarks);
   const erasing = useMarkerStore((state) => state.erasing);
-  const presenting = usePresentationStore((state) => state.active);
+  // The notes are seen only while annotation mode is on: off, the board is clean
+  const on = useMarkerStore((state) => state.active);
   const [x, y, zoom] = useStore(transformOf);
 
-  const shownPresenter = presenting ? presenterMarks : [];
-  if (marks.length === 0 && shownPresenter.length === 0) return null;
+  if (!on || marks.length === 0) return null;
   return (
     <svg className="marks-layer" aria-hidden="true">
       <g transform={`translate(${x} ${y}) scale(${zoom})`}>
         <g className="marks-canvas">
           {marks.map((mark) => (
-            // (the eraser shows what it is about to take; while presenting it takes the presenter's alone)
-            <MarkShape key={mark.id} mark={mark} fading={!presenting && erasing.includes(mark.id)} />
+            // (the eraser shows what it is about to take)
+            <MarkShape key={mark.id} mark={mark} fading={erasing.includes(mark.id)} />
           ))}
         </g>
-        {shownPresenter.length > 0 && (
-          <g className="marks-presenter">
-            {shownPresenter.map((mark) => (
-              <MarkShape key={mark.id} mark={mark} fading={erasing.includes(mark.id)} />
-            ))}
-          </g>
-        )}
       </g>
     </svg>
   );

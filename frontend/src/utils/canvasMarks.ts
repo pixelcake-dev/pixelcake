@@ -1,5 +1,5 @@
 /**
- * The marks of the marker («Pennarello») as data: what they look like (the
+ * The marks of annotation mode («Modalità appunti») as data: what they look like (the
  * thickness of a line, the size of words, the colours of the two themes),
  * how a new one is named and kept, and how a list of them is read from
  * outside (a project file, the browser's storage).

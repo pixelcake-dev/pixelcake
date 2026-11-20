@@ -1,10 +1,8 @@
 /**
- * The tools of the marker («Pennarello»), over the top of the board while it
- * is in use: what to draw (pen, words, arrow, circle, tick, cross) or the
- * eraser, the colour, the thickness, «Cancella tutto», and the way to put it
- * away. While presenting it says that what is written goes with the
- * presentation, and «Cancella tutto» clears the presenter's marks at once:
- * they are not the canvas's.
+ * The tools of annotation mode («Modalità appunti»), over the top of the
+ * board while it is on: what to draw (pen, words, arrow, circle, tick, cross)
+ * or the eraser, the colour, the thickness, «Cancella tutto», and the way to
+ * leave the mode. The same while building and while presenting.
  */
 
 import type { ReactNode } from 'react';
@@ -12,7 +10,6 @@ import { Check, Circle, Eraser, MoveUpRight, Pencil, Trash2, Type, X } from 'luc
 import { MARK_COLOURS, MARK_WIDTHS } from '@/types';
 import { MARKER_TOOLS, useMarkerStore, type MarkerTool } from '@/store/markerStore';
 import { useNetworkStore } from '@/store/networkStore';
-import { usePresentationStore } from '@/store/presentationStore';
 import { useT } from '@/i18n';
 import { MARK_COLOUR_VARS } from '@/utils/canvasMarks';
 import { clearWithQuestion } from '@/utils/markerActions';
@@ -39,17 +36,8 @@ const MarkerToolbar = () => {
   const tool = useMarkerStore((state) => state.tool);
   const color = useMarkerStore((state) => state.color);
   const width = useMarkerStore((state) => state.width);
-  const presenting = usePresentationStore((state) => state.active);
   const nothingWritten = useNetworkStore((state) => state.marks.length === 0);
-  const nothingPresented = useMarkerStore((state) => state.presenterMarks.length === 0);
   const marker = useMarkerStore.getState();
-
-  const handleClear = () => {
-    // (the presenter's marks are gone at the end anyway: no question)
-    if (presenting) marker.clearPresenterMarks();
-    else void clearWithQuestion();
-  };
-  const nothingToClear = presenting ? nothingPresented : nothingWritten;
 
   return (
     <div className="marker-toolbar" role="toolbar" aria-label={t.marker.name}>
@@ -101,20 +89,14 @@ const MarkerToolbar = () => {
         ))}
       </div>
 
-      {presenting && (
-        <span className="marker-presenting" title={t.marker.presentingHint}>
-          {t.marker.presenting}
-        </span>
-      )}
-
       <div className="marker-group">
         <button
           type="button"
           className="marker-button"
           aria-label={t.marker.clear}
-          title={presenting ? t.marker.clearPresenterHint : t.marker.clearHint}
-          disabled={nothingToClear}
-          onClick={handleClear}
+          title={t.marker.clearHint}
+          disabled={nothingWritten}
+          onClick={() => void clearWithQuestion()}
         >
           <Trash2 size={16} aria-hidden="true" />
         </button>

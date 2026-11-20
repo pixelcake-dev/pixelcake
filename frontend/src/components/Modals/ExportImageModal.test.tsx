@@ -10,6 +10,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { useNetworkStore } from '@/store/networkStore';
+import { useMarkerStore } from '@/store/markerStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useSimulationStore } from '@/store/simulationStore';
@@ -19,6 +20,7 @@ import { createRedundancySample } from '@/utils/sampleRedundancy';
 import { createSampleTopology } from '@/utils/sampleTopology';
 import { DEVICE_STATE_COLORS, MARK_COLORS, PALETTES, deviceSize } from '@/utils/drawingImage';
 import * as images from '@/utils/imageExport';
+import { drawMark } from '@/utils/handDrawing';
 import { device } from '@/test/networkFixtures';
 import PresentationBar from '@/components/Presentation/PresentationBar';
 import PresentationPanel from '@/components/Presentation/PresentationPanel';
@@ -903,5 +905,65 @@ describe('ExportImageModal — a device on DHCP', () => {
     expect(texts).toContain('192.168.10.1');
     // nothing was written back on the drawing
     expect(named('PC-1')).toMatchObject({ ip: '', nics: [{ dhcp: true, ip: '' }] });
+  });
+});
+
+describe('ExportImageModal — the notes follow annotation mode', () => {
+  const ring = { kind: 'ellipse' as const, color: 'red' as const, width: 'thick' as const, points: [10, 10, 160, 120], seed: 5 };
+  /** One path of the ring, as it is drawn */
+  const ringPath = () => drawMark({ id: 'mark-1', ...ring }).paths[0];
+  const hasRing = () => new XMLSerializer().serializeToString(picture()).includes(ringPath());
+
+  beforeEach(() => {
+    act(() => useMarkerStore.getState().setActive(false));
+  });
+  afterEach(() => {
+    act(() => useMarkerStore.getState().setActive(false));
+  });
+
+  it('with the mode off the notes are not in the picture, and one line says so', async () => {
+    act(() => {
+      network().addMark(ring);
+    });
+    render(<ExportImageModal />);
+    await openDialog();
+
+    expect(hasRing()).toBe(false);
+    expect(screen.getByText("Gli appunti non sono nell'immagine: la modalità appunti è spenta.")).toBeInTheDocument();
+  });
+
+  it('with the mode on the notes are in the picture, and the line is not there', async () => {
+    act(() => {
+      network().addMark(ring);
+      useMarkerStore.getState().setActive(true);
+    });
+    render(<ExportImageModal />);
+    await openDialog();
+
+    expect(hasRing()).toBe(true);
+    expect(screen.queryByText(/Gli appunti non sono nell'immagine/)).toBeNull();
+  });
+
+  it('with no notes on the canvas there is nothing to say, the mode off or on', async () => {
+    render(<ExportImageModal />);
+    await openDialog();
+
+    expect(screen.queryByText(/Gli appunti non sono nell'immagine/)).toBeNull();
+  });
+
+  it('while presenting it is the same: what the board shows is what the picture shows', async () => {
+    act(() => {
+      network().addMark(ring);
+      presentation().enter();
+      useMarkerStore.getState().setActive(true);
+    });
+    render(<ExportImageModal />);
+    await openDialog();
+    expect(hasRing()).toBe(true);
+
+    act(() => useMarkerStore.getState().setActive(false));
+    await settle();
+    expect(hasRing()).toBe(false);
+    expect(screen.getByText(/Gli appunti non sono nell'immagine/)).toBeInTheDocument();
   });
 });

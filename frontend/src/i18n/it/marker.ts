@@ -1,9 +1,19 @@
-/** The marker («Pennarello»): writing and drawing by hand on the canvas */
+import { formatCount } from '../numbers';
+
+const amount = (value: number) => formatCount('it', value);
+
+/** Annotation mode («Modalità appunti»): writing and drawing by hand on the canvas; what is written is the «appunti» */
 export const marker = {
   /** Its name: the button on the menu bar and on the bar of the presentation, the entry of the View menu, its tools */
-  name: 'Pennarello',
+  name: 'Modalità appunti',
+  /** Its name with the notes hidden while it is off: what the buttons are called for who cannot see their number */
+  nameCount: (count: number) =>
+    `Modalità appunti, ${count === 1 ? '1 appunto nascosto' : `${amount(count)} appunti nascosti`}`,
   /** What the button says under the pointer */
-  hint: 'Pennarello: scrivi e disegna a mano sul canvas (P)',
+  hint: 'Modalità appunti: scrivi e disegna a mano sul canvas (A)',
+  /** What it says under the pointer when the mode is off and there are notes */
+  hintHidden: (count: number) =>
+    `Modalità appunti (A): ${count === 1 ? '1 appunto nascosto' : `${amount(count)} appunti nascosti`}`,
   /** The groups of its tools, for who cannot see them */
   groups: {
     tool: 'Strumento',
@@ -30,15 +40,13 @@ export const marker = {
     thick: 'Spesso',
   },
   clear: 'Cancella tutto',
-  clearHint: 'Cancella tutto quello che è scritto su questo canvas',
-  close: 'Chiudi il pennarello',
-  /** While presenting: what is written is the presenter's, and goes with the presentation */
-  presenting: 'Solo per questa presentazione',
-  presentingHint: "Quello che scrivi ora non cambia il canvas e sparisce quando esci dalla presentazione",
-  clearPresenterHint: 'Cancella quello che hai scritto durante la presentazione',
+  clearHint: 'Cancella tutti gli appunti di questo canvas',
+  close: 'Esci dalla modalità appunti',
+  /** In the window that saves the image: the notes are left out while the mode is off */
+  notInImage: "Gli appunti non sono nell'immagine: la modalità appunti è spenta.",
   clearQuestion: {
-    title: 'Cancellare tutto quello che è scritto sul canvas?',
-    detail: 'Ogni segno del pennarello su questo canvas viene tolto. Dispositivi, cavi e riquadri restano.',
+    title: 'Cancellare tutti gli appunti del canvas?',
+    detail: 'Ogni appunto scritto a mano su questo canvas viene tolto. Dispositivi, cavi e riquadri restano.',
     confirm: 'Cancella',
   },
   /** The field the words are typed in, where the canvas was clicked */

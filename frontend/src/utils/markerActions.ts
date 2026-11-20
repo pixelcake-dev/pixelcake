@@ -1,5 +1,5 @@
 /**
- * What the marker («Pennarello») does that asks the user first: clearing
+ * What annotation mode («Modalità appunti») does that asks the user first: clearing
  * everything written on the canvas. Kept out of the components, like
  * utils/areaActions.ts.
  */

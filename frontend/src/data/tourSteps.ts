@@ -5,7 +5,7 @@
  * screen. A part of the screen the tour points at carries `data-tour`.
  *
  * A step whose places are all out of sight (a narrow window hides the button
- * of the marker and «Presenta», and the View menu is there for both) is shown
+ * of annotation mode and «Presenta», and the View menu is there for both) is shown
  * without a frame, its balloon in the middle.
  */
 

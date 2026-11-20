@@ -18,8 +18,8 @@ export function shortcutLetter(event: KeyboardEvent, options: { withShift?: bool
 }
 
 /**
- * The letter of a key pressed alone, with no Ctrl, Cmd, Alt or Shift: P
- * takes up the marker. Read as shortcutLetter reads it: in lower case, and
+ * The letter of a key pressed alone, with no Ctrl, Cmd, Alt or Shift: A
+ * turns annotation mode on and off. Read as shortcutLetter reads it: in lower case, and
  * from the place of the key when what it writes is not a Latin letter.
  * Whoever listens leaves a key that is typed into a field to the field.
  */

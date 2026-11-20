@@ -1,5 +1,5 @@
 // Writes the licence texts of the typefaces of the interface (the two of its
-// text, and the handwriting of the marker) to public/licenses/, so that they
+// text, and the handwriting of annotation mode) to public/licenses/, so that they
 // travel with the built app as the SIL Open Font License asks: the font
 // files are bundled, and so is their licence.
 //

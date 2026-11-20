@@ -1,7 +1,7 @@
 /**
  * What the app bundles from others besides the icon sets (which are in
  * data/bundledIcons.ts): the typefaces of the interface, the two of its
- * text and the handwriting of the marker («Pennarello»). The text of
+ * text and the handwriting of annotation mode («Modalità appunti»). The text of
  * each licence is in public/licenses/ and travels with the built app;
  * `pnpm licenses:fonts` (scripts/font-licenses.mjs) writes it from the
  * package the typeface comes from, and a test holds the two together.

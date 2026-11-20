@@ -47,7 +47,7 @@ function Screen() {
         Vista
       </button>
       <button type="button" data-tour="marker">
-        Pennarello
+        Modalità appunti
       </button>
       <button type="button" data-tour="present">
         Presenta
@@ -175,7 +175,7 @@ describe('the guided tour', () => {
       'Il terminale',
       'Annulla e ripeti',
       'Salva il progetto',
-      'Il pennarello',
+      'Modalità appunti',
       'Presenta',
     ]);
   });
@@ -206,7 +206,7 @@ describe('the guided tour', () => {
     try {
       renderTour();
       open();
-      press('p');
+      press('a');
       press('z', { ctrlKey: true });
       press('Delete');
       press('ArrowRight');
@@ -214,7 +214,7 @@ describe('the guided tour', () => {
       expect(heard).not.toHaveBeenCalled();
 
       // closed, the app hears its keys again
-      press('p');
+      press('a');
       expect(heard).toHaveBeenCalledTimes(1);
     } finally {
       window.removeEventListener('keydown', heard);
@@ -265,7 +265,7 @@ describe('the guided tour', () => {
     const placed = balloon();
     expect(parseFloat(placed.style.left)).toBeGreaterThanOrEqual(48);
 
-    // the marker button is not on screen (a narrow window): its step falls back on the View menu
+    // the annotation mode button is not on screen (a narrow window): its step falls back on the View menu
     placeAt(document.querySelector('[data-tour="marker"]')!, { x: 0, y: 0, width: 0, height: 0 });
     act(() =>
       useGuideStore.setState({ tourStep: TOUR_STEPS.findIndex(step => step.id === 'marker') })

@@ -67,7 +67,7 @@ export const SHORTCUT_GROUPS: ReadonlyArray<{ id: ShortcutGroup; rows: readonly 
   // PresentationBar
   { id: 'presenting', rows: ['leavePresentation', 'askOrBreak', 'presentationView'] },
   // useMarkerKeys, MarkerSurface
-  { id: 'marker', rows: ['markerToggle', 'markerOff', 'markerText', 'markerNewLine', 'markerView'] },
+  { id: 'annotations', rows: ['markerToggle', 'markerOff', 'markerText', 'markerNewLine', 'markerView'] },
   // components/Guide/GuidedTour
   { id: 'tour', rows: ['tourNext', 'tourBack', 'tourClose', 'tourButtons'] },
 ];
@@ -104,5 +104,5 @@ export const KEYS_HEARD: Record<string, readonly ShortcutRow[]> = {
   Tab: ['tourButtons'],
   ',': ['vlans'],
   Backspace: ['vlans'],
-  p: ['markerToggle'],
+  a: ['markerToggle'],
 };

@@ -119,25 +119,25 @@ describe('the marks in the project file', () => {
     const { canvas, warnings } = readWith([MARKS[0], { kind: 'pen' }, { ...MARKS[2], points: 'x' }]);
 
     expect(canvas.marks).toEqual([MARKS[0]]);
-    expect(warnings).toEqual(['Canvas «Canvas 1»: 2 segni del pennarello non validi ignorati.']);
+    expect(warnings).toEqual(['Canvas «Canvas 1»: 2 appunti non validi ignorati.']);
   });
 
   it('what is not a list of marks is no mark, and the user is told', () => {
     const { canvas, warnings } = readWith('a ring');
 
     expect(canvas).not.toHaveProperty('marks');
-    expect(warnings).toEqual(['Canvas «Canvas 1»: 1 segno del pennarello non valido ignorato.']);
+    expect(warnings).toEqual(['Canvas «Canvas 1»: 1 appunto non valido ignorato.']);
   });
 
   it('a mark that is completed is kept, and the user is told', () => {
     const { canvas, warnings } = readWith([{ ...MARKS[0], color: 'purple' }]);
 
     expect(canvas.marks?.[0].color).toBe('accent');
-    expect(warnings).toEqual(['Canvas «Canvas 1»: 1 segno del pennarello incompleto corretto.']);
+    expect(warnings).toEqual(['Canvas «Canvas 1»: 1 appunto incompleto corretto.']);
   });
 
   it('are not in the YAML: it is the network alone', () => {
     const canvas = projectOf(MARKS).canvases[0];
-    expect(generateYaml(canvas.devices, canvas.connections)).not.toMatch(/mark|pennarello/i);
+    expect(generateYaml(canvas.devices, canvas.connections)).not.toMatch(/mark|appunt/i);
   });
 });

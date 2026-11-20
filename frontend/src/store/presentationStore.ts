@@ -88,11 +88,9 @@ const CANVAS_STATE = {
   route: null,
 };
 
-/** The marker put away, and what the presenter wrote with it gone */
-function putPenAway() {
-  const marker = useMarkerStore.getState();
-  marker.setActive(false);
-  marker.clearPresenterMarks();
+/** Annotation mode put away: the presentation starts and ends with the board clean (the notes stay on the canvas) */
+function putAnnotationsAway() {
+  useMarkerStore.getState().setActive(false);
 }
 
 function toggled(list: string[], id: string): string[] {
@@ -122,8 +120,8 @@ export const usePresentationStore = create<PresentationStore>((set, get) => ({
     // (an area being worked on is let go too: selecting is not editing)
     network.selectArea(null);
     network.setEditingArea(null);
-    // (the marker too: while presenting it is the presenter's pen, taken up anew)
-    putPenAway();
+    // (annotation mode too: in the presentation it is turned on anew, with its button or A)
+    putAnnotationsAway();
 
     set({ active: true, ...CANVAS_STATE, flow: 'ping', panelOpen: true });
     return true;
@@ -132,8 +130,7 @@ export const usePresentationStore = create<PresentationStore>((set, get) => ({
   exit: () => {
     if (!get().active) return;
     useSimulationStore.getState().stopSimulation();
-    // What the presenter wrote is gone with the presentation
-    putPenAway();
+    putAnnotationsAway();
     set({ active: false, ...CANVAS_STATE });
   },
 
@@ -200,8 +197,6 @@ export const usePresentationStore = create<PresentationStore>((set, get) => ({
 
   resetCanvasState: () => {
     useSimulationStore.getState().stopSimulation();
-    // (what the presenter wrote was written over the old canvas)
-    useMarkerStore.getState().clearPresenterMarks();
     set({ ...CANVAS_STATE });
   },
 

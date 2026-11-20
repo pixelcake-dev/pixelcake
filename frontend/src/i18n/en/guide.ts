@@ -37,8 +37,8 @@ export const guide: Dictionary['guide'] = {
         text: 'File → Save writes the project to a file on your computer. It goes to no server.',
       },
       marker: {
-        title: 'The marker',
-        text: 'Write by hand over the drawing, as on a whiteboard: words, arrows, circles. The P key takes it up too.',
+        title: 'Annotation mode',
+        text: 'Write by hand over the drawing: words, arrows, circles. Annotations show only while the mode is on (A key).',
       },
       present: {
         title: 'Present',

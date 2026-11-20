@@ -100,15 +100,15 @@ export const projectFile = {
       inCanvas(
         canvasName,
         count === 1
-          ? '1 segno del pennarello non valido ignorato.'
-          : `${amount(count)} segni del pennarello non validi ignorati.`
+          ? '1 appunto non valido ignorato.'
+          : `${amount(count)} appunti non validi ignorati.`
       ),
     marksRepaired: (canvasName: string, count: number) =>
       inCanvas(
         canvasName,
         count === 1
-          ? '1 segno del pennarello incompleto corretto.'
-          : `${amount(count)} segni del pennarello incompleti corretti.`
+          ? '1 appunto incompleto corretto.'
+          : `${amount(count)} appunti incompleti corretti.`
       ),
     viewReset: (canvasName: string) =>
       inCanvas(canvasName, 'vista mancante o non valida, riportata alla posizione iniziale.'),

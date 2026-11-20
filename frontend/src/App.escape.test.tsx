@@ -11,6 +11,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, fireEvent } from '@testing-library/react';
 import { useNetworkStore } from '@/store/networkStore';
+import { useMarkerStore } from '@/store/markerStore';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useUIStore } from '@/store/uiStore';
 import { createNewProject } from '@/utils/projectFileAccess';
@@ -93,6 +94,7 @@ beforeEach(() => {
   localStorage.setItem('pixelcake-hide-welcome', 'true');
   stubBrowser();
   usePresentationStore.getState().exit();
+  useMarkerStore.getState().setActive(false);
   createNewProject({ name: 'Sede Milano' });
   const sample = createSampleTopology();
   network().loadTopology(sample.devices, sample.connections);
@@ -220,6 +222,21 @@ describe('App — Esc and the terminal', () => {
 
     fireEvent.keyDown(input, { key: 'Escape' });
     expect(ui().modals.codeTerminal).toBe(false);
+    expect(usePresentationStore.getState().active).toBe(true);
+
+    esc();
+    expect(usePresentationStore.getState().active).toBe(false);
+  });
+
+  it('while presenting in annotation mode: the first Esc leaves the mode, the second leaves the presentation', () => {
+    render(<App />);
+    act(() => {
+      usePresentationStore.getState().enter();
+      useMarkerStore.getState().setActive(true);
+    });
+
+    esc();
+    expect(useMarkerStore.getState().active).toBe(false);
     expect(usePresentationStore.getState().active).toBe(true);
 
     esc();
