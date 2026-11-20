@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **A firewall with rules blocks what no rule allows where it cannot tell the zone of a side**, as a router with rules does since 0.9.2. Its zone policy needs the zone of both sides; until now, where one was missing, what no rule matched went through with a note. Answers on existing drawings can change: on a firewall with at least one rule switched on, a question that reaches it by a cable not attached to a port (on a firewall with zones a new cable never is, by itself), or that crosses one of its ports in zone «Nessuna» (“None”), and that no rule allows, is now blocked. The reason says which side has no zone, and the rules skipped for it: `firewall FW-Edge: no rule allows it, and the zone policy cannot decide: the link is not attached to a port`. The reply to a flow the firewall allowed still passes. A firewall with no rules, or with all of them switched off, and one that knows the zones of both sides, decide as before. `show rules` ends with a line that says so, the first rule of a firewall lists its links with no zone, `connect` says it of an end left open, and the Rules tab and the guide say the same.
+
 ## [0.9.2] - 2026-11-20
 
 The marker, undo and redo, a guided tour, and addresses that two devices cannot share.
