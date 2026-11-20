@@ -34,7 +34,7 @@ export const advanced: Dictionary['advanced'] = {
       windows: 'In the windows',
       terminal: 'In the terminal',
       presenting: 'While presenting',
-      marker: 'In annotation mode',
+      annotations: 'In annotation mode',
       tour: 'In the guided tour',
     },
     /** What each shortcut does, and the keys (or the gesture) that do it */

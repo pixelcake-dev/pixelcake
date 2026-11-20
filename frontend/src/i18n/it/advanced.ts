@@ -32,7 +32,7 @@ export const advanced = {
       windows: 'Nelle finestre',
       terminal: 'Nel terminale',
       presenting: 'Durante la presentazione',
-      marker: 'In modalità appunti',
+      annotations: 'In modalità appunti',
       tour: 'Nel tour guidato',
     },
     /** What each shortcut does, and the keys (or the gesture) that do it */
