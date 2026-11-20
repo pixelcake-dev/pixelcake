@@ -8,7 +8,10 @@
  *     service, source and destination all match decides;
  *  2. when no rule matches, the zone policy: traffic towards a more trusted
  *     zone is denied (untrust → trust, untrust → dmz, dmz → trust), anything
- *     else is allowed;
+ *     else is allowed. The policy needs the zone of both sides; where one is
+ *     not known, a firewall with a rule switched on ends its list as a router
+ *     does, with an implicit deny: what no rule allows is blocked. A firewall
+ *     with no rule switched on lets the packet through, with a note;
  *  3. firewalls keep state: the reply to a flow the firewall itself saw, and
  *     allowed, passes whatever the rules say about new flows in that
  *     direction. A reply whose request went another way is, to this
@@ -23,7 +26,8 @@
  * Zones are a property of the firewall's ports, so a rule naming a zone can
  * only be evaluated when the link is attached to a port that is in a zone:
  * otherwise the rule is skipped and the verdict says which of the two is
- * missing.
+ * missing. When the implicit deny then blocks the packet, its reason names
+ * the rules skipped and the side with no zone, so that it says what to fix.
  *
  * Pure and deterministic: no React, no Zustand, no side effects.
  */
@@ -111,6 +115,43 @@ function whyNoZone(iface: DeviceInterface | undefined): string {
   return iface ? `${interfacePhrase(iface)} is in no zone` : 'the link is not attached to a port';
 }
 
+/** `rule 2`, `rules 1 and 3`, `rules 1, 2 and 4` */
+function rulesPhrase(numbers: number[]): string {
+  if (numbers.length === 1) return `rule ${numbers[0]}`;
+  return `rules ${numbers.slice(0, -1).join(', ')} and ${numbers[numbers.length - 1]}`;
+}
+
+/**
+ * Why a firewall with rules blocks what no rule allows: its zone policy
+ * cannot decide, nor can the rules that name a zone, which were skipped, for
+ * the side (or the two sides) whose zone it does not know.
+ * `firewall FW-1: no rule allows it, and the zone policy cannot decide: port 4 is in no zone`
+ */
+function implicitDenyText(
+  name: string,
+  ingress: DeviceInterface | undefined,
+  egress: DeviceInterface | undefined,
+  unknown: { ingress: boolean; egress: boolean },
+  skippedRules: number[]
+): string {
+  const why = [
+    ...(unknown.ingress ? [whyNoZone(ingress)] : []),
+    ...(unknown.egress ? [whyNoZone(egress)] : []),
+  ];
+  // (two ends that are not attached are two links; a packet sent back out by
+  // the port it came in by names that port once)
+  const sides =
+    unknown.ingress && unknown.egress && !ingress && !egress
+      ? 'neither link is attached to a port'
+      : why.filter((reason, index) => why.indexOf(reason) === index).join(' and ');
+  const undecided =
+    skippedRules.length === 0
+      ? 'the zone policy cannot decide'
+      : `neither ${rulesPhrase(skippedRules)}, which ${skippedRules.length === 1 ? 'names' : 'name'} ` +
+        'a zone, nor the zone policy can decide';
+  return `${name}: no rule allows it, and ${undecided}: ${sides}`;
+}
+
 /**
  * The firewall's decision on a packet crossing `device` from `ingress` to
  * `egress` (either may be unknown: a link end not attached to a port).
@@ -129,6 +170,8 @@ export function evaluateFirewall(
   const ingressZone = zoneOf(ingress);
   const egressZone = zoneOf(egress);
   const skipped: string[] = [];
+  /** The numbers of the rules in `skipped` */
+  const skippedRules: number[] = [];
   /** `firewall FW-1`, or `router R-1` for a router that carries rules */
   const name = `${isFirewall(device) ? 'firewall' : 'router'} ${device.label}`;
 
@@ -150,6 +193,7 @@ export function evaluateFirewall(
           (why.length === 1 ? ` and ${why[0]}` : `, ${why[0]} and ${why[1]}`) +
           ': skipped'
       );
+      skippedRules.push(numberOf(rule));
       continue;
     }
     const what = `rule ${numberOf(rule)} (${describeRule(rule)})`;
@@ -182,21 +226,26 @@ export function evaluateFirewall(
           replyText: `firewall policy: ${transition} allowed (reply to an allowed flow)`,
         };
       }
-    } else if (!isFirewall(device) && hasRules) {
-      // A router has no zones: its access list ends with an implicit deny,
-      // as on real routers. What no rule allows is blocked
+    } else if (hasRules) {
+      // A router has no zones, and a firewall does not know the zone of a
+      // side: the list ends with an implicit deny, as on real devices. What
+      // no rule allows is blocked; a firewall says why its zones could not
+      // decide, which is what to fix
+      const unknown = { ingress: !ingressZone, egress: !egressZone };
       decision = {
         allowed: false,
-        text: `${name}: no rule allows it`,
+        text: isFirewall(device)
+          ? implicitDenyText(name, ingress, egress, unknown, skippedRules)
+          : `${name}: no rule allows it`,
         replyText: `${name}: no rule matches, allowed as the reply to an allowed flow`,
       };
     } else {
-      // (a router whose rules are all switched off filters nothing, as one with none)
-      const text = !isFirewall(device)
-        ? `${name}: no rule is switched on: allowed`
-        : hasRules
-          ? `${name}: no rule matches and no zone binding: allowed`
-          : `${name} has no zone binding: allowed`;
+      // (a router whose rules are all switched off filters nothing, as one
+      // with none; a firewall with no rule switched on lets through what its
+      // zones cannot judge)
+      const text = isFirewall(device)
+        ? `${name} has no zone binding: allowed`
+        : `${name}: no rule is switched on: allowed`;
       decision = { allowed: true, text, replyText: text };
     }
   }

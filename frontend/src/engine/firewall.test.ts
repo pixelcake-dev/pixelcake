@@ -174,8 +174,10 @@ describe('evaluateFirewall: rules', () => {
     const fw = firewall([rule('deny', 'any', 'untrust', 'any')]);
     const verdict = decide(fw, undefined, 1, packet());
     expect(verdict).toMatchObject({
-      allowed: true,
-      text: 'firewall FW-1: no rule matches and no zone binding: allowed',
+      allowed: false,
+      text:
+        'firewall FW-1: no rule allows it, and neither rule 1, which names a zone, nor the zone ' +
+        'policy can decide: the link is not attached to a port',
       skipped: [
         'firewall FW-1: rule 1 names a zone and the link is not attached to a port: skipped',
       ],
@@ -206,6 +208,96 @@ describe('evaluateFirewall: rules', () => {
     expect(decide(fw, undefined, undefined, packet())).toMatchObject({
       allowed: false,
       text: 'firewall FW-1: denied by rule 1 (deny any from 203.0.113.50 to any)',
+      skipped: [],
+    });
+    const open = firewall([rule('allow', 'any', '203.0.113.0/24', 'any')]);
+    expect(decide(open, undefined, 4, packet())).toMatchObject({
+      allowed: true,
+      text: 'firewall FW-1: allowed by rule 1 (allow any from 203.0.113.0/24 to any)',
+    });
+  });
+});
+
+describe('evaluateFirewall: rules, and a side whose zone is not known', () => {
+  const byAddress = () => firewall([rule('allow', 'web', 'any', '172.16.0.10')]);
+
+  it('blocks what no rule allows, as a router does, and says which side has no zone', () => {
+    // port 4 is attached, and its zone is «None»
+    expect(decide(byAddress(), 1, 4, packet())).toEqual({
+      allowed: false,
+      text: 'firewall FW-1: no rule allows it, and the zone policy cannot decide: port 4 is in no zone',
+      skipped: [],
+    });
+    expect(decide(byAddress(), undefined, 2, packet())?.text).toBe(
+      'firewall FW-1: no rule allows it, and the zone policy cannot decide: the link is not attached to a port'
+    );
+    expect(decide(byAddress(), undefined, 4, packet())?.text).toBe(
+      'firewall FW-1: no rule allows it, and the zone policy cannot decide: the link is not attached ' +
+        'to a port and port 4 is in no zone'
+    );
+    expect(decide(byAddress(), undefined, undefined, packet())?.text).toBe(
+      'firewall FW-1: no rule allows it, and the zone policy cannot decide: neither link is attached to a port'
+    );
+    // sent back out by the port it came in by: the port is named once
+    expect(decide(byAddress(), 4, 4, packet())?.text).toBe(
+      'firewall FW-1: no rule allows it, and the zone policy cannot decide: port 4 is in no zone'
+    );
+  });
+
+  it('lets through what a rule allows, and the zone policy still decides where both zones are known', () => {
+    expect(decide(byAddress(), undefined, 4, packet({ service: 'web' }))).toMatchObject({
+      allowed: true,
+      text: 'firewall FW-1: allowed by rule 1 (allow web from any to 172.16.0.10)',
+    });
+    expect(decide(byAddress(), 1, 2, packet())).toMatchObject({
+      allowed: true,
+      text: 'firewall FW-1: no rule matches, zone policy trust → dmz allowed',
+    });
+  });
+
+  it('names the rules it skipped, which a zone on that side would have let it read', () => {
+    const fw = firewall([
+      rule('allow', 'ping', 'trust', 'dmz'),
+      rule('deny', 'any', '198.51.100.0/24', 'any'),
+      rule('allow', 'any', 'trust', 'any'),
+    ]);
+    expect(decide(fw, undefined, 2, packet())).toEqual({
+      allowed: false,
+      text:
+        'firewall FW-1: no rule allows it, and neither rules 1 and 3, which name a zone, nor the ' +
+        'zone policy can decide: the link is not attached to a port',
+      skipped: [
+        'firewall FW-1: rule 1 names a zone and the link is not attached to a port: skipped',
+        'firewall FW-1: rule 3 names a zone and the link is not attached to a port: skipped',
+      ],
+    });
+    const one = firewall([rule('allow', 'ping', 'any', 'dmz')]);
+    expect(decide(one, 1, 4, packet())?.text).toBe(
+      'firewall FW-1: no rule allows it, and neither rule 1, which names a zone, nor the zone ' +
+        'policy can decide: port 4 is in no zone'
+    );
+  });
+
+  it('lets the reply to a flow it allowed pass, and not one whose request it never saw', () => {
+    const reply = packet({ sourceIp: '172.16.0.10', destinationIp: '203.0.113.50', returnTraffic: true });
+    expect(decide(byAddress(), 4, 1, reply)).toEqual({
+      allowed: true,
+      text: 'firewall FW-1: no rule matches, allowed as the reply to an allowed flow',
+      skipped: [],
+    });
+    expect(decide(byAddress(), 4, 1, { ...reply, requestPath: new Set(['other']) })).toMatchObject({
+      allowed: false,
+      text:
+        'firewall FW-1: no rule allows it, and the zone policy cannot decide: port 4 is in no zone, ' +
+        'and it never saw the request',
+    });
+  });
+
+  it('with no rule switched on lets the packet through with a note, as with none', () => {
+    const off = firewall([rule('allow', 'web', 'any', '172.16.0.10', { enabled: false })]);
+    expect(decide(off, undefined, 4, packet())).toEqual({
+      allowed: true,
+      text: 'firewall FW-1 has no zone binding: allowed',
       skipped: [],
     });
   });
@@ -507,6 +599,39 @@ describe('traceRoute through a transparent firewall with rules', () => {
       ['fw', 'blocked'],
     ]);
   });
+
+  it('with a port in no zone blocks what no rule allows, and the reason names the rule it skipped', () => {
+    const base = bridged([
+      rule('allow', 'web', 'any', '192.168.1.20'),
+      rule('allow', 'ping', 'any', 'trust'),
+    ]);
+    // port 2, towards the server, in zone «None»
+    const t: Topology = {
+      ...base,
+      devices: base.devices.map(d =>
+        d.id === 'fw' ? { ...d, ports: [port(1, { securityZone: 'untrust' }), port(2)] } : d
+      ),
+    };
+
+    // rule 1 lets the page through, and its response passes as the reply
+    const web = planAndEvaluateFlow('web', 'pc1', 'srv', t);
+    expect(web.verdict).toBe('success');
+    expect(web.notes).toEqual([
+      'HTTP request: firewall FW-1: allowed by rule 1 (allow web from any to 192.168.1.20)',
+      'HTTP response: firewall FW-1: no rule matches, allowed as the reply to an allowed flow',
+    ]);
+
+    const ping = planAndEvaluateFlow('ping', 'pc1', 'srv', t);
+    expect(ping.verdict).toBe('blocked');
+    expect(ping.failureReason).toBe(
+      'request: firewall FW-1: no rule allows it, and neither rule 2, which names a zone, nor the ' +
+        'zone policy can decide: port 2 is in no zone'
+    );
+    expect(ping.legs[0].trace.hops.map(h => [h.deviceId, h.status])).toEqual([
+      ['pc1', 'forwarded'],
+      ['fw', 'blocked'],
+    ]);
+  });
 });
 
 // ---------- each firewall remembers the flows it has seen ----------
@@ -518,10 +643,14 @@ describe('a reply and the firewalls its request did not cross', () => {
    * pcA ─ r1 ─ fwA ─ r2 ─ pcB, and r1 ─ fwB ─ r2 beside it. The request
    * goes through fwA, the reply comes back through fwB: each router sends
    * the other network by its own firewall. Both firewalls deny ping from
-   * the network of pcB to the network of pcA.
+   * the network of pcB to the network of pcA, and allow what the network of
+   * pcA sends (their ports have no zones: what no rule allows is blocked).
    */
   function twoFirewalls(): Topology {
-    const denyInwards = () => [rule('deny', 'ping', '192.168.2.0/24', '192.168.1.0/24')];
+    const denyInwards = () => [
+      rule('deny', 'ping', '192.168.2.0/24', '192.168.1.0/24'),
+      rule('allow', 'any', '192.168.1.0/24', '192.168.2.0/24'),
+    ];
     return topo(
       [
         host('pcA', '192.168.1.10', '192.168.1.1'),
