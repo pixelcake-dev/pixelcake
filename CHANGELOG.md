@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-11-20
+
+The marker, undo and redo, a guided tour, and addresses that two devices cannot share.
+
+### Added
+- **The marker** («Pennarello»): write and draw by hand on a board, over cables and devices: pen, words in a handwriting font, arrows, circles, ticks, crosses, an eraser and «Cancella tutto» (“Clear all”, which asks first); four colours and two widths. From the button before «Presenta», View → «Pennarello» or P; Esc puts it away. While it is on, the pointer writes and selects nothing; when it is off, the marks never get in the way. What is written belongs to its board: it is kept in the browser and in the project file (`marks`, left out of a board with none: an older app opens the file and ignores them), it goes with a duplicated board and into the exported image, light and dark; not into the YAML. While presenting, the marker is the presenter's pen: it writes on top, changes nothing that is saved, and is gone when the presentation ends.
+- **Undo and redo** of the drawing: Edit → «Annulla» (Ctrl + Z) and «Ripeti» (Ctrl + Y, Ctrl + Shift + Z; Cmd on a Mac), also with Caps Lock on and on keyboards whose letters are not Latin. One action is one step: a device added, pasted or deleted with its cables, a drag, a Save in a window, a terminal command, an import, a bulk add, an automatic layout, an area, a mark. Each board keeps its last 100 steps while the page is open; the Edit menu names the step. In a text field the keys stay the field's; nothing is undone while presenting.
+- **A guided tour** of eight short steps on the first visit, once the welcome screen is left: adding a device, a cable, a question, the terminal, undo, saving, the marker, presenting. It can be skipped at any step, and taken again from Aiuto → «Tour guidato» (“Guided tour”).
+- **A first question** after the company sample is loaded: «PC-Vendite raggiunge Web-Gestionale?» (in English `ping Web-ERP from PC-Sales`), run in the terminal with one click.
+- **The handwriting font Caveat** (SIL OFL 1.1) travels with the app, with its licence.
+
+### Changed
+- **Two devices with one address are in conflict**, as when a machine is cloned. An address typed by hand on two devices that can meet turns both yellow, with «· in conflitto» (“· in conflict”) under the name; the device window names the other device; `show ip` and `show interfaces` mark it; a question to or from it stops with the conflict as its reason. Leases, switched-off interfaces and private addresses that only meet across the Internet are not counted.
+- **A pasted server, router, firewall or switch keeps its addresses**, and the notice says which are now in conflict (PCs and the other end devices go on taking theirs from DHCP).
+- **A router with rules blocks what no rule allows**, as a real access list does; with no rules it lets everything through as before. The reason says «no rule allows it», `show rules` ends with the implicit deny, and the Rules tab says so.
+- **Custom templates** offer all nine base types (PC and Access Point included), grouped, each made as the built-in one of its type.
+- The documentation's first-network video and company picture show the app as it is now.
+
+### Development
+- The workflow uses the current versions of its GitHub Actions, which run on Node 24.
+
 ## [0.9.1] - 2026-11-19
 
 Corrections: what writing the documentation and the first days online found, in the board, the engine, the terminal, the YAML and the templates.
