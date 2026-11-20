@@ -53,6 +53,8 @@ export default function scenario({ lang }) {
   const through = `![...document.querySelectorAll('.presentation-panel button')].some((b) => b.textContent.trim() === ${JSON.stringify(w.stop)})`;
   /** The question is over: "Show again" is there, and the button is not "Stop" */
   const over = `[...document.querySelectorAll('.presentation-panel button')].some((b) => b.textContent.trim() === ${JSON.stringify(w.again)}) && ${through}`;
+  /** The question is over and has stayed over for a while: between two legs of the answer the button can show "Show again" for a moment */
+  const settled = `(() => { const ok = ${over}; if (!ok) { window.__overSince = 0; return false; } if (!window.__overSince) { window.__overSince = Date.now(); return false; } return Date.now() - window.__overSince > 1800; })()`;
   const travelling = `[...document.querySelectorAll('.presentation-panel button')].some((b) => b.textContent.trim() === ${JSON.stringify(w.stop)})`;
 
   /** Click a device, then an entry of the small menu it opens */
@@ -61,7 +63,7 @@ export default function scenario({ lang }) {
     { do: 'click', to: menuItem(text), ms: 400 },
   ];
   const waitForPacket = [
-    { do: 'waitFor', until: travelling, timeout: 5000 },
+    { do: 'waitFor', until: travelling, timeout: 15000 },
     { do: 'waitFor', until: through, timeout: 40000 },
   ];
 
@@ -106,7 +108,7 @@ export default function scenario({ lang }) {
       ...onDevice(w.backup, w.failure),
       { do: 'wait', ms: 800 },
       ...waitForPacket,
-      { do: 'waitFor', until: over, timeout: 40000, after: 600 },
+      { do: 'waitFor', until: settled, timeout: 40000, after: 300 },
       { do: 'poster' },
       { do: 'wait', ms: 2400 },
     ],

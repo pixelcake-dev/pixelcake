@@ -19,6 +19,8 @@ export default function scenario({ lang }) {
       { do: 'wait', ms: 1800 },
       ...runSimulation(w, { holdAfter: 400 }),
       { do: 'hidePointer' },
+      // (a beat before the poster: the screen can be a moment behind the page on a busy machine)
+      { do: 'wait', ms: 1500 },
       { do: 'poster' },
       { do: 'wait', ms: 2200 },
     ],

@@ -6,11 +6,11 @@ order: 3
 
 The screen has a bar along the top, a strip of buttons down the left, and the board, where the drawing is. What you open from the buttons appears over the board: a panel at the left, a window of the terminal, the window of a device. This page names each part as it is named on screen.
 
-![The sample network "Office: two networks and a router" in PixelCake, with ten parts marked by numbers: 1 the menus File, Edit, View and Help; 2 the name of the project; 3 the Present button; 4 the switch between IT and EN; 5 the button of the theme; 6 the strip of buttons on the left; 7 the Simulation panel; 8 the board; 9 the small map; 10 the terminal, after a ping from PC-1 to Web-01.](../../media/getting-started/interface.en.png "The parts of the screen: the office sample, the Simulation panel open, the terminal after a ping.")
+![The sample network "Office: two networks and a router" in PixelCake, with ten parts marked by numbers: 1 the menus File, Edit, View and Help; 2 the name of the project; 3 the buttons Annotation mode and Present; 4 the switch between IT and EN; 5 the button of the theme; 6 the strip of buttons on the left; 7 the Simulation panel; 8 the board; 9 the small map; 10 the terminal, after a ping from PC-1 to Web-01.](../../media/getting-started/interface.en.png "The parts of the screen: the office sample, the Simulation panel open, the terminal after a ping.")
 
 1. The menus: [File, Edit, View and Help](#menu-bar), with the logo before them.
 2. The name of the project.
-3. “Present”, which starts [presentation mode](#presentation).
+3. “Annotation mode”, which turns on the layer to write and draw on the board ([Annotation mode](../building/annotations.md)), and “Present”, which starts [presentation mode](#presentation).
 4. The switch between IT and EN: see [Languages and themes](languages-and-themes.md).
 5. The button of the theme, light or dark.
 6. The strip of [buttons on the left](#panels): “Explorer”, “Simulation”, “Add device”, “Console”, “Import/Export”, and “Settings” at the bottom.

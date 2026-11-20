@@ -51,7 +51,7 @@ export default function scenario({ lang }) {
     const parts = [
       [1, union([rect(bar.querySelector('a')), ...items]), 'below', 0.85],
       [2, rect(document.querySelector('.topbar-project')), 'below', 0.5],
-      [3, rect(document.querySelector('.present-button')), 'below', 0.5],
+      [3, union([rect(document.querySelector('.marker-toggle')), rect(document.querySelector('.present-button'))]), 'below', 0.5],
       [4, rect(document.querySelector('.language-switch')), 'below', 0.5],
       [5, rect(theme), 'below', 0.5],
       [6, [strip[0] + 2, barBottom + 6, strip[2] - 5, strip[3] - 10], 'right', 0.45],
@@ -93,7 +93,13 @@ export default function scenario({ lang }) {
       { do: 'click', to: `button[aria-label="${w.console}"]`, ms: 100 },
       { do: 'waitFor', until: `!!document.querySelector('${input}')` },
       { do: 'drag', from: '[data-testid="terminal-resize-handle"]', to: (p) => p.where('[data-testid="terminal-resize-handle"]').then((h) => ({ x: h.x - 220, y: h.y - 200 })), ms: 200, approach: 100 },
-      { do: 'drag', from: { css: '[data-testid="terminal-drag-handle"]', at: [0.3, 0.5] }, to: (p) => p.where({ css: '[data-testid="terminal-drag-handle"]', at: [0.3, 0.5] }).then((h) => ({ x: h.x + 145, y: h.y + 300 })), ms: 200, approach: 100 },
+      // (put by where it is now, not by a distance: the window opens at the right of the board,
+      // at its smallest size once pulled in, and its top left corner is taken to a fixed place)
+      { do: 'drag', from: { css: '[data-testid="terminal-drag-handle"]', at: [0.3, 0.5] }, to: async (p) => {
+          const handle = await p.where({ css: '[data-testid="terminal-drag-handle"]', at: [0.3, 0.5] });
+          const corner = await p.where({ css: '[data-testid="terminal-window"]', at: [0, 0] });
+          return { x: handle.x + (340 - corner.x), y: handle.y + (418 - corner.y) };
+        }, ms: 200, approach: 100 },
       { do: 'click', to: `[aria-label="${w.closeTerminal}"]`, ms: 100 },
     ],
     steps: [
