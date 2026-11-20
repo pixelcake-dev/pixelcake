@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.9.2] - 2026-11-20
 
-The marker, undo and redo, a guided tour, and addresses that two devices cannot share.
+Annotation mode, undo and redo, a guided tour, and addresses that two devices cannot share.
 
 ### Added
 - **Annotation mode** («Modalità appunti»): a transparent layer over the board, entered as presentation mode is, to write and draw by hand over cables and devices: pen, words in a handwriting font, arrows, circles, ticks, crosses, an eraser and «Cancella tutto» (“Clear all”, which asks first); four colours and two widths. From the button before «Presenta», View → «Modalità appunti» or A; Esc leaves it. The annotations are seen, and can be written, only while the mode is on: off, the board is clean, and the button shows how many are hidden. The same mode works in the presentation, on the same sheet: what was prepared is there, what is written stays. What is written belongs to its board: it is kept in the browser and in the project file (`marks`, left out of a board with none: an older app opens the file and ignores them), it goes with a duplicated board and, when the mode is on, into the exported image, light and dark; not into the YAML.
