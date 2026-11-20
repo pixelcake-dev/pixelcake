@@ -135,8 +135,11 @@ export const help = {
         'decide la politica delle zone: verso una zona più fidata il traffico è negato, il resto ' +
         "passa. Nella scheda «Regole» si scrivono le eccezioni, lette dall'alto in basso: decide " +
         'la prima che corrisponde, per servizio (ping, web, email, DNS), partenza e ' +
-        'destinazione. Un firewall lascia passare la risposta a un flusso che ha permesso lui ' +
-        'stesso. Anche un router ha la scheda «Regole»: le sue regole filtrano ciò che instrada. ' +
+        'destinazione. Dove un cavo non è assegnato a una porta, o la sua porta non ha zona, le ' +
+        'zone non possono decidere: un firewall con una regola attiva blocca allora ciò che ' +
+        'nessuna regola permette. Un firewall lascia passare la risposta a un flusso che ha ' +
+        'permesso lui stesso. Anche un router ha la scheda «Regole»: le sue regole filtrano ciò che ' +
+        'instrada. ' +
         'Un router senza regole lascia passare tutto; appena ne ha una attiva, blocca ciò che ' +
         'nessuna regola permette, come un router vero.',
     },

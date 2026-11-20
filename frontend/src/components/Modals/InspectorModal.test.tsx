@@ -237,12 +237,15 @@ describe('InspectorModal — Regole', () => {
     addFirewall();
   });
 
-  it('starts empty and explains what decides without rules', () => {
+  it('starts empty, explains what decides without rules, and that with one a side with no zone blocks the rest', () => {
     openInspector('FW-1');
     openTab('Regole');
     expect(screen.getByText(/Nessuna regola: decide soltanto la politica delle zone/)).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Quando nessuna regola corrisponde' })).toHaveTextContent(
-      'untrust → trust, untrust → dmz, dmz → trust'
+    const noMatch = screen.getByRole('region', { name: 'Quando nessuna regola corrisponde' });
+    expect(noMatch).toHaveTextContent('untrust → trust, untrust → dmz, dmz → trust');
+    expect(noMatch).toHaveTextContent(
+      'dove il firewall non ne conosce una (un cavo non assegnato a una porta, una porta senza zona), ' +
+        'ciò che nessuna regola permette viene bloccato appena ha una regola attiva, come su un router'
     );
   });
 

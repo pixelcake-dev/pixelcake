@@ -44,9 +44,12 @@ export const firewall = {
     title: 'Quando nessuna regola corrisponde',
     text:
       'Decide la politica delle zone: il traffico verso una zona più fidata è negato (untrust → ' +
-      'trust, untrust → dmz, dmz → trust), tutto il resto è permesso. La risposta a un flusso ' +
-      'che il firewall ha permesso passa; una risposta di cui non ha visto la richiesta viene ' +
-      'giudicata come ogni altro pacchetto.',
+      'trust, untrust → dmz, dmz → trust), tutto il resto è permesso. La politica ha bisogno ' +
+      'della zona di entrambi i lati: dove il firewall non ne conosce una (un cavo non assegnato ' +
+      'a una porta, una porta senza zona), ciò che nessuna regola permette viene bloccato appena ' +
+      'ha una regola attiva, come su un router; senza regole, o con tutte spente, passa. La ' +
+      'risposta a un flusso che il firewall ha permesso passa; una risposta di cui non ha visto ' +
+      'la richiesta viene giudicata come ogni altro pacchetto.',
   },
 
   /** The same tab on a router: its rules are its access list, and it has no zones */
