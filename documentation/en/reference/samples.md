@@ -71,6 +71,7 @@ pixelcake> show rules FW-Edge
 RULES of FW-Edge (the first that matches decides)
    1  allow web    from untrust            to 172.16.0.10
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
+  without a zone on both sides (a link not attached to a port, a port in no zone): what no rule allows is blocked
   the reply to a flow it allowed passes
 pixelcake> browse Web-Public from Remote-PC
 Browsing Web-Public (203.0.113.1) from Remote-PC...

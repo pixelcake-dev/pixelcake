@@ -95,13 +95,23 @@ pixelcake> add rule deny ping from PC-1 to Server-1 on Firewall-1
 Firewall-1: rule 1 added — deny ping from 192.168.1.2 to 192.168.1.3
   PC-1 → 192.168.1.2
   Server-1 → 192.168.1.3
+  from now on Firewall-1 blocks what no rule allows where it cannot tell the zone of both sides:
+    the link to PC-1 is on port 1, which is in no zone
+    the link to Server-1 is on port 2, which is in no zone
 pixelcake> ping Server-1 from PC-1
 Pinging Server-1 (192.168.1.3) from PC-1...
 Ping failed (blocked): request: firewall Firewall-1: denied by rule 1 (deny ping from 192.168.1.2 to 192.168.1.3)
   dropped at: Firewall-1
+pixelcake> browse Server-1 from PC-1
+Browsing Server-1 (192.168.1.3) from PC-1...
+  ✗ HTTP request: PC-1 → Server-1
+Browse failed (blocked): HTTP request: firewall Firewall-1: no rule allows it, and the zone policy cannot decide: port 1 is in no zone and port 2 is in no zone
+  dropped at: Firewall-1
 ```
 
 Le due note sotto la prima risposta dicono che nessuna porta del firewall è in una zona di sicurezza, quindi decidono solo le regole. Il motivo della seconda risposta è quello che mostrava l'avviso.
+
+La regola porta con sé anche un'altra cosa, e `add rule` lo dice nelle sue ultime righe: un firewall che ha una regola, e non conosce le zone di un passaggio, blocca ciò che nessuna regola permette, come un router con una lista di accesso. Firewall-1 non ha zone, quindi anche la pagina che PC-1 chiede a Server-1 si ferma lì: nessuna regola la permette. Una regola che la permette, sopra o sotto la prima, la riapre; e così mettere le due porte in una zona, in modo che decida la politica delle zone ([Zone e regole del firewall](../services/firewall.md#zones)).
 
 Per eliminarla, riapri la scheda «Regole» e premi il cestino della regola (fermandoci sopra il puntatore si legge «Elimina la regola»), poi «Salva». Il ping torna ad arrivare.
 

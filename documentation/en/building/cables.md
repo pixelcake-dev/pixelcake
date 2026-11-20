@@ -29,35 +29,32 @@ What an end is attached to decides what the engine can check on it:
 - the address of a router port, and the gateway that goes with it, are checked against what the sender uses ([Addresses and gateways](addresses.md#gateway));
 - the security zone of a firewall port decides which policy applies ([Firewall](../services/firewall.md#zones)).
 
-An end that is **not attached** has none of this. The engine lets the packet through that end, skips the rules of the port, and writes a note on the answer: `link Router-Core–FW-Edge has no port binding on FW-Edge: per-port rules skipped`, or, when it is a router, that the gateway was not verified. The window says the same under the lists: “Port state, security zone and gateway are checked only on the ends assigned to an interface.” A project that is opened gives each end that has none the first free interface again, with the one exception below.
+An end that is **not attached** has none of this. The engine lets the packet through that end, skips the rules of the port, and writes a note on the answer: `link Router-Core–FW-Edge has no port binding on FW-Edge: per-port rules skipped`, or, when it is a router, that the gateway was not verified. On a firewall with rules, what comes in by such an end is blocked unless a rule allows it ([below](#firewall)). The window says the same under the lists: “Port state, security zone and gateway are checked only on the ends assigned to an interface.” A project that is opened gives each end that has none the first free interface again, with the one exception below.
 
 ## On a firewall with zones {#firewall}
 
 On a firewall whose ports carry security zones the end is never attached by itself. Picking a port there would be picking a policy: the port decides the zone, and when no rule matches the zone decides what the firewall lets through. So a cable to such a firewall is made with that end not attached, and you choose the port in “Edit link”, under "Interface on" and the name of the firewall. The terminal does the same: `connect` leaves the end open and says so.
 
-Until the port is chosen the firewall cannot tell which zone the cable is in. In the company sample, take away the cable from FW-Edge to Router-Core and draw it again, and the trace through the firewall changes from the zone policy to a note:
+Until the port is chosen the firewall cannot tell which zone the cable is in, and its zone policy cannot decide for what comes in by that cable. A firewall with no rule switched on lets it through, with a note; FW-Edge has rules, so what no rule allows stops there, as on a router ([Firewall](../services/firewall.md#zones)). In the company sample, take away the cable from FW-Edge to Router-Core and draw it again, and the trace from the offices to the DMZ stops at the firewall:
 
 ```ncl sample=company
 pixelcake> disconnect FW-Edge from Router-Core
 disconnected FW-Edge ↔ Router-Core
 pixelcake> connect FW-Edge to Router-Core
 connected FW-Edge (unbound) ↔ Router-Core (port 4)
-  FW-Edge has security zones, so the port of a new link is chosen by hand (right click on the link, Edit link, Interfaces): until then that end is not bound, per-port rules are skipped there
+  FW-Edge has security zones, so the port of a new link is chosen by hand (right click on the link, Edit link, Interfaces): until then that end is not bound, per-port rules are skipped there, and what comes in by it is blocked unless a rule allows it
 pixelcake> trace Customer-Portal from PC-Sales
 Tracing route to Customer-Portal (172.16.0.10) from PC-Sales:
   1  ○ PC-Sales (PC)
   2  ○ SW-Offices (Switch)  — VLAN 10
   3  ○ SW-Core (Switch)  — VLAN 10
   4  ○ Router-Core (Router)  — routed: default route via 10.0.0.2 (port 4)
-  5  ○ FW-Edge (Firewall)  — routed: 172.16.0.0/24 is on port 2; firewall FW-Edge: no rule matches and no zone binding: allowed
-  6  ○ SW-DMZ (Switch)
-  7  ● Customer-Portal (Server)
+  5  ✗ FW-Edge (Firewall)  — firewall FW-Edge: no rule allows it, and the zone policy cannot decide: the link is not attached to a port
   note: link Router-Core–FW-Edge has no port binding on FW-Edge: per-port rules skipped
-  note: firewall FW-Edge: no rule matches and no zone binding: allowed
-Trace complete: destination reached.
+Trace failed (blocked): firewall FW-Edge: no rule allows it, and the zone policy cannot decide: the link is not attached to a port
 ```
 
-Before, the same trace read `no rule matches, zone policy trust → dmz allowed`. The commands are in [Devices and addresses](../terminal/devices-and-addresses.md#connect).
+The reason says what to do: attach the end. With the cable on port 1, the port in zone trust, the same trace passes again, by the zone policy (`no rule matches, zone policy trust → dmz allowed`). The commands are in [Devices and addresses](../terminal/devices-and-addresses.md#connect).
 
 ## Editing a link {#edit}
 

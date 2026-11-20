@@ -77,7 +77,7 @@ Two cases keep the main route. A network the device is attached to by a failed c
 A firewall that a packet crosses (not one that sends it, not one it is addressed to) decides before the packet goes on. So does a router that carries rules, its access list: it reads them the same way, and has no zones.
 
 1. **The rules**, top to bottom. The first rule that is enabled and matches the service, the source and the destination decides, to allow or to deny. A rule that names a zone needs the cable to be attached to a port that is in a zone, because the zone belongs to the port: without that the rule is skipped, with a note.
-2. **The zone policy**, when no rule matches. A new flow to a more trusted zone is denied: `untrust → trust`, `untrust → dmz` and `dmz → trust`. Anything else is allowed. A firewall that does not know the zone of both sides, because a cable is attached to no port or to a port in no zone, allows, with a note. A router has no zones: its list ends with an implicit deny, as on real routers, so what no rule allows is blocked (`router Router-Core: no rule allows it`). A router with no rules, or with all of them disabled, lets everything through.
+2. **The zone policy**, when no rule matches. A new flow to a more trusted zone is denied: `untrust → trust`, `untrust → dmz` and `dmz → trust`. Anything else is allowed. The policy needs the zone of both sides, and a cable attached to no port, or to a port in no zone, has none. There a firewall with a rule switched on ends its list as a router does: what no rule allows is blocked, and the reason says why the zones could not decide (`firewall FW-Edge: no rule allows it, and the zone policy cannot decide: port 2 is in no zone`), naming the rules that were skipped for it when there are any. A firewall with no rule switched on allows, with a note. A router has no zones: its list ends with an implicit deny, as on real routers, so what no rule allows is blocked (`router Router-Core: no rule allows it`). A router with no rules, or with all of them disabled, lets everything through.
 3. **Replies**. A firewall remembers the flows it has let through itself. The reply to such a flow passes it, whatever the rules say about a new flow in that direction. A reply that comes back by another way, through a firewall the request did not cross, is a new packet to that firewall: its rules and its zones decide, and when they deny it the reason ends with `and it never saw the request`.
 
 ```ncl sample=site
@@ -85,6 +85,7 @@ pixelcake> show rules FW-Edge
 RULES of FW-Edge (the first that matches decides)
    1  allow web    from untrust            to 172.16.0.10
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
+  without a zone on both sides (a link not attached to a port, a port in no zone): what no rule allows is blocked
   the reply to a flow it allowed passes
 pixelcake> ping Srv-Internal from Web-Public
 Pinging Srv-Internal (192.168.20.10) from Web-Public...
@@ -137,7 +138,7 @@ At every cable the engine checks, in this order:
 5. **The port it arrives at is up.**
 6. **The device it reaches.** A switch or an access point takes the frame if the VLAN is allowed in by that port, and the search goes on from it. A router with addresses on its ports never carries a frame for others: it answers if the address is the one of the port the cable arrives at (any of its own, when the cable end is attached to no port), and otherwise the search does not go through it. An end device is the same.
 
-The cable end is attached to a port or a network card of its device ([the two ends](../building/cables.md#ends)). Rules that belong to a port, such as the state of the port, its VLAN and its zone, are applied only when that is known. A cable end attached to nothing is accepted, and the answer carries a note: `link A–B has no port binding…: per-port rules skipped`.
+The cable end is attached to a port or a network card of its device ([the two ends](../building/cables.md#ends)). Rules that belong to a port, such as the state of the port, its VLAN and its zone, are applied only when that is known. A cable end attached to nothing is accepted, and the answer carries a note: `link A–B has no port binding…: per-port rules skipped`. On a firewall with rules the zone of that end is not known, so what no rule allows is blocked there (step 2 of [the firewall](#firewall)).
 
 When nothing answers for the address, the reason is the first thing that stopped the packet on the shortest chain of cables to the device that should have answered. What stopped it on a side branch says nothing about the way there. When nothing stopped it, the reason is what is wrong with the network itself: the device is on another network and there is no router in between (`no router between subnets 192.168.10.0 and 192.168.20.0 — L2 devices cannot route`), or an end device sits in the way (`PC-2 is an end device: it does not forward traffic for others`), or a router sits between two devices addressed in one network (`… a router does not pass traffic within one network`), or nobody has the address.
 
@@ -252,6 +253,7 @@ The reasons are written in English, in both languages of the interface, and name
 | `firewall FW-Edge: denied by rule 2 (…)` | a rule says deny, with its number |
 | `firewall FW-Edge: no rule matches, zone policy dmz → trust denied` | no rule decides, and the zones do |
 | `router Router-Core: no rule allows it` | a router with rules, and none of them allows the packet |
+| `firewall FW-Edge: no rule allows it, and the zone policy cannot decide: …` | a firewall with rules, none of them allows the packet, and the zone of a side is not known: the end says which |
 | `address conflict: 192.168.20.10 is on both Web-01 and Mail-01, …` | two devices have the address the question goes to, or comes from |
 | `Internet does not carry private addresses: …` | a private address reached the Internet symbol |
 | `SW-Core is down`, `link R-HQ–R-Branch is down` | a simulated failure |
@@ -264,7 +266,7 @@ What the engine cannot verify is **never passed silently as a success**: it adds
 - `Router-1 has no interface addresses: gateway and routing not verified`: the router's ports carry no address, so it is assumed to pass the packet on.
 - `Internet is not simulated: traffic assumed to pass`: the Internet symbol is a stand-in. `203.0.113.1 is not in the drawing: Internet assumed to take the traffic` says a gateway belongs to the outside world.
 - `link A–B has no port binding…: per-port rules skipped`: one end of a cable is attached to no port or card.
-- `firewall FW-1 has no zone binding: allowed`, or a rule `names a zone and the link is not attached to a port: skipped`, or `names a zone and port 4 is in no zone: skipped`.
+- `firewall FW-1 has no zone binding: allowed` (a firewall with no rule switched on), or a rule `names a zone and the link is not attached to a port: skipped`, or `names a zone and port 4 is in no zone: skipped`.
 - `firewall FW-1: allowed by rule 1 (…)`, `router R-1: denied by rule 1 (…)`, `NAT: source … → …`, and the line about a route that is unusable and the one used instead, which tell what the device did and are there to be read.
 
 The terminal prints the notes under the answer. The simulation panel shows only the reason of a stop; [presentation mode](presentation.md#ask) shows the path hop by hop with the notes of each hop, and `trace` prints them in the terminal.

@@ -33,7 +33,7 @@ La «Modalità della porta» (LAN, WAN o DMZ) è un'etichetta e non decide nulla
 
 Il motore deve sapere a quale porta è collegato un cavo, per sapere da quale zona entra un pacchetto e da quale esce. Una connessione disegnata verso un firewall che ha delle zone non viene assegnata a una porta da sola: la porta, e con essa la zona, si sceglie nella finestra della connessione. Fai clic destro sulla connessione, scegli «Modifica connessione» e, sotto «Interfacce», scegli la porta nell'elenco intitolato `Interfaccia su FW-Edge`. Un'estremità non assegnata non ha una zona: una regola che nomina una zona viene saltata, e il `trace` lo dice in una nota.
 
-Una porta con «Nessuna» come zona è lo stesso: niente zona, niente politica. Lì una regola che nomina una zona viene saltata, con la stessa nota, e ciò che nessun'altra regola decide è permesso; il `trace` scrive `no zone binding: allowed`:
+Una porta con «Nessuna» come zona è lo stesso: niente zona, niente politica. Lì una regola che nomina una zona viene saltata, con la stessa nota. Senza la zona di entrambi i lati non può decidere nemmeno la [politica delle zone](#policy), e che cosa succede allora dipende dalle regole. Un firewall senza regole attive lascia passare il pacchetto, con la nota `has no zone binding: allowed`. Un firewall che ne ha una chiude la sua lista come [fa un router](#router): ciò che nessuna regola permette viene bloccato. Il motivo nomina il lato senza zona, e le regole saltate per questo, cioè che cosa sistemare. FW-Edge ha una regola, quindi con la porta 2 senza zona la pagina chiesta dagli uffici si ferma lì:
 
 ```ncl sample=site
 pixelcake> interface 2 zone none on FW-Edge
@@ -46,11 +46,37 @@ PORT   STATE      MODE     VLAN       ZONE     IP               LINK
 4      up         lan      -          -        -                -
 pixelcake> browse Web-Pubblico from PC-Uffici-1
 Browsing Web-Pubblico (172.16.0.10) from PC-Uffici-1...
+  ✗ HTTP request: PC-Uffici-1 → Web-Pubblico
+Browse failed (blocked): HTTP request: firewall FW-Edge: no rule allows it, and the zone policy cannot decide: port 2 is in no zone
+  dropped at: FW-Edge
+```
+
+Una regola che lascia entrare gli uffici nella DMZ non serve finché la porta 2 non ha una zona: nomina una zona, quindi viene saltata, e il motivo lo dice:
+
+```ncl continue
+pixelcake> add rule allow web from trust to dmz on FW-Edge
+FW-Edge: rule 2 added — allow web from trust to dmz
+  no port of FW-Edge is in zone dmz yet: interface <n> zone dmz on FW-Edge
+pixelcake> browse Web-Pubblico from PC-Uffici-1
+Browsing Web-Pubblico (172.16.0.10) from PC-Uffici-1...
+  ✗ HTTP request: PC-Uffici-1 → Web-Pubblico
+Browse failed (blocked): HTTP request: firewall FW-Edge: no rule allows it, and neither rule 2, which names a zone, nor the zone policy can decide: port 2 is in no zone
+  dropped at: FW-Edge
+  note: HTTP request: firewall FW-Edge: rule 2 names a zone and port 2 is in no zone: skipped
+```
+
+Con la porta di nuovo nella sua zona la regola viene letta, e la pagina arriva:
+
+```ncl continue
+pixelcake> interface 2 zone dmz on FW-Edge
+port 2 on FW-Edge is now in zone dmz
+pixelcake> browse Web-Pubblico from PC-Uffici-1
+Browsing Web-Pubblico (172.16.0.10) from PC-Uffici-1...
   ✓ HTTP request: PC-Uffici-1 → Web-Pubblico
   ✓ HTTP response: Web-Pubblico → PC-Uffici-1
 Page received from Web-Pubblico
-  note: HTTP request: firewall FW-Edge: no rule matches and no zone binding: allowed
-  note: HTTP response: firewall FW-Edge: no rule matches and no zone binding: allowed
+  note: HTTP request: firewall FW-Edge: allowed by rule 2 (allow web from trust to dmz)
+  note: HTTP response: firewall FW-Edge: no rule matches, zone policy dmz → trust allowed (reply to an allowed flow)
 ```
 
 ## La politica delle zone {#policy}
@@ -85,7 +111,7 @@ Tracing route to PC-Uffici-1 (192.168.10.11) from Web-Pubblico:
 Trace failed (blocked): firewall FW-Edge: no rule matches, zone policy dmz → trust denied
 ```
 
-Senza regole il motivo è `firewall policy on FW-Edge: dmz → trust denied`; con regole che non corrispondono, `firewall FW-Edge: no rule matches, zone policy dmz → trust denied`. La scheda «Regole» lo dice sotto «Quando nessuna regola corrisponde».
+Senza regole il motivo è `firewall policy on FW-Edge: dmz → trust denied`; con regole che non corrispondono, `firewall FW-Edge: no rule matches, zone policy dmz → trust denied`. La scheda «Regole» lo dice sotto «Quando nessuna regola corrisponde». Dove la zona di un lato non è nota, un firewall con regole invece blocca, e il motivo dice perché la politica non ha potuto decidere: `firewall FW-Edge: no rule allows it, and the zone policy cannot decide: port 2 is in no zone` ([Zone](#zones)).
 
 ## Le regole {#rules}
 
@@ -107,6 +133,7 @@ pixelcake> show rules FW-Edge
 RULES of FW-Edge (the first that matches decides)
    1  allow web    from untrust            to 172.16.0.10
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
+  without a zone on both sides (a link not attached to a port, a port in no zone): what no rule allows is blocked
   the reply to a flow it allowed passes
 pixelcake> add rule deny web from 192.168.10.12 to dmz on FW-Edge
 FW-Edge: rule 2 added — deny web from 192.168.10.12 to dmz
@@ -135,6 +162,7 @@ RULES of FW-Edge (the first that matches decides)
    2  allow web    from untrust            to 172.16.0.10
    3  deny  web    from 192.168.10.12      to dmz
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
+  without a zone on both sides (a link not attached to a port, a port in no zone): what no rule allows is blocked
   the reply to a flow it allowed passes
 pixelcake> browse Web-Pubblico from PC-Uffici-2
 Browsing Web-Pubblico (172.16.0.10) from PC-Uffici-2...
@@ -197,7 +225,7 @@ Le regole giudicano solo ciò che attraversa il firewall. L'amministrazione del 
 
 ## Regole su un router {#router}
 
-Anche un router può avere delle regole: la sua lista di accesso. La finestra di un router ha la stessa scheda «Regole», con lo stesso editor, e il terminale accetta `add rule` e `show rules` su un router come su un firewall. Le regole si leggono allo stesso modo, dall'alto in basso, su ciò che il router instrada. Un router non ha zone, quindi una regola nomina indirizzi e reti.
+Anche un router può avere delle regole: la sua lista di accesso. La finestra di un router ha la stessa scheda «Regole», con lo stesso editor, e il terminale accetta `add rule` e `show rules` su un router come su un firewall. Le regole si leggono allo stesso modo, dall'alto in basso, su ciò che il router instrada. Un router non ha zone, quindi una regola nomina indirizzi e reti. Un firewall che non conosce la zona di un lato chiude la sua lista allo stesso modo ([Zone](#zones)).
 
 Ciò che nessuna regola indica si decide come sui router veri: la lista finisce con un divieto implicito. Un router senza regole lascia passare tutto; appena ne ha una attiva, ciò che nessuna regola permette viene bloccato, e il motivo lo dice: `router Router-Core: no rule allows it`. Un router con tutte le regole spente torna a lasciar passare tutto. La risposta a un flusso che il router ha permesso passa, come su un firewall. Sotto «Quando nessuna regola corrisponde» la scheda «Regole» di un router dice lo stesso, e `show rules` finisce con il divieto implicito:
 
@@ -252,5 +280,5 @@ La regola 1 viene sempre prima: il ping resta negato, e tutto il resto che parte
 > - Un firewall ricorda i flussi che ha lasciato passare per il tempo di una sola domanda: non c'è una tabella delle connessioni da consultare, né un tempo massimo, né un limite a quante possono essere aperte.
 > - Ciò che è diretto al firewall stesso non viene filtrato.
 > - Il pacchetto è guardato solo per indirizzo e per zona. Non c'è ispezione di ciò che trasporta, né registro degli eventi, né limite di frequenza, né orari. L'opzione IPS/IDS di una porta è solo documentazione: il motore non la simula.
-> - Un'estremità di connessione non assegnata a una porta non ha una zona, e nemmeno una porta la cui zona è «Nessuna». Le regole che nominano una zona vengono saltate lì, e il `trace` dice quale dei due casi è; il traffico non viene fermato per questo.
+> - Un'estremità di connessione non assegnata a una porta non ha una zona, e nemmeno una porta la cui zona è «Nessuna». Le regole che nominano una zona vengono saltate lì, e il `trace` dice quale dei due casi è. Lì non può decidere nemmeno la politica delle zone: un firewall senza regole attive lascia passare il traffico, uno con una regola blocca ciò che nessuna regola permette. Su un firewall che instrada, il lato da cui un pacchetto esce è la porta della sua rotta, quindi un'estremità non assegnata conta per ciò che entra da lì.
 > - Le regole di un router tengono lo stato, come quelle di un firewall: la risposta a un flusso che il router ha permesso passa. Una semplice lista di accesso su un router vero no, e vuole una regola anche per le risposte.

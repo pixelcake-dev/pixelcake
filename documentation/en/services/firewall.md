@@ -33,7 +33,7 @@ The “Port mode” of a port (LAN, WAN or DMZ) is a label and decides nothing: 
 
 The engine needs to know which port a cable is attached to, to know which zone a packet comes in by and goes out by. A link drawn to a firewall that has zones is not attached to a port by itself: you choose the port, and with it the zone, in the window of the link. Right-click the link, choose “Edit link”, and under “Interfaces” choose the port in the list headed `Interface on FW-Edge`. An end that is not attached has no zone: a rule that names a zone is skipped, and the trace says so in a note.
 
-A port with “None” as its zone is the same: no zone, no policy. A rule that names a zone is skipped there, with the same note, and what no other rule decides is allowed; the trace says `no zone binding: allowed`:
+A port with “None” as its zone is the same: no zone, no policy. A rule that names a zone is skipped there, with the same note. Without the zone of both sides the [zone policy](#policy) cannot decide either, and what happens then depends on the rules. A firewall with no rule switched on lets the packet through, with the note `has no zone binding: allowed`. A firewall that has one ends its list as [a router does](#router): what no rule allows is blocked. The reason names the side with no zone, and the rules that were skipped for it, which is what to fix. FW-Edge has a rule, so with port 2 in no zone the page from the offices stops there:
 
 ```ncl sample=site
 pixelcake> interface 2 zone none on FW-Edge
@@ -46,11 +46,37 @@ PORT   STATE      MODE     VLAN       ZONE     IP               LINK
 4      up         lan      -          -        -                -
 pixelcake> browse Web-Public from PC-Office-1
 Browsing Web-Public (172.16.0.10) from PC-Office-1...
+  ✗ HTTP request: PC-Office-1 → Web-Public
+Browse failed (blocked): HTTP request: firewall FW-Edge: no rule allows it, and the zone policy cannot decide: port 2 is in no zone
+  dropped at: FW-Edge
+```
+
+A rule that allows the offices into the DMZ does not help while port 2 has no zone: it names a zone, so it is skipped, and the reason says so:
+
+```ncl continue
+pixelcake> add rule allow web from trust to dmz on FW-Edge
+FW-Edge: rule 2 added — allow web from trust to dmz
+  no port of FW-Edge is in zone dmz yet: interface <n> zone dmz on FW-Edge
+pixelcake> browse Web-Public from PC-Office-1
+Browsing Web-Public (172.16.0.10) from PC-Office-1...
+  ✗ HTTP request: PC-Office-1 → Web-Public
+Browse failed (blocked): HTTP request: firewall FW-Edge: no rule allows it, and neither rule 2, which names a zone, nor the zone policy can decide: port 2 is in no zone
+  dropped at: FW-Edge
+  note: HTTP request: firewall FW-Edge: rule 2 names a zone and port 2 is in no zone: skipped
+```
+
+With the port back in its zone the rule is read, and the page arrives:
+
+```ncl continue
+pixelcake> interface 2 zone dmz on FW-Edge
+port 2 on FW-Edge is now in zone dmz
+pixelcake> browse Web-Public from PC-Office-1
+Browsing Web-Public (172.16.0.10) from PC-Office-1...
   ✓ HTTP request: PC-Office-1 → Web-Public
   ✓ HTTP response: Web-Public → PC-Office-1
 Page received from Web-Public
-  note: HTTP request: firewall FW-Edge: no rule matches and no zone binding: allowed
-  note: HTTP response: firewall FW-Edge: no rule matches and no zone binding: allowed
+  note: HTTP request: firewall FW-Edge: allowed by rule 2 (allow web from trust to dmz)
+  note: HTTP response: firewall FW-Edge: no rule matches, zone policy dmz → trust allowed (reply to an allowed flow)
 ```
 
 ## The zone policy {#policy}
@@ -85,7 +111,7 @@ Tracing route to PC-Office-1 (192.168.10.11) from Web-Public:
 Trace failed (blocked): firewall FW-Edge: no rule matches, zone policy dmz → trust denied
 ```
 
-With no rules at all the reason reads `firewall policy on FW-Edge: dmz → trust denied`, and with rules that do not match, `firewall FW-Edge: no rule matches, zone policy dmz → trust denied`. The “Rules” tab says the same under “When no rule matches”.
+With no rules at all the reason reads `firewall policy on FW-Edge: dmz → trust denied`, and with rules that do not match, `firewall FW-Edge: no rule matches, zone policy dmz → trust denied`. The “Rules” tab says the same under “When no rule matches”. Where the zone of a side is not known, a firewall with rules blocks instead, and the reason says why the policy could not decide: `firewall FW-Edge: no rule allows it, and the zone policy cannot decide: port 2 is in no zone` ([Zones](#zones)).
 
 ## Rules {#rules}
 
@@ -107,6 +133,7 @@ pixelcake> show rules FW-Edge
 RULES of FW-Edge (the first that matches decides)
    1  allow web    from untrust            to 172.16.0.10
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
+  without a zone on both sides (a link not attached to a port, a port in no zone): what no rule allows is blocked
   the reply to a flow it allowed passes
 pixelcake> add rule deny web from 192.168.10.12 to dmz on FW-Edge
 FW-Edge: rule 2 added — deny web from 192.168.10.12 to dmz
@@ -135,6 +162,7 @@ RULES of FW-Edge (the first that matches decides)
    2  allow web    from untrust            to 172.16.0.10
    3  deny  web    from 192.168.10.12      to dmz
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
+  without a zone on both sides (a link not attached to a port, a port in no zone): what no rule allows is blocked
   the reply to a flow it allowed passes
 pixelcake> browse Web-Public from PC-Office-2
 Browsing Web-Public (172.16.0.10) from PC-Office-2...
@@ -197,7 +225,7 @@ Only what goes through is judged by the rules. The administration of the firewal
 
 ## Rules on a router {#router}
 
-A router can carry rules too: its access list. The window of a router has the same “Rules” tab, with the same editor, and the terminal takes `add rule` and `show rules` on a router as on a firewall. The rules are read the same way, top to bottom, on what the router routes. A router has no zones, so a rule names addresses and networks.
+A router can carry rules too: its access list. The window of a router has the same “Rules” tab, with the same editor, and the terminal takes `add rule` and `show rules` on a router as on a firewall. The rules are read the same way, top to bottom, on what the router routes. A router has no zones, so a rule names addresses and networks. A firewall that cannot tell the zone of a side ends its list in the same way ([Zones](#zones)).
 
 What no rule matches is decided as on real routers: the list ends with an implicit deny. A router with no rules lets everything through; as soon as it has one that is enabled, what no rule allows is blocked, and the reason says so: `router Router-Core: no rule allows it`. A router whose rules are all disabled lets everything through again. The reply to a flow the router allowed passes, as on a firewall. Under “When no rule matches” the “Rules” tab of a router says the same, and `show rules` ends with the implicit deny:
 
@@ -252,5 +280,5 @@ Rule 1 still comes first: the ping stays denied, and everything else from the of
 > - A firewall remembers the flows it let through for as long as one question lasts: there is no table of connections to look at, no timeout and no limit on how many are open.
 > - What is addressed to the firewall itself is not filtered.
 > - The packet is looked at by address and by zone only. There is no inspection of what it carries, no logging, no rate limit and no schedule. The IPS/IDS option of a port is documentation: the engine does not simulate it.
-> - A link end that is not attached to a port has no zone, and neither has a port whose zone is “None”. The rules that name a zone are skipped there, and the trace says which of the two it is; the traffic is not stopped for it.
+> - A link end that is not attached to a port has no zone, and neither has a port whose zone is “None”. The rules that name a zone are skipped there, and the trace says which of the two it is. The zone policy cannot decide there either: a firewall with no rule switched on lets the traffic through, one with a rule blocks what no rule allows. On a firewall that routes, the side a packet leaves by is the port of its route, so an end that is not attached counts for what comes in by it.
 > - The rules of a router keep state, as those of a firewall: the reply to a flow the router allowed passes. A plain access list on a real router does not, and needs a rule for the replies too.

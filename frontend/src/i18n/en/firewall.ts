@@ -46,9 +46,11 @@ export const firewall: Dictionary['firewall'] = {
     title: 'When no rule matches',
     text:
       'The zone policy decides: traffic towards a more trusted zone is denied (untrust → trust, ' +
-      'untrust → dmz, dmz → trust); everything else is allowed. The reply to a flow this ' +
-      'firewall allowed passes; a reply whose request it never saw is judged like any other ' +
-      'packet.',
+      'untrust → dmz, dmz → trust); everything else is allowed. The policy needs the zone of both ' +
+      'sides: where the firewall cannot tell one (a cable not attached to a port, a port in no ' +
+      'zone), what no rule allows is blocked once it has an enabled rule, as on a router; with no ' +
+      'rules, or with all of them disabled, it passes. The reply to a flow this firewall allowed ' +
+      'passes; a reply whose request it never saw is judged like any other packet.',
   },
 
   /** The same tab on a router: its rules are its access list, and it has no zones */

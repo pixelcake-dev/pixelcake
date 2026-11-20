@@ -49,7 +49,7 @@ add rule [<position>] allow|deny [<service>|any] from <source> to <destination> 
   allow may be written permit, deny block
 ```
 
-Aggiunge una regola all'elenco di un router o di un firewall. Le regole si leggono dall'alto, e la prima che corrisponde per servizio, partenza e destinazione decide; quando nessuna corrisponde, su un firewall decide la politica delle zone ([regole](../services/firewall.md#rules)), e un router blocca il pacchetto: la sua lista finisce con un divieto implicito ([regole su un router](../services/firewall.md#router)). La prima regola di un router lo dice in una riga sua, e togliere l'ultima dice che il router torna a lasciar passare tutto.
+Aggiunge una regola all'elenco di un router o di un firewall. Le regole si leggono dall'alto, e la prima che corrisponde per servizio, partenza e destinazione decide; quando nessuna corrisponde, su un firewall decide la politica delle zone ([regole](../services/firewall.md#rules)), e un router blocca il pacchetto: la sua lista finisce con un divieto implicito ([regole su un router](../services/firewall.md#router)). Anche un firewall lo blocca dove non conosce la zona di un lato, una connessione non assegnata a una porta o una porta senza zona ([zone](../services/firewall.md#zones)). La prima regola di un router lo dice in una riga sua, e togliere l'ultima dice che il router torna a lasciar passare tutto. La prima regola di un firewall che ha connessioni così le elenca, una per riga, e togliere l'ultima dice che lì il firewall torna a lasciar passare il pacchetto.
 
 | Parametro | Che cos'è |
 |---|---|
@@ -100,6 +100,7 @@ RULES of FW-Edge (the first that matches decides)
    6  deny  any    from dmz                to trust
    7  allow ping   from 203.0.113.50       to dmz
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
+  without a zone on both sides (a link not attached to a port, a port in no zone): what no rule allows is blocked
   the reply to a flow it allowed passes
 ```
 
@@ -125,6 +126,7 @@ RULES of FW-Edge (the first that matches decides)
    1  allow web    from untrust            to 172.16.0.10
    2  allow web    from 172.16.0.10        to 192.168.30.20
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
+  without a zone on both sides (a link not attached to a port, a port in no zone): what no rule allows is blocked
   the reply to a flow it allowed passes
 pixelcake> delete rule 1 on FW-Edge
 FW-Edge: rule 1 removed — allow web from untrust to 172.16.0.10

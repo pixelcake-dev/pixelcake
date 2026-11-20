@@ -22,6 +22,7 @@ import {
   planAndEvaluateFlow,
   boundInterface,
   interfaceLinks,
+  interfacePhrase,
   listInterfaces,
   requiresExplicitBinding,
   routingTable,
@@ -944,16 +945,44 @@ function ruleRow(number: string, rule: Pick<FirewallRule, 'action' | 'service' |
   );
 }
 
-/** True when a router's rules end with the implicit deny: it has one switched on */
-function routerDeniesTheRest(rules: FirewallRule[]): boolean {
+/**
+ * True when the rules end with the implicit deny: one is switched on. On a
+ * router it decides what no rule matches; on a firewall, what no rule
+ * matches where it cannot tell the zone of both sides
+ */
+function deniesTheRest(rules: FirewallRule[]): boolean {
   return rules.some((rule) => rule.enabled !== false);
+}
+
+/** The last line of the rules of a firewall that has one switched on */
+const FIREWALL_IMPLICIT_DENY =
+  'without a zone on both sides (a link not attached to a port, a port in no zone): what no rule allows is blocked';
+
+/**
+ * The links of a firewall whose zone it cannot tell, in words: the end on
+ * the firewall is not attached to a port, or its port is in no zone
+ */
+function zoneGaps(topo: Topology, firewall: NetworkDevice): string[] {
+  const label = (id: string) => topo.devices.find((d) => d.id === id)?.label ?? id;
+  const gaps: string[] = [];
+  for (const connection of topo.connections) {
+    if (connection.source !== firewall.id && connection.target !== firewall.id) continue;
+    const peer = label(connection.source === firewall.id ? connection.target : connection.source);
+    const iface = boundInterface(connection, firewall);
+    if (!iface) gaps.push(`the link to ${peer} is not attached to a port`);
+    else if (iface.kind !== 'port' || !iface.port.securityZone) {
+      gaps.push(`the link to ${peer} is on ${interfacePhrase(iface)}, which is in no zone`);
+    }
+  }
+  return gaps;
 }
 
 /**
  * `show rules <device>` — the rules in order, then what decides when none
- * matches: the zone policy on a firewall; on a router (its access list) the
- * implicit deny once it has a rule switched on, else nothing, so the rest
- * passes
+ * matches: the zone policy on a firewall, and the implicit deny where it
+ * cannot tell both zones once it has a rule switched on; on a router (its
+ * access list) the implicit deny once it has a rule switched on, else
+ * nothing, so the rest passes
  */
 function showRules(d: NetworkDevice): TerminalLine[] {
   const rules = d.firewallRules ?? [];
@@ -969,7 +998,8 @@ function showRules(d: NetworkDevice): TerminalLine[] {
   });
   if (isFirewall) {
     lines.push(muted(`  then the ${ZONE_POLICY}`));
-  } else if (routerDeniesTheRest(rules)) {
+    if (deniesTheRest(rules)) lines.push(muted(`  ${FIREWALL_IMPLICIT_DENY}`));
+  } else if (deniesTheRest(rules)) {
     const implicit = { action: 'deny', service: 'any', source: 'any', destination: 'any' } as const;
     lines.push(muted(`${ruleRow('', implicit)}  (implicit: what no rule allows)`));
   } else {
@@ -1359,10 +1389,15 @@ function runConnect(action: 'connect' | 'disconnect', aQuery: string, bQuery: st
     ] as const) {
       if (iface) continue;
       if (requiresExplicitBinding(device)) {
+        // (with a rule switched on, what comes in by an end with no zone needs a rule)
+        const blocks = deniesTheRest(device.firewallRules ?? [])
+          ? ', and what comes in by it is blocked unless a rule allows it'
+          : '';
         lines.push(
           muted(
             `  ${device.label} has security zones, so the port of a new link is chosen by hand ` +
-              '(right click on the link, Edit link, Interfaces): until then that end is not bound, per-port rules are skipped there'
+              '(right click on the link, Edit link, Interfaces): until then that end is not bound, per-port rules are skipped there' +
+              blocks
           )
         );
         continue;
@@ -1962,9 +1997,17 @@ function runRuleAdd(
       );
     }
   }
-  // A router's first rule brings the implicit deny of its access list with it
-  if (!zoned && !routerDeniesTheRest(rules)) {
+  // A router's first rule brings the implicit deny of its access list with
+  // it; so does a firewall's, on the links whose zone it cannot tell
+  if (!zoned && !deniesTheRest(rules)) {
     lines.push(muted(`  from now on ${device.label} blocks what no rule allows`));
+  }
+  const gaps = zoned && !deniesTheRest(rules) ? zoneGaps(topo, device) : [];
+  if (gaps.length > 0) {
+    lines.push(
+      muted(`  from now on ${device.label} blocks what no rule allows where it cannot tell the zone of both sides:`),
+      ...gaps.map((gap) => muted(`    ${gap}`))
+    );
   }
   return lines;
 }
@@ -1972,7 +2015,7 @@ function runRuleAdd(
 function runRuleRemove(position: number, deviceQuery: string | undefined, context: TerminalContext): TerminalLine[] {
   const found = targetDevice(deviceQuery, context, `remove rule ${position} from <device>`);
   if ('errorLines' in found) return found.errorLines;
-  const { device } = found;
+  const { device, topo } = found;
   const rules = device.firewallRules ?? [];
   const rule = rules[position - 1];
   if (!rule) {
@@ -1989,16 +2032,18 @@ function runRuleRemove(position: number, deviceQuery: string | undefined, contex
     firewallRules: remaining.length > 0 ? remaining : undefined,
   });
   const lines = [ok(`${device.label}: rule ${position} removed — ${describeRule(rule)}`)];
-  // (a router left with no rule switched on filters nothing any more)
-  const isRouter = isL3Capable(device) && !device.type.toLowerCase().includes('firewall');
-  if (isRouter && routerDeniesTheRest(rules) && !routerDeniesTheRest(remaining)) {
-    lines.push(
-      muted(
-        remaining.length === 0
-          ? `  ${device.label} has no rules left: it lets everything through`
-          : `  ${device.label} has no rule switched on left: it lets everything through`
-      )
-    );
+  // (a router left with no rule switched on filters nothing any more; a
+  // firewall lets through again what crosses a link whose zone it cannot tell)
+  const isFirewall = device.type.toLowerCase().includes('firewall');
+  const isRouter = isL3Capable(device) && !isFirewall;
+  const left = remaining.length === 0 ? 'has no rules left' : 'has no rule switched on left';
+  if (deniesTheRest(rules) && !deniesTheRest(remaining)) {
+    if (isRouter) lines.push(muted(`  ${device.label} ${left}: it lets everything through`));
+    else if (isFirewall && zoneGaps(topo, device).length > 0) {
+      lines.push(
+        muted(`  ${device.label} ${left}: where it cannot tell the zone of both sides it lets the packet through`)
+      );
+    }
   }
   return lines;
 }

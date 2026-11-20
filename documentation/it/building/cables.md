@@ -29,35 +29,32 @@ L'interfaccia a cui è assegnata un'estremità decide che cosa il motore può ve
 - l'indirizzo di una porta di router, e il gateway che gli corrisponde, vengono confrontati con ciò che usa chi manda il pacchetto ([Indirizzi e gateway](addresses.md#gateway));
 - la zona di sicurezza di una porta di firewall decide quale politica si applica ([Firewall](../services/firewall.md#zones)).
 
-Un'estremità **non assegnata** non ha niente di tutto questo. Il motore lascia passare il pacchetto da quell'estremità, salta le regole della porta, e scrive una nota nella risposta: `link Router-Core–FW-Edge has no port binding on FW-Edge: per-port rules skipped`, o, se è un router, che il gateway non è stato verificato. La finestra dice lo stesso sotto gli elenchi: «Stato della porta, zona di sicurezza e gateway vengono verificati solo sulle estremità assegnate a un'interfaccia.» Quando si apre un progetto, ogni estremità senza interfaccia riceve di nuovo la prima libera, con l'unica eccezione descritta qui sotto.
+Un'estremità **non assegnata** non ha niente di tutto questo. Il motore lascia passare il pacchetto da quell'estremità, salta le regole della porta, e scrive una nota nella risposta: `link Router-Core–FW-Edge has no port binding on FW-Edge: per-port rules skipped`, o, se è un router, che il gateway non è stato verificato. Su un firewall con regole, ciò che entra da un'estremità così viene bloccato, a meno che una regola lo permetta ([qui sotto](#firewall)). La finestra dice lo stesso sotto gli elenchi: «Stato della porta, zona di sicurezza e gateway vengono verificati solo sulle estremità assegnate a un'interfaccia.» Quando si apre un progetto, ogni estremità senza interfaccia riceve di nuovo la prima libera, con l'unica eccezione descritta qui sotto.
 
 ## Su un firewall con zone {#firewall}
 
 Su un firewall le cui porte hanno zone di sicurezza, l'estremità non viene mai assegnata da sola. Scegliere una porta lì vorrebbe dire scegliere una politica: la porta decide la zona, e quando nessuna regola corrisponde è la zona a decidere che cosa il firewall lascia passare. Perciò un cavo verso un firewall di questo tipo nasce con quell'estremità non assegnata, e la porta si sceglie in «Modifica connessione», sotto "Interfaccia su" e il nome del firewall. Anche il terminale fa così: `connect` lascia l'estremità senza interfaccia e lo dice.
 
-Finché la porta non è scelta il firewall non sa in quale zona sia il cavo. Nella rete dell'azienda, elimina il cavo da FW-Edge a Router-Core e disegnalo di nuovo: nel `trace` attraverso il firewall, al posto della politica delle zone compare una nota:
+Finché la porta non è scelta il firewall non sa in quale zona sia il cavo, e la sua politica delle zone non può decidere per ciò che entra da quel cavo. Un firewall senza regole attive lo lascia passare, con una nota; FW-Edge ha delle regole, quindi ciò che nessuna regola permette si ferma lì, come su un router ([Firewall](../services/firewall.md#zones)). Nella rete dell'azienda, elimina il cavo da FW-Edge a Router-Core e disegnalo di nuovo: il `trace` dagli uffici alla DMZ si ferma al firewall:
 
 ```ncl sample=company
 pixelcake> disconnect FW-Edge from Router-Core
 disconnected FW-Edge ↔ Router-Core
 pixelcake> connect FW-Edge to Router-Core
 connected FW-Edge (unbound) ↔ Router-Core (port 4)
-  FW-Edge has security zones, so the port of a new link is chosen by hand (right click on the link, Edit link, Interfaces): until then that end is not bound, per-port rules are skipped there
+  FW-Edge has security zones, so the port of a new link is chosen by hand (right click on the link, Edit link, Interfaces): until then that end is not bound, per-port rules are skipped there, and what comes in by it is blocked unless a rule allows it
 pixelcake> trace Portale-Clienti from PC-Vendite
 Tracing route to Portale-Clienti (172.16.0.10) from PC-Vendite:
   1  ○ PC-Vendite (PC)
   2  ○ SW-Uffici (Switch)  — VLAN 10
   3  ○ SW-Core (Switch)  — VLAN 10
   4  ○ Router-Core (Router)  — routed: default route via 10.0.0.2 (port 4)
-  5  ○ FW-Edge (Firewall)  — routed: 172.16.0.0/24 is on port 2; firewall FW-Edge: no rule matches and no zone binding: allowed
-  6  ○ SW-DMZ (Switch)
-  7  ● Portale-Clienti (Server)
+  5  ✗ FW-Edge (Firewall)  — firewall FW-Edge: no rule allows it, and the zone policy cannot decide: the link is not attached to a port
   note: link Router-Core–FW-Edge has no port binding on FW-Edge: per-port rules skipped
-  note: firewall FW-Edge: no rule matches and no zone binding: allowed
-Trace complete: destination reached.
+Trace failed (blocked): firewall FW-Edge: no rule allows it, and the zone policy cannot decide: the link is not attached to a port
 ```
 
-Prima, lo stesso `trace` diceva `no rule matches, zone policy trust → dmz allowed`. I comandi sono in [Dispositivi e indirizzi](../terminal/devices-and-addresses.md#connect).
+Il motivo dice che cosa fare: assegnare l'estremità. Con il cavo sulla porta 1, la porta nella zona trust, lo stesso `trace` passa di nuovo, per la politica delle zone (`no rule matches, zone policy trust → dmz allowed`). I comandi sono in [Dispositivi e indirizzi](../terminal/devices-and-addresses.md#connect).
 
 ## Modificare una connessione {#edit}
 

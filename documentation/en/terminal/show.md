@@ -293,7 +293,7 @@ default              192.168.1.1      eth0     default (gateway)
 show rules [of] <device>
 ```
 
-The rules of a router or a firewall in the order they are read, each with its number, its action, its service, its source and its destination, and then what decides when none matches: on a firewall the zone policy; on a router with an enabled rule the implicit deny of its access list, a last row `deny any from any to any` marked `(implicit: what no rule allows)`; on a router with no rule, or with all of them disabled, nothing, so anything else is allowed. A router or a firewall lets through the reply to a flow it allowed itself. A device that is neither a router nor a firewall, and has no rules, says that it filters nothing.
+The rules of a router or a firewall in the order they are read, each with its number, its action, its service, its source and its destination, and then what decides when none matches: on a firewall the zone policy, and, once it has an enabled rule, a line saying that without a zone on both sides what no rule allows is blocked; on a router with an enabled rule the implicit deny of its access list, a last row `deny any from any to any` marked `(implicit: what no rule allows)`; on a router with no rule, or with all of them disabled, nothing, so anything else is allowed. A router or a firewall lets through the reply to a flow it allowed itself. A device that is neither a router nor a firewall, and has no rules, says that it filters nothing.
 
 ```ncl sample=company
 pixelcake> show rules FW-Edge
@@ -302,6 +302,7 @@ RULES of FW-Edge (the first that matches decides)
    2  allow email  from untrust            to 192.168.30.40
    3  allow web    from 172.16.0.10        to 192.168.30.20
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
+  without a zone on both sides (a link not attached to a port, a port in no zone): what no rule allows is blocked
   the reply to a flow it allowed passes
 pixelcake> show rules Router-Core
 RULES of Router-Core (the first that matches decides)
