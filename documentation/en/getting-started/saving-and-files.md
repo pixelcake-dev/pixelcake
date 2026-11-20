@@ -41,7 +41,7 @@ A project has one or more boards, each with its own drawing. Open the Explorer, 
 
 - add a board with “New board”: type a name in the field and confirm;
 - rename a board, with its pencil or by a double click on its name, or delete it (a project always keeps at least one, and the app asks before it deletes a board, and says how many devices it holds);
-- duplicate a board with “Duplicate board”, the button with two sheets: the copy comes right after it, named after it with "(copy)", with its devices, cables, areas, notes, what is written on it with the marker, and its view, and it is a board of its own;
+- duplicate a board with “Duplicate board”, the button with two sheets: the copy comes right after it, named after it with "(copy)", with its devices, cables, areas, notes, its annotations, and its view, and it is a board of its own;
 - change the name and the description of the project;
 - move from one board to another with a click.
 

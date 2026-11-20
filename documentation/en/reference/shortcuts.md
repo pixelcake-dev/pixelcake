@@ -80,23 +80,23 @@ The terminal is a window that floats over the board: drag it by its top bar to m
 
 | To | Do |
 |---|---|
-| Leave the presentation | Esc. If the small menu of a click is open, the first Esc closes it; if the marker is on, the first Esc turns it off. Nothing happens while a field has the keyboard or a window, the terminal included, is open. |
+| Leave the presentation | Esc. If the small menu of a click is open, the first Esc closes it; if annotation mode is on, the first Esc turns it off. Nothing happens while a field has the keyboard or a window, the terminal included, is open. |
 | Ask or break | Click a device or a cable: a menu offers “Start here”, “Arrive here”, “Simulate a failure” and “Repair”. |
 | Move the view | Drag with the left button; the wheel zooms. A double click does not zoom. |
 
-While presenting, nothing can be selected, moved, joined, copied, deleted or undone, so the keys of [the board](#board) do nothing but Ctrl + S, which still saves. P takes up [the marker](#marker), which writes over the drawing without changing it.
+While presenting, nothing can be selected, moved, joined, copied, deleted or undone, so the keys of [the board](#board) do nothing but Ctrl + S, which still saves. A turns on [annotation mode](#annotations), which shows the annotations and writes over the drawing without changing it.
 
-## With the marker {#marker}
+## In annotation mode {#annotations}
 
 | To | Do |
 |---|---|
-| Turn the marker on or off, also while presenting | P, or the marker button on the bar. Nothing happens while a field is being typed in or a window is open. |
-| Turn the marker off | Esc. While presenting, the first Esc turns the marker off and the second leaves the presentation. |
+| Turn annotation mode on or off, also while presenting | A, or its button on the bar. Nothing happens while a field is being typed in, a window is open, or Ctrl, Cmd, Alt or Shift is held. |
+| Leave annotation mode | Esc. While presenting, the first Esc leaves the mode and the second leaves the presentation. |
 | Write the words typed on the board (Esc gives them up) | Enter, with the “Text” tool, after a click where the words go. |
 | Start a new line in the words | Shift + Enter. |
 | Move the view while writing | Right button + drag, mouse wheel. |
 
-While the marker is on, the left button, a pen or a finger writes: nothing is selected, moved or joined. [Writing on the board](../building/marker.md) says what each tool does.
+While the mode is on, the left button, a pen or a finger writes: nothing is selected, moved or joined. [Annotation mode](../building/annotations.md) says what each tool does.
 
 ## In the guided tour {#tour}
 

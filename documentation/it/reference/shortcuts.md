@@ -80,23 +80,23 @@ Il terminale è una finestra mobile sopra il canvas: si sposta trascinandola dal
 
 | Per | Fai |
 |---|---|
-| Uscire dalla presentazione | Esc. Se il piccolo menu di un clic è aperto, il primo Esc lo chiude; se il pennarello è attivo, il primo Esc lo disattiva. Non succede nulla mentre un campo ha il focus o è aperta una finestra, il terminale compreso. |
+| Uscire dalla presentazione | Esc. Se il piccolo menu di un clic è aperto, il primo Esc lo chiude; se la modalità appunti è attiva, il primo Esc la disattiva. Non succede nulla mentre un campo ha il focus o è aperta una finestra, il terminale compreso. |
 | Fare una domanda o simulare un guasto | Clic su un dispositivo o su un cavo: un menu offre «Parti da qui», «Arriva qui», «Simula un guasto» e «Ripara». |
 | Spostare la vista | Trascina con il tasto sinistro; la rotellina fa zoom. Un doppio clic non fa zoom. |
 
-Durante la presentazione nulla si può selezionare, spostare, collegare, copiare, eliminare o annullare, quindi i tasti del [canvas](#board) non fanno niente, tranne Ctrl + S, che salva ancora. P prende [il pennarello](#marker), che scrive sopra il disegno senza cambiarlo.
+Durante la presentazione nulla si può selezionare, spostare, collegare, copiare, eliminare o annullare, quindi i tasti del [canvas](#board) non fanno niente, tranne Ctrl + S, che salva ancora. A accende la [modalità appunti](#annotations), che mostra gli appunti e scrive sopra il disegno senza cambiarlo.
 
-## Con il pennarello {#marker}
+## In modalità appunti {#annotations}
 
 | Per | Fai |
 |---|---|
-| Attivare o disattivare il pennarello, anche durante la presentazione | P, oppure il pulsante del pennarello nella barra. Non succede nulla mentre scrivi in un campo o è aperta una finestra. |
-| Disattivare il pennarello | Esc. Durante la presentazione, il primo Esc disattiva il pennarello e il secondo esce dalla presentazione. |
+| Attivare o disattivare la modalità appunti, anche durante la presentazione | A, oppure il suo pulsante nella barra. Non succede nulla mentre scrivi in un campo, è aperta una finestra o tieni premuto Ctrl, Cmd, Alt o Maiusc. |
+| Uscire dalla modalità appunti | Esc. Durante la presentazione, il primo Esc esce dalla modalità e il secondo esce dalla presentazione. |
 | Scrivere sul canvas le parole digitate (Esc le lascia perdere) | Invio, con lo strumento «Testo», dopo un clic dove vanno le parole. |
 | Andare a capo nelle parole | Maiusc + Invio. |
 | Spostare la vista mentre scrivi | Tasto destro + trascina, rotellina del mouse. |
 
-Con il pennarello attivo, il tasto sinistro, una penna o un dito scrivono: nulla si seleziona, si sposta o si collega. [Scrivere sul canvas](../building/marker.md) dice che cosa fa ogni strumento.
+Con la modalità attiva, il tasto sinistro, una penna o un dito scrivono: nulla si seleziona, si sposta o si collega. La [modalità appunti](../building/annotations.md) dice che cosa fa ogni strumento.
 
 ## Nel tour guidato {#tour}
 

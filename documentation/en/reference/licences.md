@@ -16,13 +16,13 @@ The drawings of the devices are PixelCake's own, under the same licence as the a
 
 ## What it bundles {#bundled}
 
-The app and these pages carry the two typefaces of the interface; the app also carries the handwriting of the marker and two sets of icons. Each licence text is a file of the built app, under `licenses/`.
+The app and these pages carry the two typefaces of the interface; the app also carries the handwriting of annotation mode and two sets of icons. Each licence text is a file of the built app, under `licenses/`.
 
 | What | Licence | Used for | Text |
 |---|---|---|---|
 | Inter | SIL Open Font License 1.1 | The text of the interface and of these pages. | [inter.txt](https://app.pixelcake.dev/licenses/inter.txt) |
 | JetBrains Mono | SIL Open Font License 1.1 | Addresses, the terminal and code. | [jetbrains-mono.txt](https://app.pixelcake.dev/licenses/jetbrains-mono.txt) |
-| Caveat | SIL Open Font License 1.1 | The words written with the [marker](../building/marker.md), on the board and in the exported image. | [caveat.txt](https://app.pixelcake.dev/licenses/caveat.txt) |
+| Caveat | SIL Open Font License 1.1 | The words written in [annotation mode](../building/annotations.md), on the board and in the exported image. | [caveat.txt](https://app.pixelcake.dev/licenses/caveat.txt) |
 | Material Design Icons, by Pictogrammers | Apache 2.0 | The icons of the interface that come from this set. | [icons-mdi.txt](https://app.pixelcake.dev/licenses/icons-mdi.txt) |
 | Lucide | ISC | The icons of the interface that come from this set. | [icons-lucide.txt](https://app.pixelcake.dev/licenses/icons-lucide.txt) |
 

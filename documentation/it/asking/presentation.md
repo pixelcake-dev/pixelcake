@@ -19,11 +19,11 @@ Quando entri, la selezione viene tolta, il menu del tasto destro si chiude e un 
 - il contrassegno **«Presentazione»** e il nome del progetto;
 - i canvas del progetto, in «Canvas del progetto», quando ne ha più di uno. Cambiare canvas fa dimenticare la domanda e i guasti, perché riguardavano l'altro;
 - **«Velocità del pacchetto»**: «Lenta», «Normale», «Veloce»;
-- **«Pennarello»**, per [scrivere sopra il disegno](#marker), poi **«Terminale»**, **«Esporta immagine»** e **«Schermo intero»**;
+- **«Modalità appunti»**, per [scrivere sopra il disegno](#annotations), con un numero piccolo quando ci sono appunti nascosti, poi **«Terminale»**, **«Esporta immagine»** e **«Schermo intero»**;
 - la lingua e il tema, come nella barra dei menu;
 - **«Esci»**.
 
-Per uscire premi «Esci» oppure Esc. Esc chiude prima il piccolo menu, se ce n'è uno aperto, o mette via il pennarello, se è attivo; non fa nulla mentre scrivi in un campo o c'è una finestra aperta. Uscendo si dimenticano la domanda e ogni guasto simulato, e si esce dallo schermo intero.
+Per uscire premi «Esci» oppure Esc. Esc chiude prima il piccolo menu, se ce n'è uno aperto, o esce dalla modalità appunti, se è attiva; non fa nulla mentre scrivi in un campo o c'è una finestra aperta. Uscendo si dimenticano la domanda e ogni guasto simulato, e si esce dallo schermo intero.
 
 I riquadri si vedono ma non si possono modificare. Il doppio clic su un dispositivo non apre la sua finestra: qui nulla modifica il disegno.
 
@@ -78,11 +78,13 @@ Il tipo di comunicazione contata è quello scelto nella domanda, «Ping», «Web
 
 Il motore prende la strada più corta che funziona. Lo spanning tree e protocolli simili non sono simulati, quindi una comunicazione che "passa da un'altra strada" prende la più corta che i cavi permettono, non quella che avrebbe scelto uno switch vero.
 
-## Scrivere sopra il disegno {#marker}
+## Scrivere sopra il disegno {#annotations}
 
-Mentre presenti, il [pennarello](../building/marker.md) è una penna: premi «Pennarello» nella barra, oppure P, e scrivi sopra il disegno mentre rompi uno switch o tagli una connessione: un cerchio intorno a ciò che si ferma, una freccia, una parola. Quello che il canvas ha già di scritto resta sotto. Gli strumenti dicono «Solo per questa presentazione»: quello che la penna scrive non cambia nulla del canvas e non viene salvato. Sparisce quando esci dalla presentazione, e quando mostri un altro canvas; «Cancella tutto» lo toglie subito.
+La [modalità appunti](../building/annotations.md) funziona anche mentre presenti, sullo stesso foglio di quando costruisci. La presentazione parte con la modalità spenta e il disegno pulito. Premi «Modalità appunti» nella barra, oppure A, e compaiono gli appunti scritti prima; scrivi sopra il disegno mentre rompi uno switch o tagli una connessione: un cerchio intorno a ciò che si ferma, una freccia, una parola. Quello che scrivi resta sul canvas, salvato con lui, finché non lo cancelli. Spegni la modalità e sono di nuovo fuori vista; il pulsante dice quanti ne sono nascosti.
 
-Finché la penna è attiva, un clic scrive invece di aprire il menu di un dispositivo. Mettila via (P, Esc o il suo pulsante) per fare una domanda o rompere qualcosa, e riprendila per scrivere. Con la penna attiva, il primo Esc la mette via e il secondo esce dalla presentazione.
+Finché la modalità è attiva, un clic scrive invece di aprire il menu di un dispositivo. Spegnila (A, Esc o il suo pulsante) per fare una domanda o rompere qualcosa, e riaccendila per scrivere. Con la modalità attiva, il primo Esc ne esce e il secondo esce dalla presentazione.
+
+L'annullamento non funziona durante la presentazione, come per tutto il resto: quello che è stato scritto durante la presentazione si annulla con Ctrl + Z dopo essere uscito, oppure si toglie con la gomma.
 
 ## Il terminale durante la presentazione {#terminal}
 

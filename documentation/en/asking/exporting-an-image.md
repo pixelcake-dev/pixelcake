@@ -29,7 +29,7 @@ The file is named after the project, and after the board when the project has mo
   - **“Question and answer under the drawing”**, only from a presentation (see [below](#presentation));
   - **“Transparent background”**: the drawing alone, with no page behind it, to put on a page that has its own. The preview then shows a chequered ground.
 
-The picture is drawn again from the data of the board, not taken from the screen. It always shows the **whole** drawing, whatever part is in the window and at whatever zoom, with the names and the addresses under the devices (a device on DHCP shows the address it is leased), the labels of the cables, and the areas, unless View → “Show areas” has them hidden. What is written with the [marker](../building/marker.md) is drawn over all of it, its words in the handwriting, which the picture carries in itself. It shows no selection and no connection points.
+The picture is drawn again from the data of the board, not taken from the screen. It always shows the **whole** drawing, whatever part is in the window and at whatever zoom, with the names and the addresses under the devices (a device on DHCP shows the address it is leased), the labels of the cables, and the areas, unless View → “Show areas” has them hidden. The annotations of [annotation mode](../building/annotations.md) are drawn over all of it, their words in the handwriting, which the picture carries in itself, only while the mode is on: what you see is what you export. With the mode off and annotations on the board, the window says they are not in the image. It shows no selection and no connection points.
 
 Outside a presentation it also shows the **lamp** of the last answer: the device that answered turns green and the one that stopped the question turns red, as on the board (see [what stays on the board](simulation-panel.md#afterwards)), and a device that waits for an address says so.
 
@@ -37,7 +37,7 @@ The PNG is made as soon as the choices are, so that saving or copying is one pre
 
 ## From a presentation {#presentation}
 
-Opened from the bar of the presentation, the window shows the drawing **as it is on screen now**: the devices that are down and the cables that are cut marked, the two ends of the question tagged `FROM` and `TO`, the way of the answer drawn on the cables, and what the presenter wrote with the [marker](presentation.md#marker). Under the drawing, the picture says what was asked:
+Opened from the bar of the presentation, the window shows the drawing **as it is on screen now**: the devices that are down and the cables that are cut marked, the two ends of the question tagged `FROM` and `TO`, the way of the answer drawn on the cables, and the annotations, if annotation mode is on ([annotations](presentation.md#annotations)). Under the drawing, the picture says what was asked:
 
 - a heading with the question and its colour: `Ping from PC-HQ-1 to PC-Branch-1: arrives`;
 - the answer in a sentence, with, when it does not arrive, `Reason:` and the reason of the engine;

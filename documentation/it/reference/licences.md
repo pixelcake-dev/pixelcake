@@ -16,13 +16,13 @@ I disegni dei dispositivi sono propri di PixelCake, con la stessa licenza dell'a
 
 ## Che cosa include {#bundled}
 
-L'app e queste pagine includono i due caratteri dell'interfaccia; l'app include anche la grafia a mano del pennarello e due serie di icone. Il testo di ogni licenza è un file dell'app compilata, sotto `licenses/`.
+L'app e queste pagine includono i due caratteri dell'interfaccia; l'app include anche la grafia a mano della modalità appunti e due serie di icone. Il testo di ogni licenza è un file dell'app compilata, sotto `licenses/`.
 
 | Che cosa | Licenza | A che cosa serve | Testo |
 |---|---|---|---|
 | Inter | SIL Open Font License 1.1 | Il testo dell'interfaccia e di queste pagine. | [inter.txt](https://app.pixelcake.dev/licenses/inter.txt) |
 | JetBrains Mono | SIL Open Font License 1.1 | Gli indirizzi, il terminale e il codice. | [jetbrains-mono.txt](https://app.pixelcake.dev/licenses/jetbrains-mono.txt) |
-| Caveat | SIL Open Font License 1.1 | Le parole scritte con il [pennarello](../building/marker.md), sul canvas e nell'immagine esportata. | [caveat.txt](https://app.pixelcake.dev/licenses/caveat.txt) |
+| Caveat | SIL Open Font License 1.1 | Le parole scritte in [modalità appunti](../building/annotations.md), sul canvas e nell'immagine esportata. | [caveat.txt](https://app.pixelcake.dev/licenses/caveat.txt) |
 | Material Design Icons, di Pictogrammers | Apache 2.0 | Le icone dell'interfaccia che vengono da questa serie. | [icons-mdi.txt](https://app.pixelcake.dev/licenses/icons-mdi.txt) |
 | Lucide | ISC | Le icone dell'interfaccia che vengono da questa serie. | [icons-lucide.txt](https://app.pixelcake.dev/licenses/icons-lucide.txt) |
 

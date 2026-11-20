@@ -121,7 +121,7 @@ The reference implementation is `frontend/src/utils/projectFile.ts`
 | `devices` | array | Devices on the canvas. |
 | `connections` | array | Links between devices of the same canvas. |
 | `areas` | array | Optional. The areas drawn behind the devices, in the order they are drawn, see below. Left out when the canvas has none. |
-| `marks` | array | Optional. What is written on the canvas with the marker, in the order it was written, see below. Left out when nothing is. |
+| `marks` | array | Optional. The annotations written on the canvas in annotation mode, in the order they were written, see below. Left out when there are none. |
 | `viewport` | object | Pan and zoom of the view: `x`, `y` (numbers) and `zoom` (number greater than 0). |
 | `deviceCounter` | integer | Number the next device id (`dev-N`) will use. |
 | `connectionCounter` | integer | Number the next connection id (`conn-N`) will use. |
@@ -293,11 +293,11 @@ Fields this document does not list are not kept on an area.
 
 ### Mark
 
-A mark is what is written by hand on the canvas with the marker
-(«Pennarello»): a line, words, an arrow, a ring, a tick, a cross. It is drawn
-over the devices and the cables, and like an area it is a drawing and nothing
-else. The marks a presenter writes in presentation mode are never written to
-the file.
+A mark is an annotation written by hand on the canvas in annotation mode
+(«Modalità appunti»): a line, words, an arrow, a ring, a tick, a cross. It is
+drawn over the devices and the cables, only while the mode is on, and like an
+area it is a drawing and nothing else. What is written during a presentation is
+the same sheet, and is written to the file like the rest.
 
 | Field | Type | Meaning |
 |-------|------|---------|

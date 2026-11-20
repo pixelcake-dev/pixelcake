@@ -27,14 +27,14 @@ A sinistra, il logo apre il sito di PixelCake in una nuova scheda, e i quattro m
 |---|---|
 | File | «Nuovo progetto…», «Apri…», «Salva», «Salva con nome…» ed «Esporta immagine…». Vedi [Salvare, aprire, i file](saving-and-files.md) e [Esportare un'immagine](../asking/exporting-an-image.md). |
 | Modifica | «Annulla», «Ripeti», «Copia», «Incolla» e «Racchiudi in un riquadro». Vedi [Annullare e ripetere](#undo). |
-| Vista | «Adatta alla finestra», «Modalità presentazione», «Disposizione automatica» («Verticale» od «Orizzontale»), «Collega i dispositivi senza cavo», «Ingrandisci», «Animazione rete», «Mostra i riquadri» e «Pennarello». |
+| Vista | «Adatta alla finestra», «Modalità presentazione», «Disposizione automatica» («Verticale» od «Orizzontale»), «Collega i dispositivi senza cavo», «Ingrandisci», «Animazione rete», «Mostra i riquadri» e «Modalità appunti». |
 | Aiuto | «Guida», «Documentazione», «Comandi del terminale», «Tour guidato», «Mostra la schermata di benvenuto», «Informazioni» e «Il sito di PixelCake». |
 
 «Guida» è la guida breve dentro l'applicazione. «Tour guidato» riapre il [tour della prima visita](#tour). «Documentazione» apre queste pagine, nella lingua dell'interfaccia, in una nuova scheda del browser. «Mostra la schermata di benvenuto» fa ricomparire la schermata di benvenuto, ma solo su un canvas vuoto.
 
 Al centro della barra c'è il nome del progetto aperto. Un clic sul nome apre l'Explorer. Un puntino arancione davanti al nome dice che il progetto ha modifiche non ancora salvate su file.
 
-A destra ci sono «Pennarello», il pulsante con il pennarello che scrive e disegna sul canvas ([Scrivere sul canvas](../building/marker.md)), «Presenta», il selettore tra IT ed EN e il pulsante del tema.
+A destra ci sono «Modalità appunti», il pulsante con il pennarello che accende lo strato trasparente per scrivere e disegnare sul canvas ([Modalità appunti](../building/annotations.md)), con il numero degli appunti nascosti quando è spenta, «Presenta», il selettore tra IT ed EN e il pulsante del tema.
 
 ## I pannelli a sinistra {#panels}
 
@@ -100,6 +100,6 @@ Con un clic destro su un dispositivo e poi «Console», il terminale si apre gi�
 
 ## Il tour guidato {#tour}
 
-Alla prima visita, appena lasci la schermata di benvenuto, un tour guidato di otto passi percorre lo schermo: aggiungere un dispositivo, collegare due dispositivi con un cavo, fare una domanda dal pannello «Simulazione», il terminale, annullare e ripetere, salvare il progetto in un file, il pennarello e la presentazione. Ogni passo incornicia in arancione una parte dello schermo e scurisce il resto, con accanto un fumetto di una o due frasi. «Avanti» e «Indietro» scorrono i passi, «Salta» chiude il tour a qualsiasi passo; le frecce, Invio ed Esc fanno lo stesso ([Tastiera e mouse](../reference/shortcuts.md#tour)).
+Alla prima visita, appena lasci la schermata di benvenuto, un tour guidato di otto passi percorre lo schermo: aggiungere un dispositivo, collegare due dispositivi con un cavo, fare una domanda dal pannello «Simulazione», il terminale, annullare e ripetere, salvare il progetto in un file, la modalità appunti e la presentazione. Ogni passo incornicia in arancione una parte dello schermo e scurisce il resto, con accanto un fumetto di una o due frasi. «Avanti» e «Indietro» scorrono i passi, «Salta» chiude il tour a qualsiasi passo; le frecce, Invio ed Esc fanno lo stesso ([Tastiera e mouse](../reference/shortcuts.md#tour)).
 
 Compare da solo una volta in un browser, e non in un browser che contiene già un disegno fatto prima che il tour esistesse. Aiuto → «Tour guidato» lo riapre dal primo passo, in qualsiasi momento. In una finestra più stretta di 600 pixel il fumetto sta in fondo allo schermo, e un passo il cui pulsante lì non è nella barra indica il menu Vista, dove c'è la stessa voce.

@@ -111,15 +111,15 @@ A board holds:
 | `devices` | Each device: type, template, name, addresses, position, notes, its ports or network cards with their VLANs, zones, NAT and DHCP pools, static routes, firewall rules, port forwards and DNS records. |
 | `connections` | The links: the two devices and, at each end, the port or the network card the cable is attached to; type, bandwidth, label, colour, VLANs. |
 | `areas` | The areas drawn behind groups of devices: label, colour, position and size. Left out when a board has none. |
-| `marks` | What is written on the board with the marker: see [below](#marks). Left out when nothing is. |
+| `marks` | The annotations of the board, written in annotation mode: see [below](#marks). Left out when there are none. |
 | `viewport` | The pan and the zoom of the board, so that it opens where it was left. |
 | `deviceCounter`, `connectionCounter` | The numbers the next device and the next link are given, so that a new one never takes the id of another. |
 
 Two things are never written because they follow from the drawing: the address a card is leased by DHCP, and the address a name resolves to. The engine works them out again every time.
 
-### What is written with the marker {#marks}
+### The annotations {#marks}
 
-Each mark of the [marker](../building/marker.md) is one entry of `marks`, first written first:
+Each annotation of [annotation mode](../building/annotations.md) is one entry of `marks`, first written first. The file carries them whether the mode was on or off when it was saved:
 
 ```json
 {
@@ -140,7 +140,7 @@ Each mark of the [marker](../building/marker.md) is one entry of `marks`, first 
 - `text`: the words of a mark of words, one line or more;
 - `seed`: what its slight wobble is worked out from, so that it is drawn the same every time.
 
-The marks the presenter writes in a presentation are never in the file. A program that does not know `marks` opens the file all the same and leaves them out.
+What is written during a presentation is in the file too: it is the same sheet. A program that does not know `marks` opens the file all the same and leaves them out.
 
 ## Opening an old or damaged file {#repairs}
 

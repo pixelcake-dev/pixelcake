@@ -27,14 +27,14 @@ On the left, the logo opens the PixelCake website in a new tab, and the four men
 |---|---|
 | File | “New project…”, “Open…”, “Save”, “Save as…” and “Export image…”. See [Saving, opening, files](saving-and-files.md) and [Exporting an image](../asking/exporting-an-image.md). |
 | Edit | “Undo”, “Redo”, “Copy”, “Paste” and “Enclose in an area”. See [Undo and redo](#undo). |
-| View | “Fit to window”, “Presentation mode”, “Auto-layout” (“Vertical” or “Horizontal”), “Connect devices with no cable”, “Magnify”, “Animation”, “Show areas” and “Marker”. |
+| View | “Fit to window”, “Presentation mode”, “Auto-layout” (“Vertical” or “Horizontal”), “Connect devices with no cable”, “Magnify”, “Animation”, “Show areas” and “Annotation mode”. |
 | Help | “Guide”, “Documentation”, “Terminal commands”, “Guided tour”, “Show the welcome screen”, “About” and “The PixelCake website”. |
 
 “Guide” is the short guide inside the app. “Guided tour” takes the [tour of the first visit](#tour) again. “Documentation” opens these pages, in the language of the interface, in a new tab. “Show the welcome screen” brings back the first screen, on an empty board only.
 
 In the middle of the bar is the name of the open project. A click on it opens the Explorer. A small orange dot before the name says that the project has changes not saved to a file yet.
 
-On the right are “Marker”, the button with the marker that writes and draws on the board ([Writing on the board](../building/marker.md)), “Present”, the switch between IT and EN, and the button of the theme.
+On the right are “Annotation mode”, the button with the marker that turns on the transparent layer to write and draw on the board ([Annotation mode](../building/annotations.md)), with the number of annotations hidden while it is off, “Present”, the switch between IT and EN, and the button of the theme.
 
 ## The panels on the left {#panels}
 
@@ -100,6 +100,6 @@ Right-click a device and choose “Console” to open it already on that device.
 
 ## The guided tour {#tour}
 
-On a first visit, once the welcome screen is left, a guided tour of eight steps goes over the screen: adding a device, joining two devices with a cable, asking a question in the “Simulation” panel, the terminal, undo and redo, saving the project to a file, the marker and presentation mode. Each step frames one part of the screen in orange and dims the rest, with a balloon of a sentence or two beside it. “Next” and “Back” go through the steps, and “Skip” closes the tour at any step; the arrow keys, Enter and Esc do the same ([Keyboard and mouse](../reference/shortcuts.md#tour)).
+On a first visit, once the welcome screen is left, a guided tour of eight steps goes over the screen: adding a device, joining two devices with a cable, asking a question in the “Simulation” panel, the terminal, undo and redo, saving the project to a file, annotation mode and presentation mode. Each step frames one part of the screen in orange and dims the rest, with a balloon of a sentence or two beside it. “Next” and “Back” go through the steps, and “Skip” closes the tour at any step; the arrow keys, Enter and Esc do the same ([Keyboard and mouse](../reference/shortcuts.md#tour)).
 
 It comes by itself once in a browser, and not in a browser that already holds a drawing made before the tour existed. Help → “Guided tour” opens it again from the first step, at any time. In a window narrower than 600 pixels the balloon sits at the bottom of the screen, and a step whose button is not on the bar there points at the View menu, where the same entry is.

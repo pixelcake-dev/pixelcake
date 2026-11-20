@@ -29,7 +29,7 @@ Il file prende il nome dal progetto, e dal canvas quando il progetto ne ha più 
   - **«Domanda e risposta sotto il disegno»**, solo da una presentazione (vedi [più avanti](#presentation));
   - **«Sfondo trasparente»**: il disegno da solo, senza una pagina dietro, da mettere su una pagina che ha il suo sfondo. L'anteprima mostra allora un fondo a scacchi.
 
-L'immagine viene ridisegnata dai dati del canvas, non presa dallo schermo. Mostra sempre **tutto** il disegno, qualunque parte sia nella finestra e a qualunque ingrandimento, con i nomi e gli indirizzi sotto i dispositivi (un dispositivo in DHCP mostra l'indirizzo che gli è stato assegnato), le etichette dei cavi e i riquadri, a meno che Vista → «Mostra i riquadri» non li abbia nascosti. Quello che è scritto con il [pennarello](../building/marker.md) è disegnato sopra tutto, con le parole nella grafia a mano, che l'immagine porta con sé. Non mostra nessuna selezione e nessun punto di collegamento.
+L'immagine viene ridisegnata dai dati del canvas, non presa dallo schermo. Mostra sempre **tutto** il disegno, qualunque parte sia nella finestra e a qualunque ingrandimento, con i nomi e gli indirizzi sotto i dispositivi (un dispositivo in DHCP mostra l'indirizzo che gli è stato assegnato), le etichette dei cavi e i riquadri, a meno che Vista → «Mostra i riquadri» non li abbia nascosti. Gli appunti della [modalità appunti](../building/annotations.md) sono disegnati sopra tutto, con le parole nella grafia a mano, che l'immagine porta con sé, solo se la modalità è attiva: quello che vedi è quello che esporti. A modalità spenta, se il canvas ha degli appunti, la finestra dice che non sono nell'immagine. Non mostra nessuna selezione e nessun punto di collegamento.
 
 Fuori da una presentazione mostra anche la **spia** dell'ultima risposta: il dispositivo che ha risposto diventa verde e quello che ha fermato la domanda diventa rosso, come sul canvas (vedi [che cosa resta sul canvas](simulation-panel.md#afterwards)), e un dispositivo che aspetta un indirizzo lo dice.
 
@@ -37,7 +37,7 @@ Il PNG viene preparato appena hai scelto, così per salvarlo o copiarlo basta un
 
 ## Da una presentazione {#presentation}
 
-Aperta dalla barra della presentazione, la finestra mostra il disegno **com'è ora sullo schermo**: i segni sui dispositivi guasti e sui cavi tagliati, le due estremità della domanda indicate con `DA` e `A`, la strada della risposta disegnata sui cavi e quello che chi presenta ha scritto con il [pennarello](presentation.md#marker). Sotto il disegno, l'immagine dice che cosa è stato chiesto:
+Aperta dalla barra della presentazione, la finestra mostra il disegno **com'è ora sullo schermo**: i segni sui dispositivi guasti e sui cavi tagliati, le due estremità della domanda indicate con `DA` e `A`, la strada della risposta disegnata sui cavi e gli appunti, se la modalità appunti è attiva ([appunti](presentation.md#annotations)). Sotto il disegno, l'immagine dice che cosa è stato chiesto:
 
 - un titolo con la domanda e il suo colore: `Ping da PC-Sede-1 a PC-Filiale-1: arriva`;
 - la risposta in una frase, con, quando non arriva, `Motivo:` e il motivo del motore;
