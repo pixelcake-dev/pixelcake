@@ -106,7 +106,7 @@ None of these is refused when you type it. The window checks that an address is 
 
 An address written on two devices is in conflict, as on a real network when a machine is cloned with its address: whoever asks for it may be answered by either of the two, so no answer about it can be trusted. It happens most often after a paste: a copy of a server, a router, a firewall or a switch keeps the addresses of the original ([Devices](devices.md#copy-delete)). Until one of the two has another address:
 
-- **on the board** both devices are yellow, and the line under the name shows the address followed by `· in conflict`;
+- **on the board** both devices are yellow, and the line under the name shows the address and, on a line under it, `in conflict`;
 - **in the window of the device** a box over the tabs names the other device that has the address, and follows what you type; saving is not refused;
 - **in the answers** a question to that address, or from it, stops before it starts, with a reason that names the address and the devices. A device that pings itself is still answered, and a question between two other devices is not touched;
 - **in the terminal** `show ip` and `show interfaces` end with a line for each address in conflict.

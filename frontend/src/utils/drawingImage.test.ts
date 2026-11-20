@@ -134,6 +134,8 @@ describe('layoutDrawing — devices', () => {
     // frame 2, room 6, drawing 48, 3 to the name, name 16, address 14, room 3, frame 2
     expect(deviceSize(true)).toEqual({ width: 104, height: 94 });
     expect(deviceSize(false)).toEqual({ width: 104, height: 80 });
+    // and a line more for the words said of the address
+    expect(deviceSize(true, 2)).toEqual({ width: 104, height: 108 });
 
     const boxes = layoutDrawing(
       input({
@@ -225,6 +227,43 @@ describe('the mark of a device with a note', () => {
     const without = long('');
     const withMark = long('nota');
     expect(withMark.x + withMark.width).toBeCloseTo(without.x + without.width + NOTE_MARK.size, 5);
+  });
+});
+
+describe('an address in conflict', () => {
+  // the address, and under it the words, as the canvas writes them: two lines
+  const taken = (id: string, x: number, y = 0) =>
+    device({ id, label: id.toUpperCase(), ip: '192.168.100.100\nin conflict', position: { x, y } });
+
+  it('is two lines under the name, and the frame is a line higher, as on the canvas', () => {
+    const scene = layoutDrawing(input({ devices: [taken('a', 0)] }));
+    expect(scene.devices[0].box).toEqual({ x: 0, y: 0, width: 104, height: 108 });
+    const [group] = deviceGroups(parse(renderDrawingImage(input({ devices: [taken('a', 0)] }), LIGHT).svg));
+    expect(texts(group)).toEqual(['A', '192.168.100.100', 'in conflict']);
+    const [, address, words] = [...group.querySelectorAll('text')];
+    // (the name ends at 8 + 48 + 3 + 16; each line is 14 under the one before)
+    expect(Number(words.getAttribute('y')) - Number(address.getAttribute('y'))).toBe(DEVICE_METRICS.ipLine);
+    expect(words.getAttribute('x')).toBe(address.getAttribute('x'));
+  });
+
+  it('is as wide as its longest line: it does not reach a device 136 further along, nor one in the next row', () => {
+    const scene = layoutDrawing(
+      input({ devices: [taken('a', 0), taken('b', 136), taken('c', 0, 130)] })
+    );
+    const half = (text: string) => measure(text, { size: DEVICE_METRICS.ipSize, weight: 400, mono: true }) / 2 + DEVICE_METRICS.textPad;
+    const [a, b, c] = scene.devices;
+    const reach = half('192.168.100.100');
+    expect(a.box.x + a.box.width / 2 + reach).toBeLessThan(b.box.x + b.box.width / 2 - reach);
+    // and the frame of a row ends before the next one begins
+    expect(a.box.y + a.box.height).toBeLessThanOrEqual(c.box.y);
+    // (the picture is not wider than the two frames and what the address needs)
+    expect(scene.bounds.width).toBeLessThanOrEqual(136 + 104 + 2 * Math.max(0, reach - 52));
+  });
+
+  it('is made of what the screen says: the same text, two lines, in the same drawing', () => {
+    const one = renderDrawingImage(input({ devices: [taken('a', 0)] }), LIGHT).svg;
+    expect(one).not.toContain('in conflict</text>192');
+    expect(one).toContain('>in conflict</text>');
   });
 });
 

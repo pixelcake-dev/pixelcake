@@ -106,7 +106,7 @@ Nessuno di questi valori viene rifiutato quando lo scrivi. La finestra controlla
 
 Un indirizzo scritto su due dispositivi è in conflitto, come in una rete vera quando si clona una macchina con il suo indirizzo: a chi lo cerca può rispondere l'uno o l'altro, e quindi nessuna risposta che lo riguarda è affidabile. Succede soprattutto dopo un incolla: la copia di un server, di un router, di un firewall o di uno switch tiene gli indirizzi dell'originale ([Dispositivi](devices.md#copy-delete)). Finché uno dei due non ha un altro indirizzo:
 
-- **sul canvas** i due dispositivi sono gialli, e la riga sotto il nome mostra l'indirizzo seguito da `· in conflitto`;
+- **sul canvas** i due dispositivi sono gialli, e la riga sotto il nome mostra l'indirizzo e, su una riga sotto, `in conflitto`;
 - **nella finestra del dispositivo** un riquadro sopra le schede nomina l'altro dispositivo che ha l'indirizzo, e segue quello che scrivi; il salvataggio non viene rifiutato;
 - **nelle risposte** una domanda verso quell'indirizzo, o che parte da lì, si ferma prima di cominciare, con un motivo che nomina l'indirizzo e i dispositivi. Un dispositivo che fa ping a sé stesso riceve comunque risposta, e una domanda fra altri due dispositivi non cambia;
 - **nel terminale** `show ip` e `show interfaces` finiscono con una riga per ogni indirizzo in conflitto.

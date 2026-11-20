@@ -478,16 +478,19 @@ describe('what the upper layer of a device says', () => {
     await renderCanvas();
 
     for (const label of ['Srv-1', 'Srv-2']) {
-      expect(nodeOf(label).querySelector('.device-ip')?.textContent).toBe('192.168.1.10 · in conflitto');
+      // (the address, and under it the words, on a line of their own: a frame one line higher)
+      expect(nodeOf(label).querySelector('.device-ip')?.textContent).toBe('192.168.1.10\nin conflitto');
+      expect(frameOf(label).className).toContain('device-address-lines');
       expect(stateOf(label)).toEqual(['is-warning']);
     }
     expect(stateOf('PC-2')).toEqual(['is-rest']);
     expect(nodeOf('PC-2').querySelector('.device-ip')?.textContent).toBe('192.168.1.20');
+    expect(frameOf('PC-2').className).not.toContain('device-address-lines');
 
     // in the language of the interface
     try {
       act(() => setLanguage('en'));
-      expect(nodeOf('Srv-1').querySelector('.device-ip')?.textContent).toBe('192.168.1.10 · in conflict');
+      expect(nodeOf('Srv-1').querySelector('.device-ip')?.textContent).toBe('192.168.1.10\nin conflict');
     } finally {
       act(() => setLanguage('it'));
     }
@@ -497,6 +500,7 @@ describe('what the upper layer of a device says', () => {
     await settle();
     expect(nodeOf('Srv-1').querySelector('.device-ip')?.textContent).toBe('192.168.1.11');
     expect(nodeOf('Srv-2').querySelector('.device-ip')?.textContent).toBe('192.168.1.10');
+    expect(frameOf('Srv-1').className).not.toContain('device-address-lines');
     expect(stateOf('Srv-1')).toEqual(['is-rest']);
     expect(stateOf('Srv-2')).toEqual(['is-rest']);
   });
@@ -507,7 +511,7 @@ describe('what the upper layer of a device says', () => {
     add('Srv-1', 'Server', { ip: '192.168.1.10' });
     await renderCanvas();
 
-    expect(nodeOf('R-1').querySelector('.device-ip')?.textContent).toBe('192.168.1.10 · in conflitto');
+    expect(nodeOf('R-1').querySelector('.device-ip')?.textContent).toBe('192.168.1.10\nin conflitto');
     expect(stateOf('R-1')).toEqual(['is-warning']);
   });
 

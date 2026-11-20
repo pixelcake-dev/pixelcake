@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { DEVICE_DRAWINGS, DEVICE_DRAWING_IDS } from '@/data/deviceDrawings';
 import styleSheet from '../index.css?raw';
-import { DEVICE_METRICS, cableEnd, cableRun, deviceHeight, drawingPlace, type Side } from './deviceGeometry';
+import { DEVICE_METRICS, addressLines, cableEnd, cableRun, deviceHeight, drawingPlace, type Side } from './deviceGeometry';
 
 const css = styleSheet.replace(/\r\n/g, '\n');
 /** The declarations of the first rule with exactly this selector */
@@ -31,7 +31,18 @@ describe('the frame of a device', () => {
     expect(deviceHeight(false)).toBe(80);
     // and a line of 14 for the address
     expect(deviceHeight(true)).toBe(94);
+    // and one more for the words said of the address (in conflict), under it
+    expect(deviceHeight(true, 2)).toBe(108);
+    expect(deviceHeight(false, 2)).toBe(80);
     expect(m.width).toBe(104);
+  });
+
+  it('breaks the lines under the name where the text says so, never by the width of the frame', () => {
+    expect(addressLines('')).toEqual([]);
+    expect(addressLines('192.168.100.100')).toEqual(['192.168.100.100']);
+    expect(addressLines('192.168.100.100\nin conflict')).toEqual(['192.168.100.100', 'in conflict']);
+    // (an address leased by DHCP stays on one line: the layouts make room for it)
+    expect(addressLines('192.168.100.100 · DHCP')).toHaveLength(1);
   });
 
   it('has its drawing in the middle, under the room at the top', () => {
@@ -63,12 +74,17 @@ describe('the frame of a device', () => {
     expect(value(both, 'padding')).toBe(`0 ${m.textPad}px`);
     expect(value(both, 'background-color')).toBe('var(--bg-canvas)');
     expect(value(both, 'white-space')).toBe('nowrap');
+    // the words said of an address are on a line of their own: the text has the break, the line keeps it
+    expect(value('.network-device .device-ip', 'white-space')).toBe('pre');
   });
 
   it('tells the style sheet how high it is, for what is placed along its sides', () => {
     expect(value('.network-device', '--frame-height')).toBe(`${deviceHeight(false)}px`);
     expect(value('.network-device.device-with-address', '--frame-height')).toBe(
       `${deviceHeight(true)}px`
+    );
+    expect(value('.network-device.device-address-lines', '--frame-height')).toBe(
+      `${deviceHeight(true, 2)}px`
     );
   });
 });

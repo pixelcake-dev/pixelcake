@@ -381,7 +381,10 @@ describe('ExportImageModal — the choices', () => {
     });
     await settle();
 
-    expect(pictureTexts().filter((text) => text === `${taken} · in conflitto`)).toHaveLength(2);
+    // (the address, and the words on a line of their own under it)
+    expect(pictureTexts().filter((text) => text === taken)).toHaveLength(2);
+    expect(pictureTexts().filter((text) => text === 'in conflitto')).toHaveLength(2);
+    expect(pictureTexts().some((text) => text?.includes(' · in conflitto'))).toBe(false);
     expect(lit()).toBeGreaterThan(0);
   });
 

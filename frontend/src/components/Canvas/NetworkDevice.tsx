@@ -7,7 +7,7 @@ import type { NetworkDevice as NetworkDeviceType } from '@/types/network';
 import DeviceDrawing from '@/components/ui/DeviceDrawing';
 import { deviceState, drawingOf } from '@/utils/deviceDrawing';
 import { noLeaseLabel } from '@/utils/dhcpLabels';
-import { DEVICE_METRICS, cableEnd, type Side } from '@/utils/deviceGeometry';
+import { DEVICE_METRICS, addressLines, cableEnd, type Side } from '@/utils/deviceGeometry';
 import type { DeviceDrawingId } from '@/data/deviceDrawings';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
@@ -186,6 +186,8 @@ const NetworkDevice = memo(({ data, id, selected }: NodeProps<NetworkDeviceData>
   const stateClasses = [
     // (the frame is a line higher: the style sheet places the sides by it)
     address ? 'device-with-address' : '',
+    // (and higher when the words under the address take a line more)
+    addressLines(address ?? '').length > 1 ? 'device-address-lines' : '',
     // While presenting a device is not dragged, so a press on it would start
     // moving the view, and a hand that is not perfectly still would turn a
     // click into a drag: `nopan` leaves the press to the click

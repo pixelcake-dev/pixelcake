@@ -23,8 +23,8 @@ export const canvas = {
     /** For a screen reader: what the colour of the lamp says of the answer (red, green) */
     stopsHere: 'Qui si ferma',
     getsHere: 'Qui arriva',
-    /** Under the name: an address that another device has too */
-    conflict: (address: string) => `${address} · in conflitto`,
+    /** Under the name: an address that another device has too, and on a line of its own what is wrong with it */
+    conflict: (address: string) => `${address}\nin conflitto`,
   },
 
   /** Presentation mode: the mark on a cable that is cut */

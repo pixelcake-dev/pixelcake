@@ -778,6 +778,11 @@ button.area-label:focus-visible {
   --frame-height: 94px;
 }
 
+/* An address and, under it, what is said of it (in conflict): one line more */
+.network-device.device-address-lines {
+  --frame-height: 108px;
+}
+
 .react-flow__node:hover .network-device {
   border-color: var(--border-color);
 }
@@ -840,6 +845,12 @@ button.area-label:focus-visible {
   padding: 0 4px;
   background-color: var(--bg-canvas);
   white-space: nowrap;
+}
+
+/* The address, and under it the words that say what is wrong with it: they
+   are parted by a line break in the text, never by the width of the frame */
+.network-device .device-ip {
+  white-space: pre;
 }
 
 /* Where a cable ends, and where one is started.

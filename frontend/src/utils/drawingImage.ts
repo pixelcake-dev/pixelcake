@@ -29,6 +29,7 @@ import {
   DEVICE_METRICS,
   cableEnd,
   cableRun,
+  addressLines,
   deviceHeight,
   drawingPlace,
   type Side,
@@ -344,7 +345,14 @@ export interface Scene {
  * measures with the browser.
  */
 export const approximateTextWidth: TextMeasure = (text, font) =>
-  [...text].length * font.size * (font.mono ? 0.6 : font.hand ? 0.42 : font.weight === 400 ? 0.54 : 0.58);
+  Math.max(...text.split('\n').map((line) => [...line].length)) *
+  font.size *
+  (font.mono ? 0.6 : font.hand ? 0.42 : font.weight === 400 ? 0.54 : 0.58);
+
+/** The width of the widest line of a text of several lines, as the caller measures a line */
+function widestLine(text: string, font: FontSpec, measure: TextMeasure): number {
+  return Math.max(0, ...text.split('\n').map((line) => measure(line, font)));
+}
 
 /** The width of words of the marker, measured as the caller measures text */
 function handMeasure(measure: TextMeasure): HandMeasure {
@@ -355,8 +363,8 @@ function handMeasure(measure: TextMeasure): HandMeasure {
  * The size the screen gives a device: its frame, the same for every device
  * whatever it is called, lower when there is no address to show
  */
-export function deviceSize(hasAddress: boolean): Size {
-  return { width: DEVICE_METRICS.width, height: deviceHeight(hasAddress) };
+export function deviceSize(hasAddress: boolean, lines = 1): Size {
+  return { width: DEVICE_METRICS.width, height: deviceHeight(hasAddress, lines) };
 }
 
 const SIDES: Record<Side, Position> = {
@@ -443,7 +451,7 @@ export function layoutDrawing(input: DrawingInput): Scene {
   });
 
   const devices: SceneDevice[] = input.devices.map(device => {
-    const size = deviceSize(device.ip !== '');
+    const size = deviceSize(device.ip !== '', addressLines(device.ip).length);
     const failed = marks?.failedDevices.includes(device.id) ?? false;
     // Where the answer on screen ends: the one of the presentation, or the
     // one the last question left on the canvas
@@ -485,7 +493,7 @@ export function layoutDrawing(input: DrawingInput): Scene {
       [scene.ip, IP_FONT],
     ] as const) {
       if (text === '') continue;
-      const half = measureText(text, font) / 2 + m.textPad;
+      const half = widestLine(text, font, measureText) / 2 + m.textPad;
       bounds.add(centre - half, scene.box.y);
       bounds.add(centre + half, scene.box.y);
     }
@@ -722,11 +730,12 @@ function deviceSvg(device: SceneDevice, look: DeviceLook): string {
       `<rect x="${num(left)}" y="${num(top)}" width="${NOTE_MARK.size}" height="${NOTE_MARK.size}" fill="${palette.address}"/>`
     );
   }
-  if (device.ip) {
+  // (the address, and under it the words said of it: each on its own line)
+  addressLines(device.ip).forEach((line, index) => {
     texts.push(
-      deviceLine(device.ip, centre, nameTop + m.nameLine, m.ipLine, IP_FONT, palette.address, look)
+      deviceLine(line, centre, nameTop + m.nameLine + index * m.ipLine, m.ipLine, IP_FONT, palette.address, look)
     );
-  }
+  });
   // (the name and the address of a broken device fade)
   parts.push(device.failed ? `<g opacity="${FAILED_TEXT_OPACITY}">${texts.join('')}</g>` : texts.join(''));
 
