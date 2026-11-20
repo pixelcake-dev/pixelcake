@@ -6,11 +6,11 @@ order: 3
 
 Lo schermo ha una barra in alto, una colonna di pulsanti a sinistra e il canvas, dove sta il disegno. Quello che apri dai pulsanti compare sopra il canvas: un pannello a sinistra, una finestra del terminale, la finestra di un dispositivo. Questa pagina chiama ogni parte con il nome che ha sullo schermo.
 
-![La rete di esempio «Ufficio: due reti e un router» in PixelCake, con dieci parti segnate da un numero: 1 i menu File, Modifica, Vista e Aiuto; 2 il nome del progetto; 3 il pulsante Presenta; 4 il selettore tra IT ed EN; 5 il pulsante del tema; 6 la colonna di pulsanti a sinistra; 7 il pannello Simulazione; 8 il canvas; 9 la mappa piccola; 10 il terminale, dopo un ping da PC-1 a Web-01.](../../media/getting-started/interface.it.png "Le parti dello schermo: la rete di esempio dell'ufficio, il pannello Simulazione aperto, il terminale dopo un ping.")
+![La rete di esempio «Ufficio: due reti e un router» in PixelCake, con dieci parti segnate da un numero: 1 i menu File, Modifica, Vista e Aiuto; 2 il nome del progetto; 3 i pulsanti Modalità appunti e Presenta; 4 il selettore tra IT ed EN; 5 il pulsante del tema; 6 la colonna di pulsanti a sinistra; 7 il pannello Simulazione; 8 il canvas; 9 la mappa piccola; 10 il terminale, dopo un ping da PC-1 a Web-01.](../../media/getting-started/interface.it.png "Le parti dello schermo: la rete di esempio dell'ufficio, il pannello Simulazione aperto, il terminale dopo un ping.")
 
 1. I menu: [File, Modifica, Vista e Aiuto](#menu-bar), con il logo davanti.
 2. Il nome del progetto.
-3. «Presenta», che avvia la [modalità presentazione](#presentation).
+3. «Modalità appunti», che accende lo strato per scrivere e disegnare sul canvas ([Modalità appunti](../building/annotations.md)), e «Presenta», che avvia la [modalità presentazione](#presentation).
 4. Il selettore tra IT ed EN: vedi [Lingue e temi](languages-and-themes.md).
 5. Il pulsante del tema, chiaro o scuro.
 6. La colonna dei [pulsanti a sinistra](#panels): «Explorer», «Simulazione», «Aggiungi dispositivo», «Console», «Import/Export», e «Impostazioni» in fondo.

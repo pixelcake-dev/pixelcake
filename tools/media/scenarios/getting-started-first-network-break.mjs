@@ -31,6 +31,7 @@ export default function scenario({ lang }) {
       { do: 'waitFor', until: `!document.querySelector('.base-modal')`, after: 500 },
       ...runSimulation(w, { holdAfter: 600 }),
       { do: 'hidePointer' },
+      { do: 'wait', ms: 1500 },
       { do: 'poster' },
       { do: 'wait', ms: 3200 },
     ],
