@@ -109,7 +109,7 @@ disconnect <device> [from] <device>
 Things the answer says:
 
 - An end with no free interface (every port is in use, or the device has none) is drawn all the same, not attached to an interface, and the answer says so. A link that is not attached to an interface cannot be checked per port: the port rules are skipped on it and the engine says so in its notes.
-- On a firewall whose ports have security zones the end is never attached by itself, even when ports are free: the port decides the zone. The answer says that the port of a new link is chosen by hand, in the window of the link (right click, “Edit link”), and that until then that end is not bound (see [On a firewall with zones](../building/cables.md#firewall)).
+- On a firewall whose ports have security zones the end is never attached by itself, even when ports are free: the port decides the zone. The answer says that the port of a new link is chosen by hand, in the window of the link (right click, “Edit link”), and that until then that end is not bound. When the firewall has a rule switched on, it adds that what comes in by that end is blocked unless a rule allows it: its zone policy cannot decide without the zone (see [On a firewall with zones](../building/cables.md#firewall)).
 - `connect` between two devices that already have a link does nothing, and says so. `disconnect` between two devices that have none says so too.
 
 ```ncl sample=office

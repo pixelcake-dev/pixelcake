@@ -175,7 +175,12 @@ At every device that handles the packet at layer 3:
    first enabled rule whose service, source and destination match decides.
    When none matches, the zone policy decides: a new flow towards a more
    trusted zone is denied (`untrust→trust`, `untrust→dmz`, `dmz→trust`), the
-   rest is allowed. A firewall lets through the reply to a flow it allowed
+   rest is allowed. The policy needs the zone of both sides: where a link is
+   not attached to a port, or its port is in no zone, a firewall with an
+   enabled rule blocks what no rule allows, and says why the zones could not
+   decide (`firewall FW-1: no rule allows it, and the zone policy cannot
+   decide: port 4 is in no zone`); with no rule switched on it allows, with a
+   note. A firewall lets through the reply to a flow it allowed
    itself; to a firewall the request did not cross, a reply is a new flow.
    A router with rules (its access list) filters the same way, without
    zones; its list ends with an implicit deny: once it has an enabled rule,
@@ -381,8 +386,8 @@ condition into a silent success; it adds a note to the result instead:
   a gateway that belongs to the outside world, with an Internet symbol on
   that network
 - `Internet is not simulated: traffic assumed to pass`
-- `firewall FW-1 has no zone binding: allowed` — the firewall's links are not
-  attached to zoned ports
+- `firewall FW-1 has no zone binding: allowed` — the firewall has no rule
+  switched on, and the link is not attached to a zoned port
 - `firewall FW-1: rule 2 names a zone and the link is not attached to a port:
   skipped`
 

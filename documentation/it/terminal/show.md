@@ -293,7 +293,7 @@ default              192.168.1.1      eth0     default (gateway)
 show rules [of] <device>
 ```
 
-Le regole di un router o di un firewall nell'ordine in cui si leggono, ciascuna con il suo numero, l'azione, il servizio, la partenza e la destinazione, e poi ciò che decide quando nessuna corrisponde: su un firewall la politica delle zone; su un router con una regola attiva il divieto implicito della sua lista di accesso, un'ultima riga `deny any from any to any` segnata `(implicit: what no rule allows)`; su un router senza regole, o con tutte spente, niente, quindi tutto il resto è permesso. Un router o un firewall lascia passare la risposta a un flusso che ha permesso lui stesso. Un dispositivo che non è né un router né un firewall, e non ha regole, dice che non filtra nulla.
+Le regole di un router o di un firewall nell'ordine in cui si leggono, ciascuna con il suo numero, l'azione, il servizio, la partenza e la destinazione, e poi ciò che decide quando nessuna corrisponde: su un firewall la politica delle zone e, appena ha una regola attiva, una riga che dice che senza la zona di entrambi i lati ciò che nessuna regola permette viene bloccato; su un router con una regola attiva il divieto implicito della sua lista di accesso, un'ultima riga `deny any from any to any` segnata `(implicit: what no rule allows)`; su un router senza regole, o con tutte spente, niente, quindi tutto il resto è permesso. Un router o un firewall lascia passare la risposta a un flusso che ha permesso lui stesso. Un dispositivo che non è né un router né un firewall, e non ha regole, dice che non filtra nulla.
 
 ```ncl sample=company
 pixelcake> show rules FW-Edge
@@ -302,6 +302,7 @@ RULES of FW-Edge (the first that matches decides)
    2  allow email  from untrust            to 192.168.30.40
    3  allow web    from 172.16.0.10        to 192.168.30.20
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
+  without a zone on both sides (a link not attached to a port, a port in no zone): what no rule allows is blocked
   the reply to a flow it allowed passes
 pixelcake> show rules Router-Core
 RULES of Router-Core (the first that matches decides)

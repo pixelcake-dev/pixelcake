@@ -95,13 +95,23 @@ pixelcake> add rule deny ping from PC-1 to Server-1 on Firewall-1
 Firewall-1: rule 1 added — deny ping from 192.168.1.2 to 192.168.1.3
   PC-1 → 192.168.1.2
   Server-1 → 192.168.1.3
+  from now on Firewall-1 blocks what no rule allows where it cannot tell the zone of both sides:
+    the link to PC-1 is on port 1, which is in no zone
+    the link to Server-1 is on port 2, which is in no zone
 pixelcake> ping Server-1 from PC-1
 Pinging Server-1 (192.168.1.3) from PC-1...
 Ping failed (blocked): request: firewall Firewall-1: denied by rule 1 (deny ping from 192.168.1.2 to 192.168.1.3)
   dropped at: Firewall-1
+pixelcake> browse Server-1 from PC-1
+Browsing Server-1 (192.168.1.3) from PC-1...
+  ✗ HTTP request: PC-1 → Server-1
+Browse failed (blocked): HTTP request: firewall Firewall-1: no rule allows it, and the zone policy cannot decide: port 1 is in no zone and port 2 is in no zone
+  dropped at: Firewall-1
 ```
 
 The two notes under the first answer say that no port of the firewall is in a security zone, so only the rules decide. The reason of the second answer is the one the notice showed.
+
+The rule brings one more thing with it, and `add rule` says so in its last lines: a firewall that has a rule, and cannot tell the zones of a crossing, blocks what no rule allows, as a router with an access list does. Firewall-1 has no zones, so the page that PC-1 asks of Server-1 stops there too: no rule allows it. A rule that allows it, above or below the first, opens it again; so does putting the two ports in zones, so that the zone policy decides ([Firewall zones and rules](../services/firewall.md#zones)).
 
 To undo it, open the Rules tab again and click the bin of the rule, which reads “Delete rule” when the pointer rests on it, then “Save”. The same question then arrives again.
 

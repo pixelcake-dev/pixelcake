@@ -77,7 +77,7 @@ Due casi tengono la rotta principale. Una rete a cui il dispositivo è collegato
 Un firewall che un pacchetto attraversa (non uno che lo manda, non uno a cui è indirizzato) decide prima che il pacchetto prosegua. Lo stesso fa un router che ha delle regole, la sua lista di accesso: le legge allo stesso modo, e non ha zone.
 
 1. **Le regole**, dall'alto in basso. La prima regola attiva che corrisponde per servizio, partenza e destinazione decide se permettere o negare. Una regola che nomina una zona ha bisogno che il cavo sia assegnato a una porta che sta in una zona, perché la zona appartiene alla porta: altrimenti la regola viene saltata, con una nota.
-2. **La politica delle zone**, quando nessuna regola corrisponde. Un nuovo flusso verso una zona più fidata viene negato: `untrust → trust`, `untrust → dmz` e `dmz → trust`. Tutto il resto è permesso. Un firewall che non conosce la zona di entrambi i lati, perché un cavo non è assegnato a nessuna porta o è assegnato a una porta senza zona, permette, con una nota. Un router non ha zone: la sua lista finisce con un divieto implicito, come sui router veri, e quindi ciò che nessuna regola permette viene bloccato (`router Router-Core: no rule allows it`). Un router senza regole, o con tutte spente, lascia passare tutto.
+2. **La politica delle zone**, quando nessuna regola corrisponde. Un nuovo flusso verso una zona più fidata viene negato: `untrust → trust`, `untrust → dmz` e `dmz → trust`. Tutto il resto è permesso. La politica ha bisogno della zona di entrambi i lati, e un cavo non assegnato a nessuna porta, o assegnato a una porta senza zona, non ne ha. Lì un firewall con una regola attiva chiude la sua lista come fa un router: ciò che nessuna regola permette viene bloccato, e il motivo dice perché le zone non hanno potuto decidere (`firewall FW-Edge: no rule allows it, and the zone policy cannot decide: port 2 is in no zone`), con le regole saltate per questo, se ce ne sono. Un firewall senza regole attive permette, con una nota. Un router non ha zone: la sua lista finisce con un divieto implicito, come sui router veri, e quindi ciò che nessuna regola permette viene bloccato (`router Router-Core: no rule allows it`). Un router senza regole, o con tutte spente, lascia passare tutto.
 3. **Le risposte.** Un firewall ricorda i flussi che ha lasciato passare lui stesso. La risposta a uno di questi flussi lo attraversa, qualunque cosa dicano le regole su un nuovo flusso in quel verso. Una risposta che torna per un'altra strada, attraverso un firewall che la richiesta non ha attraversato, per quel firewall è un pacchetto nuovo: decidono le sue regole e le sue zone, e quando la negano il motivo finisce con `and it never saw the request`.
 
 ```ncl sample=site
@@ -85,6 +85,7 @@ pixelcake> show rules FW-Edge
 RULES of FW-Edge (the first that matches decides)
    1  allow web    from untrust            to 172.16.0.10
   then the zone policy: untrust → trust, untrust → dmz and dmz → trust denied, the rest allowed
+  without a zone on both sides (a link not attached to a port, a port in no zone): what no rule allows is blocked
   the reply to a flow it allowed passes
 pixelcake> ping Srv-Interno from Web-Pubblico
 Pinging Srv-Interno (192.168.20.10) from Web-Pubblico...
@@ -137,7 +138,7 @@ A ogni cavo il motore controlla, in quest'ordine:
 5. **La porta a cui arriva è accesa.**
 6. **Il dispositivo che raggiunge.** Uno switch o un access point prende la trama se la VLAN può entrare da quella porta, e la ricerca prosegue da lui. Un router con indirizzi sulle porte non porta mai una trama per altri: risponde se l'indirizzo è quello della porta a cui arriva il cavo (uno qualunque dei suoi, quando l'estremità del cavo non è assegnata a nessuna porta), altrimenti la ricerca non passa da lui. Lo stesso vale per un dispositivo finale.
 
-L'estremità di un cavo è assegnata a una porta o a una scheda di rete del suo dispositivo ([le due estremità](../building/cables.md#ends)). Le regole che appartengono a una porta, come il suo stato, la sua VLAN e la sua zona, si applicano solo quando questo è noto. Un'estremità non assegnata viene accettata, e la risposta porta una nota: `link A–B has no port binding…: per-port rules skipped`.
+L'estremità di un cavo è assegnata a una porta o a una scheda di rete del suo dispositivo ([le due estremità](../building/cables.md#ends)). Le regole che appartengono a una porta, come il suo stato, la sua VLAN e la sua zona, si applicano solo quando questo è noto. Un'estremità non assegnata viene accettata, e la risposta porta una nota: `link A–B has no port binding…: per-port rules skipped`. Su un firewall con regole la zona di quell'estremità non è nota, quindi lì ciò che nessuna regola permette viene bloccato (il punto 2 del [firewall](#firewall)).
 
 Quando nessuno risponde per l'indirizzo, il motivo è la prima cosa che ha fermato il pacchetto sulla catena di cavi più corta verso il dispositivo che avrebbe dovuto rispondere. Ciò che l'ha fermato su un ramo laterale non dice nulla sulla strada fin lì. Quando non l'ha fermato nulla, il motivo è ciò che non va nella rete: il dispositivo è su un'altra rete e in mezzo non c'è un router (`no router between subnets 192.168.10.0 and 192.168.20.0 — L2 devices cannot route`), oppure un dispositivo finale sta in mezzo (`PC-2 is an end device: it does not forward traffic for others`), oppure un router sta tra due dispositivi indirizzati nella stessa rete (`… a router does not pass traffic within one network`), oppure nessuno ha quell'indirizzo.
 
@@ -252,6 +253,7 @@ I motivi sono scritti in inglese, in entrambe le lingue dell'interfaccia, e nomi
 | `firewall FW-Edge: denied by rule 2 (…)` | una regola dice di negare, con il suo numero |
 | `firewall FW-Edge: no rule matches, zone policy dmz → trust denied` | nessuna regola decide, e decidono le zone |
 | `router Router-Core: no rule allows it` | un router ha delle regole, e nessuna permette il pacchetto |
+| `firewall FW-Edge: no rule allows it, and the zone policy cannot decide: …` | un firewall ha delle regole, nessuna permette il pacchetto, e la zona di un lato non è nota: la fine dice quale |
 | `address conflict: 192.168.20.10 is on both Web-01 and Mail-01, …` | due dispositivi hanno l'indirizzo a cui va la domanda, o da cui parte |
 | `Internet does not carry private addresses: …` | un indirizzo privato è arrivato al simbolo Internet |
 | `SW-Core is down`, `link R-HQ–R-Branch is down` | un guasto simulato |
@@ -264,7 +266,7 @@ Ciò che il motore non può verificare **non passa mai in silenzio come un succe
 - `Router-1 has no interface addresses: gateway and routing not verified`: le porte del router non hanno indirizzo, quindi si assume che faccia passare il pacchetto.
 - `Internet is not simulated: traffic assumed to pass`: il simbolo Internet è un segnaposto. `203.0.113.1 is not in the drawing: Internet assumed to take the traffic` dice che un gateway appartiene al mondo esterno.
 - `link A–B has no port binding…: per-port rules skipped`: un'estremità di un cavo non è assegnata a nessuna porta o scheda.
-- `firewall FW-1 has no zone binding: allowed`, oppure una regola che `names a zone and the link is not attached to a port: skipped`, o che `names a zone and port 4 is in no zone: skipped`.
+- `firewall FW-1 has no zone binding: allowed` (un firewall senza regole attive), oppure una regola che `names a zone and the link is not attached to a port: skipped`, o che `names a zone and port 4 is in no zone: skipped`.
 - `firewall FW-1: allowed by rule 1 (…)`, `router R-1: denied by rule 1 (…)`, `NAT: source … → …`, e la riga su una rotta che non si può usare e su quella usata al suo posto, che dicono che cosa ha fatto il dispositivo e sono lì per essere lette.
 
 Il terminale stampa le note sotto la risposta. Il pannello della simulazione mostra solo il motivo per cui il pacchetto si è fermato; la [presentazione](presentation.md#ask) mostra il percorso salto per salto con le note di ogni salto, e `trace` le stampa nel terminale.

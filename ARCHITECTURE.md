@@ -305,7 +305,11 @@ Modules:
   enabled rule, what no rule allows is blocked (`no rule allows it`); with
   none, or all of them switched off, it filters nothing. A rule naming a zone is
   skipped, with a note saying why, when the link is not on a port or the
-  port is in no zone.
+  port is in no zone. The zone policy needs the zone of both sides: where one
+  is not known, a firewall with an enabled rule ends its list as a router
+  does, and its reason names the side with no zone and the rules skipped for
+  it (`no rule allows it, and the zone policy cannot decide: port 2 is in no
+  zone`); with no rule switched on it allows, with a note.
 - `nat.ts` — address translation. Source NAT on a port (`doesNat`,
   `natAddress`), port forwards (`matchForward`, `publications`), which
   addresses are private (`isPrivateAddress`), and what a NAT device
