@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- The pictures and videos of the documentation show the app as it is now, with annotation mode in the menu bar and the plain small map, in both languages and both themes; the picture of the interface numbers the annotation button with “Present”.
+
 ## [0.9.2] - 2026-11-20
 
 The marker, undo and redo, a guided tour, and addresses that two devices cannot share.
