@@ -62,7 +62,7 @@
   --area-violet: #6a58a6;
   --area-teal: #1c6f7c;
 
-  /* The marker («Pennarello»): the orange of the logo, a red, a green, and
+  /* The annotation mode («Modalità appunti»): the orange of the logo, a red, a green, and
      the ink of the theme. Strong enough to read over a drawing. The
      exported picture repeats them (utils/canvasMarks.ts) */
   --mark-accent: #F07D2A;
@@ -3991,8 +3991,8 @@ legend {
 }
 
 /* ============================================================
-   The marker («Pennarello»): writing and drawing by hand on the
-   board (components/Canvas/MarksLayer, MarkerSurface, MarkerToolbar)
+   Annotation mode («Modalità appunti»): writing and drawing by hand
+   on the board (components/Canvas/MarksLayer, MarkerSurface, MarkerToolbar)
    ============================================================ */
 
 /* What is written, over the devices and the cables (React Flow draws them
@@ -4095,8 +4095,7 @@ legend {
   align-items: center;
 }
 
-.marker-group + .marker-group,
-.marker-presenting + .marker-group {
+.marker-group + .marker-group {
   padding-left: 6px;
   border-left: 1px solid var(--border-color);
 }
@@ -4161,15 +4160,29 @@ legend {
   height: 5px;
 }
 
-/* While presenting: what is written goes with the presentation */
-.marker-presenting {
-  padding: 0 6px;
-  color: var(--text-color-light);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
+/* The number of notes hidden while the mode is off: a small square of the
+   accent at the corner of its button, on the menu bar and on the bar of the
+   presentation */
+.marker-toggle,
+.presentation-icon-button {
+  position: relative;
+}
+
+.marker-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 0;
+  background: var(--accent-color);
+  color: var(--bg-canvas);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
 }
 
 /* Its button on the menu bar, before «Presenta»; on the bar of the

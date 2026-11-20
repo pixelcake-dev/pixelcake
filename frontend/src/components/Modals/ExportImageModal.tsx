@@ -73,10 +73,10 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
   const allAreas = useNetworkStore((state) => state.areas);
   const areasShown = useUIStore((state) => state.areasShown);
   const areas = useMemo(() => (areasShown ? allAreas : []), [allAreas, areasShown]);
-  // What is written with the marker, over the drawing; while presenting, what
-  // the presenter wrote over it too: the image shows what the board shows
+  // The notes of annotation mode, over the drawing, only while the mode is on:
+  // the image shows what the board shows
   const canvasMarks = useNetworkStore((state) => state.marks);
-  const presenterMarks = useMarkerStore((state) => state.presenterMarks);
+  const annotating = useMarkerStore((state) => state.active);
   const emailMode = useNetworkStore((state) => state.globalNetworkSettings.emailMode ?? 'auto');
   const deviceTemplates = useTemplateStore((state) => state.templates);
   const connectionTemplates = useTemplateStore((state) => state.connectionTemplates);
@@ -92,10 +92,9 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
   const failedDevices = usePresentationStore((state) => state.failedDevices);
   const failedConnections = usePresentationStore((state) => state.failedConnections);
   const route = usePresentationStore((state) => state.route);
-  const writing = useMemo(
-    () => (presenting && presenterMarks.length > 0 ? [...canvasMarks, ...presenterMarks] : canvasMarks),
-    [presenting, canvasMarks, presenterMarks]
-  );
+  const writing = useMemo(() => (annotating ? canvasMarks : []), [annotating, canvasMarks]);
+  // (notes the image leaves out, and says so)
+  const notesLeftOut = !annotating && canvasMarks.length > 0;
 
   // The handwriting goes inside the picture, read once from the app when
   // there are words to write; meanwhile the words are in the computer's
@@ -497,6 +496,9 @@ const ExportImageDialog = ({ onClose }: { onClose: () => void }) => {
           {presenting && caption && (
             <p className="export-image-hint">{t.exportImage.presentationNote}</p>
           )}
+
+          {/* Notes hidden while annotation mode is off are not in the picture */}
+          {notesLeftOut && <p className="export-image-hint">{t.marker.notInImage}</p>}
 
           {failed && format === 'png' && (
             <div className="modal-error-box" role="alert">

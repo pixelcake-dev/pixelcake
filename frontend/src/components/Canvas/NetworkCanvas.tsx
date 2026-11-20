@@ -776,7 +776,7 @@ const NetworkCanvas = () => {
       {/* Welcome Screen: drawn inside the canvas */}
       {shouldShowWelcome && <WelcomeScreen />}
 
-      {/* The tools of the marker, over the top of the board while it is in use */}
+      {/* The tools of annotation mode, over the top of the board while it is on */}
       {markerActive && <MarkerToolbar />}
 
       {/* React Flow Canvas */}
@@ -870,8 +870,8 @@ const NetworkCanvas = () => {
         {/* Packet Animation Logic */}
         <PacketAnimation />
         <DeviceNote />
-        {/* What is written with the marker, over the devices and the cables;
-            and, while the marker is in use, the sheet that takes the pointer */}
+        {/* The notes of annotation mode, over the devices and the cables (only while it is on);
+            and the sheet that takes the pointer */}
         <MarksLayer />
         {markerActive && <MarkerSurface />}
       </ReactFlow>

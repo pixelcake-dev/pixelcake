@@ -242,7 +242,7 @@ export interface CanvasArea {
   size: { width: number; height: number };
 }
 
-/** What a mark of the marker («Pennarello») is: a line by hand, words, an arrow, a ring, a tick, a cross */
+/** What a mark of annotation mode («Modalità appunti») is: a line by hand, words, an arrow, a ring, a tick, a cross */
 export const MARK_KINDS = ['pen', 'text', 'arrow', 'ellipse', 'tick', 'cross'] as const;
 export type MarkKind = (typeof MARK_KINDS)[number];
 
@@ -255,7 +255,7 @@ export const MARK_WIDTHS = ['thin', 'thick'] as const;
 export type MarkWidth = (typeof MARK_WIDTHS)[number];
 
 /**
- * A mark written by hand on a canvas with the marker («Pennarello»): drawn
+ * A mark written by hand on a canvas with annotation mode («Modalità appunti»): drawn
  * over the devices and the cables, in the coordinates of the canvas. Like an
  * area it is a drawing and nothing else: the engine never reads it, and it
  * does not follow a device that is moved.

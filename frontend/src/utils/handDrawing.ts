@@ -1,5 +1,5 @@
 /**
- * How a mark of the marker («Pennarello») is drawn: as a hand draws it, with
+ * How a mark of annotation mode («Modalità appunti») is drawn: as a hand draws it, with
  * a little wobble. The wobble comes from the seed of the mark, never from
  * chance at the moment of drawing: the same mark is drawn the same on
  * screen, after a reload and in the exported image, which all draw it from

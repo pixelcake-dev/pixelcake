@@ -1,11 +1,11 @@
 /**
- * The keys of the marker («Pennarello»): P takes it up and puts it away,
- * while building and while presenting; Esc puts it away. Not while a field
+ * The keys of annotation mode («Modalità appunti»): A turns it on and off,
+ * while building and while presenting; Esc turns it off. Not while a field
  * is typed in, not while a window is open over the board (the terminal
  * floats beside it and is not one), not with Ctrl, Cmd, Alt or Shift.
  *
- * A press of Esc that puts the marker away is marked as used: the
- * presentation is left only at the next one.
+ * A press of Esc that leaves the mode is marked as used: the presentation
+ * is left only at the next one.
  */
 
 import { useEffect } from 'react';
@@ -41,7 +41,7 @@ export function useMarkerKeys(): void {
         marker.setActive(false);
         return;
       }
-      if (plainLetter(event) === 'p') {
+      if (plainLetter(event) === 'a') {
         event.preventDefault();
         marker.toggle();
       }

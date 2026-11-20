@@ -7,6 +7,7 @@ import type { ConnectionSummary, LeftAloneReason } from '@/utils/autoConnect';
 import type { NetworkDevice } from '@/types';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useMarkerStore } from '@/store/markerStore';
+import { useHiddenMarks } from '@/components/Canvas/useHiddenMarks';
 import { useGuideStore } from '@/store/guideStore';
 import {
   openProject,
@@ -98,8 +99,10 @@ const TopMenuBar = () => {
   const toggleParticleAnimation = useUIStore((state) => state.toggleParticleAnimation);
   const areasShown = useUIStore((state) => state.areasShown);
   const setAreasShown = useUIStore((state) => state.setAreasShown);
-  // The marker («Pennarello»): taken up and put away from its button, from the View menu, with P
+  // Annotation mode («Modalità appunti»): turned on and off from its button, from the View menu, with A
   const markerActive = useMarkerStore((state) => state.active);
+  // (the notes out of sight while it is off: the buttons say how many)
+  const hiddenNotes = useHiddenMarks();
   const toggleMarker = useMarkerStore((state) => state.toggle);
   const openTour = useGuideStore((state) => state.openTour);
   const applyAutoLayout = useNetworkStore((state) => state.applyAutoLayout);
@@ -456,7 +459,7 @@ const TopMenuBar = () => {
               <SquareDashed size={14} style={{ display: 'inline', marginRight: '6px' }} />
               {t.menu.view.areas}
             </li>
-            {/* The marker: write and draw by hand on the board */}
+            {/* Annotation mode: write and draw by hand on the board */}
             <li
               onClick={toggleMarker}
               className="magnify-item"
@@ -467,6 +470,7 @@ const TopMenuBar = () => {
               {!markerActive && <span style={{ display: 'inline-block', width: '14px', marginRight: '6px' }}></span>}
               <Highlighter size={14} style={{ display: 'inline', marginRight: '6px' }} />
               {t.marker.name}
+              {hiddenNotes > 0 && ` (${hiddenNotes})`}
             </li>
           </ul>
         </div>
@@ -518,17 +522,22 @@ const TopMenuBar = () => {
         )}
       </button>
 
-      {/* The marker: write and draw by hand on the board (P) */}
+      {/* Annotation mode: write and draw by hand on the board (A) */}
       <button
         type="button"
         className={markerActive ? 'marker-toggle active' : 'marker-toggle'}
         data-tour="marker"
         onClick={toggleMarker}
         aria-pressed={markerActive}
-        aria-label={t.marker.name}
-        title={t.marker.hint}
+        aria-label={hiddenNotes > 0 ? t.marker.nameCount(hiddenNotes) : t.marker.name}
+        title={hiddenNotes > 0 ? t.marker.hintHidden(hiddenNotes) : t.marker.hint}
       >
         <Highlighter size={18} aria-hidden="true" />
+        {hiddenNotes > 0 && (
+          <span className="marker-count" aria-hidden="true">
+            {hiddenNotes}
+          </span>
+        )}
       </button>
 
       {/* Presentation mode */}

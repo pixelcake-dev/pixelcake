@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { usePresentationStore } from '@/store/presentationStore';
 import { useMarkerStore } from '@/store/markerStore';
+import { useHiddenMarks } from '@/components/Canvas/useHiddenMarks';
 import { useProjectStore } from '@/store/projectStore';
 import { SIMULATION_SPEEDS, useSimulationStore, type SimulationSpeed } from '@/store/simulationStore';
 import { useUIStore } from '@/store/uiStore';
@@ -51,9 +52,10 @@ const PresentationBar = () => {
   const openModal = useUIStore((state) => state.openModal);
   const darkMode = useUIStore((state) => state.darkMode);
   const toggleDarkMode = useUIStore((state) => state.toggleDarkMode);
-  // The presenter's pen: what it writes is on top, and goes with the presentation
-  const penActive = useMarkerStore((state) => state.active);
-  const togglePen = useMarkerStore((state) => state.toggle);
+  // Annotation mode: the notes of the canvas, shown and written while it is on (A)
+  const notesOn = useMarkerStore((state) => state.active);
+  const toggleNotes = useMarkerStore((state) => state.toggle);
+  const hiddenNotes = useHiddenMarks();
 
   const [isFullscreen, setIsFullscreen] = useState(() => document.fullscreenElement != null);
 
@@ -87,7 +89,7 @@ const PresentationBar = () => {
       }
       if (isTyping(event.target)) return;
       if (Object.values(useUIStore.getState().modals).some(Boolean)) return;
-      // (the pen in use is put away first: that press is the marker's)
+      // (annotation mode is left first: that press is its)
       if (useMarkerStore.getState().active) return;
       presentation.exit();
     };
@@ -149,16 +151,21 @@ const PresentationBar = () => {
           ))}
         </div>
 
-        {/* The pen: write over the drawing while presenting it (P) */}
+        {/* Annotation mode: the notes over the drawing, shown and written while it is on (A) */}
         <button
           type="button"
-          className={penActive ? 'presentation-icon-button active' : 'presentation-icon-button'}
-          title={t.marker.hint}
-          aria-label={t.marker.name}
-          aria-pressed={penActive}
-          onClick={togglePen}
+          className={notesOn ? 'presentation-icon-button active' : 'presentation-icon-button'}
+          title={hiddenNotes > 0 ? t.marker.hintHidden(hiddenNotes) : t.marker.hint}
+          aria-label={hiddenNotes > 0 ? t.marker.nameCount(hiddenNotes) : t.marker.name}
+          aria-pressed={notesOn}
+          onClick={toggleNotes}
         >
           <Highlighter size={18} />
+          {hiddenNotes > 0 && (
+            <span className="marker-count" aria-hidden="true">
+              {hiddenNotes}
+            </span>
+          )}
         </button>
         <button
           type="button"

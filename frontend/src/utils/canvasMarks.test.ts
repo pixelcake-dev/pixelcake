@@ -1,5 +1,5 @@
 /**
- * The marks of the marker («Pennarello») as data: their ids, the words of a
+ * The marks of annotation mode («Modalità appunti») as data: their ids, the words of a
  * mark of words, and a list of them read from outside (a project file, the
  * browser's storage) as the app keeps it.
  */

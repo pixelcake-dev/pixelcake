@@ -104,5 +104,5 @@ export const KEYS_HEARD: Record<string, readonly ShortcutRow[]> = {
   Tab: ['tourButtons'],
   ',': ['vlans'],
   Backspace: ['vlans'],
-  p: ['markerToggle'],
+  a: ['markerToggle'],
 };

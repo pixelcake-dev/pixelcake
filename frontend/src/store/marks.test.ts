@@ -1,10 +1,10 @@
 /**
- * What is written with the marker («Pennarello») in the stores: it belongs to
+ * What is written in annotation mode («Modalità appunti») in the stores: it belongs to
  * its canvas and goes wherever the canvas goes (a canvas switch, a copy of
  * the canvas, the project as it goes to a file, a page load); each mark
  * finished, rubbed out or cleared is one edit of the project. While
- * presenting, the presenter's pen writes apart: on top, never saved, gone
- * when the presentation ends.
+ * presenting it is the same sheet: annotation mode is put away when the
+ * presentation starts and when it ends, and the store keeps no marks of its own.
  *
  * Isolation: the stores read localStorage when they are created, so each
  * test re-imports them (a re-import is a reload).
@@ -300,68 +300,46 @@ describe('the marks after the page is loaded again', () => {
   });
 });
 
-describe("the presenter's pen", () => {
-  it('writes apart from the canvas: nothing of the drawing changes, nothing is saved', async () => {
-    const { network, presentation, marker, project } = await loadApp();
+describe('annotation mode and the presentation: one sheet', () => {
+  it('the mode keeps no marks of its own: what is written while presenting is the canvas own', async () => {
+    const { network, presentation, marker } = await loadApp();
     network.getState().addDevice(pc('PC-1'));
     network.getState().addMark(ring);
     network.getState().markSaved();
     presentation.getState().enter();
+    marker.getState().setActive(true);
 
-    const id = marker.getState().addPresenterMark(note);
+    const id = network.getState().addMark(note);
 
-    expect(id).toBe('mark-1');
-    expect(marker.getState().presenterMarks).toEqual([{ id: 'mark-1', ...note }]);
-    expect(network.getState().marks).toEqual([{ id: 'mark-1', ...ring }]);
-    expect(network.getState().hasUnsavedChanges).toBe(false);
-    expect(project.getState().buildProjectFile().canvases[0].marks).toEqual([{ id: 'mark-1', ...ring }]);
+    expect(id).toBe('mark-2');
+    expect(network.getState().marks.map((mark) => mark.kind)).toEqual(['ellipse', 'text']);
+    expect(network.getState().hasUnsavedChanges).toBe(true);
+    expect('presenterMarks' in marker.getState()).toBe(false);
   });
 
-  it('is rubbed out and cleared by itself', async () => {
+  it('the presentation is entered and left with the mode put away, the marks kept', async () => {
     const { network, presentation, marker } = await loadApp();
     network.getState().addDevice(pc('PC-1'));
+    network.getState().addMark(ring);
+    marker.getState().setActive(true);
+
     presentation.getState().enter();
-    const a = marker.getState().addPresenterMark(ring);
-    marker.getState().addPresenterMark(note);
+    expect(marker.getState().active).toBe(false);
 
-    marker.getState().removePresenterMarks([a!]);
-    expect(marker.getState().presenterMarks.map((mark) => mark.kind)).toEqual(['text']);
-
-    marker.getState().clearPresenterMarks();
-    expect(marker.getState().presenterMarks).toEqual([]);
+    marker.getState().setActive(true);
+    presentation.getState().exit();
+    expect(marker.getState().active).toBe(false);
+    expect(network.getState().marks).toEqual([{ id: 'mark-1', ...ring }]);
   });
 
-  it('what it wrote is gone when the presentation ends, and the marker is put away', async () => {
+  it('another canvas on screen while presenting changes nothing of the mode', async () => {
     const { network, presentation, marker } = await loadApp();
     network.getState().addDevice(pc('PC-1'));
     presentation.getState().enter();
     marker.getState().setActive(true);
-    marker.getState().addPresenterMark(ring);
-
-    presentation.getState().exit();
-
-    expect(marker.getState().presenterMarks).toEqual([]);
-    expect(marker.getState().active).toBe(false);
-  });
-
-  it('what it wrote is gone when another canvas comes on screen: it was written over the old one', async () => {
-    const { network, presentation, marker } = await loadApp();
-    network.getState().addDevice(pc('PC-1'));
-    presentation.getState().enter();
-    marker.getState().addPresenterMark(ring);
 
     presentation.getState().resetCanvasState();
 
-    expect(marker.getState().presenterMarks).toEqual([]);
-  });
-
-  it('entering the presentation puts away a marker that was in use while building', async () => {
-    const { network, presentation, marker } = await loadApp();
-    network.getState().addDevice(pc('PC-1'));
-    marker.getState().setActive(true);
-
-    presentation.getState().enter();
-
-    expect(marker.getState().active).toBe(false);
+    expect(marker.getState().active).toBe(true);
   });
 });
