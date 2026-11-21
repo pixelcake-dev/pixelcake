@@ -17,7 +17,7 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 
 ![The sample network of a small company, its groups of devices in areas (Internet, Edge, Core, Offices, Servers), with the terminal: a ping from PC-Sales to Web-ERP that works; the gateway of PC-Sales set to a wrong address; the same ping stopped at PC-Sales, with the reason; then the addresses of PC-Sales](docs/screenshot.png)
 
-**Status:** version 0.9.2, a beta. It is good for exploring and explaining a small network. Do not use its answers to validate a real one: the [limits](#what-it-does-not-do) are listed below.
+**Status:** version 0.9.3, a beta. It is good for exploring and explaining a small network. Do not use its answers to validate a real one: the [limits](#what-it-does-not-do) are listed below.
 
 **Documentation:** [app.pixelcake.dev/docs](https://app.pixelcake.dev/docs/), in Italian [app.pixelcake.dev/docs/it](https://app.pixelcake.dev/docs/it/): how to draw a network, configure it and ask it questions, and every command of the terminal, with examples.
 
