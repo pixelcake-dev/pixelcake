@@ -300,7 +300,7 @@ export const help = {
     },
   },
 
-  prototype:'PixelCake è un prototipo: serve a ragionare su una piccola rete, non a validarne una reale.',
+  prototype:'PixelCake è una beta: serve a ragionare su una piccola rete, non a validarne una reale.',
 
   commands: {
     intro:

@@ -487,7 +487,7 @@ describe('App', () => {
 
       expect(screen.getByRole('heading', { name: 'Guida' })).toBeInTheDocument();
       expect(selectedTab()).toBe('Come si usa');
-      expect(screen.getByText(/PixelCake è un prototipo/)).toBeInTheDocument();
+      expect(screen.getByText(/PixelCake è una beta/)).toBeInTheDocument();
     });
 
     it('each entry of the Help menu opens it on its own tab', () => {

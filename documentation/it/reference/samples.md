@@ -163,7 +163,7 @@ Ping failed (blocked): request: firewall FW-PA: denied by rule 3 (deny any from 
   dropped at: FW-PA
 ```
 
-Poi rompi qualcosa, in una presentazione: taglia il cavo con l'etichetta «Linea principale» tra R-MI-WAN e R-RM, la linea principale di Roma. Il pannello conta, tra i 132 dispositivi finali, 14.891 comunicazioni che senza il guasto funzionano: nessuna si interrompe, 4422 passano da un'altra strada (Roma passa dall'MPLS), 10.469 non cambiano. Ci mette qualche secondo a calcolarlo.
+Poi rompi qualcosa, in una presentazione: taglia il cavo con l'etichetta «Linea principale» tra R-MI-WAN e R-RM, la linea principale di Roma. Il pannello conta, tra i 132 dispositivi finali, 14.891 comunicazioni che senza il guasto funzionano: nessuna si interrompe, 4.422 passano da un'altra strada (Roma passa dall'MPLS), 10.469 non cambiano. Ci mette qualche secondo a calcolarlo.
 
 > [!LIMITS]
 > - Una rete di esempio è un punto di partenza, non il modello di un'azienda vera. I suoi indirizzi sono fatti per l'esempio, e ciò che lascia fuori è ciò che l'app lascia fuori ([Limiti e domande](limits-and-faq.md#not-simulated)).

@@ -294,7 +294,7 @@ export const help: Dictionary['help'] = {
   },
 
   prototype:
-    'PixelCake is a prototype: it is for reasoning about a small network, not for validating a ' +
+    'PixelCake is a beta: it is for reasoning about a small network, not for validating a ' +
     'real one.',
 
   commands: {

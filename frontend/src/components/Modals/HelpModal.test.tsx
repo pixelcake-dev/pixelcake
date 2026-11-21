@@ -75,7 +75,7 @@ describe('HelpModal', () => {
     expect(screen.getByText('.pixelcake.json')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'PixelCake è un prototipo: serve a ragionare su una piccola rete, non a validarne una reale.'
+        'PixelCake è una beta: serve a ragionare su una piccola rete, non a validarne una reale.'
       )
     ).toBeInTheDocument();
   });

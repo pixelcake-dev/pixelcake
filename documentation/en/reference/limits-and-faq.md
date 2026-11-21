@@ -4,7 +4,7 @@ description: "Everything PixelCake does not simulate, in one place, and answers 
 order: 5
 ---
 
-PixelCake is an early prototype. It is good for exploring and explaining a small network, and it is not a tool to validate a real one: when it cannot verify something it says so in a note, but it cannot tell you what a real device would do beyond what is listed here. This page gathers what the app does not do. Each group names the page that explains the feature it belongs to.
+PixelCake is a beta. It is good for exploring and explaining a small network, and it is not a tool to validate a real one: when it cannot verify something it says so in a note, but it cannot tell you what a real device would do beyond what is listed here. This page gathers what the app does not do. Each group names the page that explains the feature it belongs to.
 
 ## What is not simulated {#not-simulated}
 

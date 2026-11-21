@@ -4,7 +4,7 @@ description: "Tutto ciò che PixelCake non simula, in un posto solo, e le rispos
 order: 5
 ---
 
-PixelCake è un prototipo in fase iniziale. Va bene per esplorare e spiegare una piccola rete, e non è uno strumento per validarne una vera: quando non può verificare qualcosa lo dice in una nota, ma non può dirti che cosa farebbe un apparato vero oltre ciò che è elencato qui. Questa pagina raccoglie ciò che l'app non fa. Ogni gruppo nomina la pagina che spiega la funzione a cui appartiene.
+PixelCake è una beta. Va bene per esplorare e spiegare una piccola rete, e non è uno strumento per validarne una vera: quando non può verificare qualcosa lo dice in una nota, ma non può dirti che cosa farebbe un apparato vero oltre ciò che è elencato qui. Questa pagina raccoglie ciò che l'app non fa. Ogni gruppo nomina la pagina che spiega la funzione a cui appartiene.
 
 ## Che cosa non è simulato {#not-simulated}
 
