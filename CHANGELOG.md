@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- The changelog page of the documentation said that changes were listed under Unreleased until the first release; it now says that each version has its heading here and its page among the releases, and where the app shows its version.
+
 ## [0.9.3] - 2026-11-21
 
 A firewall with rules blocks what no rule allows also where it cannot tell the zone, the line under a device in conflict keeps to its own device, and the pictures and videos show the app as it is now.

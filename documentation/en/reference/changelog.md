@@ -8,4 +8,4 @@ Every change to PixelCake that a person can notice is written down in the change
 
 ## Versions {#versions}
 
-The app is in an early stage: its changes are listed under one heading, Unreleased, until the first release. The language of the terminal has a version of its own, NCL v0.5, which `help` prints on its first line; what each version of the language added is listed in the [overview of the terminal](../terminal/index.md#version).
+PixelCake is a beta. Each version has a heading of its own in the changelog, with its number and date, and a page among the [releases](https://github.com/pixelcake-dev/pixelcake/releases) of the repository that says in short what changed; what is done and not released yet waits at the top, under Unreleased. Help → “About” shows the version of the app in use. The language of the terminal has a version of its own, NCL v0.5, which `help` prints on its first line; what each version of the language added is listed in the [overview of the terminal](../terminal/index.md#version).
