@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - The changelog page of the documentation said that changes were listed under Unreleased until the first release; it now says that each version has its heading here and its page among the releases, and where the app shows its version.
 - The guide of the app («Come si usa», “How to use it”) and the page of limits called PixelCake a prototype; they say a beta, as the README and the releases do.
+- The README names annotation mode among what the app does.
 
 ## [0.9.3] - 2026-11-21
 
