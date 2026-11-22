@@ -17,7 +17,7 @@ PixelCake is a browser-based designer for small networks. You draw the network, 
 
 ![The sample network of a small company, its groups of devices in areas (Internet, Edge, Core, Offices, Servers), with the terminal: a ping from PC-Sales to Web-ERP that works; the gateway of PC-Sales set to a wrong address; the same ping stopped at PC-Sales, with the reason; then the addresses of PC-Sales](docs/screenshot.png)
 
-**Status:** version 0.9.3, a beta. It is good for exploring and explaining a small network. Do not use its answers to validate a real one: the [limits](#what-it-does-not-do) are listed below.
+**Status:** version 0.9.4, a beta. It is good for exploring and explaining a small network. Do not use its answers to validate a real one: the [limits](#what-it-does-not-do) are listed below.
 
 **Documentation:** [app.pixelcake.dev/docs](https://app.pixelcake.dev/docs/), in Italian [app.pixelcake.dev/docs/it](https://app.pixelcake.dev/docs/it/): how to draw a network, configure it and ask it questions, and every command of the terminal, with examples.
 
@@ -135,7 +135,7 @@ In presentation mode a click on a device or on a cable, then “Simulate a failu
 - A router, or a host with two network cards, stops using a route when the interface it leaves by has no working cable left (cut, the device at the other end down, or the port at the other end switched off), and takes the next route for that destination: a backup route written after the main one. The answer says so in a note.
 - The panel then counts, over every pair of end devices: how many exchanges stop, how many take another path, how many do not change. A click on one of them asks that question.
 
-The terminal sees the same failures while the presentation lasts, so a `ping` typed there agrees with what is on screen.
+The terminal sees the same failures while the presentation lasts, so a `ping` typed there agrees with what is on screen. It can also make them: `fail SW-Core`, `fail link R-HQ to R-Branch`, `repair all`, and `show failures` for what is down and what it stops.
 
 Every link is attached to a port or a network card at both ends, chosen automatically when you draw it and editable afterwards.
 
@@ -192,7 +192,7 @@ The app's icons are bundled with it: nothing is fetched from the Iconify API.
 
 ```bash
 cd frontend
-pnpm test:run      # about 4,100 tests: engine, terminal, project files, import/export, images, screens, the two languages, the documentation
+pnpm test:run      # about 4,300 tests: engine, terminal, project files, import/export, images, screens, the two languages, the documentation
 pnpm type-check
 pnpm lint
 pnpm build         # the app, then its documentation into dist/docs
