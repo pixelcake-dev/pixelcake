@@ -90,7 +90,6 @@ import { parse } from './parser';
 import { NCL_VERSION } from './types';
 import type { Command, FailureTarget, InterfaceSetting, LinkSetting, TerminalLine, ShowTarget } from './types';
 import type {
-  NetworkConnection,
   DhcpPool,
   DnsRecord,
   FirewallRule,

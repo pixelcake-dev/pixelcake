@@ -95,12 +95,12 @@ I guasti si possono fare anche dal terminale, con `fail` e `repair` ([i comandi]
 ```ncl sample=two-sites presentation
 pixelcake> ping PC-Filiale-1 from PC-Sede-1
 Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
-Reply from 192.168.2.11: hops=7 time=11ms
+Reply from 192.168.2.11: hops=7 time=1.5ms
 pixelcake> fail link R-Sede to R-Filiale
 link R-Sede–R-Filiale is down
 pixelcake> ping PC-Filiale-1 from PC-Sede-1
 Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
-Reply from 192.168.2.11: hops=8 time=13ms
+Reply from 192.168.2.11: hops=8 time=33ms
   note: request: R-Sede: the route 192.168.2.0/24 via 10.0.0.2 is unusable (link R-Sede–R-Filiale is down), the route 192.168.2.0/24 via 10.0.1.2 is used instead
   note: reply: R-Filiale: the route 192.168.1.0/24 via 10.0.0.1 is unusable (link R-Filiale–R-Sede is down), the route 192.168.1.0/24 via 10.0.2.1 is used instead
 pixelcake> fail R-Riserva
