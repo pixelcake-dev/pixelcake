@@ -76,7 +76,9 @@ const PacketAnimation = () => {
           links[i],
           usePresentationStore.getState().failedConnections
         );
-        // A device or a cable removed while the packet travels: skip the stretch
+        // A device or a cable removed while the packet travels, or the next
+        // leg starting on another device (a mail fetched by its recipient):
+        // skip the stretch
         if (!fromNode || !toNode || !connection) continue;
 
         const centre = (node: typeof fromNode) => ({

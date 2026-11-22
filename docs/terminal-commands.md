@@ -142,7 +142,7 @@ out: `["on" device]`.
 | `ping <target> [from <device>]` | Echo semantics: BOTH directions evaluated (request + reply), round trip animated on the canvas. |
 | `trace <target> [from <device>] [as <service>]` | One way; prints every hop with what the device did (the VLAN, the route taken, the firewall decision) as the packet reaches it. `as web` / `as email` traces that service instead of a ping, which matters to firewall rules. Aliases: `traceroute`, `tracert`. |
 | `browse <target> [from <device>]` | A whole web exchange: HTTP request, then the response. Aliases: `web`, `curl`. |
-| `mail <target> [from <device>]` | An email, through its relay (see *Email and flow models*). Alias: `email`. |
+| `mail <target> [from <device>]` | An email: submitted to a mail server, fetched by the recipient (see *Email and flow models*). Alias: `email`. |
 | `download <target> [from <device>]` | Download request, then the data. To a firewall a download is web traffic. Alias: `wget`. |
 | `resolve <name> [from <device>]` | A DNS lookup alone: the server asked, the request and the reply, then the address the name stands for, or the reason there is none. Aliases: `lookup`, `nslookup`. |
 
@@ -202,7 +202,7 @@ An address held by two devices that can meet is in conflict: a question to
 it, or from it, ends at once (`address conflict: 192.168.1.10 is on both
 Srv-1 and Srv-2, so the answer cannot be trusted`). A private address is not
 in conflict with one on the other side of the Internet symbol; a lease never
-is, as a DHCP server hands out only addresses nobody has.
+is, as a DHCP server hands out only addresses that nobody it meets has.
 
 Verdicts: `error` (an endpoint does not exist, has no usable address, or its
 address is in conflict),
@@ -216,8 +216,10 @@ way: the reason names the device, the port, the route or the rule),
 *Internet* refuses a packet whose source or destination is in a private
 range (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`),
 and the reason says which of the two and what should have translated it. A
-Cloud symbol with any other name (a carrier's network, a private line)
-carries whatever crosses it.
+packet that leaves the symbol for a private destination is refused the same
+way, whoever sent it: an external device whose gateway is the symbol, or the
+symbol itself. A Cloud symbol with any other name (a carrier's network, a
+private line) carries whatever crosses it.
 
 - **Source NAT** (`interface <n> nat`). A new flow a router or a firewall
   forwards out of a port with NAT leaves with the address of that port. The
@@ -264,8 +266,10 @@ worked out from the drawing**, the same way every time.
   to another network. With two servers on one network the first in the
   drawing that has an address left answers, and a warning names them.
 - **Which address.** Cards are served in the order of the drawing; each gets
-  the lowest address of the range that nobody has: not written by hand on any
-  interface of the drawing, not leased already, not the first or the last
+  the lowest address of the range that nobody it meets has: not written by
+  hand, nor leased already, on a device the pool meets in the sense of a
+  conflict (a private address on the other side of the Internet symbol,
+  behind another NAT, is in a network of its own), not the first or the last
   address of the network. So writing an address by hand inside a range moves
   the lease that had it.
 - **A card that gets nothing has no address**, and a question from it or to it
@@ -463,17 +467,29 @@ Each model is a plan of one or more legs, each traced hop-by-hop; the verdict
 is `success` only when ALL legs pass, and evaluation stops at the first
 failing leg. A reply goes back to the address the request came from.
 
-Email relays depend on the configured **email mode**:
+An email is submitted and fetched, as in real networks: the sender submits
+it to its mail server, and the recipient fetches it from its own, with a
+request and the reply that brings the mail (a reply, so a firewall that saw
+the request lets it in). Between two servers the mail is relayed, a push.
+All legs are the service `email`. The servers depend on the configured
+**email mode**:
 
-- `internal` — nearest internal mail server (hops from the source); legs
-  `SMTP submit` + `delivery`. No mail server → error.
-- `cloud` — nearest internet exit (an Internet or Cloud symbol, or a device
-  whose name has Internet, Cloud, WAN or ISP as a word of its own); legs
-  `SMTP to cloud provider` + `cloud delivery`. No internet exit → error.
+- `internal` — for each end, the nearest internal mail server (hops from
+  it); legs `SMTP submit`, `SMTP relay` (only when the two servers differ),
+  `fetch request` + `fetch reply`. No mail server → error.
+- `cloud` — the mailbox of a provider, beyond the nearest Internet symbol:
+  an address of the outside that no device has (the highest free one of the
+  public network next to the symbol, else of 192.0.2.0/24), which the symbol
+  takes; a symbol with an address of its own is aimed at that address. With
+  no Internet symbol drawn, the exit is a Cloud symbol or a device whose name
+  has Internet, Cloud, WAN or ISP as a word of its own, at its own address.
+  Legs `SMTP to cloud provider`, `cloud fetch request` + `cloud fetch reply`.
+  No internet exit → error.
 - `auto` (default) — prefers internal, falls back to cloud with a note
-  (`no internal mail server: using cloud email via <relay>`).
+  (`no internal mail server: using cloud email via <exit>`).
 
-When an endpoint already IS the relay the plan collapses to a single leg.
+A mail to a mail server is only submitted (and relayed to it), a mail from
+one only fetched.
 
 ## Examples
 
@@ -731,6 +747,10 @@ Of NAT: port numbers (a forward is a service on an interface, and two flows
 never compete for a translation), a server reached from inside at its
 published address is not treated apart, and a device behind two layers of
 NAT is found by name only through the first.
+
+Of email: the protocols (SMTP, IMAP, POP3) and their ports, queues and
+mailboxes; every leg is the service `email`. A cloud provider is not in the
+drawing: its mailbox is taken to be beyond the Internet symbol.
 
 Of DHCP: relay (a server giving addresses to another network through a
 router), reservations (the same address always to the same card), lease

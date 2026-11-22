@@ -319,7 +319,10 @@ Modules:
   served by a pool (`dhcpServer` on a router or firewall port, or on a card
   of a server) whose interface hears its broadcast (`broadcastReach` in
   `l2.ts`: the same search that delivers a frame); cards are served in
-  drawing order, each gets the lowest address nobody has. The result carries
+  drawing order, each gets the lowest address that nobody the pool meets
+  has, written by hand or leased (`addressesMeet` of `conflicts.ts`: a
+  private address across the Internet symbol, behind another NAT, is
+  another network's). The result carries
   the leases, the cards left without and why, the pools, and the drawing
   with the leases filled in (`withLeases`), which is what `trace.ts`,
   `flows.ts` and `impact.ts` read: the rest of the engine does not know an
@@ -333,7 +336,10 @@ Modules:
   routers and firewalls without interface addresses (transparent; a firewall
   still applies its policy) and devices that are not simulated (Internet
   symbol, load balancer). A Cloud symbol named Internet (`isPublicInternet`)
-  refuses a packet with a private source or destination. The shortest path
+  refuses a packet with a private source or destination (`privateDestination`
+  is the same refusal for what leaves the symbol, applied by `trace.ts`). The
+  symbol a packet is for takes it for an address beyond it that nobody in the
+  drawing has (the mailbox of a cloud provider). The shortest path
   that works is the one taken. When
   nobody answers, `explain` picks the most useful reason: what happened on the
   cables of the way to the device that should have answered.
@@ -344,6 +350,8 @@ Modules:
   together at all are one network. A switched-off interface, a lease (DHCP
   hands out only free addresses), 0.0.0.0 and loopback addresses do not
   count. Kept by the identity of the two lists of the drawing, as the leases.
+  `addressesMeet` is the same notion for any two devices, and what the DHCP
+  pools keep away from.
   `trace.ts` ends a question to or from an address in conflict, and a port
   forward to one, with the reason (`conflictReason`).
 - `trace.ts` — the walk itself, loop detection, and the notes: whatever is not
@@ -357,11 +365,16 @@ Modules:
   and the service each leg is to a firewall. A reply leg is the return traffic
   of an allowed flow, sent back to the address the request came from, with
   the devices the request crossed (for the firewalls). A device pings itself
-  without the packet leaving it. Cloud email leaves by the nearest internet
-  exit: an Internet or Cloud symbol, or a device named with one of the words
-  Internet, Cloud, WAN, ISP on its own. The
+  without the packet leaving it. An email is submitted by the sender to its
+  mail server, relayed to the server of the recipient when that is another
+  one (a push), and fetched by the recipient: a request and its reply. Cloud
+  email goes to the mailbox of a provider beyond the nearest Internet symbol
+  (`cloudMailbox`: an address of the outside nobody has, which the symbol
+  takes); with no Internet symbol drawn, by a Cloud symbol or a device named
+  with one of the words Internet, Cloud, WAN, ISP on its own. The
   result carries the devices to animate and the cable of each stretch
-  (`animationPath`, `animationLinks`).
+  (`animationPath`, `animationLinks`; '' where the next leg starts on another
+  device, the recipient of a mail: the packet does not travel there).
 - `dns.ts` — a name in place of an address (`lookup`). Nothing is
   remembered: a name is looked up each time a question uses it. A server
   answers for the records written on it (`dnsRecords`); a device asks the

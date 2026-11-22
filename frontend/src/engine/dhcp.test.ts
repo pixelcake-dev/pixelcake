@@ -20,6 +20,7 @@ import { traceRoute } from './trace';
 import { planAndEvaluateFlow, traceToDevice } from './flows';
 import { impactEndpoints } from './impact';
 import { withFailures } from './failures';
+import { addressConflicts } from './conflicts';
 import {
   leaseOf,
   noLeaseReason,
@@ -175,6 +176,82 @@ describe('a lease', () => {
     const t = lab();
     byId(t, 'srv').nics![0].ip = '192.168.1.100';
     expect(leasedIp(t, 'a')).toBe('192.168.1.102');
+  });
+
+  /**
+   * Two offices, each behind its own NAT, with the same private network:
+   *
+   *   A .100 ── SW-A ── RA ═ 203.0.113.1  Internet  198.51.100.1 ═ RB ── SW-B ── B (dhcp)
+   *                 192.168.1.1                                  192.168.1.1, pool .100–.102
+   */
+  function twoOffices(options: { internet?: string; pa?: string } = {}): Topology {
+    const { internet = 'Internet', pa = '192.168.1.100' } = options;
+    const router = (id: string, wan: string, pool?: DhcpPool): NetworkDevice =>
+      device({
+        id,
+        label: id.toUpperCase(),
+        type: 'Router',
+        ip: '192.168.1.1',
+        ports: [
+          port(1, { ip: '192.168.1.1', subnet: MASK, ...(pool ? { dhcpServer: pool } : {}) }),
+          port(2, { ip: wan, subnet: MASK, nat: true }),
+        ],
+      });
+    return topo(
+      [
+        host('pa', pa, '192.168.1.1', { label: 'PA' }),
+        switchWith('swa', [port(1), port(2)], { label: 'SW-A' }),
+        router('ra', '203.0.113.1'),
+        device({ id: 'inet', label: internet, type: 'Cloud', templateId: 'tpl-cloud', nics: [nic(), nic({ id: 'nic-2', name: 'eth1' })] }),
+        router('rb', '198.51.100.1', POOL),
+        switchWith('swb', [port(1), port(2)], { label: 'SW-B' }),
+        client('b'),
+      ],
+      [
+        link('pa', 'swa', { sourceNic: 'nic-1', targetPort: 1 }),
+        link('swa', 'ra', { sourcePort: 2, targetPort: 1 }),
+        link('ra', 'inet', { sourcePort: 2, targetNic: 'nic-1' }),
+        link('inet', 'rb', { sourceNic: 'nic-2', targetPort: 2 }),
+        link('rb', 'swb', { sourcePort: 1, targetPort: 2 }),
+        link('b', 'swb', { sourceNic: 'nic-1', targetPort: 1 }),
+      ]
+    );
+  }
+
+  it('is free of an address written by hand behind another NAT, across the Internet: the two networks never meet', () => {
+    const t = twoOffices();
+    expect(leasedIp(t, 'b')).toBe('192.168.1.100');
+    // and the two .100 are no conflict, as two offices can both have it
+    expect(addressConflicts(withLeases(t)).list).toEqual([]);
+    expect(resolveDhcp(t).pools[0].free).toBe(2);
+  });
+
+  it('still keeps away from it where the two meet: across a Cloud that is not the Internet, or anywhere when it is public', () => {
+    // a carrier's network joins the two offices into one private network
+    expect(leasedIp(twoOffices({ internet: 'MPLS' }), 'b')).toBe('192.168.1.101');
+    // a public address is met everywhere
+    const publicRange = twoOffices({ pa: '100.64.0.100' });
+    const rb = publicRange.devices.find(d => d.id === 'rb') as NetworkDevice;
+    rb.ports = rb.ports?.map(p => (p.id === 1 ? { ...p, ip: '100.64.0.1', dhcpServer: { start: '100.64.0.100', end: '100.64.0.102' } } : p));
+    expect(leasedIp(publicRange, 'b')).toBe('100.64.0.101');
+  });
+
+  it('a lease behind another NAT does not take the address either', () => {
+    // A takes its address from a pool of its own, the same range as B's
+    const t = twoOffices({ pa: '' });
+    const withPool = topo(
+      t.devices.map(d => {
+        if (d.id === 'pa') return client('pa', { label: 'PA' });
+        if (d.id === 'ra') return { ...d, ports: d.ports?.map(p => (p.id === 1 ? { ...p, dhcpServer: POOL } : p)) };
+        return d;
+      }),
+      t.connections
+    );
+    expect(resolveDhcp(withPool).leases.map(lease => `${lease.deviceId} ${lease.ip}`)).toEqual([
+      'pa 192.168.1.100',
+      'b 192.168.1.100',
+    ]);
+    expect(addressConflicts(withLeases(withPool)).list).toEqual([]);
   });
 
   it('is never the address of the network, its broadcast address, the gateway or the server itself', () => {

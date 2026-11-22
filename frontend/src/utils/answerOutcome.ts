@@ -22,8 +22,9 @@ export function traceOutcome(trace: TraceResult): SimulationOutcome | null {
 /**
  * The end of a whole exchange. One that arrives ends on the device that
  * answered: the far end of its first leg for a ping, a page, a file (asked
- * there, and the reply came back), of its last leg for a mail, which nobody
- * answers. One that does not arrive ends where its last leg was dropped.
+ * there, and the reply came back), of its last leg for a mail: the recipient,
+ * which the mail it fetched comes back to (the server, for a mail sent to a
+ * server). One that does not arrive ends where its last leg was dropped.
  */
 export function flowOutcome(answer: FlowResult, flow: FlowModelType): SimulationOutcome | null {
   const last = answer.legs[answer.legs.length - 1];

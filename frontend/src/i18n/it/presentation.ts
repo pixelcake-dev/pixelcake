@@ -46,7 +46,7 @@ export const presentation = {
   flowHints: {
     ping: 'Una domanda e la sua risposta: il modo più semplice per sapere se due dispositivi si vedono',
     web: 'La richiesta di una pagina e la pagina che torna indietro',
-    email: "Un'email: dal mittente al server di posta, dal server al destinatario",
+    email: "Un'email: il mittente la manda al suo server di posta, il destinatario la prende da lì",
   },
 
   /** The legs of an exchange (the engine names them in English) */
@@ -58,9 +58,12 @@ export const presentation = {
     downloadRequest: 'Richiesta del file',
     downloadData: 'Arrivo del file',
     smtpSubmit: 'Invio al server di posta',
-    delivery: 'Consegna al destinatario',
+    smtpRelay: "Da un server di posta all'altro",
+    fetchRequest: 'Il destinatario chiede la sua posta',
+    fetchReply: 'La posta arriva al destinatario',
     smtpToCloud: 'Invio al servizio di posta esterno',
-    cloudDelivery: 'Consegna dal servizio esterno',
+    cloudFetchRequest: 'Il destinatario chiede la posta al servizio esterno',
+    cloudFetchReply: 'La posta arriva dal servizio esterno',
   },
 
   /** The bar that takes the place of the menu bar */

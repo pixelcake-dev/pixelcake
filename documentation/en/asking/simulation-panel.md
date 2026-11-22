@@ -29,14 +29,14 @@ The pace of the packet is the one set in presentation mode (“Slow”, “Norma
 
 ## Kinds of traffic {#traffic}
 
-“Traffic type” has four choices. Each is made of one or two packets, and the packet you see goes through all of them, one after the other.
+“Traffic type” has four choices. Each is made of one packet or more, and the packet you see goes through all of them, one after the other.
 
 | Choice | What it is made of |
 |---|---|
 | “Ping (ICMP)” | a request from the source to the destination, then the reply back |
 | “Web page (HTTP)” | the request for a page, then the page that comes back |
 | “File download (FTP)” | the request for a file, then the file that comes back; a firewall treats it as web traffic |
-| “Email message (SMTP)” | the message from the source to a mail server, then from the mail server to the destination; there is no reply |
+| “Email message (SMTP)” | the message from the source to its mail server; then the destination asks its own server for its mail, and the mail comes back to it |
 
 A reply is a packet of its own: it is followed only if the request arrived, and it may take another way back. A firewall lets it through because it answers a flow that was allowed. How each leg is followed, and which mail server or internet exit an email goes through, is in [flows](how-the-engine-decides.md#flows).
 
@@ -46,7 +46,7 @@ Which way an email goes is chosen in Settings → Network, group “Simulation�
 
 The answer is on the board, in three ways.
 
-- **The packet.** A dot travels from the source along the cables, device by device, as far as the engine follows it. For a ping it goes to the destination and comes back; for an email it stops at the recipient.
+- **The packet.** A dot travels from the source along the cables, device by device, as far as the engine follows it. For a ping it goes to the destination and comes back; for an email it goes to the mail server, then sets off again from the recipient, which fetches the mail and gets it back.
 - **The lamp.** When the packet has got to the end of its way, one device says how the question ended: the device that answers turns **green**, or the device where the question stops turns **red**. The one that answers is the destination.
 - **The reason.** When the question does not arrive, a notice says so. Its title names the kind of traffic (`Ping simulation failed`; in the Italian interface, `Simulazione Ping fallita`), and under it the reason, as the engine gives it: `request: firewall FW-Edge: no rule matches, zone policy dmz → trust denied`. It begins with the leg that failed and names the device, the port, the route or the rule. The reasons are in English in both languages; [the reasons and the notes](how-the-engine-decides.md#reasons) explains how to read them.
 

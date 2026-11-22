@@ -38,7 +38,7 @@ Click a device. A small menu opens at the pointer, with the name and the address
 
 The right button opens the same menu. The question is asked as soon as both ends are chosen: the packet is sent, and the answer is written in the panel. The two ends are marked on the drawing with `FROM` and `TO`.
 
-You can also choose the ends in the panel, with “From” and “To”; “Swap source and destination” turns the question round. Choosing the other end as the start turns it round by itself. Under them, **“Traffic type”** has three choices: “Ping”, “Web” and “Email”. A download is not offered here, and a web page is the same traffic for a firewall. “Ping” is a question and its answer, “Web” the request for a page and the page that comes back, “Email” a message from the sender to the mail server and from the server to the recipient. How each is followed is in [flows](how-the-engine-decides.md#flows).
+You can also choose the ends in the panel, with “From” and “To”; “Swap source and destination” turns the question round. Choosing the other end as the start turns it round by itself. Under them, **“Traffic type”** has three choices: “Ping”, “Web” and “Email”. A download is not offered here, and a web page is the same traffic for a firewall. “Ping” is a question and its answer, “Web” the request for a page and the page that comes back, “Email” a message from the sender to its mail server, where the recipient fetches it. How each is followed is in [flows](how-the-engine-decides.md#flows).
 
 The packet is sent again whenever the question or a failure changes, and “Show again” plays it once more. While it travels, the button reads “Stop”.
 

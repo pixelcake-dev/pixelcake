@@ -36,9 +36,12 @@ const LEG_KEYS = new Map<string, keyof Dictionary['presentation']['legs']>([
   ['download request', 'downloadRequest'],
   ['download data', 'downloadData'],
   ['SMTP submit', 'smtpSubmit'],
-  ['delivery', 'delivery'],
+  ['SMTP relay', 'smtpRelay'],
+  ['fetch request', 'fetchRequest'],
+  ['fetch reply', 'fetchReply'],
   ['SMTP to cloud provider', 'smtpToCloud'],
-  ['cloud delivery', 'cloudDelivery'],
+  ['cloud fetch request', 'cloudFetchRequest'],
+  ['cloud fetch reply', 'cloudFetchReply'],
 ]);
 
 /**

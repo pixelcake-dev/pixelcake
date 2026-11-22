@@ -98,8 +98,8 @@ The range of port 1 lost its DNS server, because the command did not name one.
 
 The engine gives the cards their addresses in the order of the drawing: the devices as they appear, and the cards of each device in order. Each card takes the lowest address of its range that is free. An address is not free when:
 
-- it is written by hand on any interface of the drawing, in any network;
-- another card has been given it already;
+- it is written by hand on an interface of the drawing, in any network, except a private address on the other side of the Internet symbol: behind another NAT it is in a network of its own, as for [two devices with one address](../building/addresses.md#conflicts);
+- another card has been given it already, with the same exception;
 - it is the gateway the range hands out;
 - it is the first or the last address of the network.
 

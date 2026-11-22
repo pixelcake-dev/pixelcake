@@ -157,7 +157,7 @@ function describeScenarios(title: string, load: () => Topology) {
       expect(result.notes).toEqual([]);
     });
 
-    it('3b. email PC-1 → PC-2 in internal mode is relayed by Mail-01', () => {
+    it('3b. email PC-1 → PC-2 in internal mode goes to Mail-01, where PC-2 fetches it', () => {
       const topo = load();
       const result = flow('email', topo, 'PC-1', 'PC-2', { emailMode: 'internal' });
       expect(result.verdict).toBe('success');
@@ -169,10 +169,17 @@ function describeScenarios(title: string, load: () => Topology) {
         ])
       ).toEqual([
         ['SMTP submit', 'PC-1', 'Mail-01'],
-        ['delivery', 'Mail-01', 'PC-2'],
+        ['fetch request', 'PC-2', 'Mail-01'],
+        ['fetch reply', 'Mail-01', 'PC-2'],
       ]);
+      // the packet stops on the server, and the fetch sets off from PC-2
       expect(animationLabels(result, topo)).toEqual([
         'PC-1',
+        'SW-Office',
+        'Router-1',
+        'SW-Servers',
+        'Mail-01',
+        'PC-2',
         'SW-Office',
         'Router-1',
         'SW-Servers',

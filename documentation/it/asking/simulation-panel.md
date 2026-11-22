@@ -29,14 +29,14 @@ La velocità del pacchetto è quella impostata nella presentazione («Lenta», �
 
 ## I tipi di traffico {#traffic}
 
-«Tipo di traffico» ha quattro scelte. Ognuna è fatta di uno o due pacchetti, e il pacchetto che vedi li percorre tutti, uno dopo l'altro.
+«Tipo di traffico» ha quattro scelte. Ognuna è fatta di uno o più pacchetti, e il pacchetto che vedi li percorre tutti, uno dopo l'altro.
 
 | Scelta | Di che cosa è fatta |
 |---|---|
 | «Ping (ICMP)» | una richiesta dalla partenza alla destinazione, poi la risposta che torna |
 | «Pagina web (HTTP)» | la richiesta di una pagina, poi la pagina che torna |
 | «Download di un file (FTP)» | la richiesta di un file, poi il file che torna; per un firewall è traffico web |
-| «Messaggio email (SMTP)» | il messaggio dalla partenza a un server di posta, poi dal server di posta alla destinazione; non c'è risposta |
+| «Messaggio email (SMTP)» | il messaggio dalla partenza al suo server di posta; poi la destinazione chiede la sua posta al proprio server, e la posta le torna |
 
 Una risposta è un pacchetto a sé: si segue solo se la richiesta è arrivata, e può tornare per un'altra strada. Un firewall la lascia passare perché risponde a un flusso permesso. Come viene seguito ogni tratto, e da quale server di posta o uscita verso Internet passa un'email, è spiegato in [i flussi](how-the-engine-decides.md#flows).
 
@@ -46,7 +46,7 @@ Da dove passa un'email si sceglie in Impostazioni → Rete, gruppo «Simulazione
 
 La risposta è sul canvas, in tre modi.
 
-- **Il pacchetto.** Un punto viaggia dalla partenza lungo i cavi, dispositivo per dispositivo, fin dove il motore lo segue. Per un ping va alla destinazione e torna; per un'email si ferma al destinatario.
+- **Il pacchetto.** Un punto viaggia dalla partenza lungo i cavi, dispositivo per dispositivo, fin dove il motore lo segue. Per un ping va alla destinazione e torna; per un'email va al server di posta, poi riparte dal destinatario, che va a prendere la posta e la riceve.
 - **La spia.** Quando il pacchetto è arrivato in fondo alla sua strada, un dispositivo dice come è finita la domanda: il dispositivo che risponde diventa **verde**, oppure il dispositivo dove la domanda si ferma diventa **rosso**. Quello che risponde è la destinazione.
 - **Il motivo.** Quando la domanda non arriva, un avviso lo dice. Il titolo nomina il tipo di traffico ("Simulazione Ping fallita"; nell'interfaccia inglese, "Ping simulation failed"), e sotto c'è il motivo, come lo dà il motore: `request: firewall FW-Edge: no rule matches, zone policy dmz → trust denied`. Comincia con il tratto che è fallito e nomina il dispositivo, la porta, la rotta o la regola. I motivi sono in inglese in entrambe le lingue; [i motivi e le note](how-the-engine-decides.md#reasons) spiega come leggerli.
 

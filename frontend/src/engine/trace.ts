@@ -24,6 +24,10 @@
  * a new flow that leaves by a port with NAT takes the address of that port.
  * So the firewall of the same device sees real addresses on both sides.
  *
+ * The Internet symbol does not carry private addresses (see ./l2): a packet
+ * for one is refused where it enters the symbol, and where it leaves it,
+ * whoever sent it.
+ *
  * A card that takes its address from a DHCP server has the address it is
  * leased, worked out from the drawing before the packet starts (see ./dhcp);
  * a card that got none has no address, and the error says why.
@@ -59,7 +63,7 @@
 import type { NetworkDevice, ServiceName } from '@/types';
 import { isValidIP } from '@/utils/ipHelpers';
 import type { Topology, TraceResult, PingResult, HopResult } from './types';
-import { devicesById, forwardingRole, isInternetLike } from './topology';
+import { devicesById, forwardingRole, isInternetLike, isPublicInternet } from './topology';
 import { interfacePhrase } from './interfaces';
 import type { DeviceInterface } from './interfaces';
 import {
@@ -74,7 +78,7 @@ import type { L3Interface, RouteEntry } from './addressing';
 import { evaluateFirewall } from './firewall';
 import type { Packet } from './firewall';
 import { deadInterfaces, isDeviceDown } from './failures';
-import { forwardAssumed, physicallyConnected, resolveOnLink } from './l2';
+import { forwardAssumed, physicallyConnected, privateDestination, resolveOnLink } from './l2';
 import type { L2Request, L2Result, Unroutable } from './l2';
 import { doesNat, matchForward, natAddress } from './nat';
 import type { NatTranslation } from './nat';
@@ -309,8 +313,10 @@ export function traceRoute(
   let targetIp = options.targetIp ?? primaryAddress(target);
   /** The address the packet is sent to, whatever it is translated into later */
   const sentTo = targetIp;
+  // (a reply leaves from the address its request reached: the mailbox of a
+  // cloud provider, beyond an Internet symbol that has no address of its own)
   for (const [device, ip] of [
-    [source, primaryAddress(source)],
+    [source, options.sourceIp ?? primaryAddress(source)],
     [target, targetIp],
   ] as const) {
     if (!ip) {
@@ -513,6 +519,20 @@ export function traceRoute(
       return blocked(current, `routing loop: the packet comes back to ${current.label}`);
     }
     crossed.add(current.id);
+
+    // The Internet carries no private address out, as it carries none in
+    // (see ./l2): a packet that leaves it for one is refused with the reason
+    // it is refused with on the way in, whoever sent it, the symbol itself
+    // included
+    if (isPublicInternet(current)) {
+      const refused = privateDestination(topo, current, {
+        sourceIp,
+        destinationIp: targetIp,
+        service,
+        returnTraffic: isReply,
+      });
+      if (refused) return blocked(current, refused.reason, arrivalLink, refused.unroutable);
+    }
 
     const isSource = step === 0;
     const decision = decide(current, targetIp, topo);

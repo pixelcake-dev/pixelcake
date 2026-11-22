@@ -226,6 +226,31 @@ describe('createPerimeterSample — the questions it answers', () => {
     );
   });
 
+  it('mail goes to a provider beyond the Internet symbol, which has no address, and every end device fetches it', () => {
+    // (no mail server: the mail is the cloud's)
+    const ends = ['PC-Remoto', 'Web-Pubblico', 'PC-Uffici-1', 'PC-Uffici-2', 'Srv-Interno'];
+    for (const from of ends) {
+      for (const to of ends.filter(other => other !== from)) {
+        expect(ask('email', from, to).verdict, `${from} > ${to}`).toBe('success');
+      }
+    }
+    const result = ask('email', 'PC-Uffici-1', 'Web-Pubblico');
+    expect(result.legs.map(leg => [leg.purpose, leg.trace.targetIp])).toEqual([
+      ['SMTP to cloud provider', '203.0.113.254'],
+      ['cloud fetch request', '203.0.113.254'],
+      ['cloud fetch reply', '203.0.113.1'],
+    ]);
+    expect(result.notes.slice(0, 2)).toEqual([
+      'no internal mail server: using cloud email via Internet',
+      'the cloud mailbox is beyond Internet, at 203.0.113.254: the provider is not simulated',
+    ]);
+    // the reply that brings the mail to the DMZ passes the firewall that saw the request
+    expect(result.notes).toContain(
+      'cloud fetch reply: firewall FW-Edge: no rule matches, zone policy untrust → dmz allowed (reply to an allowed flow)'
+    );
+    expect(result.legs[2].trace.hops.map(h => h.label)).toEqual(['Internet', 'FW-Edge', 'SW-DMZ', 'Web-Pubblico']);
+  });
+
   it('moving a PC to the other VLAN cuts it off from its gateway, and the reason names the port', () => {
     const moved = {
       devices: sample.devices.map(d =>

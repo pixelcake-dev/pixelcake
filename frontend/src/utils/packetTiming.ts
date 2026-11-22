@@ -26,7 +26,10 @@ export function edgeDuration(distance: number, speed: number): number {
 /**
  * The cable the packet takes from `fromId` to `toId`: the one the engine
  * named when it joins the two, else the first cable between them that is not
- * cut, else the first one.
+ * cut, else the first one. None when the engine says there is none (`''`):
+ * the next leg of the exchange starts on another device (the recipient of a
+ * mail fetches it once it is on the server), and the packet goes on from
+ * there without travelling between the two.
  */
 export function pickConnection(
   connections: NetworkConnection[],
@@ -39,6 +42,7 @@ export function pickConnection(
     (connection.source === fromId && connection.target === toId) ||
     (connection.source === toId && connection.target === fromId);
 
+  if (linkId === '') return undefined;
   if (linkId) {
     const named = connections.find(connection => connection.id === linkId);
     if (named && joins(named)) return named;

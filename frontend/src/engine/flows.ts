@@ -10,10 +10,15 @@
  *  - web:      HTTP request src→dst, HTTP response dst→src
  *  - download: download request src→dst, download data dst→src (a download
  *              is web traffic to a firewall)
- *  - email:    src→relay, relay→dst — the relay depends on the email mode:
- *              'internal' uses the nearest mail server, 'cloud' uses the
- *              nearest internet exit (see internetExits), and 'auto'
- *              (default) prefers internal, falling back to cloud.
+ *  - email:    the sender submits the mail to its mail server, and the
+ *              recipient fetches it from its own: a request to the server
+ *              and the reply that brings the mail, as in real networks,
+ *              where nobody pushes mail to a desk. Between two servers the
+ *              mail is relayed, server to server (SMTP: a push). The servers
+ *              depend on the email mode: 'internal' uses the mail server
+ *              nearest to each end, 'cloud' the mailbox of a provider beyond
+ *              the nearest internet exit (see internetExits, cloudMailbox),
+ *              and 'auto' (default) prefers internal, falling back to cloud.
  *
  * A reply carries the devices its request went through: a firewall lets it
  * pass as a reply only when it saw the request (see ./firewall).
@@ -21,14 +26,30 @@
  * Pure and deterministic: no React, no Zustand, no side effects.
  */
 
-import type { EmailMode, FlowModelType, NetworkDevice, ServiceName } from '@/types';
+import type {
+  EmailMode,
+  FlowModelType,
+  NetworkConnection,
+  NetworkDevice,
+  ServiceName,
+} from '@/types';
+import { isValidIP } from '@/utils/ipHelpers';
 import type { Topology, TraceResult, Verdict } from './types';
-import { buildAdjacency, isInternetLike } from './topology';
+import { buildAdjacency, isInternetLike, isPublicInternet } from './topology';
 import { traceRoute } from './trace';
 import type { TraceOptions } from './trace';
 import { isPrivateAddress, matchForward, publications } from './nat';
-import { ownedAddresses } from './addressing';
+import {
+  DEFAULT_MASK,
+  networkOf,
+  numberToIp,
+  ownedAddresses,
+  parseNetwork,
+  primaryAddress,
+} from './addressing';
+import type { Network } from './addressing';
 import { withLeases } from './dhcp';
+import { broadcastReach } from './l2';
 
 /** One evaluated segment of a flow (e.g. the SMTP submit leg of an email) */
 export interface FlowLeg {
@@ -53,8 +74,10 @@ export interface FlowResult {
   animationPath: string[];
   /**
    * The cables the animation travels on: `animationLinks[i]` is the id of the
-   * connection between `animationPath[i]` and `animationPath[i + 1]` ('' when
-   * the engine does not know it). Two devices can be joined by more than one
+   * connection between `animationPath[i]` and `animationPath[i + 1]`, '' where
+   * a leg starts on another device than the one the leg before it ended on
+   * (the recipient of a mail fetches it from its server): no cable, the
+   * packet goes on from there. Two devices can be joined by more than one
    * cable, and only the engine knows which one the packet took.
    */
   animationLinks: string[];
@@ -92,14 +115,83 @@ function namedAsInternetExit(device: NetworkDevice): boolean {
 }
 
 /**
- * The devices cloud email can leave by: the Internet and Cloud symbols, by
- * their kind (type or template), and the devices whose name has one of the
- * words Internet, Cloud, WAN or ISP on its own (`ISP-Router`, `R-WAN`,
- * `WAN1`; never `Display-1` or `Swan`). A symbol often has no address, so the
- * router named for the exit is needed as well: the nearest of them is used.
+ * The devices cloud email can leave by. The mailbox of a provider is on the
+ * Internet: when the drawing has an Internet symbol (see isPublicInternet),
+ * the exits are the Internet symbols, and nothing else. A drawing without one
+ * leaves by any Cloud symbol, by its kind (type or template), or by a device
+ * whose name has one of the words Internet, Cloud, WAN or ISP on its own
+ * (`ISP-Router`, `R-WAN`, `WAN1`; never `Display-1` or `Swan`). The nearest
+ * of them is used.
  */
 function internetExits(topo: Topology): NetworkDevice[] {
+  const internet = topo.devices.filter(isPublicInternet);
+  if (internet.length > 0) return internet;
   return topo.devices.filter(device => isInternetLike(device) || namedAsInternetExit(device));
+}
+
+/** A network kept for examples (RFC 5737): the outside, when the drawing names none */
+const EXAMPLE_OUTSIDE = parseNetwork('192.0.2.0/24') as Network;
+
+/** The highest address of `network` for a device that nobody has; undefined when there is none */
+function highestFree(network: Network, owned: Set<string>): string | undefined {
+  // (a network of one or two addresses has no room beside who is on it)
+  if (network.prefix > 30) return undefined;
+  const size = 2 ** (32 - network.prefix);
+  for (let address = network.address + size - 2; address > network.address; address--) {
+    const ip = numberToIp(address);
+    if (!owned.has(ip)) return ip;
+  }
+  return undefined;
+}
+
+/** The mailbox beyond each exit ('' for none), for a drawing, for as long as the drawing is around */
+const mailboxes = new WeakMap<
+  NetworkDevice[],
+  { connections: NetworkConnection[]; byExit: Map<string, string> }
+>();
+
+/**
+ * Where the mailbox of a cloud provider is, beyond an Internet or Cloud
+ * symbol that has no address of its own: an address of the outside, as the
+ * drawing has it, that no device has. The packet is aimed there and routed
+ * as anything for the Internet is; the symbol takes it (see ./l2), and what
+ * is beyond it is not simulated. The outside is the network of the first
+ * public address next to the symbol (on the same layer 2 network: a port of
+ * the router or of the firewall that faces it, a device drawn on it), else
+ * 192.0.2.0/24; the address is the highest of that network that nobody has.
+ * It is worked out from the drawing with everything working, leases
+ * included, so that a simulated failure does not move it.
+ *
+ * Undefined for a symbol that has an address, and for a device named for
+ * the exit: each stands for the provider, at its own address.
+ */
+export function cloudMailbox(exit: NetworkDevice, topo: Topology): string | undefined {
+  if (!isInternetLike(exit)) return undefined;
+  const kept = mailboxes.get(topo.devices);
+  const byExit =
+    kept && kept.connections === topo.connections ? kept.byExit : new Map<string, string>();
+  if (byExit !== kept?.byExit) mailboxes.set(topo.devices, { connections: topo.connections, byExit });
+  const known = byExit.get(exit.id);
+  if (known !== undefined) return known || undefined;
+
+  // (the drawing as it is set: no failures, the leases filled in)
+  const drawing = withLeases({ devices: topo.devices, connections: topo.connections });
+  const symbol = drawing.devices.find(device => device.id === exit.id) ?? exit;
+  let mailbox: string | undefined;
+  if (!isValidIP(primaryAddress(symbol))) {
+    const owned = new Set(drawing.devices.flatMap(device => ownedAddresses(device)));
+    const outside = broadcastReach(drawing, symbol).listeners.flatMap(({ device, arrival }) => {
+      const ip = arrival ? arrival.ip : device.ip;
+      const mask = (arrival ? arrival.subnet : device.subnet) || DEFAULT_MASK;
+      return isValidIP(ip) && !isPrivateAddress(ip) ? [networkOf(ip, mask)] : [];
+    });
+    for (const network of [...outside, EXAMPLE_OUTSIDE]) {
+      mailbox = highestFree(network, owned);
+      if (mailbox) break;
+    }
+  }
+  byExit.set(exit.id, mailbox ?? '');
+  return mailbox;
 }
 
 /** BFS hop distances from `sourceId` to every reachable device */
@@ -227,8 +319,10 @@ function evaluateLegs(plans: LegPlan[], topo: Topology, planNotes: string[]): Fl
     legs.push({ fromId: plan.fromId, toId: plan.toId, purpose: plan.purpose, trace });
 
     for (const hop of trace.hops) {
-      // Consecutive legs share their joint device (leg N ends where leg N+1
-      // starts): skip it so the animation does not stutter on the joint.
+      // Consecutive legs mostly share their joint device (leg N ends where
+      // leg N+1 starts): skip it so the animation does not stutter on the
+      // joint. A leg that starts elsewhere (the fetch of a mail, on the
+      // recipient) is joined by no cable: ''
       if (animationPath[animationPath.length - 1] === hop.deviceId) continue;
       if (animationPath.length > 0) animationLinks.push(hop.viaConnectionId ?? '');
       animationPath.push(hop.deviceId);
@@ -275,26 +369,40 @@ function nearestByHops(
   return chosen;
 }
 
-/** How email routes through a relay: classifier plus per-leg purposes */
-interface EmailRelayKind {
-  /** The devices of the topology that can relay the email */
-  relays: (topo: Topology) => NetworkDevice[];
+/** Where a kind of email keeps the mail, and what its legs are called */
+interface MailKind {
+  /** The devices of the topology that keep the mail */
+  servers: (topo: Topology) => NetworkDevice[];
+  /** From the sender to its server */
   submitPurpose: string;
-  deliveryPurpose: string;
+  /**
+   * From the server of the sender to the server of the recipient, when they
+   * are two: SMTP pushes it. None for the cloud: one provider, beyond any exit
+   */
+  relayPurpose?: string;
+  /** From the recipient to its server, and the reply that brings the mail */
+  fetchPurpose: string;
+  fetchReplyPurpose: string;
+  /** The address a leg to a server is aimed at; undefined: the server's own */
+  aim?: (server: NetworkDevice, topo: Topology) => string | undefined;
 }
 
-/** Internal email: relay through a mail server */
-const INTERNAL_RELAY: EmailRelayKind = {
-  relays: topo => topo.devices.filter(isMailServer),
+/** Internal email: through the mail servers of the drawing */
+const INTERNAL_MAIL: MailKind = {
+  servers: topo => topo.devices.filter(isMailServer),
   submitPurpose: 'SMTP submit',
-  deliveryPurpose: 'delivery',
+  relayPurpose: 'SMTP relay',
+  fetchPurpose: 'fetch request',
+  fetchReplyPurpose: 'fetch reply',
 };
 
-/** Cloud email: relay through the internet exit (see internetExits) */
-const CLOUD_RELAY: EmailRelayKind = {
-  relays: internetExits,
+/** Cloud email: through the mailbox of a provider, past the internet exit (see internetExits) */
+const CLOUD_MAIL: MailKind = {
+  servers: internetExits,
   submitPurpose: 'SMTP to cloud provider',
-  deliveryPurpose: 'cloud delivery',
+  fetchPurpose: 'cloud fetch request',
+  fetchReplyPurpose: 'cloud fetch reply',
+  aim: cloudMailbox,
 };
 
 const NO_MAIL_SERVER_ERROR =
@@ -305,53 +413,66 @@ const NO_EMAIL_RELAY_ERROR =
   'no mail server and no internet exit — add a Mail Server device or an Internet/Cloud gateway (or set the email mode in the network settings)';
 
 /**
- * Plan src→relay→dst through the nearest relay (BFS hops from source) of the
- * given kind, or a single leg when an endpoint already IS a relay (target →
- * submit purpose, source → delivery purpose). Returns undefined when the
- * topology has no relay of this kind so the caller can fall back ('auto') or
- * emit a mode-specific error. `note` builds an extra plan note from the
- * device the flow relays through (used by the auto→cloud fallback).
+ * Plan an email through the servers of one kind, and evaluate it: the sender
+ * submits it to its server, the server relays it to the server of the
+ * recipient when that is another one, and the recipient fetches it (a
+ * request, then the reply that brings the mail back on its own way). The
+ * server of a device is the device itself when it is one, else the one
+ * with the fewest hops from it. A leg a device would send to itself is
+ * left out: a server that sends a mail submits nothing, a server that
+ * receives one fetches nothing. Returns undefined when the topology has no
+ * server of this kind, so the caller can fall back ('auto') or emit a
+ * mode-specific error. `note` builds an extra plan note from the server of
+ * the sender (used by the auto→cloud fallback).
  */
-function planEmailViaRelay(
+function planEmailVia(
   sourceId: string,
   targetId: string,
   topo: Topology,
-  kind: EmailRelayKind,
-  note?: (relay: NetworkDevice) => string
+  kind: MailKind,
+  note?: (server: NetworkDevice) => string
 ): FlowResult | undefined {
-  const source = topo.devices.find(d => d.id === sourceId);
-  const target = topo.devices.find(d => d.id === targetId);
+  const servers = kind.servers(topo);
+  if (servers.length === 0) return undefined;
+  const serverOf = (deviceId: string): NetworkDevice =>
+    servers.find(server => server.id === deviceId) ?? nearestByHops(servers, deviceId, topo);
+  const outgoing = serverOf(sourceId);
+  const incoming = serverOf(targetId);
 
-  const relays = kind.relays(topo);
-  const isRelay = (device: NetworkDevice) => relays.includes(device);
+  const notes = note ? [note(outgoing)] : [];
+  /** Where a leg to `server` is aimed; a mailbox beyond a symbol says so once */
+  const aimAt = (server: NetworkDevice): string | undefined => {
+    const address = kind.aim?.(server, topo);
+    const said = `the cloud mailbox is beyond ${server.label}, at ${address}: the provider is not simulated`;
+    if (address !== undefined && !notes.includes(said)) notes.push(said);
+    return address;
+  };
 
-  // Special cases: an endpoint already is the relay → single leg.
-  if (target && isRelay(target)) {
-    return evaluateLegs(
-      [{ fromId: sourceId, toId: targetId, purpose: kind.submitPurpose, service: 'email' }],
-      topo,
-      note ? [note(target)] : []
-    );
+  const leg =(fromId: string, toId: string, purpose: string, targetIp?: string): LegPlan => ({
+    fromId,
+    toId,
+    purpose,
+    service: 'email',
+    targetIp,
+  });
+  const plans: LegPlan[] = [];
+  if (outgoing.id !== sourceId) {
+    plans.push(leg(sourceId, outgoing.id, kind.submitPurpose, aimAt(outgoing)));
   }
-  if (source && isRelay(source)) {
-    return evaluateLegs(
-      [{ fromId: sourceId, toId: targetId, purpose: kind.deliveryPurpose, service: 'email' }],
-      topo,
-      note ? [note(source)] : []
-    );
+  if (kind.relayPurpose && incoming.id !== outgoing.id) {
+    plans.push(leg(outgoing.id, incoming.id, kind.relayPurpose));
   }
-
-  if (relays.length === 0) return undefined;
-
-  const chosen = nearestByHops(relays, sourceId, topo);
-  return evaluateLegs(
-    [
-      { fromId: sourceId, toId: chosen.id, purpose: kind.submitPurpose, service: 'email' },
-      { fromId: chosen.id, toId: targetId, purpose: kind.deliveryPurpose, service: 'email' },
-    ],
-    topo,
-    note ? [note(chosen)] : []
-  );
+  if (incoming.id !== targetId) {
+    plans.push(leg(targetId, incoming.id, kind.fetchPurpose, aimAt(incoming)), {
+      ...leg(incoming.id, targetId, kind.fetchReplyPurpose),
+      returnTraffic: true,
+    });
+  }
+  // (a mail from one exit to another: sent to the provider, as it always was)
+  if (plans.length === 0) {
+    plans.push(leg(sourceId, targetId, kind.submitPurpose, aimAt(incoming)));
+  }
+  return evaluateLegs(plans, topo, notes);
 }
 
 /** Email plan: the relay kind depends on the configured email mode */
@@ -364,23 +485,23 @@ function planEmail(
   switch (emailMode) {
     case 'internal':
       return (
-        planEmailViaRelay(sourceId, targetId, topo, INTERNAL_RELAY) ??
+        planEmailVia(sourceId, targetId, topo, INTERNAL_MAIL) ??
         flowError(NO_MAIL_SERVER_ERROR)
       );
     case 'cloud':
       return (
-        planEmailViaRelay(sourceId, targetId, topo, CLOUD_RELAY) ??
+        planEmailVia(sourceId, targetId, topo, CLOUD_MAIL) ??
         flowError(NO_INTERNET_EXIT_ERROR)
       );
     case 'auto':
       return (
-        planEmailViaRelay(sourceId, targetId, topo, INTERNAL_RELAY) ??
-        planEmailViaRelay(
+        planEmailVia(sourceId, targetId, topo, INTERNAL_MAIL) ??
+        planEmailVia(
           sourceId,
           targetId,
           topo,
-          CLOUD_RELAY,
-          relay => `no internal mail server: using cloud email via ${relay.label}`
+          CLOUD_MAIL,
+          server => `no internal mail server: using cloud email via ${server.label}`
         ) ??
         flowError(NO_EMAIL_RELAY_ERROR)
       );
