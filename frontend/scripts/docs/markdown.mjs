@@ -428,6 +428,8 @@ function renderTerminal(token, env) {
     if (attrs.fixture) strap = words.onFixture(attrs.fixture);
     else if (attrs.sample === 'empty') strap = words.emptyBoard;
     else if (attrs.sample && words.samples[attrs.sample]) strap = words.onSample(words.samples[attrs.sample]);
+    // (the example runs in presentation mode, where failures are simulated)
+    if (strap && flags.includes('presentation')) strap += `, ${words.inPresentation}`;
   }
   const commands = steps.map((step) => step.command).join('\n');
   // The bar of the window, as the terminal of the app has: what the example runs on, and the copy button

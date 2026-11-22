@@ -98,12 +98,13 @@ A command checks what it can before it writes, and writes nothing if it refuses.
 - [The grammar](grammar.md): the language on one page, with its tolerances and its aliases.
 
 > [!LIMITS]
-> The terminal knows what the engine knows. ARP and MAC tables, spanning tree, dynamic routing, router sub-interfaces, ports other than the four services, link speed and ping times are not simulated, and no command speaks of them; a ping time is worked out from the number of hops. The commands to break and repair a device or a cable, and to list what stops working, are not in the language yet: failures are simulated in presentation mode ([what is not simulated](../reference/limits-and-faq.md#not-simulated)).
+> The terminal knows what the engine knows. ARP and MAC tables, spanning tree, dynamic routing, router sub-interfaces, ports other than the four services, link speed and ping times are not simulated, and no command speaks of them; a ping time is worked out from the number of hops. Failures are simulated in presentation mode, and the commands that break and repair a device or a cable work only there ([`fail`, `repair`](asking.md#failures); [what is not simulated](../reference/limits-and-faq.md#not-simulated)).
 
 ## The version of the language {#version}
 
-The language is versioned on its own, and the version is the first line of `help`: **NCL v0.5**. Until version 1.0 the forms of the commands are stable, but aliases and the wording of the answers may still change between two minor versions. What each version added:
+The language is versioned on its own, and the version is the first line of `help`: **NCL v0.6**. Until version 1.0 the forms of the commands are stable, but aliases and the wording of the answers may still change between two minor versions. What each version added:
 
+- **0.6**: failures from the terminal. `fail` takes a device down or cuts a cable, `repair` puts it back (`repair all`: everything), `show failures` lists what is down and what it stops on the rest of the network. They act on the failures of presentation mode.
 - **0.5**: DNS. A host name works as the target of `ping`, `trace`, `browse`, `mail` and `download`, and `resolve` looks it up alone. A server keeps records (`add record`, `remove record`), a card names its DNS server (`interface <name> dns`), a pool hands one out, `show dns`. `dns` is a service for rules and forwards, and for `trace … as dns`.
 - **0.4**: DHCP. A card takes its address from a server (`interface <name> dhcp`), an interface hands out a range (`interface <n> pool`), `show dhcp`. The `show` commands tell a leased address from one written by hand.
 - **0.3**: address translation. Source NAT (`interface <n> nat`), port forwards (`add forward`, `remove forward`), `show nat`. The Internet symbol no longer carries private addresses.

@@ -304,6 +304,72 @@ PC-Vendite> exit
 left PC-Vendite
 ```
 
+## fail, repair {#failures}
+
+```text
+fail <device>
+fail link <device> to <device> [by <interface>]
+repair <device>
+repair link <device> to <device> [by <interface>]
+repair all
+```
+
+Che cosa succede se si rompe questo? `fail` spegne un dispositivo, o taglia il cavo tra due dispositivi, e `repair` lo rimette a posto; `repair all` rimette a posto tutto insieme. Agiscono sui guasti della [modalità presentazione](../asking/presentation.md#failures): lo stesso elenco del piccolo menu e del pannello, quindi canvas, pannello e terminale sono sempre d'accordo, e le domande della sezione precedente li vedono. Non si salva nulla e il disegno non cambia, e i guasti si dimenticano quando la presentazione finisce. Fuori dalla presentazione i comandi non fanno nulla, e rispondono in una riga dove i guasti si simulano.
+
+| Parametro | Che cos'è |
+|---|---|
+| `<device>` | Un dispositivo, con il suo nome o un indirizzo, come dappertutto. Dentro `use <device>` si può omettere: `fail` spegne il dispositivo del contesto |
+| `link <device> to <device>` | Il cavo tra i due dispositivi, in un ordine o nell'altro. Al posto di `to` si può scrivere `from` |
+| `by <interface>` | Quale cavo, quando due dispositivi sono uniti da più d'uno: un'interfaccia del primo dispositivo, come numero di porta (`by 3`, `by port 3`) o nome di una scheda di rete (`by eth0`) |
+
+Le risposte usano le parole del motore e del pannello: `SW-Core is down`, `link R-Sede–R-Filiale is down`, e per una riparazione `SW-Core is working again`. Spegnere ciò che è già spento, o riparare ciò che non lo è, lo dice e non cambia nulla. Un cavo tagliato e un dispositivo spento sono due guasti: riparare un dispositivo non ripara i suoi cavi. Dopo un `fail` o un `repair`, il `ping` o il `trace` successivo vede il nuovo stato, con il motivo nelle parole del guasto ([come decide il motore](../asking/how-the-engine-decides.md#failures)). `show failures` elenca che cosa è fermo e che cosa interrompe ([show failures](show.md#show-failures)).
+
+```ncl sample=two-sites presentation
+pixelcake> fail SW-Core
+SW-Core is down
+pixelcake> fail SW-Core
+SW-Core is already down
+pixelcake> fail link R-Sede to R-Filiale
+link R-Sede–R-Filiale is down
+pixelcake> repair SW-Piano-1
+SW-Piano-1 is not down
+pixelcake> ping Srv-File from PC-Sede-1
+Pinging Srv-File (192.168.1.10) from PC-Sede-1...
+Ping failed (blocked): request: SW-Core is down
+  dropped at: SW-Piano-1
+pixelcake> repair SW-Core
+SW-Core is working again
+pixelcake> repair link R-Filiale to R-Sede
+link R-Filiale–R-Sede is working again
+pixelcake> repair all
+nothing is down
+```
+
+Quando due dispositivi sono uniti da più d'un cavo, il comando lo dice ed elenca come nominare ciascuno, con l'interfaccia del primo dispositivo. Un comando che non si può eseguire viene rifiutato come gli altri:
+
+```ncl sample=two-sites presentation
+pixelcake> fail link R-Sede to PC-Filiale-1
+R-Sede and PC-Filiale-1 are not connected
+pixelcake> fail SW-Cor
+device not found: "SW-Cor"
+  did you mean "SW-Core"?
+pixelcake> fail link R-Sede
+unknown command: "fail link R-Sede"
+  try: fail <device> | fail link <device A> to <device B> [by <interface>]
+  type "help" for the command list
+pixelcake> fail
+specify a device: "fail <device>"
+```
+
+Fuori dalla modalità presentazione gli stessi comandi dicono soltanto dove andare: il pulsante «Presenta» della barra dei menu, oppure Vista → «Modalità presentazione».
+
+```ncl sample=two-sites
+pixelcake> fail SW-Core
+failures are simulated in presentation mode: press "Present" in the menu bar, or choose View → "Presentation mode"
+pixelcake> show failures
+failures are simulated in presentation mode: press "Present" in the menu bar, or choose View → "Presentation mode"
+```
+
 ## Quando un comando viene rifiutato {#refusals}
 
 Una domanda che non si può fare non parte, e la risposta dice perché, o che forma avrebbe dovuto avere:

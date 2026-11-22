@@ -13,7 +13,7 @@ A `show` with a word that is not one of the list is refused with the list, or wi
 ```ncl sample=office
 pixelcake> show banana
 unknown command: "show banana"
-  try: show devices | interfaces | ports | vlans | connections | config | neighbors | ip | routes | rules | nat | dhcp | dns
+  try: show devices | interfaces | ports | vlans | connections | config | neighbors | ip | routes | rules | nat | dhcp | dns | failures
   type "help" for the command list
 pixelcake> show devces
 unknown command: "show devces"
@@ -385,6 +385,35 @@ pixelcake> show dns Laptop-1
 DNS of Laptop-1
   eth0: asks 192.168.30.10 (Srv-Auth), handed out with its lease by Router-Core port 2
   a name is looked up each time it is used: no cache, no second server, no forwarding to another server
+```
+
+## show failures {#show-failures}
+
+```text
+show failures
+```
+
+What is down in presentation mode, and what that does to the rest of the network: the failures made with `fail` or with the small menu, then the same count the panel makes under “On the rest of the network” ([what it does to the rest](../asking/presentation.md#impact)). Every exchange between two end devices is asked with nothing broken and again with the failures: how many worked, how many stop, how many take another path, how many do not change. The kind of exchange counted is the one chosen in the panel, “Ping” unless changed. With nothing down it says so. Outside presentation mode it says where failures are simulated, as `fail` does ([fail, repair](asking.md#failures)).
+
+```ncl sample=two-sites presentation
+pixelcake> show failures
+nothing is down
+pixelcake> fail SW-Core
+SW-Core is down
+pixelcake> fail link R-HQ to R-Branch
+link R-HQ–R-Branch is down
+pixelcake> show failures
+FAILURES (2)
+  SW-Core is down
+  link R-HQ–R-Branch is down
+On the rest of the network
+  Ping between the 5 end devices: 20 exchanges that work without the failures.
+  16 stop
+  4 do not change
+pixelcake> repair all
+everything is working again
+pixelcake> show failures
+nothing is down
 ```
 
 ## sh {#sh}

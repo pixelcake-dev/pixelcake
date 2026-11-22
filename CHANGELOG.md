@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Failures from the terminal** (NCL 0.6): `fail SW-Core` takes a device down, `fail link R-HQ to R-Branch` cuts the cable between two devices (`by 3`, `by port 3` or `by eth0` says which, when two devices are joined by more than one), `repair` puts them back, `repair all` everything, and `show failures` lists what is down and what it stops on the rest of the network, in the words of the presentation panel: how many exchanges between end devices stop, how many take another path. They act on the failures of presentation mode, so the board, the panel and the terminal always agree, and a `ping` or `trace` typed next sees them. Nothing is saved and the drawing does not change; outside presentation mode the commands do nothing and say where failures are simulated. `help`, the reference and the documentation, in both languages, say so.
+- An example of the documentation can run in presentation mode (`ncl sample=two-sites presentation`), so that a page can show `fail` and then `ping`.
+
 ### Fixed
 - The changelog page of the documentation said that changes were listed under Unreleased until the first release; it now says that each version has its heading here and its page among the releases, and where the app shows its version.
 - The guide of the app («Come si usa», “How to use it”) and the page of limits called PixelCake a prototype; they say a beta, as the README and the releases do.

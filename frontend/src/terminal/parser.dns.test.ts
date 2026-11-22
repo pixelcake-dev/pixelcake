@@ -269,7 +269,7 @@ describe('parse — show dns', () => {
   });
 
   it('is in the list, and suggested for a near miss', () => {
-    expect(suggestion('show')).toMatch(/\| dhcp \| dns$/);
+    expect(suggestion('show')).toMatch(/\| dhcp \| dns \| failures$/);
     expect(suggestion('show dsn')).toBe('did you mean "show dns"?');
   });
 });

@@ -89,6 +89,7 @@ Ping failed (blocked): request: port 2 on SW-Office is disabled
 
 - After `ncl`, what the example starts from: `sample=company`, `office`, `site`, `two-sites`, `multinational` (the five samples of the app, see Add → Samples), `sample=empty`, or `fixture=<name>` for `fixtures/<name>.pixelcake.json`. Or `continue`: the example goes on from where the previous example of the same page left the network.
 - The sample is loaded in the language of the page; `lang=en` or `lang=it` chooses the other.
+- `presentation` after the sample (`ncl sample=two-sites presentation`) runs the example in presentation mode, where `fail` and `repair` act: outside it they only say that failures are simulated there. The bar of the example says so. An example that goes on with `continue` stays in presentation mode; a new one starts out of it, as every example does.
 - A line that starts with the prompt is typed: `pixelcake> `, or `SW-Office> ` after `use SW-Office`. The lines under it are what the terminal prints, in full, spaces included. An empty line at the end of an answer is allowed, to let two commands breathe.
 - **To get the output**, run the commands in the terminal of the app on the same sample, in the language of the page, and copy what it prints. Or write the commands with no output, run `pnpm docs:test`, and copy the lines the failure shows as received, after checking they say what you meant.
 - When the app changes what a command prints, the examples fail: correct them, in both languages.

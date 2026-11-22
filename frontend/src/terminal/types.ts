@@ -15,7 +15,7 @@ import type { DhcpPool, ServiceName } from '@/types';
  * docs/terminal-commands.md carries the same number in its title, and a test
  * holds the two together.
  */
-export const NCL_VERSION = '0.5';
+export const NCL_VERSION = '0.6';
 
 /** One rendered line of terminal output */
 export interface TerminalLine {
@@ -36,7 +36,8 @@ export type ShowTarget =
   | 'rules'
   | 'nat'
   | 'dhcp'
-  | 'dns';
+  | 'dns'
+  | 'failures';
 
 export type SetProperty = 'ip' | 'gateway' | 'subnet' | 'name';
 
@@ -64,6 +65,15 @@ export type InterfaceSetting =
   | { what: 'dns'; address: string | null };
 
 /**
+ * What `fail` and `repair` act on: a device, or a cable between two devices.
+ * `by` names which cable when there are several between the same two: an
+ * interface of `a`, as typed (a port number or a card name).
+ */
+export type FailureTarget =
+  | { what: 'device'; device?: string }
+  | { what: 'link'; a: string; b: string; by?: string };
+
+/**
  * Parsed command. Device arguments are RAW STRINGS (labels may be multi-word,
  * or IPs); resolution against the topology happens in the executor, which
  * can also produce "did you mean" suggestions.
@@ -75,6 +85,9 @@ export type Command =
   /** `resolve <name>`: ask the DNS server of a device for the address of a name */
   | { kind: 'resolve'; name: string; from?: string }
   | { kind: 'show'; what: ShowTarget; device?: string }
+  /** `fail` / `repair`: simulated failures, which live in presentation mode */
+  | { kind: 'fail'; target: FailureTarget }
+  | { kind: 'repair'; target: FailureTarget | { what: 'all' } }
   | { kind: 'set'; property: SetProperty; device?: string; value: string }
   | { kind: 'vlan-add'; vlanId: number; device?: string }
   | { kind: 'vlan-remove'; vlanId: number; device?: string }

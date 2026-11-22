@@ -1,4 +1,4 @@
-# NCL — Network Command Language v0.5
+# NCL — Network Command Language v0.6
 
 **NCL (Network Command Language)** is a vendor-neutral command language in
 semi-natural English. Cisco, Juniper and Mikrotik each speak their own
@@ -28,6 +28,12 @@ shown. The other sessions show only the lines that matter.
 The documentation of the app explains the language command by command, with
 examples: https://app.pixelcake.dev/docs/terminal/ (source in
 `documentation/`). This document stays its specification.
+
+**New in v0.6:** failures from the terminal. `fail <device>` takes a device
+down, `fail link <A> to <B>` cuts the cable between two devices, `repair`
+puts them back (`repair all`: everything), `show failures` lists what is down
+and what it stops on the rest of the network. They act on the failures of
+presentation mode, and only there.
 
 **New in v0.5:** DNS. A host name works as the target of `ping`, `trace`,
 `browse`, `mail` and `download`: the source asks its DNS server first, and
@@ -75,10 +81,10 @@ service       ::= "ping" | "web" | "email" | "dns"
 inspection    ::= "show" show-target [["of"] device]
 show-target   ::= "devices" | "interfaces" | "ports" | "vlans"
                 | "connections" | "config" | "neighbors" | "ip"
-                | "routes" | "rules" | "nat" | "dhcp" | "dns"
+                | "routes" | "rules" | "nat" | "dhcp" | "dns" | "failures"
 
 configuration ::= set-cmd | vlan-cmd | link-cmd | iface-cmd | route-cmd | rule-cmd
-                | forward-cmd | record-cmd
+                | forward-cmd | record-cmd | failure-cmd
 set-cmd       ::= "set" ("ip" | "gateway" | "subnet" | "name")
                         ["of"] device ["to"] value
 vlan-cmd      ::= "add" "vlan" number ["to"] device
@@ -117,6 +123,11 @@ forward-cmd   ::= "add" "forward" [service | "any"] "from" ["interface"] number
 
 record-cmd    ::= "add" "record" name ["to"] (ipv4 | device) ["on" device]
                 | "remove" "record" (position | name) [("from" | "on") device]
+
+failure-cmd   ::= "fail" (device | link)
+                | "repair" (device | link | "all")
+link          ::= "link" device ("to" | "from") device ["by" ["port" | "interface"] iface-id]
+                                                          (* simulated: presentation mode only *)
 
 session       ::= "use" device | "exit" | "clear" | "help" [topic]
 
@@ -313,7 +324,61 @@ menus, and do not use names.
 
 In presentation mode a device or a cable can be taken as broken ("what
 happens if this goes down?"). The drawing is not changed, and the commands of
-the terminal see the same failures for as long as the presentation lasts.
+the terminal see the same failures for as long as the presentation lasts. The
+terminal can make and mend them too: `fail`, `repair` and `show failures` act
+on the very list the presentation keeps, so the board, the panel and the
+terminal always agree. Nothing is saved and the drawing is not changed.
+
+- `fail <device>` → `SW-Core is down`; `fail link <A> to <B>` → `link
+  R-HQ–R-Branch is down` (`from` for `to` is accepted). The two ends may be
+  named in either order, and the answer names them as typed. When several
+  cables join the same two devices the command names none and lists how to
+  say which, by an interface of the first device: `fail link A to B by 3`
+  (`by port 3`, `by eth0`).
+- `repair <device>`, `repair link <A> to <B> [by <interface>]` →
+  `SW-Core is working again`; `repair all` puts back everything. A cable cut
+  and a device down are two failures: repairing the device does not mend its
+  cables.
+- Taking down what is down, or repairing what is not, says so
+  (`SW-Core is already down`, `SW-Core is not down`) and changes nothing.
+  Inside `use <device>` the device may be left out.
+- `show failures` lists what is down, then the effect on the rest of the
+  network in the words of the presentation panel: of the exchanges between
+  end devices that work with nothing broken, how many stop, how many take
+  another path, how many do not change. The kind of exchange is the one the
+  panel has chosen (ping unless changed).
+- Outside presentation mode the three commands do nothing and answer in one
+  line: failures are simulated in presentation mode, with the name of the
+  button and of the menu entry that opens it.
+
+```ncl sample=two-sites presentation
+pixelcake> ping PC-Branch-1 from PC-HQ-1
+Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
+Reply from 192.168.2.11: hops=7 time=11ms
+pixelcake> fail link R-HQ to R-Branch
+link R-HQ–R-Branch is down
+pixelcake> ping PC-Branch-1 from PC-HQ-1
+Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
+Reply from 192.168.2.11: hops=8 time=13ms
+  note: request: R-HQ: the route 192.168.2.0/24 via 10.0.0.2 is unusable (link R-HQ–R-Branch is down), the route 192.168.2.0/24 via 10.0.1.2 is used instead
+  note: reply: R-Branch: the route 192.168.1.0/24 via 10.0.0.1 is unusable (link R-Branch–R-HQ is down), the route 192.168.1.0/24 via 10.0.2.1 is used instead
+pixelcake> fail R-Backup
+R-Backup is down
+pixelcake> ping PC-Branch-1 from PC-HQ-1
+Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
+Ping failed (blocked): request: link R-HQ–R-Branch is down
+  dropped at: R-HQ
+pixelcake> show failures
+FAILURES (2)
+  R-Backup is down
+  link R-HQ–R-Branch is down
+On the rest of the network
+  Ping between the 5 end devices: 20 exchanges that work without the failures.
+  12 stop
+  8 do not change
+pixelcake> repair all
+everything is working again
+```
 
 - A device that is down sends and takes nothing; a cable that is cut carries
   nothing: `SW-Core is down`, `link R-HQ–R-Branch is down`.
@@ -407,6 +472,7 @@ condition into a silent success; it adds a note to the result instead:
 | `show rules [of] <device>` | The rules of a router or a firewall in order, then what decides when none matches |
 | `show nat [of] <device>` | The interfaces that do source NAT with the address each gives, then the port forwards in order |
 | `show dhcp [[of] <device>]` | The pools (range, gateway and DNS server handed out, how many addresses are leased and free), the leases (address, card, pool) and the cards left without an address, each with the reason. Of the whole drawing, or of what one device hands out and is given |
+| `show failures` | What is down in presentation mode (`fail`, `repair`), and what it does to the rest of the network: how many exchanges between end devices stop, how many take another path, how many do not change. See *Simulated failures* |
 | `show dns [[of] <device>]` | Of the whole drawing: the records of every server, and every device that asks a DNS server, with the card it asks through. Of one device: its records if it is a server, and for each of its cards the server it asks, which device that is, and whether it came with the lease |
 
 Aliases: `sh` → `show` · `ls`, `list` → `show devices` ·
@@ -438,6 +504,8 @@ Aliases: `sh` → `show` · `ls`, `list` → `show devices` ·
 | `add record <name> [to] <address> on <server>` | A name a server answers for as a DNS server. The address may be given as a device, and is stored as the address it has. A name that is already there takes the new address: one name, one address |
 | `remove record <n>\|<name> [from] <server>` | By its place in the list, or by its name |
 | `add vlan <id> [to] <device>` / `remove vlan <id> from <device>` | The VLAN list of a device (see *VLANs*) |
+| `fail <device>` / `fail link <A> to <B> [by <interface>]` | Take a device down, or cut the cable between two devices, as a failure simulated in presentation mode (nothing is saved, the drawing is not changed). `by` names the cable when several join the same two devices |
+| `repair <device>` / `repair link <A> to <B> [by <interface>]` / `repair all` | Put it back. See *Simulated failures* |
 | `connect <A> [to] <B>` / `disconnect <A> [from] <B>` | Create/remove a link. `connect` attaches each end to the first free interface and says which: `connected A (port 3) ↔ B (eth0)`. On a firewall with security zones the end stays unattached: choose the port, and with it the zone, in the connection editor |
 
 Values are validated before writing (`"999.1.2.3" is not a valid IPv4
@@ -748,8 +816,4 @@ and aliases. A device with no network card asks nobody.
 The spec will grow with the engine's capabilities; every extension keeps the
 principles above (verb-first, optional prepositions, neutral vocabulary):
 
-- **Failures from the terminal** — failures are simulated in presentation
-  mode today, and the terminal sees them; commands to break and repair a
-  device or a link, and to list what stops working, are not in the language
-  yet
 - **More services** — `ssh`, and rules by port number

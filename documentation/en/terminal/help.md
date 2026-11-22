@@ -17,7 +17,7 @@ help [<word>]
 
 ```ncl sample=empty
 pixelcake> help
-PixelCake terminal — NCL v0.5 (Network Command Language, vendor-neutral)
+PixelCake terminal — NCL v0.6 (Network Command Language, vendor-neutral)
   ping <target> [from <device>]                              does it answer? request and reply
   trace <target> [from <device>] [as web|email|dns]          one way, hop by hop, with what each device did
   browse | mail | download <target> [from <device>]          a whole web, email or download exchange
@@ -45,6 +45,9 @@ PixelCake terminal — NCL v0.5 (Network Command Language, vendor-neutral)
   add record <name> <address> on <server>                    a name a DNS server answers for (remove record <n>|<name> from <server>)
   add vlan <id> to <device>                                  VLAN list of a device (remove vlan <id> from <device>)
   connect <A> to <B>                                         create a link (disconnect <A> from <B>)
+  fail <device> | fail link <A> to <B> [by <interface>]      simulate a failure, in presentation mode
+  repair <device> | repair link <A> to <B> | repair all      put it back
+  show failures                                              what is down, and what that stops on the rest of the network
   use <device> / exit                                        enter/leave device context (implies "from" and "on")
   clear, help [command]                                      screen and this reference
   device names are case-insensitive and may be multi-word; IPs work anywhere a device is expected
