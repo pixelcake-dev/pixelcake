@@ -143,7 +143,7 @@ Annotation mode («Modalità appunti»; in the code, the marker) puts a transpar
 - **InspectorModal** - Device configuration in tabs, over one form that «Salva» checks and saves all together: ports and cards are edited in place (`ui/PortEditor`, `ui/NicEditor` in `ui/NicRows`; no panel has a save of its own), what is wrong with one is worked out by `utils/interfaceProblems.ts` both under its field as it is typed and when the device is saved, and they are kept tidy (`tidyPort`, `tidyNic`). The first tab, Generale, is made for the device: every device has its note there, the last field of «Identità» (`TextAreaField`, one row until it is written and then as many as its lines, six at most; kept by `utils/deviceNotes.ts`: trimmed, none when emptied); an end device or a server has the address of its first card there (`NicAddressFields`, the same fields as in the card), a switch its VLANs and how its ports are split (`ui/PortsOverview`, `utils/portSummary.ts`), a router or a firewall its ports in use. The other tabs: Porte (switch, router, firewall: `ui/PortGrid` and the port picked under it; the number of ports changes there) or Schede di rete (end devices), Rotte (router, firewall: `ui/RoutesPanel`, with the routing table the engine would read from the form), Regole (firewall: `ui/FirewallRulesPanel`, ordered rules), NAT (router, firewall: `ui/NatPanel`, a tick for each port that has an address and the ordered port forwards), DHCP (router, firewall, server: `ui/DhcpPanel`, a tick and the range for each interface that can serve, who was given which address and who was left without), DNS (server: `ui/DnsPanel`, the names it answers for). Routes, rules, forwards and DNS records are validated on save (`utils/networkConfigValidation.ts`; a record also as it is typed), pools in the panel of their port or card and again on save (`utils/dhcpLabels.ts`); a pool typed in the DHCP tab is checked as it is typed, kept trimmed on save, and not kept when its range was left empty. NAT and the DHCP server of an interface are one setting with two places to set it: the tab of the service and the panel of the port or card, both on the `ports`/`nics` of the form. A server switched on in the DHCP tab starts from `suggestedPool` of the engine. The window keeps the open tab itself (`TabContainer` with `activeTab`), so that a tab can send to another one: «Dagliene uno» opens the port that needs an address. The DNS server a card asks is a field of the card (`ui/NICConfigPanel`), the one a pool hands out a field of the pool (`ui/DhcpPoolFields`). The DHCP tab and the lease shown on a card are worked out from the form as it is, unsaved edits included. So is an address of the form that another device has too: a box over the tabs (`.inspector-address-conflict`) names the other devices (`conflictsOf` in `utils/addressConflicts.ts`), and the save is not refused
 - **HelpModal** - The guide, in three tabs: how to use the app, the terminal commands (rendered from `COMMAND_REFERENCE`, the table the terminal's `help` prints, with a link to the terminal reference of the documentation), information
 - **ExportImageModal** - The board as an image: preview, format (PNG, SVG), size, theme, title, background; save to a file or copy to the clipboard. It exists only while it is open, so every time it starts from the drawing and the theme on screen. See "The drawing as a picture" below
-- **ConnectionInspectorModal** - Connection properties editor
+- **ConnectionInspectorModal** - Connection properties editor: the interface of each end, then the cable («Cavo»: «Mezzo», «Lunghezza» with its unit, «Ritardo (ms)», and «Ritardo in un verso», the time worked out by the engine as the fields are typed; `utils/linkCable.ts` reads the form, what is wrong is said under its field and nothing is saved until it is right), then type, bandwidth, label and colour
 - **SettingsModal** - App settings with tabbed interface. Its first tab, Rete (`NetworkSettingsTab`), holds the settings of the project: what a new device starts from (network, mask, gateway and, optional, the DNS server its card asks), saved together by the one button of the tab. Once a DNS server is saved, the tab counts the end devices of the canvas that ask nobody (`utils/defaultDns.ts`) and offers to write it on their first card addressed by hand, after a question. The group «VLAN del progetto» is the table of the names of the VLANs (`ui/VlanNamesTable`): the VLANs that have one and those the canvas uses without one (`vlansInUse`), a row added by hand for any other; what is wrong with a row (`vlanRowProblem`) is said under it and stops the save
 - **BulkAddDeviceModal** - Bulk device creation with table-based interface
   - Two sections: Configurable Devices (Switch/Router/Firewall with portCount dropdown) + Standard Devices (PC/Server/Database with fixed 1 NIC)
@@ -362,6 +362,18 @@ Modules:
   Internet, Cloud, WAN, ISP on its own. The
   result carries the devices to animate and the cable of each stretch
   (`animationPath`, `animationLinks`).
+- `latency.ts` — how long a question takes (`roundTripMs`, `pathMs`,
+  `linkDelay`, `crossingMs`), worked out from the hops of the request and
+  of the reply the engine already found, and never changing a verdict. A
+  path takes each cable it goes along (the time of its medium, `MEDIUM_MS`,
+  plus 5 µs a km of its length, or the delay written by hand on the link,
+  which wins) and each device it crosses (`FORWARDING_MS`; a Cloud symbol is
+  the network it stands for, `CARRIER_MS`); an exchange adds its two ends
+  once (`END_DEVICE_MS`). The medium of a link nobody set is worked out
+  (`linkMedium`: Wi-Fi between a laptop, a smartphone or a tablet and an
+  access point, copper otherwise). Deterministic: no jitter, no load, no
+  queue. `formatMs` is the one way a time is written (0.24, 7.4, 38), for
+  the terminal and the window of a link alike.
 - `dns.ts` — a name in place of an address (`lookup`). Nothing is
   remembered: a name is looked up each time a question uses it. A server
   answers for the records written on it (`dnsRecords`); a device asks the
@@ -623,6 +635,7 @@ dhcpServer?: { start, end, gateway?, dns? }   // DHCP pool, on a card of a serve
   In YAML: `source_port`, `target_port`, `source_nic`, `target_nic` (NIC name);
   devices also carry `template_id`, ports carry `ip`/`subnet`.
 - `vlan?: number[]` - Tagged VLANs
+- The cable, for the time a packet takes on it (`engine/latency.ts`): `medium?: LinkMedium` (`copper`, `fibre`, `wifi`, `dsl`, `ftth`, `mobile`, `satellite`; absent: worked out), `lengthM?: number` (metres), `delayMs?: number` (one way, written by hand: it takes the place of the other two). In YAML: `medium`, `length_m`, `delay_ms`. The type of a link says what it is for, never what it is made of
 - `stpPortState?, stpPortPriority?`
 
 ### DeviceTemplate

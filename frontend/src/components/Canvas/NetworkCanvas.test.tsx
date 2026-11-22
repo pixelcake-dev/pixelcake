@@ -298,7 +298,7 @@ describe('NetworkCanvas — mouse and keyboard', () => {
       await clickDevice('PC-1');
 
       const output = document.body.appendChild(document.createElement('pre'));
-      output.textContent = 'Reply from 192.168.20.10: hops=5 time=7ms';
+      output.textContent = 'Reply from 192.168.20.10: hops=5 time=0.44ms';
       const range = document.createRange();
       range.selectNodeContents(output);
       window.getSelection()?.removeAllRanges();

@@ -109,7 +109,7 @@ Un canvas contiene:
 | Campo | Che cosa contiene |
 |---|---|
 | `devices` | Ogni dispositivo: tipo, template, nome, indirizzi, posizione, note, le sue porte o schede di rete con VLAN, zone, NAT e intervalli DHCP, rotte statiche, regole del firewall, inoltri e record DNS. |
-| `connections` | Le connessioni: i due dispositivi e, a ciascuna estremità, la porta o la scheda di rete a cui è collegato il cavo; tipo, banda, etichetta, colore, VLAN. |
+| `connections` | Le connessioni: i due dispositivi e, a ciascuna estremità, la porta o la scheda di rete a cui è collegato il cavo; tipo, banda, etichetta, colore, VLAN; il mezzo, la lunghezza e il ritardo del suo cavo, quando sono stati impostati. |
 | `areas` | I riquadri disegnati dietro i gruppi di dispositivi: etichetta, colore, posizione e dimensioni. Assente quando il canvas non ne ha. |
 | `marks` | Gli appunti del canvas, scritti in modalità appunti: vedi [più avanti](#marks). Assente quando non ce ne sono. |
 | `viewport` | La posizione e lo zoom del canvas, così che si apra dov'era stato lasciato. |

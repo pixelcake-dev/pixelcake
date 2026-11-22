@@ -60,8 +60,19 @@ import {
   servesDns,
   dnsRecordsOf,
   dnsCardOf,
+  formatMs,
+  roundTripMs,
+  linkDelay,
+  describeCable,
+  describeLinkDelay,
+  formatLength,
+  isLinkLength,
+  isLinkDelay,
+  LINK_DELAY_MAX_MS,
+  MEDIUM_WORDS,
 } from '@/engine';
 import type {
+  LinkDelay,
   Topology,
   TraceResult,
   InterfaceLink,
@@ -74,12 +85,13 @@ import { isValidIP } from '@/utils/ipHelpers';
 import { liveTopology } from '@/utils/liveTopology';
 import { parse } from './parser';
 import { NCL_VERSION } from './types';
-import type { Command, InterfaceSetting, TerminalLine, ShowTarget } from './types';
+import type { Command, InterfaceSetting, LinkSetting, TerminalLine, ShowTarget } from './types';
 import type {
   DhcpPool,
   DnsRecord,
   FirewallRule,
   FlowModelType,
+  NetworkConnection,
   NetworkDevice,
   NetworkInterfaceCard,
   Port,
@@ -437,10 +449,11 @@ function diagnose(kind: 'ping' | 'trace', ends: Ends, flowModel: FlowModelType, 
     lines.push(muted(`Pinging ${destination.label} (${aimedIp || 'no ip'}) from ${source.label}...`));
 
     const finalLines: TerminalLine[] = [];
-    if (flow.verdict === 'success') {
-      const requestHops = flow.legs[0]?.trace.hops.length ?? 1;
-      const rttMs = 1 + 2 * Math.max(0, requestHops - 2);
-      finalLines.push(ok(`Reply from ${aimedIp}: hops=${requestHops} time=${rttMs}ms`));
+    const [request, reply] = flow.legs;
+    if (flow.verdict === 'success' && request && reply) {
+      // The request on its path, the reply on its own (see engine/latency)
+      const time = formatMs(roundTripMs(request.trace, reply.trace, topo));
+      finalLines.push(ok(`Reply from ${aimedIp}: hops=${request.trace.hops.length} time=${time}ms`));
     } else {
       finalLines.push(err(`Ping failed (${flow.verdict}): ${flow.failureReason ?? 'unknown reason'}`));
       finalLines.push(...droppedAt(flow));
@@ -680,9 +693,17 @@ function showConnections(topo: Topology, device?: NetworkDevice): TerminalLine[]
         ? `  [${sourceIface?.label ?? '?'} ↔ ${targetIface?.label ?? '?'}]`
         : '';
     const meta = [c.type, c.bandwidth].filter(Boolean).join(', ');
-    lines.push(line(`  ${a} ↔ ${b}${meta ? `  (${meta})` : ''}${ports}`));
+    lines.push(line(`  ${a} ↔ ${b}${meta ? `  (${meta})` : ''}${ports}  ${cableText(linkDelay(c, source, target))}`));
   }
   return lines;
+}
+
+/**
+ * The cable of a link and the time it takes, one way: `fibre, 600 km: 3.0ms`,
+ * `copper, automatic: 0.00ms`, `fibre, 600 km: 7.0ms written by hand`
+ */
+function cableText(delay: LinkDelay): string {
+  return `${describeCable(delay)}: ${formatMs(delay.ms)}ms${delay.written ? ' written by hand' : ''}`;
 }
 
 /** What an interface is linked to: "SW-Office (port 8)", "SW-Office", or "-" */
@@ -1410,6 +1431,79 @@ function runConnect(action: 'connect' | 'disconnect', aQuery: string, bQuery: st
   if (!existing) return [muted(`${a.label} and ${b.label} are not connected`)];
   useNetworkStore.getState().removeConnection(existing.id);
   return [ok(`disconnected ${a.label} ↔ ${b.label}`)];
+}
+
+/** What a setting of `link` says it did: `medium fibre`, `length 600 km`, `delay 7.0ms written by hand` */
+function linkSettingText(setting: LinkSetting): string {
+  switch (setting.what) {
+    case 'medium':
+      return setting.medium === null ? 'medium automatic' : `medium ${MEDIUM_WORDS[setting.medium]}`;
+    case 'length':
+      return setting.metres === null ? 'no length' : `length ${formatLength(setting.metres)}`;
+    case 'delay':
+      return setting.ms === null ? 'delay worked out' : `delay ${formatMs(setting.ms)}ms written by hand`;
+  }
+}
+
+/**
+ * `link <A> to <B> medium … length … delay …`: the cable of the link between
+ * two devices, and the time it takes now. The link is found by its two ends,
+ * whichever was drawn first; two devices joined by more than one cable are
+ * set in the window of the link.
+ */
+function runLinkSet(aQuery: string, bQuery: string, settings: LinkSetting[]): TerminalLine[] {
+  const topo = snapshot();
+  const resA = resolveOrError(aQuery, topo);
+  if ('errorLines' in resA) return resA.errorLines;
+  const resB = resolveOrError(bQuery, topo);
+  if ('errorLines' in resB) return resB.errorLines;
+  const [a, b] = [resA.device, resB.device];
+  if (a.id === b.id) return [err('a link joins two devices: name the other end')];
+
+  const links = topo.connections.filter(
+    (c) => (c.source === a.id && c.target === b.id) || (c.source === b.id && c.target === a.id)
+  );
+  if (links.length === 0) {
+    return [err(`${a.label} and ${b.label} are not connected`), muted(`  connect them first: connect ${a.label} to ${b.label}`)];
+  }
+  if (links.length > 1) {
+    return [
+      err(`${links.length} links join ${a.label} and ${b.label}: the terminal cannot tell which one you mean`),
+      muted('  set it in the window of the link: right click on it, Edit link'),
+    ];
+  }
+
+  const updates: Partial<NetworkConnection> = {};
+  for (const setting of settings) {
+    if (setting.what === 'medium') updates.medium = setting.medium ?? undefined;
+    if (setting.what === 'length') {
+      // (a length is kept to the millimetre: 1.1 km is 1100 m, not 1100.0000000000002)
+      const metres = setting.metres === null ? undefined : Math.round(setting.metres * 1000) / 1000;
+      if (metres !== undefined && !isLinkLength(metres)) {
+        return [err('a cable is longer than 0 m, and at most 40000 km long: length 600 km, length 80 m')];
+      }
+      updates.lengthM = metres;
+    }
+    if (setting.what === 'delay') {
+      if (setting.ms !== null && !isLinkDelay(setting.ms)) {
+        return [err(`a delay written on a link is from 0 to ${LINK_DELAY_MAX_MS} ms, one way`)];
+      }
+      updates.delayMs = setting.ms ?? undefined;
+    }
+  }
+
+  const [link] = links;
+  useNetworkStore.getState().updateConnection(link.id, updates);
+  const delay = linkDelay({ ...link, ...updates }, a.id === link.source ? a : b, a.id === link.source ? b : a);
+  const lines = [
+    ok(`${a.label} ↔ ${b.label}: ${settings.map(linkSettingText).join(', ')}`),
+    muted(`  one way: ${formatMs(delay.ms)}ms (${describeLinkDelay(delay)})`),
+  ];
+  // (what is set but does not count, while a delay is written)
+  if (delay.written && settings.some((setting) => setting.what !== 'delay')) {
+    lines.push(muted('  the delay written by hand takes the place of medium and length: "delay auto" to work them in'));
+  }
+  return lines;
 }
 
 function runPort(action: 'enable' | 'disable', portId: number, deviceQuery: string | undefined, context: TerminalContext): TerminalLine[] {
@@ -2284,6 +2378,7 @@ export const COMMAND_REFERENCE: Array<[string, string]> = [
   ['add record <name> <address> on <server>', 'a name a DNS server answers for (remove record <n>|<name> from <server>)'],
   ['add vlan <id> to <device>', 'VLAN list of a device (remove vlan <id> from <device>)'],
   ['connect <A> to <B>', 'create a link (disconnect <A> from <B>)'],
+  ['link <A> to <B> medium|length|delay <value>', 'the cable of a link: what it is, how long, its delay (one way)'],
   ['use <device> / exit', 'enter/leave device context (implies "from" and "on")'],
   ['clear, help [command]', 'screen and this reference'],
 ];
@@ -2358,6 +2453,8 @@ export function executeCommand(rawInput: string, context: TerminalContext): Exec
       return { lines: runConnect('connect', command.a, command.b), context };
     case 'disconnect':
       return { lines: runConnect('disconnect', command.a, command.b), context };
+    case 'link-set':
+      return { lines: runLinkSet(command.a, command.b, command.settings), context };
     case 'port-enable':
       return { lines: runPort('enable', command.port, command.device, context), context };
     case 'port-disable':

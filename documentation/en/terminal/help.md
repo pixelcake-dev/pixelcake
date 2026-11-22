@@ -17,7 +17,7 @@ help [<word>]
 
 ```ncl sample=empty
 pixelcake> help
-PixelCake terminal — NCL v0.5 (Network Command Language, vendor-neutral)
+PixelCake terminal — NCL v0.6 (Network Command Language, vendor-neutral)
   ping <target> [from <device>]                              does it answer? request and reply
   trace <target> [from <device>] [as web|email|dns]          one way, hop by hop, with what each device did
   browse | mail | download <target> [from <device>]          a whole web, email or download exchange
@@ -45,6 +45,7 @@ PixelCake terminal — NCL v0.5 (Network Command Language, vendor-neutral)
   add record <name> <address> on <server>                    a name a DNS server answers for (remove record <n>|<name> from <server>)
   add vlan <id> to <device>                                  VLAN list of a device (remove vlan <id> from <device>)
   connect <A> to <B>                                         create a link (disconnect <A> from <B>)
+  link <A> to <B> medium|length|delay <value>                the cable of a link: what it is, how long, its delay (one way)
   use <device> / exit                                        enter/leave device context (implies "from" and "on")
   clear, help [command]                                      screen and this reference
   device names are case-insensitive and may be multi-word; IPs work anywhere a device is expected
@@ -96,7 +97,7 @@ pixelcake> use PC-1
 context: PC-1 — "from" is now implied, "exit" to leave
 PC-1> ping Web-01
 Pinging Web-01 (192.168.20.10) from PC-1...
-Reply from 192.168.20.10: hops=5 time=7ms
+Reply from 192.168.20.10: hops=5 time=0.44ms
 PC-1> trace Mail-01
 Tracing route to Mail-01 (192.168.20.20) from PC-1:
   1  ○ PC-1 (PC)

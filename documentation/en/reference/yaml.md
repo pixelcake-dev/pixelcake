@@ -42,6 +42,7 @@ The reader accepts the file as the app writes it, with everything under a `pixel
 | `Area 2: no position or size, ignored` | An entry of `areas` has no `position` and `size`, or one that cannot be drawn. |
 | `FW-Edge: rule 2 incomplete or invalid, ignored` | A rule needs an `allow` or `deny`, a service, and both ends. Routes, port forwards and DNS records say the same of themselves (`route 1 without a destination or a next hop`, `port forward 1 incomplete or invalid`, `DNS record 1 without a name or an address`). The others keep their order. |
 | `Port 2: DHCP server without a first or a last address, ignored` | A pool with no `start` or no `end`. |
+| `Link 3: medium "banana" not valid, left out` | A link with a `medium` the app does not know, a `length_m` that is not a number above 0 (40,000 km at most) or a `delay_ms` that is not a number from 0 to 10,000. The link is imported without it. |
 | `Link 4: source “PC-9” not found` | A link names a device the file does not have (`target` likewise). The link is left out. |
 | `Link 2: port 3 not found on “A”, end not assigned` | The port, or the card, a link names is not on that device. The link stays and the end is attached to a free interface when the file loads. |
 | `Link 2: port 1 of “B” already used by another link, end not assigned` | Two links name one interface. The first keeps it. |
@@ -88,7 +89,7 @@ pixelcake:
     …
 ```
 
-The comment lines at the top and `version`, `project` and `exported` are for whoever reads the file: the importer does not use them. A link names its two devices by name, and the port or the card at each end: `source_port: 8` for a port, `source_nic: eth0` for a card (by its name).
+The comment lines at the top and `version`, `project` and `exported` are for whoever reads the file: the importer does not use them. A link names its two devices by name, and the port or the card at each end: `source_port: 8` for a port, `source_nic: eth0` for a card (by its name). When its cable was set, a link also carries `medium` (`copper`, `fibre`, `wifi`, `dsl`, `ftth`, `mobile` or `satellite`), `length_m` (the length in metres) and `delay_ms` (a delay written by hand, in ms, one way); without them its medium is worked out and it has no length ([the time a packet takes](../building/cables.md#delay)).
 
 What a device carries, when it has it: `type`, `template_id` (which kind of server or storage it is), `ip`, `subnet`, `gateway`, `vendor`, `location`, `notes`, `vlan` (the list of the device), `stp`, `position` (where it is drawn, as `{x: 100, y: 50}`, written last), and then lists. A port has `id`, `name`, `enabled`, `ip`, `subnet`, `speed`, `mode`, `vlan` (a number for an access port, a list for a trunk), `poe`, `nat`, `dhcp_server`, `security_zone`, `description`. A card has `name`, `enabled`, `ip`, `subnet`, `gateway`, `dns`, `speed`, `mac`, `description`, and `dhcp: true` in place of the addresses when it takes its own from a server. The lists are `routes` (`destination`, `via`), `firewall_rules`, `port_forwards` and `dns_records`.
 

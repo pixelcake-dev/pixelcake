@@ -86,6 +86,9 @@ export const importExport = {
       `${deviceName}: VLAN ${values} fuori intervallo (1–4094), non importata`,
     connectionVlanOutOfRange: (number: number, values: string) =>
       `Connessione ${number}: VLAN ${values} fuori intervallo (1–4094), non importata`,
+    /** `field` is the key of the file: medium, length_m, delay_ms */
+    connectionCableNotValid: (number: number, field: string, value: string) =>
+      `Connessione ${number}: ${field} "${value}" non valido, non importato`,
     /** `renamed` is the list of the new names, each written «old» → «new» */
     namesRepeated: (renamed: string) =>
       `Nomi usati più volte, ai dispositivi successivi è stato dato un nome libero: ${renamed}. Le connessioni che citano il nome vanno al primo dispositivo che lo ha`,

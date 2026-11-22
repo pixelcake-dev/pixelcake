@@ -66,6 +66,12 @@ const SAME_IN_BOTH = new Set([
   'help.about.licenceText',
   'help.about.repository',
   'presentation.caption.failuresLine',
+  // (the media of a cable that Italian names as English does)
+  'connection.cable.media.wifi',
+  'connection.cable.why.medium.wifi',
+  'connection.cable.why.medium.dsl',
+  'connection.cable.why.medium.ftth',
+  'connection.cable.why.medium.satellite',
   // (the names of drawings the Italian interface writes as the English ones, as the kit does)
   'templates.devices.drawingNames.router',
   'templates.devices.drawingNames.switch',

@@ -1,8 +1,9 @@
 /**
- * Network Engine — Trace / Ping
+ * Network Engine — Trace
  *
  * Follows one packet from a device to an address, the way the network would
- * carry it. Pure and deterministic: same topology in, same verdict out.
+ * carry it. Pure and deterministic: same topology in, same verdict out. How
+ * long the packet took is worked out from the hops it gives (see ./latency).
  *
  * At every device that handles the packet at layer 3:
  *
@@ -58,7 +59,7 @@
 
 import type { NetworkDevice, ServiceName } from '@/types';
 import { isValidIP } from '@/utils/ipHelpers';
-import type { Topology, TraceResult, PingResult, HopResult } from './types';
+import type { Topology, TraceResult, HopResult } from './types';
 import { devicesById, forwardingRole, isInternetLike } from './topology';
 import { interfacePhrase } from './interfaces';
 import type { DeviceInterface } from './interfaces';
@@ -633,20 +634,4 @@ export function traceRoute(
   }
 
   return blocked(current, `routing loop: the packet comes back to ${current.label}`);
-}
-
-/**
- * Ping: same evaluation as traceRoute, plus a deterministic simulated RTT
- * on success: 1ms base + 2ms per intermediate hop.
- */
-export function ping(
-  sourceId: string,
-  targetId: string,
-  topo: Topology,
-  options: TraceOptions = {}
-): PingResult {
-  const trace = traceRoute(sourceId, targetId, topo, options);
-  if (trace.verdict !== 'success') return { ...trace };
-  const intermediateHops = Math.max(0, trace.hops.length - 2);
-  return { ...trace, rttMs: 1 + 2 * intermediateHops };
 }

@@ -124,7 +124,7 @@ Looking up erp.company.example from PC-Sales (DNS server 192.168.30.10)...
   ✓ DNS reply: Srv-Auth → PC-Sales
 erp.company.example is 192.168.30.30 (answered by Srv-Auth)
 Pinging Web-ERP (192.168.30.30) from PC-Sales...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 ```
 
 Both lines say what went where: the DNS request, PC-Sales to Srv-Auth, and the DNS reply, back. The ping that follows is a separate question, to Web-ERP.
@@ -181,7 +181,7 @@ Lookup failed (blocked): DNS request: interface eth0 on Srv-Auth is disabled
   dropped at: Srv-Auth
 pixelcake> ping Web-ERP from PC-Sales
 Pinging Web-ERP (192.168.30.30) from PC-Sales...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 ```
 
 ## Limits {#limits}

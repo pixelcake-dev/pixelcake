@@ -291,6 +291,10 @@ function serializeConnection(
   if (conn.type) lines.push(`${indent(level)}  type: ${yamlValue(conn.type)}`);
   if (conn.bandwidth) lines.push(`${indent(level)}  bandwidth: ${yamlValue(conn.bandwidth)}`);
   if (conn.label) lines.push(`${indent(level)}  label: ${yamlValue(conn.label)}`);
+  // The cable: what it is, how long in metres, a one-way delay in ms written by hand
+  if (conn.medium) lines.push(`${indent(level)}  medium: ${conn.medium}`);
+  if (conn.lengthM !== undefined) lines.push(`${indent(level)}  length_m: ${conn.lengthM}`);
+  if (conn.delayMs !== undefined) lines.push(`${indent(level)}  delay_ms: ${conn.delayMs}`);
   if (conn.vlan && conn.vlan.length > 0) {
     lines.push(`${indent(level)}  vlan: [${conn.vlan.join(', ')}]`);
   }

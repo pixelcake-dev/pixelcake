@@ -346,7 +346,7 @@ describe('a device on DHCP in the other commands', () => {
   it('pings and is pinged with the address it is leased', () => {
     expect(transcript('ping Web-01 from PC-1')).toEqual([
       'Pinging Web-01 (192.168.20.10) from PC-1...',
-      'Reply from 192.168.20.10: hops=5 time=7ms',
+      'Reply from 192.168.20.10: hops=5 time=0.44ms',
     ]);
     expect(transcript('ping PC-1 from Web-01')[0]).toBe('Pinging PC-1 (192.168.10.100) from Web-01...');
     expect(transcript('trace PC-1 from PC-2')).toEqual([

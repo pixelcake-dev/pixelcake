@@ -67,9 +67,50 @@ The same window, “Edit link”, sets how the cable looks:
 
 Press “Save” to keep the changes. **These four change what is drawn and nothing else.** The engine does not read the type, the bandwidth, the label or the colour: a cable labelled `VLAN 10` carries VLAN 10 only if the ports at its ends are in VLAN 10. [Templates](templates.md#built-in) says how to make a link type of your own.
 
+## The time a packet takes {#delay}
+
+A packet takes time on a cable. The group “Cable” of the same window says what the cable is and how long it is, and shows the time a packet takes on it, one way:
+
+- “Medium”: “Automatic”, or what the cable is: “Copper (Ethernet)”, “Optical fibre”, “Wi-Fi”, or the line of a site to its provider: “DSL to the provider”, “Fibre to the provider (FTTH)”, “Mobile network 4G/5G”, “Satellite (geostationary)”. “Automatic” is Wi-Fi when one end is a laptop, a smartphone or a tablet and the other an access point, and copper otherwise: the laptops of the samples are on Wi-Fi with nothing set.
+- “Length”, with its “Unit” (m or km): how long the cable is. Left empty, the cable has no length.
+- “Delay (ms)”: a delay written by hand, one way, such as the latency a carrier promises for a line. Left empty, the delay is worked out from the medium and the length; written, it takes the place of both.
+- “One-way delay” shows the time as the fields are typed, and what it comes from: `3.0 ms: fibre, 600 km`, `1.5 ms: Wi-Fi (automatic)`, `7.0 ms: written by hand`.
+
+A length or a delay that is not a number, or is out of range (a cable longer than 40,000 km, a delay over 10,000 ms), is said under its field, and “Save” keeps nothing until it is put right.
+
+The time of a cable is the time of its medium, plus 5 µs for every km of its length, which is how fast light goes in copper and in fibre:
+
+| Medium | One way |
+|---|---|
+| Copper (Ethernet), optical fibre | the length alone: 0.005 ms a km, 3 ms for 600 km |
+| Wi-Fi | 1.5 ms |
+| DSL to the provider | 8 ms |
+| Fibre to the provider (FTTH) | 1.5 ms |
+| Mobile network 4G/5G | 15 ms |
+| Satellite (geostationary) | 280 ms |
+
+The devices a packet crosses take their time too, and so does the network a Cloud symbol stands for: [the time of a ping](../asking/how-the-engine-decides.md#time) says how it all adds up. The type of a link says what the link is for, never what it is made of: an MPLS link may be fibre or DSL. In the terminal, `show connections` prints the cable of every link and its time, and `link` sets them. The backup line of the two sites is a DSL line of each site to the carrier:
+
+```ncl sample=two-sites
+pixelcake> show connections of R-Backup
+CONNECTIONS of R-Backup (2)
+  R-HQ ↔ R-Backup  (uplink, 100 Mbps)  [port 3 ↔ port 1]  dsl: 8.0ms
+  R-Backup ↔ R-Branch  (uplink, 100 Mbps)  [port 2 ↔ port 3]  dsl: 8.0ms
+pixelcake> link R-HQ to R-Branch length 300 km
+R-HQ ↔ R-Branch: length 300 km
+  one way: 1.5ms (fibre, 300 km)
+pixelcake> ping PC-Branch-1 from PC-HQ-1
+Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
+Reply from 192.168.2.11: hops=7 time=3.7ms
+```
+
+The commands are in [Devices and addresses](../terminal/devices-and-addresses.md#link).
+
 ## Limits {#limits}
 
 > [!LIMITS]
-> - A cable has no length, no speed and no failure of its own. "Bandwidth" is a label, and a packet takes the same time on every cable. A cable can be cut only in presentation mode, as a simulated failure.
+> - A cable has a delay, not a speed. "Bandwidth" is a label: a packet takes the same time whatever it carries and however many packets cross the cable, and a large download takes as long as a ping. Bandwidth and the bottleneck of a path are not simulated.
+> - There is no queue, no congestion, no jitter and no loss: every ping of a drawing takes the same time. The times of the media are typical values, not measured ones.
+> - A cable has no failure of its own: it can be cut only in presentation mode, as a simulated failure.
 > - Nothing stops a cable between two end devices, or from a device to itself. The engine follows what is drawn and then says why a packet cannot cross an end device.
 > - A port can have one cable. A device with more cables than ports has the extra ends unattached.

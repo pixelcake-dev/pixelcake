@@ -23,7 +23,7 @@ Ecco una domanda e la sua risposta sulla rete di esempio di una piccola azienda:
 ```ncl sample=company
 pixelcake> ping Web-Gestionale from PC-Vendite
 Pinging Web-Gestionale (192.168.30.30) from PC-Vendite...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 pixelcake> set gateway of PC-Vendite to 192.168.10.254
 PC-Vendite: gateway set to 192.168.10.254
 pixelcake> ping Web-Gestionale from PC-Vendite
@@ -48,7 +48,7 @@ Per chi progetta o spiega una piccola rete:
 
 ## Che cosa non è {#what-it-is-not}
 
-PixelCake non è un simulatore a livello di pacchetto: non ha ARP, né apprendimento dei MAC, né instradamento dinamico, e il tempo di un ping è calcolato dal numero di salti. Non è uno strumento per validare una rete vera: una risposta positiva qui vuol dire che il modello che hai disegnato lascia passare il pacchetto, non che lo faranno i tuoi apparati. Quello che non simula è elencato in [Limiti e domande](../reference/limits-and-faq.md#not-simulated), e ogni pagina lo dice dove serve.
+PixelCake non è un simulatore a livello di pacchetto: non ha ARP, né apprendimento dei MAC, né instradamento dinamico, e il tempo di un ping si ricava dalla sua strada con valori tipici, non misurati. Non è uno strumento per validare una rete vera: una risposta positiva qui vuol dire che il modello che hai disegnato lascia passare il pacchetto, non che lo faranno i tuoi apparati. Quello che non simula è elencato in [Limiti e domande](../reference/limits-and-faq.md#not-simulated), e ogni pagina lo dice dove serve.
 
 ## Dove funziona {#where-it-runs}
 

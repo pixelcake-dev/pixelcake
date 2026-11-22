@@ -124,7 +124,7 @@ Looking up gestionale.azienda.example from PC-Vendite (DNS server 192.168.30.10)
   ✓ DNS reply: Srv-Auth → PC-Vendite
 gestionale.azienda.example is 192.168.30.30 (answered by Srv-Auth)
 Pinging Web-Gestionale (192.168.30.30) from PC-Vendite...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 ```
 
 Le due righe dicono che cosa è andato dove: la richiesta DNS, da PC-Vendite a Srv-Auth, e la risposta DNS, di ritorno. Il ping che segue è una domanda a parte, a Web-Gestionale.
@@ -181,7 +181,7 @@ Lookup failed (blocked): DNS request: interface eth0 on Srv-Auth is disabled
   dropped at: Srv-Auth
 pixelcake> ping Web-Gestionale from PC-Vendite
 Pinging Web-Gestionale (192.168.30.30) from PC-Vendite...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 ```
 
 ## Limiti {#limits}

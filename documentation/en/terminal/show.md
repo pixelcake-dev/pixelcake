@@ -147,22 +147,22 @@ VLAN   MEMBERS
 show connections [of <device>]
 ```
 
-The links of the drawing, or those of one device, with the interface at each end: `[port 3 ↔ eth0]`. An end that is not attached to an interface is shown as `?`. After each link its type and bandwidth, as drawn.
+The links of the drawing, or those of one device, with the interface at each end: `[port 3 ↔ eth0]`. An end that is not attached to an interface is shown as `?`. After each link its type and bandwidth, as drawn, and last its cable and the time it takes one way: the medium (`automatic` when nobody chose it), the length when it has one, and the time, with `written by hand` when the delay was ([the time a packet takes](../building/cables.md#delay)).
 
 ```ncl sample=office
 pixelcake> show connections
 CONNECTIONS (6)
-  PC-1 ↔ SW-Office  (access, 1 Gbps)  [eth0 ↔ port 1]
-  PC-2 ↔ SW-Office  (access, 1 Gbps)  [eth0 ↔ port 2]
-  SW-Office ↔ Router-1  (uplink, 1 Gbps)  [port 8 ↔ port 1]
-  Router-1 ↔ SW-Servers  (uplink, 1 Gbps)  [port 2 ↔ port 8]
-  Web-01 ↔ SW-Servers  (access, 1 Gbps)  [eth0 ↔ port 1]
-  Mail-01 ↔ SW-Servers  (access, 1 Gbps)  [eth0 ↔ port 2]
+  PC-1 ↔ SW-Office  (access, 1 Gbps)  [eth0 ↔ port 1]  copper, automatic: 0.00ms
+  PC-2 ↔ SW-Office  (access, 1 Gbps)  [eth0 ↔ port 2]  copper, automatic: 0.00ms
+  SW-Office ↔ Router-1  (uplink, 1 Gbps)  [port 8 ↔ port 1]  copper, automatic: 0.00ms
+  Router-1 ↔ SW-Servers  (uplink, 1 Gbps)  [port 2 ↔ port 8]  copper, automatic: 0.00ms
+  Web-01 ↔ SW-Servers  (access, 1 Gbps)  [eth0 ↔ port 1]  copper, automatic: 0.00ms
+  Mail-01 ↔ SW-Servers  (access, 1 Gbps)  [eth0 ↔ port 2]  copper, automatic: 0.00ms
 pixelcake> show connections of SW-Servers
 CONNECTIONS of SW-Servers (3)
-  Router-1 ↔ SW-Servers  (uplink, 1 Gbps)  [port 2 ↔ port 8]
-  Web-01 ↔ SW-Servers  (access, 1 Gbps)  [eth0 ↔ port 1]
-  Mail-01 ↔ SW-Servers  (access, 1 Gbps)  [eth0 ↔ port 2]
+  Router-1 ↔ SW-Servers  (uplink, 1 Gbps)  [port 2 ↔ port 8]  copper, automatic: 0.00ms
+  Web-01 ↔ SW-Servers  (access, 1 Gbps)  [eth0 ↔ port 1]  copper, automatic: 0.00ms
+  Mail-01 ↔ SW-Servers  (access, 1 Gbps)  [eth0 ↔ port 2]  copper, automatic: 0.00ms
 ```
 
 ## show config {#show-config}

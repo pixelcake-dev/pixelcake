@@ -44,7 +44,7 @@ An **example** is a session with its prompt: the lines that begin with `pixelcak
 ```ncl sample=office
 pixelcake> ping Web-01 from PC-1
 Pinging Web-01 (192.168.20.10) from PC-1...
-Reply from 192.168.20.10: hops=5 time=7ms
+Reply from 192.168.20.10: hops=5 time=0.44ms
 pixelcake> interface 2 down on Router-1
 port 2 on Router-1 is now down
 pixelcake> ping Web-01 from PC-1
@@ -98,12 +98,13 @@ A command checks what it can before it writes, and writes nothing if it refuses.
 - [The grammar](grammar.md): the language on one page, with its tolerances and its aliases.
 
 > [!LIMITS]
-> The terminal knows what the engine knows. ARP and MAC tables, spanning tree, dynamic routing, router sub-interfaces, ports other than the four services, link speed and ping times are not simulated, and no command speaks of them; a ping time is worked out from the number of hops. The commands to break and repair a device or a cable, and to list what stops working, are not in the language yet: failures are simulated in presentation mode ([what is not simulated](../reference/limits-and-faq.md#not-simulated)).
+> The terminal knows what the engine knows. ARP and MAC tables, spanning tree, dynamic routing, router sub-interfaces, ports other than the four services, and the bandwidth and the load of a cable are not simulated, and no command speaks of them; the time of a ping is worked out from the cables and the devices of its path. The commands to break and repair a device or a cable, and to list what stops working, are not in the language yet: failures are simulated in presentation mode ([what is not simulated](../reference/limits-and-faq.md#not-simulated)).
 
 ## The version of the language {#version}
 
-The language is versioned on its own, and the version is the first line of `help`: **NCL v0.5**. Until version 1.0 the forms of the commands are stable, but aliases and the wording of the answers may still change between two minor versions. What each version added:
+The language is versioned on its own, and the version is the first line of `help`: **NCL v0.6**. Until version 1.0 the forms of the commands are stable, but aliases and the wording of the answers may still change between two minor versions. What each version added:
 
+- **0.6**: time. `ping` prints the time of the exchange worked out from its path: the cables, each with its medium and its length or a delay written by hand, and the devices crossed. `link <A> to <B>` sets the medium, the length and the delay of a cable, and `show connections` prints them.
 - **0.5**: DNS. A host name works as the target of `ping`, `trace`, `browse`, `mail` and `download`, and `resolve` looks it up alone. A server keeps records (`add record`, `remove record`), a card names its DNS server (`interface <name> dns`), a pool hands one out, `show dns`. `dns` is a service for rules and forwards, and for `trace … as dns`.
 - **0.4**: DHCP. A card takes its address from a server (`interface <name> dhcp`), an interface hands out a range (`interface <n> pool`), `show dhcp`. The `show` commands tell a leased address from one written by hand.
 - **0.3**: address translation. Source NAT (`interface <n> nat`), port forwards (`add forward`, `remove forward`), `show nat`. The Internet symbol no longer carries private addresses.

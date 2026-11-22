@@ -88,6 +88,9 @@ export const importExport: Dictionary['importExport'] = {
       `${deviceName}: VLAN ${values} out of range (1–4094), left out`,
     connectionVlanOutOfRange: (number: number, values: string) =>
       `Link ${number}: VLAN ${values} out of range (1–4094), left out`,
+    /** `field` is the key of the file: medium, length_m, delay_ms */
+    connectionCableNotValid: (number: number, field: string, value: string) =>
+      `Link ${number}: ${field} "${value}" not valid, left out`,
     /** `renamed` is the list of the new names, each written “old” → “new” */
     namesRepeated: (renamed: string) =>
       `Names used more than once, the later devices were given a free name: ${renamed}. Links that name it go to the first device that has it`,

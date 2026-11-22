@@ -190,7 +190,7 @@ describe('the guide — DNS', () => {
       '  ✓ DNS reply: Srv-Auth → PC-Vendite',
       'gestionale.azienda.example is 192.168.30.30 (answered by Srv-Auth)',
       'Pinging Web-Gestionale (192.168.30.30) from PC-Vendite...',
-      'Reply from 192.168.30.30: hops=6 time=9ms',
+      'Reply from 192.168.30.30: hops=6 time=0.46ms',
     ]);
     // resolve only asks
     expect(printed(typed[2])).toEqual(printed(typed[1]).slice(0, 4));

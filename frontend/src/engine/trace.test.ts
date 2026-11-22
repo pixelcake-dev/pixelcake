@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { NetworkDevice, NetworkConnection, NetworkInterfaceCard, Port } from '@/types';
 import type { Topology } from './types';
-import { traceRoute, ping } from './trace';
+import { traceRoute } from './trace';
 
 // ---------- fixture factories ----------
 
@@ -818,37 +818,5 @@ describe('traceRoute firewall zones', () => {
     const result = traceRoute('pc1', 'pc2', firewallTopo([port(1), port(2)]));
     expect(result.verdict).toBe('success');
     expect(result.notes).toContain('firewall FW-1 has no zone binding: allowed');
-  });
-});
-
-// ---------- ping ----------
-
-describe('ping', () => {
-  it('computes a deterministic rtt from intermediate hop count', () => {
-    const viaSwitch = ping('pc1', 'pc2', sameSubnetViaSwitch());
-    expect(viaSwitch.verdict).toBe('success');
-    expect(viaSwitch.rttMs).toBe(3); // 1 + 2 * 1 intermediate hop
-
-    const direct = ping('pc1', 'pc2', topo(
-      [
-        device({ id: 'pc1', label: 'PC-1', ip: '192.168.1.10' }),
-        device({ id: 'pc2', label: 'PC-2', ip: '192.168.1.20' }),
-      ],
-      [link('pc1', 'pc2')]
-    ));
-    expect(direct.rttMs).toBe(1); // no intermediate hops
-  });
-
-  it('omits rtt when the trace fails', () => {
-    const t = topo(
-      [
-        device({ id: 'pc1', label: 'PC-1', ip: '192.168.1.10' }),
-        device({ id: 'pc2', label: 'PC-2', ip: '192.168.1.20' }),
-      ],
-      [] // no links
-    );
-    const result = ping('pc1', 'pc2', t);
-    expect(result.verdict).toBe('unreachable');
-    expect(result.rttMs).toBeUndefined();
   });
 });

@@ -184,7 +184,7 @@ A firewall keeps state. When it allowed a request, the reply to that request pas
 ```ncl sample=site
 pixelcake> ping Web-Public from PC-Office-1
 Pinging Web-Public (172.16.0.10) from PC-Office-1...
-Reply from 172.16.0.10: hops=6 time=9ms
+Reply from 172.16.0.10: hops=6 time=0.84ms
   note: request: firewall FW-Edge: no rule matches, zone policy trust → dmz allowed
   note: reply: firewall FW-Edge: no rule matches, zone policy dmz → trust allowed (reply to an allowed flow)
 ```
@@ -216,7 +216,7 @@ pixelcake> add rule deny any from untrust to any on FW-Edge
 FW-Edge: rule 2 added — deny any from untrust to any
 pixelcake> ping 203.0.113.1 from Remote-PC
 Pinging FW-Edge (203.0.113.1) from Remote-PC...
-Reply from 203.0.113.1: hops=3 time=3ms
+Reply from 203.0.113.1: hops=3 time=39ms
   note: request: Internet is not simulated: traffic assumed to pass
   note: reply: Internet is not simulated: traffic assumed to pass
 ```

@@ -39,6 +39,12 @@
  *    each. Cut the direct line and both ends withdraw the route that leaves
  *    by it, and the traffic takes MPLS.
  *
+ * Time (engine/latency): the line to Roma is 600 km of fibre, the one to the
+ * DR data centre 210 km; each site reaches the MPLS network by a fibre as
+ * long as its way to Milano (FIBRE_TO_MILANO_KM). A ping from Milano to Roma
+ * takes about 7 ms by the line, about 15 ms by MPLS. The customer is on DSL,
+ * the remote worker on FTTH; the laptops are on Wi-Fi without being told.
+ *
  * FW-MI, at Milano's edge, has zones and an ordered list of rules (guests
  * never inside, the DMZ published through NAT on two providers, the staff
  * browsing only through the proxy). The warehouse and the shop have a
@@ -87,6 +93,24 @@ const P2P_MASK = '255.255.255.252';
 const DNS_1 = '10.10.100.53';
 /** Milano's WAN router on the MPLS network: every branch's default route */
 const MILANO_MPLS = '10.255.0.1';
+/**
+ * How far each site is from Milano along the fibre of the carrier, in km,
+ * by the router of the site on the MPLS network (Milano's own: the few km to
+ * the carrier). Not measured: a distance by road, a little longer than the
+ * straight line, the islands by sea
+ */
+const FIBRE_TO_MILANO_KM: Record<string, number> = {
+  'r-mi-wan': 5,
+  'r-to': 140,
+  'r-dr': 210,
+  'r-ve': 270,
+  'r-fi': 300,
+  'r-rm': 575,
+  'r-na': 770,
+  'fw-ba': 880,
+  'r-ca': 900,
+  'fw-pa': 1500,
+};
 
 type Side = 'top' | 'bottom' | 'left' | 'right';
 interface Point {
@@ -133,8 +157,12 @@ class Drawing {
     return found;
   }
 
-  /** A cable between two ends */
-  link(from: End, to: End, look: Pick<NetworkConnection, 'type' | 'bandwidth' | 'label'> = {}): void {
+  /** A cable between two ends: how it is drawn, and what it is made of and how long, when that matters */
+  link(
+    from: End,
+    to: End,
+    look: Pick<NetworkConnection, 'type' | 'bandwidth' | 'label' | 'medium' | 'lengthM'> = {}
+  ): void {
     this.links += 1;
     this.connections.push({
       id: `link-${this.links}`,
@@ -147,6 +175,8 @@ class Drawing {
       type: look.type ?? 'access',
       ...(look.bandwidth ? { bandwidth: look.bandwidth } : {}),
       ...(look.label ? { label: look.label } : {}),
+      ...(look.medium ? { medium: look.medium } : {}),
+      ...(look.lengthM ? { lengthM: look.lengthM } : {}),
     });
   }
 
@@ -466,10 +496,12 @@ export function createMultinationalSample(): SampleNetwork {
       { id: 'rule-11', action: 'allow', service: 'web', source: '172.16.10.11', destination: '10.10.100.20', description: t.notes.siteReadsErp },
     ],
   });
-  d.link({ id: 'customer', side: 'right' }, { id: 'inet-a', side: 'left', nic: 'nic-2' }, { bandwidth: '100 Mbps' });
-  d.link({ id: 'remote-worker', side: 'left' }, { id: 'inet-b', side: 'right', nic: 'nic-2' }, { bandwidth: '100 Mbps' });
-  d.link({ id: 'fw-mi', side: 'top', port: 3 }, { id: 'inet-a', side: 'bottom' }, { type: 'uplink', bandwidth: '1 Gbps' });
-  d.link({ id: 'fw-mi', side: 'top', port: 4 }, { id: 'inet-b', side: 'bottom' }, { type: 'uplink', bandwidth: '500 Mbps' });
+  // (the customer on DSL, the remote worker on fibre to home; Milano on a
+  // fibre of its own to provider A and on FTTH to provider B)
+  d.link({ id: 'customer', side: 'right' }, { id: 'inet-a', side: 'left', nic: 'nic-2' }, { bandwidth: '100 Mbps', medium: 'dsl' });
+  d.link({ id: 'remote-worker', side: 'left' }, { id: 'inet-b', side: 'right', nic: 'nic-2' }, { bandwidth: '100 Mbps', medium: 'ftth' });
+  d.link({ id: 'fw-mi', side: 'top', port: 3 }, { id: 'inet-a', side: 'bottom' }, { type: 'uplink', bandwidth: '1 Gbps', medium: 'fibre' });
+  d.link({ id: 'fw-mi', side: 'top', port: 4 }, { id: 'inet-b', side: 'bottom' }, { type: 'uplink', bandwidth: '500 Mbps', medium: 'ftth' });
 
   // The DMZ, on the right of the firewall: a load balancer in front of two web servers
   switchDevice(d, { id: 'sw-mi-dmz', label: 'SW-MI-DMZ', ip: '172.16.10.2', gateway: '172.16.10.1', location: serverRoom, at: { x: cx + 750, y: MI.y } });
@@ -655,9 +687,18 @@ export function createMultinationalSample(): SampleNetwork {
   /* ══ The MPLS network, in the middle of the country ═════════════════════ */
   passthrough(d, { id: 'mpls', label: t.carrier, type: 'Cloud', at: MPLS_AT, cards: 10 });
   let mplsCard = 0;
+  // Each site reaches the carrier by fibre. The symbol has no geography: the
+  // way across the country is on the cable of each site, as long as the
+  // fibre from the site to Milano, where every branch's traffic goes
   const mpls = (end: End & { port: number }, side: Side, bandwidth: string) => {
     mplsCard += 1;
-    d.link(end, { id: 'mpls', side, nic: `nic-${mplsCard}` }, { type: 'uplink', bandwidth, label: 'MPLS' });
+    d.link(end, { id: 'mpls', side, nic: `nic-${mplsCard}` }, {
+      type: 'uplink',
+      bandwidth,
+      label: 'MPLS',
+      medium: 'fibre',
+      lengthM: FIBRE_TO_MILANO_KM[end.id] * 1000,
+    });
   };
   mpls({ id: 'r-mi-wan', side: 'bottom', port: 2 }, 'top', '1 Gbps');
 
@@ -681,7 +722,7 @@ export function createMultinationalSample(): SampleNetwork {
       route('0.0.0.0/0', MILANO_MPLS, t.notes.viaBackup(milano)),
     ],
   });
-  d.link({ id: 'r-mi-wan', side: 'right', port: 3 }, { id: 'r-rm', side: 'top', port: 4 }, { type: 'backbone', bandwidth: '10 Gbps', label: t.cables.mainLine });
+  d.link({ id: 'r-mi-wan', side: 'right', port: 3 }, { id: 'r-rm', side: 'top', port: 4 }, { type: 'backbone', bandwidth: '10 Gbps', label: t.cables.mainLine, medium: 'fibre', lengthM: 600_000 });
   mpls({ id: 'r-rm', side: 'left', port: 5 }, 'right', '1 Gbps');
   switchDevice(d, { id: 'sw-rm-c', label: 'SW-RM-C', ip: '10.20.1.2', location: roma, at: { x: RM.x + 200, y: RM.y + 260 }, vlans: rmVlans });
   d.vlanCables('r-rm', 'sw-rm-c', [[1, 1, 10], [2, 2, 20], [3, 3, 30]]);
@@ -747,7 +788,7 @@ export function createMultinationalSample(): SampleNetwork {
       route('0.0.0.0/0', MILANO_MPLS, t.notes.viaBackup(milano)),
     ],
   });
-  d.link({ id: 'r-mi-wan', side: 'left', port: 4 }, { id: 'r-dr', side: 'top', port: 2 }, { type: 'backbone', bandwidth: '10 Gbps', label: t.cables.drFibre });
+  d.link({ id: 'r-mi-wan', side: 'left', port: 4 }, { id: 'r-dr', side: 'top', port: 2 }, { type: 'backbone', bandwidth: '10 Gbps', label: t.cables.drFibre, medium: 'fibre', lengthM: 210_000 });
   mpls({ id: 'r-dr', side: 'right', port: 3 }, 'left', '1 Gbps');
   const drServers: Array<[string, string, string, string, string]> = [
     ['erp-app-dr', 'ERP-APP-DR', 'tpl-webserver', 'Server', '10.30.100.20'],

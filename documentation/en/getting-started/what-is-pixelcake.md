@@ -23,7 +23,7 @@ Here is a question and its answer on the sample network of a small company, firs
 ```ncl sample=company
 pixelcake> ping Web-ERP from PC-Sales
 Pinging Web-ERP (192.168.30.30) from PC-Sales...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 pixelcake> set gateway of PC-Sales to 192.168.10.254
 PC-Sales: gateway set to 192.168.10.254
 pixelcake> ping Web-ERP from PC-Sales
@@ -48,7 +48,7 @@ A network of a few dozen devices is the size it is made for. The multinational s
 
 ## What it is not {#what-it-is-not}
 
-PixelCake is not a packet-level simulator: it has no ARP, no MAC learning and no dynamic routing, and the time of a ping is worked out from the number of hops. It is not a tool to validate a real network: a reply here means that the model you drew lets the packet through, not that your equipment will. What it does not simulate is listed in [Limits and questions](../reference/limits-and-faq.md#not-simulated), and each page says it where it matters.
+PixelCake is not a packet-level simulator: it has no ARP, no MAC learning and no dynamic routing, and the time of a ping is worked out from its path with typical values, not measured. It is not a tool to validate a real network: a reply here means that the model you drew lets the packet through, not that your equipment will. What it does not simulate is listed in [Limits and questions](../reference/limits-and-faq.md#not-simulated), and each page says it where it matters.
 
 ## Where it runs {#where-it-runs}
 

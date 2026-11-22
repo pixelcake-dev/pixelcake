@@ -269,11 +269,17 @@ question uses it, by a request to the `dns` address of the card that asks.
 | `bandwidth` | string | Optional. |
 | `vlan` | integer[] | Optional. |
 | `label`, `color` | string | Optional. |
+| `medium` | `copper`, `fibre`, `wifi`, `dsl`, `ftth`, `mobile`, `satellite` | Optional. What the cable is, for the time a packet takes on it. Without it the medium is worked out: `wifi` between a laptop, a smartphone or a tablet and an access point, `copper` otherwise. |
+| `lengthM` | number | Optional. Length of the cable in metres, more than 0 and at most 40,000,000 (40,000 km): 5 µs of propagation for every km. Without it the cable has no length. |
+| `delayMs` | number | Optional. A one-way delay written by hand, in ms, from 0 to 10,000. It takes the place of `medium` and `lengthM` for the time of the link, which keeps them. |
 | `stpPortState` | `forwarding`, `blocking`, `disabled`, `learning` | Optional. |
 | `stpPortPriority` | integer | Optional. |
 
 An end of a connection is attached to at most one interface: a port or a NIC,
-never both. An interface is used by at most one connection.
+never both. An interface is used by at most one connection. A file written
+before `medium`, `lengthM` and `delayMs` existed has links with none of them:
+their medium is worked out and they have no length, and the time of a ping
+on them is worked out the same way as on a link drawn today.
 
 ### Area
 
@@ -380,6 +386,7 @@ Everything else is repaired, and each repair is reported to the user:
 | A connection that is not an object or has no `id`, `source` or `target` | Dropped. |
 | Connections sharing an `id` | The first one is kept. |
 | A connection whose `source` or `target` is not a device of the canvas | Dropped. |
+| A `medium` the application does not know, a `lengthM` that is not a number above 0 and up to 40,000,000, a `delayMs` that is not a number from 0 to 10,000 | Dropped: the connection keeps everything else. |
 | A counter missing, not a non-negative integer, or not above the ids in use | Raised to one above the highest id in use. |
 | No `templates` | None. |
 | A template missing a required field | Dropped. |

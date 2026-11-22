@@ -47,7 +47,7 @@ Output on the small office sample (Add → Samples → “Office: two networks a
 ```text
 pixelcake> ping Web-01 from PC-1
 Pinging Web-01 (192.168.20.10) from PC-1...
-Reply from 192.168.20.10: hops=5 time=7ms
+Reply from 192.168.20.10: hops=5 time=0.44ms
 
 pixelcake> set gateway of PC-1 to 192.168.10.254
 PC-1: gateway set to 192.168.10.254
@@ -118,7 +118,7 @@ Looking up erp.company.example from PC-Sales (DNS server 192.168.30.10)...
   ✓ DNS reply: Srv-Auth → PC-Sales
 erp.company.example is 192.168.30.30 (answered by Srv-Auth)
 Pinging Web-ERP (192.168.30.30) from PC-Sales...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 pixelcake> resolve portal.company.example from Remote-Customer
 Looking up portal.company.example from Remote-Customer...
 Lookup failed: Remote-Customer has no DNS server: it cannot look up portal.company.example
@@ -155,7 +155,7 @@ Opened from a presentation (the “Export image” button on its bar), it shows 
 
 ## What it does not do
 
-- **It is not a packet-level simulator.** There is no ARP, MAC learning or dynamic routing. Ping times are derived from the number of hops.
+- **It is not a packet-level simulator.** There is no ARP, MAC learning or dynamic routing. The time of a ping is worked out from its path, with typical values for each cable (its medium and its length) and each device crossed: there is no bandwidth, no queue or congestion, no jitter and no loss.
 - **Routes are static.** A router knows the networks it is attached to and the routes you wrote. Router sub-interfaces are not modelled: routing between VLANs needs a router port in each.
 - **A backup route takes over only when the line is seen to be down.** That is, when the interface of the main route has no working cable left: cut, the device at the other end down, or the port at the other end switched off. A next hop that dies behind a switch is not noticed, as with a plain static route on real hardware, and the traffic is lost there. A host has one gateway per network card: there is no gateway redundancy protocol.
 - **Simulated failures are not saved.** They belong to the presentation and are gone when it ends.

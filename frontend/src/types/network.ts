@@ -190,6 +190,16 @@ export interface NetworkDevice {
 export type ConnectionType = 'trunk' | 'access' | 'uplink' | 'backbone';
 
 /**
+ * What the cable of a link is, for the time a packet takes on it (see
+ * engine/latency): copper Ethernet, optical fibre, Wi-Fi, and the lines that
+ * reach a provider (DSL, fibre to the home, the mobile network, a
+ * geostationary satellite). A link type says what the link is for, never
+ * what it is made of: this says the medium.
+ */
+export const LINK_MEDIA = ['copper', 'fibre', 'wifi', 'dsl', 'ftth', 'mobile', 'satellite'] as const;
+export type LinkMedium = (typeof LINK_MEDIA)[number];
+
+/**
  * Network Connection (Edge)
  * Represents a connection between two devices
  */
@@ -216,6 +226,13 @@ export interface NetworkConnection {
   vlan?: number[]; // VLAN IDs (for future network logic)
   label?: string; // Custom label
   color?: string; // Custom color override
+  // Time a packet takes on the link (engine/latency), one way. Absent: the
+  // medium is worked out (Wi-Fi between a laptop, a smartphone or a tablet
+  // and an access point, copper otherwise), there is no length, and the
+  // delay comes from the two
+  medium?: LinkMedium;
+  lengthM?: number; // Length of the cable, in metres: 5 µs of propagation per km
+  delayMs?: number; // One-way delay written by hand, in ms: medium and length then do not count
   // STP Port Configuration
   stpPortState?: 'forwarding' | 'blocking' | 'disabled' | 'learning';
   stpPortPriority?: number; // Port priority (0-240, step 16)

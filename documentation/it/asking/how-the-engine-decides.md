@@ -93,7 +93,7 @@ Ping failed (blocked): request: firewall FW-Edge: no rule matches, zone policy d
   dropped at: FW-Edge
 pixelcake> ping Web-Pubblico from PC-Uffici-1
 Pinging Web-Pubblico (172.16.0.10) from PC-Uffici-1...
-Reply from 172.16.0.10: hops=6 time=9ms
+Reply from 172.16.0.10: hops=6 time=0.84ms
   note: request: firewall FW-Edge: no rule matches, zone policy trust → dmz allowed
   note: reply: firewall FW-Edge: no rule matches, zone policy dmz → trust allowed (reply to an allowed flow)
 ```
@@ -200,6 +200,55 @@ Ping failed (blocked): reply: R-Filiale has no route to 192.168.1.11
   dropped at: R-Filiale
 ```
 
+## Il tempo di un ping {#time}
+
+`ping` stampa quanto è durato lo scambio: `time=0.44ms`. Il tempo non è misurato: si ricava dalle strade che il motore ha trovato, e non cambia mai la risposta. Una linea lenta è lenta, non rotta.
+
+È la somma di tre parti:
+
+1. **La richiesta, in un verso**: ogni cavo che percorre e ogni dispositivo che attraversa, dal mittente al dispositivo che risponde.
+2. **La risposta, in un verso**, sulla sua strada, che può essere un'altra ([una risposta è un pacchetto a sé](#flows)).
+3. **Le due estremità**, 0,1 ms ciascuna, una volta sola: il mittente, per mandare la richiesta e prendere la risposta, e il dispositivo che risponde. Un dispositivo che fa il ping a se stesso conta una volta.
+
+Un cavo impiega il tempo del suo mezzo e della sua lunghezza, oppure il ritardo scritto a mano sulla sua connessione ([il tempo di un pacchetto](../building/cables.md#delay)). Un dispositivo impiega il tempo che gli serve per far passare il pacchetto; un simbolo Cloud, il tempo della rete che rappresenta:
+
+| Attraversato | In un verso |
+|---|---|
+| Switch | 0,01 ms |
+| Access point | 0,05 ms |
+| Router | 0,1 ms |
+| Firewall | 0,2 ms |
+| Bilanciatore di carico | 0,1 ms |
+| Simbolo Cloud chiamato Internet | 10 ms |
+| Qualunque altro simbolo Cloud (la rete MPLS di un operatore, una linea privata) | 4 ms |
+
+Così due PC sullo stesso switch rispondono in circa 0,2 ms, e un server dietro un router in meno di mezzo millisecondo:
+
+```ncl sample=office
+pixelcake> ping PC-2 from PC-1
+Pinging PC-2 (192.168.10.12) from PC-1...
+Reply from 192.168.10.12: hops=3 time=0.22ms
+pixelcake> ping Web-01 from PC-1
+Pinging Web-01 (192.168.20.10) from PC-1...
+Reply from 192.168.20.10: hops=5 time=0.44ms
+```
+
+Tra le due sedi un ping prende la linea principale, 80 km di fibra. Quando la sua porta è spenta da un capo subentra la riserva, una linea DSL di ogni sede verso l'operatore, e lo stesso ping dura più di venti volte tanto:
+
+```ncl sample=two-sites
+pixelcake> ping PC-Filiale-1 from PC-Sede-1
+Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
+Reply from 192.168.2.11: hops=7 time=1.5ms
+pixelcake> interface 2 down on R-Sede
+port 2 on R-Sede is now down
+pixelcake> ping PC-Filiale-1 from PC-Sede-1
+Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
+Reply from 192.168.2.11: hops=8 time=33ms
+  note: reply: R-Filiale: the route 192.168.1.0/24 via 10.0.0.1 is unusable (port 2 on R-Sede is disabled), the route 192.168.1.0/24 via 10.0.2.1 is used instead
+```
+
+Un tempo si scrive con due decimali sotto 1 ms (`0.44ms`), con uno fino a 10 ms (`7.4ms`), e intero da lì in su (`40ms`): il terminale scrive in inglese, con il punto. Non varia nulla: ogni risposta di un ping sullo stesso disegno impiega lo stesso tempo.
+
 ## I guasti simulati {#failures}
 
 In [presentazione](presentation.md#failures) un dispositivo può essere dato per spento e un cavo per tagliato. Il disegno non cambia: il motore riceve l'elenco dei guasti insieme al disegno, e attraverso quei dispositivi e quei cavi non fa passare nulla.
@@ -276,7 +325,7 @@ Il terminale stampa le note sotto la risposta. Il pannello della simulazione mos
 > [!LIMITS]
 > - **Non è un simulatore di pacchetti.** Non ci sono ARP, tabelle MAC, spanning tree, instradamento dinamico (RIP, OSPF, BGP) né ridondanza del gateway: un host ha un gateway per ogni scheda di rete. Le rotte sono quelle scritte.
 > - **Si guarda solo la linea.** Una rotta viene ritirata quando la porta da cui esce è spenta, o quando la sua linea non porta nulla: i cavi sono tagliati, i dispositivi all'altro capo sono spenti, o lì le interfacce sono spente. Un prossimo salto che si spegne dietro uno switch non si vede, come con una rotta statica su un apparato vero, e il pacchetto si perde lì.
-> - **Non ci sono tempo e carico.** Il tempo che stampa `ping` è ricavato dal numero di salti della richiesta (1 ms più 2 ms per ogni dispositivo tra le due estremità). Non ci sono velocità dei cavi, code, congestione, perdita di pacchetti o timeout.
+> - **Il tempo è calcolato, non misurato.** Il tempo che stampa `ping` è una somma di valori tipici: il mezzo e la lunghezza di ogni cavo, ogni dispositivo attraversato, le due estremità ([il tempo di un ping](#time)). Non ci sono la banda (la "Banda" è un'etichetta) né il collo di bottiglia, code o congestione, variazioni del ritardo, perdita di pacchetti o timeout: una linea lenta non è mai una linea rotta.
 > - **Quattro servizi.** Un flusso è ping, web, email o DNS (un download è web per un firewall). Non ci sono porte TCP o UDP, e il traffico indirizzato al firewall stesso non viene filtrato.
 > - **Il NAT è per servizio, non per numero di porta.** Due flussi non si contendono mai una traduzione. Un server raggiunto da dentro al suo indirizzo pubblicato non è trattato a parte, e un dispositivo dietro due livelli di NAT si trova per nome solo attraverso il primo.
 > - **Un'assegnazione DHCP è calcolata, non negoziata.** Niente durata dell'assegnazione, rinnovo o prenotazione, niente relay attraverso un router, e una porta di router non può prendere il proprio indirizzo dal DHCP.

@@ -42,7 +42,7 @@ interface eth0 on PC-Sales already takes its address from DHCP
   leased 192.168.10.100 / 255.255.255.0 gw 192.168.10.1 dns 192.168.30.10 by Router-Core port 1
 pixelcake> ping Web-ERP from PC-Sales
 Pinging Web-ERP (192.168.30.30) from PC-Sales...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 pixelcake> interface eth0 dhcp off on PC-Sales
 interface eth0 on PC-Sales no longer takes its address from DHCP: it has no address now
   give it one: interface eth0 ip <address>/<prefix> on PC-Sales

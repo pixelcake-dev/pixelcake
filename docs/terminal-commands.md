@@ -1,4 +1,4 @@
-# NCL — Network Command Language v0.5
+# NCL — Network Command Language v0.6
 
 **NCL (Network Command Language)** is a vendor-neutral command language in
 semi-natural English. Cisco, Juniper and Mikrotik each speak their own
@@ -28,6 +28,13 @@ shown. The other sessions show only the lines that matter.
 The documentation of the app explains the language command by command, with
 examples: https://app.pixelcake.dev/docs/terminal/ (source in
 `documentation/`). This document stays its specification.
+
+**New in v0.6:** time. `ping` prints the time of the exchange worked out
+from its path: the cables it goes along, each with its medium and its length
+or a delay written by hand, and the devices it crosses (see *Time* below).
+`link <A> to <B>` sets the medium, the length and the delay of the cable
+between two devices; `show connections` prints them, with the time of each
+link one way.
 
 **New in v0.5:** DNS. A host name works as the target of `ping`, `trace`,
 `browse`, `mail` and `download`: the source asks its DNS server first, and
@@ -85,6 +92,12 @@ vlan-cmd      ::= "add" "vlan" number ["to"] device
                 | "remove" "vlan" number "from" device
 link-cmd      ::= "connect" device ["to"] device
                 | "disconnect" device ["from"] device
+                | "link" device ["to"] device link-setting {link-setting}
+link-setting  ::= "medium" medium
+                | "length" (number ("m" | "km") | "none")   (* 600 km, 80m *)
+                | "delay" (number ["ms"] | "auto")          (* one way, written by hand *)
+medium        ::= "copper" | "fibre" | "wifi" | "dsl" | "ftth" | "mobile"
+                | "satellite" | "auto"
 
 iface-cmd     ::= "interface" iface-id iface-setting [["on"] device]
 iface-id      ::= number | nic-name                    (* port 3, eth0 *)
@@ -139,7 +152,7 @@ out: `["on" device]`.
 
 | Command | Meaning |
 |---|---|
-| `ping <target> [from <device>]` | Echo semantics: BOTH directions evaluated (request + reply), round trip animated on the canvas. |
+| `ping <target> [from <device>]` | Echo semantics: BOTH directions evaluated (request + reply), round trip animated on the canvas. The time printed is that of the request on its path and of the reply on its own (see *Time*). |
 | `trace <target> [from <device>] [as <service>]` | One way; prints every hop with what the device did (the VLAN, the route taken, the firewall decision) as the packet reaches it. `as web` / `as email` traces that service instead of a ping, which matters to firewall rules. Aliases: `traceroute`, `tracert`. |
 | `browse <target> [from <device>]` | A whole web exchange: HTTP request, then the response. Aliases: `web`, `curl`. |
 | `mail <target> [from <device>]` | An email, through its relay (see *Email and flow models*). Alias: `email`. |
@@ -374,6 +387,68 @@ the terminal see the same failures for as long as the presentation lasts.
 | Internet/Cloud symbol, load balancer | not simulated: assumed to let traffic through |
 | PC, server and other end devices | nothing: an end device does not carry traffic for others |
 
+#### Time
+
+`ping` prints how long the exchange took: `Reply from 192.168.20.10: hops=5
+time=0.44ms`. The time is worked out from the paths the engine found, never
+measured, and it never changes a verdict: it is the one-way time of the
+request on its path, plus the one-way time of the reply on its own path (the
+two may differ), plus 0.1 ms for each of the two ends, once (the sender, to
+send and to take the answer; the device asked, to answer; a device that
+pings itself counts once). The one-way time of a path is the sum of:
+
+- **each link crossed**: the time of its medium, plus 5 µs for every km of
+  its length (light in copper and in fibre); or the delay written by hand on
+  the link (`link … delay`, one way), which takes the place of both;
+- **each device crossed**: a switch 0.01 ms, an access point 0.05 ms, a
+  router 0.1 ms, a firewall 0.2 ms, a load balancer 0.1 ms; a Cloud symbol is
+  the network it stands for: the one named Internet 10 ms, any other (a
+  carrier's MPLS network, a private line) 4 ms.
+
+| Medium | In NCL | One way |
+|---|---|---|
+| copper Ethernet | `copper` | the length only |
+| optical fibre | `fibre` | the length only |
+| Wi-Fi | `wifi` | 1.5 ms |
+| DSL to the provider | `dsl` | 8 ms |
+| fibre to the provider | `ftth` | 1.5 ms |
+| mobile network 4G/5G | `mobile` | 15 ms |
+| geostationary satellite | `satellite` | 280 ms |
+
+A link with no medium set (`auto`) is `wifi` when one end is a laptop, a
+smartphone or a tablet and the other an access point, and `copper` otherwise.
+The type of a link (access, trunk, uplink, backbone, MPLS) says what it is
+for, never what it is made of. Nothing varies: no jitter, no load, no queue;
+every reply of a ping takes the same time. A time is written with two
+decimals under 1 ms (`0.24ms`), with one up to 10 ms (`7.4ms`), whole from
+there (`38ms`). The values are typical, not measured.
+
+```ncl sample=two-sites lang=en
+pixelcake> ping PC-Branch-1 from PC-HQ-1
+Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
+Reply from 192.168.2.11: hops=7 time=1.5ms
+pixelcake> show connections of R-HQ
+CONNECTIONS of R-HQ (3)
+  R-HQ ↔ R-Branch  (backbone, 1 Gbps)  [port 2 ↔ port 2]  fibre, 80 km: 0.40ms
+  R-HQ ↔ R-Backup  (uplink, 100 Mbps)  [port 3 ↔ port 1]  dsl: 8.0ms
+  R-HQ ↔ SW-Core  (uplink, 1 Gbps)  [port 1 ↔ port 8]  copper, automatic: 0.00ms
+pixelcake> link R-HQ to R-Branch delay 12 ms
+R-HQ ↔ R-Branch: delay 12ms written by hand
+  one way: 12ms (written by hand)
+pixelcake> ping PC-Branch-1 from PC-HQ-1
+Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
+Reply from 192.168.2.11: hops=7 time=25ms
+pixelcake> link R-HQ to R-Branch delay auto
+R-HQ ↔ R-Branch: delay worked out
+  one way: 0.40ms (fibre, 80 km)
+pixelcake> interface 2 down on R-HQ
+port 2 on R-HQ is now down
+pixelcake> ping PC-Branch-1 from PC-HQ-1
+Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
+Reply from 192.168.2.11: hops=8 time=33ms
+  note: reply: R-Branch: the route 192.168.1.0/24 via 10.0.0.1 is unusable (port 2 on R-HQ is disabled), the route 192.168.1.0/24 via 10.0.2.1 is used instead
+```
+
 **What is not verified says so.** The engine never turns an unchecked
 condition into a silent success; it adds a note to the result instead:
 
@@ -399,7 +474,7 @@ condition into a silent success; it adds a note to the result instead:
 | `show interfaces [of] <device>` | **Unified interface table** — ports + NICs in one view (the standard term), with the address and VLAN of each and the device it is connected to |
 | `show ports [of] <device>` | Port table (status, mode, VLAN, zone, IP, link) — specialized ports-only view |
 | `show vlans` | Every VLAN with where it lives: the ports of the switches that apply VLANs, and the devices that carry it in their own list |
-| `show connections [of <device>]` | Links, with the interface on each end: `[port 3 ↔ eth0]` (`?` for an end not attached to an interface) |
+| `show connections [of <device>]` | Links, with the interface on each end: `[port 3 ↔ eth0]` (`?` for an end not attached to an interface), then the cable and its time one way: `fibre, 600 km: 3.0ms`, `copper, automatic: 0.00ms` (worked out), `…: 7.0ms written by hand` |
 | `show config [of] <device>` | IP/subnet/gateway, location and note, VLANs, STP, ports, NICs, number of routes and rules, NAT, DHCP, DNS |
 | `show neighbors [of] <device>` | Directly connected devices |
 | `show ip [of] <device>` | Compact addressing summary: primary ip/mask/gateway + each NIC + each addressed port. A card on DHCP shows its lease and the pool it comes from, or why it has none. A card that asks a DNS server shows which. An address in conflict ends it with `✗ address conflict: … is also on …` |
@@ -439,6 +514,7 @@ Aliases: `sh` → `show` · `ls`, `list` → `show devices` ·
 | `remove record <n>\|<name> [from] <server>` | By its place in the list, or by its name |
 | `add vlan <id> [to] <device>` / `remove vlan <id> from <device>` | The VLAN list of a device (see *VLANs*) |
 | `connect <A> [to] <B>` / `disconnect <A> [from] <B>` | Create/remove a link. `connect` attaches each end to the first free interface and says which: `connected A (port 3) ↔ B (eth0)`. On a firewall with security zones the end stays unattached: choose the port, and with it the zone, in the connection editor |
+| `link <A> [to] <B> medium <medium> \| length <n> m\|km \| delay <n> ms` | The cable of the link between two devices, one setting or more in any order: what it is (`medium auto` works it out again), how long (`length none`: no length), and a one-way delay written by hand, which takes the place of the two (`delay auto` takes it away). The answer says the time of the link now. Two devices joined by more than one cable are set in the connection editor |
 
 Values are validated before writing (`"999.1.2.3" is not a valid IPv4
 address`, `"servers" is not a network: write it as 192.168.30.0/24, or
@@ -502,7 +578,7 @@ Ping failed (blocked): request: VLAN 10 does not leave through port 2 on SW-Offi
   dropped at: SW-Office
 pixelcake> interface 2 access 10 on SW-Office
 pixelcake> ping PC-2 from PC-1
-Reply from 192.168.10.12: hops=3 time=3ms
+Reply from 192.168.10.12: hops=3 time=0.22ms
 ```
 
 A second router, and the route to what is behind it:
@@ -570,7 +646,7 @@ interface eth0 on PC-Sales now takes its address from DHCP
   leased 192.168.10.100 / 255.255.255.0 gw 192.168.10.1 dns 192.168.30.10 by Router-Core port 1
 pixelcake> ping Web-ERP from PC-Sales
 Pinging Web-ERP (192.168.30.30) from PC-Sales...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 pixelcake> interface 1 pool none on Router-Core
 port 1 on Router-Core no longer hands out addresses
   without an address now: PC-Sales
@@ -620,7 +696,7 @@ Looking up erp.company.example from PC-Sales (DNS server 192.168.30.10)...
   ✓ DNS reply: Srv-Auth → PC-Sales
 erp.company.example is 192.168.30.30 (answered by Srv-Auth)
 Pinging Web-ERP (192.168.30.30) from PC-Sales...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 pixelcake> browse portal.company.example from Laptop-1
 Looking up portal.company.example from Laptop-1 (DNS server 192.168.30.10)...
   ✓ DNS request: Laptop-1 → Srv-Auth
@@ -704,7 +780,8 @@ FW-Edge: forward 2 removed — forward email from interface 3 to 192.168.30.40
 - The engine consumes only data the drawing holds; every field it reads
   (addresses, routes, VLANs, port state, zones, rules, the interface
   bindings, the pools and the cards on DHCP, the records and the DNS server
-  of each card) is in the project file and in the YAML export. A lease is
+  of each card, the medium, the length and the delay of each link) is in the
+  project file and in the YAML export. A lease is
   not in any file, and neither is the address a name resolved to: both are
   worked out again from the drawing.
 - Every link end is attached to one interface of its device: a port
@@ -724,8 +801,10 @@ FW-Edge: forward 2 removed — forward email from interface 3 to 192.168.30.40
 ARP and MAC tables, spanning tree (a drawing with redundant links is walked
 without loops, but no port is blocked), dynamic routing,
 gateway redundancy (a host has one gateway per network card), router
-sub-interfaces, TCP/UDP ports beyond the four services, link speed and ping
-times (the time printed is derived from the number of hops).
+sub-interfaces, TCP/UDP ports beyond the four services. Of time: bandwidth
+(a link has a delay, not a speed: a large download takes as long as a ping),
+queues and congestion, jitter and loss; the times of the media and of the
+devices are typical values, not measured ones.
 
 Of NAT: port numbers (a forward is a service on an interface, and two flows
 never compete for a translation), a server reached from inside at its

@@ -47,7 +47,7 @@ DESTINATION          VIA              OUT      KIND
 192.168.2.0/24       10.0.0.2         port 2   static
 pixelcake> ping PC-Filiale-1 from PC-Sede-1
 Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
-Reply from 192.168.2.11: hops=7 time=11ms
+Reply from 192.168.2.11: hops=7 time=1.5ms
 pixelcake> add route 192.168.2.0/24 via 10.0.1.2 on R-Sede
 R-Sede: route to 192.168.2.0/24 now goes via 10.0.1.2 (was 10.0.0.2)
 pixelcake> add route 192.168.2.0/24 via 10.0.0.2 on R-Sede
