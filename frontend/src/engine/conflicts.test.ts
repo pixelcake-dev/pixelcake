@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
 import type { NetworkDevice } from '@/types';
 import { device, forward, host, link, nic, port, switchWith, topo } from '@/test/networkFixtures';
 import type { Topology } from './types';
-import { addressConflicts, conflictOf, conflictReason } from './conflicts';
+import { addressConflicts, addressesMeet, conflictOf, conflictReason } from './conflicts';
 import { traceRoute } from './trace';
 import { planAndEvaluateFlow } from './flows';
 
@@ -264,5 +264,25 @@ describe('a question to or from an address in conflict', () => {
     expect(addressConflicts(changed).list).toEqual([]);
     expect(planAndEvaluateFlow('ping', 'pc1', 'srv1', changed).verdict).toBe('success');
     expect(planAndEvaluateFlow('ping', 'pc1', 'srv2', changed).verdict).toBe('success');
+  });
+});
+
+describe('where two devices meet over an address', () => {
+  it('is where a conflict would be: a private address not across the Internet, a public one everywhere', () => {
+    const meet = addressesMeet(twoOffices());
+    expect(meet('srv-a', 'srv-b', '192.168.1.10')).toBe(false);
+    expect(meet('srv-a', 'r-a', '192.168.1.10')).toBe(true);
+    expect(meet('srv-a', 'srv-b', '203.0.113.2')).toBe(true);
+    // a device meets itself, and a carrier's network joins the two sides
+    expect(meet('srv-a', 'srv-a', '192.168.1.10')).toBe(true);
+    expect(addressesMeet(twoOffices('MPLS'))('srv-a', 'srv-b', '192.168.1.10')).toBe(true);
+    // the very pairs the conflicts are counted on
+    expect(addressConflicts(twoOffices()).list).toEqual([]);
+    expect(addressConflicts(twoOffices('MPLS')).list.map((c) => c.ip)).toContain('192.168.1.10');
+  });
+
+  it('two devices not cabled to each other at all meet: one will be plugged in next to the other', () => {
+    const t = office([], false);
+    expect(addressesMeet(t)('srv1', 'srv2', '192.168.1.10')).toBe(true);
   });
 });

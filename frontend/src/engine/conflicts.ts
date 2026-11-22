@@ -11,8 +11,9 @@
  *  - every address written by hand on an interface that is switched on (a
  *    port, a card) and the address of the device itself; an interface
  *    switched off answers nobody;
- *  - not a lease: a DHCP server hands out only addresses nobody has (see
- *    ./dhcp), so a leased address is never in conflict;
+ *  - not a lease: a DHCP server hands out only addresses that nobody it
+ *    meets has (see ./dhcp and addressesMeet), so a leased address is never
+ *    in conflict;
  *  - not 0.0.0.0, not a loopback address (127.0.0.0/8), not what is not an
  *    address; a device that has one address twice (its own address is the
  *    one of its first card) holds it once.
@@ -102,6 +103,51 @@ function groups(size: number) {
   };
 }
 
+/**
+ * Which devices of a drawing are joined only through the Internet, by their
+ * place in `devices`: each is in a private network of its own, where a
+ * private address of the other side is not met
+ */
+function apartness(
+  devices: NetworkDevice[],
+  connections: NetworkConnection[]
+): (a: number, b: number) => boolean {
+  // The board, the Internet symbols one Internet; and the board without
+  // them, where the private networks on their different sides fall apart
+  const index = new Map(devices.map((device, at) => [device.id, at] as const));
+  const internet = devices.flatMap((device, at) => (isPublicInternet(device) ? [at] : []));
+  const whole = groups(devices.length);
+  const inside = groups(devices.length);
+  for (const other of internet.slice(1)) whole.join(internet[0], other);
+  for (const connection of connections) {
+    const a = index.get(connection.source);
+    const b = index.get(connection.target);
+    if (a === undefined || b === undefined) continue;
+    whole.join(a, b);
+    if (!isPublicInternet(devices[a]) && !isPublicInternet(devices[b])) inside.join(a, b);
+  }
+  return (a, b) => whole.same(a, b) && !inside.same(a, b);
+}
+
+/**
+ * Whether two devices of a drawing meet over an address, by their ids: two
+ * devices that both have it are in conflict exactly when they meet (see the
+ * header). A public address meets everywhere; a private one does not
+ * between two devices joined only through the Internet symbols. A device
+ * meets itself. The DHCP pools keep away from the addresses they meet (see
+ * ./dhcp), so that a lease is never in conflict.
+ */
+export function addressesMeet(topo: Topology): (a: string, b: string, ip: string) => boolean {
+  const index = new Map(topo.devices.map((device, at) => [device.id, at] as const));
+  const apart = apartness(topo.devices, topo.connections);
+  return (a, b, ip) => {
+    if (a === b || !isPrivateAddress(ip)) return true;
+    const at = index.get(a);
+    const other = index.get(b);
+    return at === undefined || other === undefined || !apart(at, other);
+  };
+}
+
 function find(devices: NetworkDevice[], connections: NetworkConnection[]): AddressConflicts {
   const list: AddressConflict[] = [];
   const byDevice = new Map<string, Map<string, NetworkDevice[]>>();
@@ -117,22 +163,8 @@ function find(devices: NetworkDevice[], connections: NetworkConnection[]): Addre
   const shared = [...holders].filter(([, indices]) => indices.length > 1);
   if (shared.length === 0) return { list, byDevice };
 
-  // The board, the Internet symbols one Internet; and the board without
-  // them, where the private networks on their different sides fall apart
-  const index = new Map(devices.map((device, at) => [device.id, at] as const));
-  const internet = devices.flatMap((device, at) => (isPublicInternet(device) ? [at] : []));
-  const whole = groups(devices.length);
-  const inside = groups(devices.length);
-  for (const other of internet.slice(1)) whole.join(internet[0], other);
-  for (const connection of connections) {
-    const a = index.get(connection.source);
-    const b = index.get(connection.target);
-    if (a === undefined || b === undefined) continue;
-    whole.join(a, b);
-    if (!isPublicInternet(devices[a]) && !isPublicInternet(devices[b])) inside.join(a, b);
-  }
   /** Joined only through the Internet: each in a private network of its own */
-  const apart = (a: number, b: number) => whole.same(a, b) && !inside.same(a, b);
+  const apart = apartness(devices, connections);
 
   for (const [ip, indices] of shared) {
     const privateAddress = isPrivateAddress(ip);

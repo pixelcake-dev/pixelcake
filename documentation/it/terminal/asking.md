@@ -152,7 +152,7 @@ mail <target> [from <device>]
 email <target> [from <device>]
 ```
 
-Un'email, attraverso il suo relay. La posta non va direttamente al destinatario: il mittente la manda a un server di posta, e il server la consegna. Quale server fa da relay dipende dalla modalità email del progetto, «Modalità email (SMTP)» in Impostazioni → Rete: con «Server di posta interno», il server di posta più vicino del disegno; con «Cloud (M365, Gmail…)», l'uscita verso Internet; con «Auto (rileva automaticamente)», quello interno se c'è, e altrimenti il cloud, con una nota. I tratti dicono quale: `SMTP submit` e `delivery`, oppure `SMTP to cloud provider` e `cloud delivery`. Quando il mittente o il destinatario è il relay stesso, il tratto è uno solo. `email` è lo stesso comando.
+Un'email, attraverso i server di posta. La posta non va direttamente al destinatario: il mittente la consegna al suo server di posta, e il destinatario la va a prendere dal suo, con una richiesta e la risposta che gli porta la posta; fra due server la posta viene ritrasmessa. Quali server, dipende dalla modalità email del progetto, «Modalità email (SMTP)» in Impostazioni → Rete: con «Server di posta interno», il server di posta del disegno più vicino a ciascuna estremità; con «Cloud (M365, Gmail…)», la casella di un fornitore oltre il simbolo Internet; con «Auto (rileva automaticamente)», quello interno se c'è, e altrimenti il cloud, con una nota. I tratti dicono quale: `SMTP submit`, `SMTP relay`, `fetch request` e `fetch reply`, oppure `SMTP to cloud provider`, `cloud fetch request` e `cloud fetch reply`. Un'email a un server di posta si consegna soltanto, una da un server si va soltanto a prendere. `email` è lo stesso comando.
 
 | Parametro | Che cos'è |
 |---|---|
@@ -163,7 +163,8 @@ Un'email, attraverso il suo relay. La posta non va direttamente al destinatario:
 pixelcake> mail PC-2 from PC-1
 Mailing PC-2 (192.168.10.12) from PC-1...
   ✓ SMTP submit: PC-1 → Mail-01
-  ✓ delivery: Mail-01 → PC-2
+  ✓ fetch request: PC-2 → Mail-01
+  ✓ fetch reply: Mail-01 → PC-2
 Mail delivered to PC-2
 pixelcake> mail Mail-01 from PC-1
 Mailing Mail-01 (192.168.20.20) from PC-1...
@@ -174,9 +175,28 @@ port 2 on Router-1 is now down
 pixelcake> mail PC-1 from Web-01
 Mailing PC-1 (192.168.10.11) from Web-01...
   ✓ SMTP submit: Web-01 → Mail-01
-  ✗ delivery: Mail-01 → PC-1
-Mail failed (blocked): delivery: port 2 on Router-1 is disabled
+  ✗ fetch request: PC-1 → Mail-01
+Mail failed (blocked): fetch request: port 2 on Router-1 is disabled
   dropped at: Router-1
+```
+
+La rete «Sede» non ha un server di posta: la posta esce verso un fornitore, oltre il simbolo Internet, che non ha un indirizzo. Il destinatario nella DMZ la va a prendere attraverso il firewall, che lascia entrare la risposta perché ha visto uscire la richiesta:
+
+```ncl sample=site
+pixelcake> mail Web-Pubblico from PC-Uffici-1
+Mailing Web-Pubblico (172.16.0.10) from PC-Uffici-1...
+  ✓ SMTP to cloud provider: PC-Uffici-1 → Internet
+  ✓ cloud fetch request: Web-Pubblico → Internet
+  ✓ cloud fetch reply: Internet → Web-Pubblico
+Mail delivered to Web-Pubblico
+  note: no internal mail server: using cloud email via Internet
+  note: the cloud mailbox is beyond Internet, at 203.0.113.254: the provider is not simulated
+  note: SMTP to cloud provider: firewall FW-Edge: no rule matches, zone policy trust → untrust allowed
+  note: SMTP to cloud provider: 203.0.113.254 is not in the drawing: Internet assumed to take the traffic
+  note: cloud fetch request: firewall FW-Edge: no rule matches, zone policy dmz → untrust allowed
+  note: cloud fetch request: 203.0.113.254 is not in the drawing: Internet assumed to take the traffic
+  note: cloud fetch reply: Internet is not simulated: traffic assumed to pass
+  note: cloud fetch reply: firewall FW-Edge: no rule matches, zone policy untrust → dmz allowed (reply to an allowed flow)
 ```
 
 ## download {#download}

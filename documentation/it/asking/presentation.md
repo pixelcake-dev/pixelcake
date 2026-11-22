@@ -38,7 +38,7 @@ Fai clic su un dispositivo. Si apre un piccolo menu accanto al puntatore, con il
 
 Il tasto destro apre lo stesso menu. La domanda parte appena le due estremità sono scelte: il pacchetto viene mandato, e la risposta compare nel pannello. Le due estremità sono segnate sul disegno con `DA` e `A`.
 
-Le estremità si possono scegliere anche nel pannello, con «Da» e «A»; «Inverti partenza e destinazione» inverte la domanda. Scegliere come partenza il dispositivo che era la destinazione la inverte da sé. Sotto, **«Tipo di traffico»** ha tre scelte: «Ping», «Web» e «Email». Il download qui non c'è, e una pagina web per un firewall è lo stesso traffico. «Ping» è una domanda con la sua risposta, «Web» la richiesta di una pagina e la pagina che torna, «Email» un messaggio dal mittente al server di posta e dal server al destinatario. Come viene seguito ciascuno è spiegato in [i flussi](how-the-engine-decides.md#flows).
+Le estremità si possono scegliere anche nel pannello, con «Da» e «A»; «Inverti partenza e destinazione» inverte la domanda. Scegliere come partenza il dispositivo che era la destinazione la inverte da sé. Sotto, **«Tipo di traffico»** ha tre scelte: «Ping», «Web» e «Email». Il download qui non c'è, e una pagina web per un firewall è lo stesso traffico. «Ping» è una domanda con la sua risposta, «Web» la richiesta di una pagina e la pagina che torna, «Email» un messaggio dal mittente al suo server di posta, dove il destinatario lo va a prendere. Come viene seguito ciascuno è spiegato in [i flussi](how-the-engine-decides.md#flows).
 
 Il pacchetto viene rimandato ogni volta che cambia la domanda o un guasto, e «Mostra di nuovo» lo fa ripartire. Mentre viaggia, il pulsante dice «Ferma».
 

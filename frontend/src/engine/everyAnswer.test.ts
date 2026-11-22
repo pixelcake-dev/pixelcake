@@ -8,7 +8,10 @@
  *
  * The digests were taken before the engine learnt to work out once, for all
  * the pairs of a drawing, what does not change from pair to pair (adjacency,
- * routing tables, distances, addresses).
+ * routing tables, distances, addresses). They were taken again when the
+ * recipient of a mail began to fetch it from its server, and cloud mail to
+ * reach a provider beyond an Internet symbol with no address: only the
+ * answers for email changed.
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
@@ -69,14 +72,14 @@ type Case = [
 ];
 
 const CASES: Case[] = [
-  ['the company', createCompanySample, nothing, { questions: 528, arrive: 458, digest: '64465a76' }],
-  ['the company, its core router down', createCompanySample, () => down('router-core'), { questions: 528, arrive: 109, digest: '6d72a953' }],
-  ['the small office', createSampleTopology, nothing, { questions: 48, arrive: 48, digest: '3d146077' }],
-  ['the site', createPerimeterSample, nothing, { questions: 80, arrive: 41, digest: 'e0decd6c' }],
+  ['the company', createCompanySample, nothing, { questions: 528, arrive: 447, digest: 'f9b8cde5' }],
+  ['the company, its core router down', createCompanySample, () => down('router-core'), { questions: 528, arrive: 109, digest: 'c31a3436' }],
+  ['the small office', createSampleTopology, nothing, { questions: 48, arrive: 48, digest: 'dbfe5a7a' }],
+  ['the site', createPerimeterSample, nothing, { questions: 80, arrive: 61, digest: '79e14084' }],
   ['the two sites', createRedundancySample, nothing, { questions: 80, arrive: 60, digest: '1a8cb81b' }],
   ['the two sites, the main line cut', createRedundancySample, () => cut('link-principale'), { questions: 80, arrive: 60, digest: '70b8e005' }],
-  ['the multinational', createMultinationalSample, nothing, { questions: 69168, arrive: 58880, digest: '7234aaff' }],
-  ['the multinational, the main line of Roma cut', createMultinationalSample, romeMainLine, { questions: 69168, arrive: 58880, digest: 'c850d2b5' }],
+  ['the multinational', createMultinationalSample, nothing, { questions: 69168, arrive: 56925, digest: '81531da9' }],
+  ['the multinational, the main line of Roma cut', createMultinationalSample, romeMainLine, { questions: 69168, arrive: 56925, digest: '14998155' }],
 ];
 
 beforeAll(() => setLanguage('it'));

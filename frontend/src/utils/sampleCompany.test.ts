@@ -332,12 +332,28 @@ describe('createCompanySample — the questions it answers', () => {
     }
   });
 
-  it('a mail between two PCs goes to the mail server and from there to the other PC', () => {
+  it('a mail between two PCs goes to the mail server, and the other PC fetches it from there', () => {
     const result = ask('email', 'PC-Contabilità', 'PC-Vendite');
     expect(result.verdict).toBe('success');
-    expect(result.legs.map(leg => leg.purpose)).toEqual(['SMTP submit', 'delivery']);
+    expect(result.legs.map(leg => leg.purpose)).toEqual(['SMTP submit', 'fetch request', 'fetch reply']);
     expect(way(result, 0)).toBe('PC-Contabilità > SW-Uffici > SW-Core > Router-Core > SW-Server > Mail');
-    expect(way(result, 1)).toBe('Mail > SW-Server > Router-Core > SW-Core > SW-Uffici > PC-Vendite');
+    expect(way(result, 1)).toBe('PC-Vendite > SW-Uffici > SW-Core > Router-Core > SW-Server > Mail');
+    expect(way(result, 2)).toBe('Mail > SW-Server > Router-Core > SW-Core > SW-Uffici > PC-Vendite');
+  });
+
+  it('the portal in the DMZ gets no mail from the server inside: it cannot open a flow to it, as it cannot send one', () => {
+    for (const from of [...OFFICES, ...WIFI, ...SERVERS, 'Cliente-Remoto']) {
+      const result = ask('email', from, 'Portale-Clienti');
+      expect(result.verdict, from).toBe('blocked');
+      expect(result.failureReason, from).toBe(
+        'fetch request: firewall FW-Edge: no rule matches, zone policy dmz → trust denied'
+      );
+    }
+    expect(ask('email', 'Portale-Clienti', 'PC-Vendite').failureReason).toBe(
+      'SMTP submit: firewall FW-Edge: no rule matches, zone policy dmz → trust denied'
+    );
+    // a page from the server room to the portal, instead, is a flow from inside: it passes
+    expect(ask('web', 'Mail', 'Portale-Clienti').verdict).toBe('success');
   });
 
   it('the inside browses the portal in the DMZ: the zone policy lets it, the answer comes back', () => {
@@ -459,10 +475,25 @@ describe('createCompanySample — the questions it answers', () => {
       'SMTP submit: Mail is behind NAT: reached at 203.0.113.1, where FW-Edge publishes it (port forward 2)'
     );
     expect(way(result, 0)).toBe('Cliente-Remoto > Internet > FW-Edge > Router-Core > SW-Server > Mail');
-    expect(way(result, 1)).toBe('Mail > SW-Server > Router-Core > SW-Core > SW-Uffici > PC-Contabilità');
+    expect(way(result, 1)).toBe('PC-Contabilità > SW-Uffici > SW-Core > Router-Core > SW-Server > Mail');
+    expect(way(result, 2)).toBe('Mail > SW-Server > Router-Core > SW-Core > SW-Uffici > PC-Contabilità');
     expect(result.notes).toContain(
       'SMTP submit: firewall FW-Edge: allowed by rule 2 (allow email from untrust to 192.168.30.40)'
     );
+  });
+
+  it('the customer outside fetches its mail by the same forward and rule, and the reply comes back', () => {
+    const result = ask('email', 'PC-Vendite', 'Cliente-Remoto');
+    expect(result.verdict).toBe('success');
+    expect(result.legs.map(leg => [leg.purpose, leg.trace.targetIp])).toEqual([
+      ['SMTP submit', '192.168.30.40'],
+      ['fetch request', '203.0.113.1'],
+      ['fetch reply', '203.0.113.50'],
+    ]);
+    expect(result.notes).toContain(
+      'fetch request: firewall FW-Edge: allowed by rule 2 (allow email from untrust to 192.168.30.40)'
+    );
+    expect(way(result, 2)).toBe('Mail > SW-Server > Router-Core > FW-Edge > Internet > Cliente-Remoto');
   });
 
   it('the portal reads its database: the third rule, for that server alone', () => {

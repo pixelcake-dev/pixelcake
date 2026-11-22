@@ -748,3 +748,80 @@ describe('port forward and the firewall of the same device', () => {
     expect(planAndEvaluateFlow('web', 'ext', 'srv', wrong).verdict).toBe('blocked');
   });
 });
+
+describe('what leaves the Internet symbol', () => {
+  /** The site, with an address on the Internet symbol itself: 203.0.113.254 */
+  function addressed(options: SiteOptions = {}): Topology {
+    const t = site(options);
+    return topo(
+      t.devices.map(d =>
+        d.id === 'inet'
+          ? {
+              ...d,
+              ip: '203.0.113.254',
+              nics: d.nics?.map(n => (n.id === 'nic-1' ? { ...n, ip: '203.0.113.254' } : n)),
+            }
+          : d
+      ),
+      t.connections
+    );
+  }
+
+  it('is held to the rule on private addresses: the symbol does not reach a PC that only NAT hides', () => {
+    const t = addressed();
+    const fromOutside = planAndEvaluateFlow('ping', 'ext', 'pc', t);
+    const fromTheSymbol = planAndEvaluateFlow('ping', 'inet', 'pc', t);
+    const reason =
+      'request: Internet does not carry private addresses: 192.168.1.10 is not reachable from ' +
+      'outside: no port forward publishes it for ping';
+    expect(fromOutside).toMatchObject({ verdict: 'blocked', failureReason: reason });
+    expect(fromTheSymbol).toMatchObject({ verdict: 'blocked', failureReason: reason });
+    // dropped where the private address would leave the Internet, before anything is assumed
+    expect(fromTheSymbol.legs[0].trace.hops).toMatchObject([{ label: 'Internet', status: 'blocked' }]);
+    expect(fromTheSymbol.notes).toEqual([]);
+    expect(traceRoute('inet', 'pc', t).failureReason).toBe(reason.replace('request: ', ''));
+  });
+
+  it('nor does it carry it through when the Internet is the gateway that was asked', () => {
+    // Ext sends to the symbol's own address: nothing was checked on the way in
+    const t = addressed();
+    const throughIt = topo(
+      t.devices.map(d =>
+        d.id === 'ext'
+          ? { ...d, gateway: '203.0.113.254', nics: d.nics?.map(n => ({ ...n, gateway: '203.0.113.254' })) }
+          : d
+      ),
+      t.connections
+    );
+    const result = planAndEvaluateFlow('ping', 'ext', 'pc', throughIt);
+    expect(result.verdict).toBe('blocked');
+    expect(result.failureReason).toBe(
+      'request: Internet does not carry private addresses: 192.168.1.10 is not reachable from ' +
+        'outside: no port forward publishes it for ping'
+    );
+    expect(result.legs[0].trace.hops.map(h => [h.label, h.status])).toEqual([
+      ['Ext', 'forwarded'],
+      ['Internet', 'blocked'],
+    ]);
+  });
+
+  it('reaches what a port forward publishes, at its public address, as an external PC does', () => {
+    const t = addressed({ forwards: [forward('ping', 2, '192.168.1.10')] });
+    const fromTheSymbol = planAndEvaluateFlow('ping', 'inet', 'pc', t);
+    expect(fromTheSymbol.verdict).toBe('success');
+    expect(fromTheSymbol.legs[0].trace.targetIp).toBe('203.0.113.2');
+    expect(fromTheSymbol.notes[0]).toBe(
+      'request: PC is behind NAT: reached at 203.0.113.2, where GW publishes it (port forward 1)'
+    );
+    expect(planAndEvaluateFlow('ping', 'ext', 'pc', t).verdict).toBe('success');
+  });
+
+  it('public addresses and replies to a translated flow still leave it', () => {
+    const t = addressed();
+    expect(planAndEvaluateFlow('ping', 'inet', 'gw', t).verdict).toBe('success');
+    // the PC asks the symbol: the reply goes back to the address NAT gave it
+    const fromInside = planAndEvaluateFlow('ping', 'pc', 'inet', t);
+    expect(fromInside.verdict).toBe('success');
+    expect(fromInside.legs[1].trace.targetIp).toBe('203.0.113.2');
+  });
+});

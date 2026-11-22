@@ -37,7 +37,7 @@ export const presentation: Dictionary['presentation'] = {
       'A question and its answer: the simplest way to find out whether two devices can reach ' +
       'each other',
     web: 'The request for a page and the page that comes back',
-    email: 'An email: from the sender to the mail server, from the server to the recipient',
+    email: 'An email: the sender sends it to its mail server, the recipient fetches it from there',
   },
 
   /** The legs of an exchange (the engine names them in English) */
@@ -49,9 +49,12 @@ export const presentation: Dictionary['presentation'] = {
     downloadRequest: 'File request',
     downloadData: 'File transfer',
     smtpSubmit: 'Sending to the mail server',
-    delivery: 'Delivery to the recipient',
+    smtpRelay: 'From one mail server to the other',
+    fetchRequest: 'The recipient asks for its mail',
+    fetchReply: 'The mail reaches the recipient',
     smtpToCloud: 'Sending to the external mail service',
-    cloudDelivery: 'Delivery from the external service',
+    cloudFetchRequest: 'The recipient asks the external service for its mail',
+    cloudFetchReply: 'The mail comes from the external service',
   },
 
   /** The bar that takes the place of the menu bar */

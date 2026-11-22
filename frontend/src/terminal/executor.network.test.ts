@@ -11,6 +11,7 @@ import { NCL_VERSION } from './types';
 import { useNetworkStore } from '@/store/networkStore';
 import { createSampleTopology } from '@/utils/sampleTopology';
 import { createCompanySample } from '@/utils/sampleCompany';
+import { createPerimeterSample } from '@/utils/samplePerimeter';
 import type { NetworkDevice, Port } from '@/types';
 
 vi.mock('sonner', () => ({
@@ -815,6 +816,44 @@ describe('a firewall at the edge, from the terminal', () => {
 
 // ---------- flows ----------
 
+describe('mail and the Internet on the site sample, from the terminal', () => {
+  // No mail server: the mail goes to a provider beyond the Internet symbol,
+  // which has no address; the recipient fetches it from there
+  beforeEach(() => {
+    const store = useNetworkStore.getState();
+    store.clearAllDevices();
+    const sample = createPerimeterSample();
+    store.loadTopology(sample.devices, sample.connections);
+  });
+
+  it('mails through the cloud, and the recipient fetches it, inside and outside', () => {
+    const inside = transcript('mail PC-Uffici-2 from PC-Uffici-1');
+    expect(inside.slice(0, 5)).toEqual([
+      'Mailing PC-Uffici-2 (192.168.10.12) from PC-Uffici-1...',
+      '  ✓ SMTP to cloud provider: PC-Uffici-1 → Internet',
+      '  ✓ cloud fetch request: PC-Uffici-2 → Internet',
+      '  ✓ cloud fetch reply: Internet → PC-Uffici-2',
+      'Mail delivered to PC-Uffici-2',
+    ]);
+    expect(inside).toContain(
+      '  note: the cloud mailbox is beyond Internet, at 203.0.113.254: the provider is not simulated'
+    );
+    expect(verdict('mail PC-Remoto from Web-Pubblico')).toBe('Mail delivered to PC-Remoto');
+    expect(verdict('mail Web-Pubblico from PC-Remoto')).toBe('Mail delivered to Web-Pubblico');
+  });
+
+  it('a ping from the Internet symbol is refused where a ping from outside is, with the same reason', () => {
+    expect(output('interface eth0 ip 203.0.113.254 on Internet')).toEqual([
+      'interface eth0 on Internet: 203.0.113.254 / 255.255.255.0',
+    ]);
+    const reason =
+      'Ping failed (blocked): request: Internet does not carry private addresses: 192.168.10.11 is ' +
+      'not reachable from outside: no port forward publishes it for ping';
+    expect(transcript('ping PC-Uffici-1 from Internet').slice(1)).toEqual([reason, '  dropped at: Internet']);
+    expect(transcript('ping PC-Uffici-1 from PC-Remoto').slice(1)).toEqual([reason, '  dropped at: Internet']);
+  });
+});
+
 describe('NAT, from the terminal', () => {
   // The sample of the welcome screen: a firewall that does NAT towards the
   // Internet and publishes the portal (web) and the mail server (email)
@@ -1089,7 +1128,8 @@ describe('browse, mail, download', () => {
     expect(transcript('mail PC-2 from PC-1')).toEqual([
       'Mailing PC-2 (192.168.10.12) from PC-1...',
       '  ✓ SMTP submit: PC-1 → Mail-01',
-      '  ✓ delivery: Mail-01 → PC-2',
+      '  ✓ fetch request: PC-2 → Mail-01',
+      '  ✓ fetch reply: Mail-01 → PC-2',
       'Mail delivered to PC-2',
     ]);
   });

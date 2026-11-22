@@ -10,7 +10,7 @@ The examples use the sample network “Site: VLANs, DMZ and firewall”. Its fir
 
 ## The Internet does not carry private addresses {#private}
 
-A Cloud symbol whose name contains Internet (`Internet`, `Internet A`) refuses a packet whose source or destination is in a private range: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 and 169.254.0.0/16. The reason says which of the two addresses it is and what should have translated it. A Cloud symbol with any other name, a carrier’s network or a private line, carries whatever crosses it.
+A Cloud symbol whose name contains Internet (`Internet`, `Internet A`) refuses a packet whose source or destination is in a private range: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 and 169.254.0.0/16. The reason says which of the two addresses it is and what should have translated it. A packet that leaves the symbol for a private destination is refused in the same way, with the same reason, whoever sent it, the symbol itself included when it has an address. A Cloud symbol with any other name, a carrier’s network or a private line, carries whatever crosses it.
 
 So a network needs NAT to reach the Internet and to be reached from it. Here NAT is switched off on port 3 of FW-Edge. An office PC cannot get out, and the Internet cannot reach the PC:
 

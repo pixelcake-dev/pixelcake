@@ -104,7 +104,7 @@ The rules and the policy are in [Firewall](../services/firewall.md): [zones](../
 
 A router or a firewall may change the addresses of a packet, in the order that makes its own rules meaningful. A packet addressed to the device is first sent on to the address a [port forward](../services/nat.md#forwards) names. The firewall then sees the real destination and the real source. Last, a new flow that leaves by a port with [source NAT](../services/nat.md#source-nat) takes the address of that port, and the device remembers the flow so that the reply is translated back.
 
-A Cloud symbol whose name contains Internet does not carry private addresses. A packet that arrives there with a private source or destination stops, and the reason says which of the two and what should have translated it: [the Internet does not carry private addresses](../services/nat.md#private). When the Internet is in the way, a device behind NAT is aimed at its public address if it has one, else at the address a forward publishes it at, and a note says so.
+A Cloud symbol whose name contains Internet does not carry private addresses. A packet that arrives there with a private source or destination stops, and the reason says which of the two and what should have translated it: [the Internet does not carry private addresses](../services/nat.md#private). A packet that leaves the symbol for a private destination stops there too, with the same reason, whoever sent it: an external PC that has the address of the symbol as its gateway, or the symbol itself when it has an address. When the Internet is in the way, a device behind NAT is aimed at its public address if it has one, else at the address a forward publishes it at, and a note says so.
 
 ```ncl sample=site
 pixelcake> browse Web-Public from Remote-PC
@@ -158,24 +158,25 @@ A Cloud symbol whose name does not contain Internet (a carrier's network, a priv
 
 ## Flows: more than one packet {#flows}
 
-A question is rarely one packet. The engine turns each kind of traffic into **legs**, a packet that goes one way, and follows each leg as above. The legs are evaluated in order and the evaluation stops at the first one that fails: the reason carries its name (`request:`, `HTTP response:`, `delivery:`).
+A question is rarely one packet. The engine turns each kind of traffic into **legs**, a packet that goes one way, and follows each leg as above. The legs are evaluated in order and the evaluation stops at the first one that fails: the reason carries its name (`request:`, `HTTP response:`, `fetch request:`).
 
 | Traffic | Legs | Seen by a firewall as |
 |---|---|---|
 | Ping | request, then reply | ping |
 | Web page | HTTP request, then HTTP response | web |
 | File download | download request, then download data | web |
-| Email | SMTP submit to the relay, then delivery from the relay | email |
+| Email | SMTP submit to the mail server of the sender; then the recipient fetches it from its own: fetch request, then fetch reply | email |
 
 - **A reply is a packet of its own.** It starts only if the request arrived, goes back to the address the request seemed to come from, and takes the way its own routing tables give. It may take another way than the request, and may fail where the request did not. A firewall that saw the request lets it through because it answers a flow it allowed; a firewall the request did not cross judges it as a new packet. The NAT devices of the way translate it back.
-- **Email has no reply.** The relay depends on the email mode in Settings → Network, group “Simulation”, field “Email mode (SMTP)”. “Internal mail server” uses the mail server with the fewest cables from the sender, counted on the drawing. “Cloud (M365, Gmail…)” uses the nearest internet exit: an Internet or Cloud symbol, or a device whose name has Internet, Cloud, WAN or ISP as a word of its own (`ISP-Router`, `R-WAN`, `WAN1`, but not `Display-1`). “Auto (detect automatically)” prefers the mail server and falls back to the exit, with a note. When the recipient is the mail server there is one leg; when the sender is, the delivery alone.
+- **An email is fetched by its recipient.** The sender submits it to its mail server. The recipient then fetches it from its own: a request to the server, and the reply that brings the mail back on its own way, as a page comes back. No server pushes a mail to a desk, so the mail reaches a recipient where the recipient may open a flow to its server: a host in a DMZ that the zone policy keeps away from the inside gets no mail from a server inside. Which servers depends on the email mode in Settings → Network, group “Simulation”, field “Email mode (SMTP)”. “Internal mail server” uses, for each end, the mail server with the fewest cables from it, counted on the drawing; when the two are different servers, the first relays the mail to the second (`SMTP relay`), a push, as mail between servers is. “Cloud (M365, Gmail…)” uses the mailbox of a provider out on the Internet, beyond the nearest Internet symbol: the packet is aimed at an address of the outside that no device has, the highest free one of the public network next to the symbol (203.0.113.254 in the site sample), it is routed as anything for the Internet is, and the symbol takes it, with a note. A symbol that has an address of its own is aimed at that address. A drawing with no Internet symbol uses the nearest Cloud symbol, or a device whose name has Internet, Cloud, WAN or ISP as a word of its own (`ISP-Router`, `R-WAN`, `WAN1`, but not `Display-1`). “Auto (detect automatically)” prefers the mail server and falls back to the cloud, with a note. A mail to a mail server is submitted and fetched by nobody; a mail from one is only fetched.
 - **A page from a device that is not a server** is followed all the same, with a note.
 
 ```ncl sample=office
 pixelcake> mail PC-2 from PC-1
 Mailing PC-2 (192.168.10.12) from PC-1...
   ✓ SMTP submit: PC-1 → Mail-01
-  ✓ delivery: Mail-01 → PC-2
+  ✓ fetch request: PC-2 → Mail-01
+  ✓ fetch reply: Mail-01 → PC-2
 Mail delivered to PC-2
 ```
 
@@ -304,7 +305,7 @@ The reasons are written in English, in both languages of the interface, and name
 | `router Router-Core: no rule allows it` | a router with rules, and none of them allows the packet |
 | `firewall FW-Edge: no rule allows it, and the zone policy cannot decide: …` | a firewall with rules, none of them allows the packet, and the zone of a side is not known: the end says which |
 | `address conflict: 192.168.20.10 is on both Web-01 and Mail-01, …` | two devices have the address the question goes to, or comes from |
-| `Internet does not carry private addresses: …` | a private address reached the Internet symbol |
+| `Internet does not carry private addresses: …` | a private address reached the Internet symbol, or was to leave it |
 | `SW-Core is down`, `link R-HQ–R-Branch is down` | a simulated failure |
 | `PC-2 is an end device: it does not forward traffic for others` | the only way goes through an end device |
 | `Laptop-1 has no address: no DHCP server answers on its network` | a card on DHCP got no lease |

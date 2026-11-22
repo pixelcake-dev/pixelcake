@@ -104,7 +104,7 @@ Le regole e la politica sono in [Firewall](../services/firewall.md): [zone](../s
 
 Un router o un firewall può cambiare gli indirizzi di un pacchetto, nell'ordine che dà un senso alle sue regole. Un pacchetto indirizzato al dispositivo viene prima mandato all'indirizzo che un [inoltro](../services/nat.md#forwards) indica. Il firewall vede allora la destinazione vera e la partenza vera. Per ultimo, un nuovo flusso che esce da una porta con il [NAT in uscita](../services/nat.md#source-nat) prende l'indirizzo di quella porta, e il dispositivo ricorda il flusso per tradurre indietro la risposta.
 
-Un simbolo Cloud il cui nome contiene Internet non trasporta indirizzi privati. Un pacchetto che arriva lì con un indirizzo di partenza o di destinazione privato si ferma, e il motivo dice quale dei due e che cosa avrebbe dovuto tradurlo: [Internet non trasporta indirizzi privati](../services/nat.md#private). Quando Internet è di mezzo, un dispositivo dietro il NAT viene raggiunto al suo indirizzo pubblico se ne ha uno, altrimenti all'indirizzo con cui un inoltro lo pubblica, e una nota lo dice.
+Un simbolo Cloud il cui nome contiene Internet non trasporta indirizzi privati. Un pacchetto che arriva lì con un indirizzo di partenza o di destinazione privato si ferma, e il motivo dice quale dei due e che cosa avrebbe dovuto tradurlo: [Internet non trasporta indirizzi privati](../services/nat.md#private). Un pacchetto che esce dal simbolo verso una destinazione privata si ferma lì allo stesso modo, con lo stesso motivo, chiunque l'abbia mandato: un PC esterno che ha come gateway l'indirizzo del simbolo, o il simbolo stesso quando ha un indirizzo. Quando Internet è di mezzo, un dispositivo dietro il NAT viene raggiunto al suo indirizzo pubblico se ne ha uno, altrimenti all'indirizzo con cui un inoltro lo pubblica, e una nota lo dice.
 
 ```ncl sample=site
 pixelcake> browse Web-Pubblico from PC-Remoto
@@ -158,24 +158,25 @@ Un simbolo Cloud il cui nome non contiene Internet (la rete di un operatore, una
 
 ## Flussi: più di un pacchetto {#flows}
 
-Una domanda è raramente un pacchetto solo. Il motore trasforma ogni tipo di traffico in **tratti**, ciascuno un pacchetto che va in un verso, e segue ogni tratto come sopra. I tratti si valutano in ordine e la valutazione si ferma alla prima che fallisce: il motivo ne porta il nome (`request:`, `HTTP response:`, `delivery:`).
+Una domanda è raramente un pacchetto solo. Il motore trasforma ogni tipo di traffico in **tratti**, ciascuno un pacchetto che va in un verso, e segue ogni tratto come sopra. I tratti si valutano in ordine e la valutazione si ferma alla prima che fallisce: il motivo ne porta il nome (`request:`, `HTTP response:`, `fetch request:`).
 
 | Traffico | Tratti | Per un firewall è |
 |---|---|---|
 | Ping | richiesta, poi risposta | ping |
 | Pagina web | richiesta HTTP, poi risposta HTTP | web |
 | Download di un file | richiesta del file, poi dati del file | web |
-| Email | invio SMTP al relay, poi consegna dal relay | email |
+| Email | invio SMTP al server di posta del mittente; poi il destinatario la prende dal suo: richiesta, poi risposta che porta la posta | email |
 
 - **Una risposta è un pacchetto a sé.** Parte solo se la richiesta è arrivata, torna all'indirizzo da cui la richiesta sembrava venire, e prende la strada che le dicono le sue tabelle. Può prendere un'altra strada rispetto alla richiesta, e può fallire dove la richiesta non ha fallito. Un firewall che ha visto la richiesta la lascia passare perché risponde a un flusso che ha permesso; un firewall che la richiesta non ha attraversato la giudica come un pacchetto nuovo. I dispositivi NAT lungo la strada la traducono indietro.
-- **L'email non ha risposta.** Il relay dipende dalla modalità email in Impostazioni → Rete, gruppo «Simulazione», campo «Modalità email (SMTP)». «Server di posta interno» usa il server di posta con meno cavi dal mittente, contati sul disegno. «Cloud (M365, Gmail…)» usa l'uscita verso Internet più vicina: un simbolo Internet o Cloud, oppure un dispositivo che nel nome ha Internet, Cloud, WAN o ISP come parola a sé (`ISP-Router`, `R-WAN`, `WAN1`, ma non `Display-1`). «Auto (rileva automaticamente)» preferisce il server di posta e ripiega sull'uscita, con una nota. Quando il destinatario è il server di posta c'è un tratto solo; quando lo è il mittente, la sola consegna.
+- **Un'email la va a prendere il destinatario.** Il mittente la consegna al suo server di posta. Poi il destinatario la prende dal suo: una richiesta al server, e la risposta che gli riporta la posta per la sua strada, come torna una pagina. Nessun server spinge la posta fino a una scrivania, quindi la posta arriva a un destinatario dove questo può aprire un flusso verso il suo server: un host in una DMZ, che la politica delle zone tiene lontano dall'interno, non riceve posta da un server interno. Quali server, lo decide la modalità email in Impostazioni → Rete, gruppo «Simulazione», campo «Modalità email (SMTP)». «Server di posta interno» usa, per ciascuna delle due estremità, il server di posta con meno cavi da essa, contati sul disegno; quando i server sono due, il primo ritrasmette la posta al secondo (`SMTP relay`), e la spinge, come fa la posta fra server. «Cloud (M365, Gmail…)» usa la casella di un fornitore su Internet, oltre il simbolo Internet più vicino: il pacchetto va a un indirizzo di fuori che nessun dispositivo ha, il più alto libero della rete pubblica accanto al simbolo (203.0.113.254 nella rete «Sede»), viene instradato come tutto ciò che va su Internet, e il simbolo lo prende, con una nota. Un simbolo che ha un indirizzo suo lo riceve a quell'indirizzo. Un disegno senza simbolo Internet usa il simbolo Cloud più vicino, oppure un dispositivo che nel nome ha Internet, Cloud, WAN o ISP come parola a sé (`ISP-Router`, `R-WAN`, `WAN1`, ma non `Display-1`). «Auto (rileva automaticamente)» preferisce il server di posta e ripiega sul cloud, con una nota. Un'email a un server di posta si consegna e nessuno la va a prendere; un'email da un server si va soltanto a prendere.
 - **Una pagina da un dispositivo che non è un server** si segue lo stesso, con una nota.
 
 ```ncl sample=office
 pixelcake> mail PC-2 from PC-1
 Mailing PC-2 (192.168.10.12) from PC-1...
   ✓ SMTP submit: PC-1 → Mail-01
-  ✓ delivery: Mail-01 → PC-2
+  ✓ fetch request: PC-2 → Mail-01
+  ✓ fetch reply: Mail-01 → PC-2
 Mail delivered to PC-2
 ```
 
@@ -304,7 +305,7 @@ I motivi sono scritti in inglese, in entrambe le lingue dell'interfaccia, e nomi
 | `router Router-Core: no rule allows it` | un router ha delle regole, e nessuna permette il pacchetto |
 | `firewall FW-Edge: no rule allows it, and the zone policy cannot decide: …` | un firewall ha delle regole, nessuna permette il pacchetto, e la zona di un lato non è nota: la fine dice quale |
 | `address conflict: 192.168.20.10 is on both Web-01 and Mail-01, …` | due dispositivi hanno l'indirizzo a cui va la domanda, o da cui parte |
-| `Internet does not carry private addresses: …` | un indirizzo privato è arrivato al simbolo Internet |
+| `Internet does not carry private addresses: …` | un indirizzo privato è arrivato al simbolo Internet, o doveva uscirne |
 | `SW-Core is down`, `link R-HQ–R-Branch is down` | un guasto simulato |
 | `PC-2 is an end device: it does not forward traffic for others` | l'unica strada passa da un dispositivo finale |
 | `Laptop-1 has no address: no DHCP server answers on its network` | una scheda in DHCP non ha ricevuto un indirizzo |

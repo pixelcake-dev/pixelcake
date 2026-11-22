@@ -10,7 +10,8 @@
  *  - routers and firewalls WITHOUT interface addresses: transparent, and a
  *    firewall still applies its policy between the two ports crossed
  *  - devices that are not simulated (Internet/Cloud symbol, load balancer):
- *    assumed to let the frame through, with a note
+ *    assumed to let the frame through, with a note; the symbol a packet is
+ *    for takes it for an address beyond it, that nobody in the drawing has
  *
  * End devices and addressed routers never carry a frame for others.
  *
@@ -579,6 +580,13 @@ function walk(request: L2Request): WalkOutcome {
           drop(child, refused.reason, refused.unroutable);
           continue;
         }
+        // An address beyond the symbol the packet is for (the mailbox of a
+        // cloud provider, see ./flows): the symbol takes it
+        if (takenBeyond(request, next)) {
+          child.notes.push(`${wantIp} is not in the drawing: ${next.label} assumed to take the traffic`);
+          outcome.found = child;
+          return outcome;
+        }
         if (isInternetLike(next)) {
           outcome.candidates.push({
             node: child,
@@ -595,6 +603,35 @@ function walk(request: L2Request): WalkOutcome {
   return outcome;
 }
 
+/** Why the Internet refuses a packet, and which of its addresses it refuses it for */
+export interface InternetRefusal {
+  reason: string;
+  unroutable: Unroutable;
+}
+
+/**
+ * Why the Internet does not carry a packet to its destination: it is a
+ * private address, said with the way in when there is one. Undefined when
+ * the destination is public. The same on the way into the symbol and on the
+ * way out of it (see ./trace), whoever sent the packet.
+ */
+export function privateDestination(
+  topo: Topology,
+  internet: NetworkDevice,
+  packet: Packet
+): InternetRefusal | undefined {
+  if (!isPrivateAddress(packet.destinationIp)) return undefined;
+  const [published] = publications(topo, packet.destinationIp, packet.service);
+  const way = published
+    ? `is reached from outside at ${published.address}, where ${published.device.label} ` +
+      `publishes it (port forward ${published.number})`
+    : `is not reachable from outside: no port forward publishes it for ${packet.service}`;
+  return {
+    reason: `${internet.label} does not carry private addresses: ${packet.destinationIp} ${way}`,
+    unroutable: { role: 'destination', address: packet.destinationIp },
+  };
+}
+
 /**
  * Why the Internet does not take the packet: its destination, or its source,
  * is a private address. Undefined when both are public.
@@ -602,22 +639,12 @@ function walk(request: L2Request): WalkOutcome {
 function privateAddressProblem(
   request: L2Request,
   internet: NetworkDevice
-): { reason: string; unroutable: Unroutable } | undefined {
+): InternetRefusal | undefined {
   const { topo, from, egress, packet } = request;
   const lead = `${internet.label} does not carry private addresses`;
 
-  if (isPrivateAddress(packet.destinationIp)) {
-    // Said with the way in, when there is one
-    const [published] = publications(topo, packet.destinationIp, packet.service);
-    const way = published
-      ? `is reached from outside at ${published.address}, where ${published.device.label} ` +
-        `publishes it (port forward ${published.number})`
-      : `is not reachable from outside: no port forward publishes it for ${packet.service}`;
-    return {
-      reason: `${lead}: ${packet.destinationIp} ${way}`,
-      unroutable: { role: 'destination', address: packet.destinationIp },
-    };
-  }
+  const toPrivate = privateDestination(topo, internet, packet);
+  if (toPrivate) return toPrivate;
   if (isPrivateAddress(packet.sourceIp)) {
     // The device that sends it out is the one that should have translated it
     const where =
@@ -632,6 +659,23 @@ function privateAddressProblem(
     };
   }
   return undefined;
+}
+
+/**
+ * True when an Internet or Cloud symbol takes the packet for an address
+ * beyond it: the symbol is the device the packet is for, and nobody in the
+ * drawing has its destination. The outside world is not simulated: what is
+ * past the symbol is assumed to be there.
+ */
+function takenBeyond(request: L2Request, symbol: NetworkDevice): boolean {
+  const { topo, target, wantIp, purpose, packet } = request;
+  return (
+    purpose === 'deliver' &&
+    symbol.id === target.id &&
+    isInternetLike(symbol) &&
+    wantIp === packet.destinationIp &&
+    !topo.devices.some(device => ownedAddresses(device).includes(wantIp))
+  );
 }
 
 /** Hops and notes of the way to `node`, sender excluded */

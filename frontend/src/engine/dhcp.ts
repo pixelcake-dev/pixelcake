@@ -20,8 +20,12 @@
  *    has an address left answers, and a warning names them.
  *  - WHICH ADDRESS: cards are served in drawing order (devices in order,
  *    cards in order); each gets the lowest address of the range that is
- *    free: not written by hand on any interface of the drawing, not the
- *    network or broadcast address, not leased already.
+ *    free: not the network or broadcast address, and neither written by hand
+ *    nor leased already on a device the pool meets. Meeting is the one of
+ *    address conflicts (see addressesMeet in ./conflicts): a public address
+ *    meets everywhere; a private one is not met on the far side of the
+ *    Internet symbol, in another private network behind its own NAT, where
+ *    the same address can be handed out again.
  *
  * Simulated failures do not change leases: a lease is the one of the drawing
  * with everything working, as a device keeps the address it had when
@@ -52,6 +56,7 @@ import {
 } from './addressing';
 import type { Network } from './addressing';
 import { broadcastReach } from './l2';
+import { addressesMeet } from './conflicts';
 
 /** A pool, by the interface it is on */
 export interface DhcpServerRef {
@@ -140,7 +145,7 @@ export interface DhcpPoolState extends DhcpServerRef {
   gateway: string;
   /** How many addresses of the range can be handed out at all */
   size: number;
-  /** How many of them nobody has: not written by hand, not leased */
+  /** How many of them nobody the pool meets has: not written by hand, not leased */
   free: number;
   /** The addresses it handed out, in the order it did */
   leases: DhcpLease[];
@@ -369,21 +374,33 @@ function resolve(drawing: NetworkDevice[], connections: NetworkConnection[]): Dh
   const rivals: DhcpPoolState[][] = [];
   const warnings: string[] = [];
 
-  // Every address written by hand, wherever it is
-  const taken = new Set<number>();
+  // Who has each address: written by hand, wherever it is, and leased, as
+  // the leases are given. An address is not free for a pool when a device
+  // that has it meets the pool (see the header)
+  const holders = new Map<number, string[]>();
+  const hold = (address: number, deviceId: string) => {
+    const known = holders.get(address);
+    if (known) known.push(deviceId);
+    else holders.set(address, [deviceId]);
+  };
   for (const device of devices) {
     for (const ip of ownedAddresses(device)) {
-      if (isValidIP(ip)) taken.add(ipToNumber(ip));
+      if (isValidIP(ip)) hold(ipToNumber(ip), device.id);
     }
   }
+  const meet = addressesMeet(topo);
+  const takenFor = (pool: WorkingPool, address: number): boolean =>
+    (holders.get(address) ?? []).some(deviceId =>
+      meet(deviceId, pool.state.deviceId, numberToIp(address))
+    );
 
-  /** The lowest free address of a pool, taken; undefined when it has none left */
-  const take = (pool: WorkingPool): string | undefined => {
-    while (pool.cursor <= pool.end && (taken.has(pool.cursor) || pool.never.has(pool.cursor))) {
+  /** The lowest free address of a pool, leased to `deviceId`; undefined when it has none left */
+  const take = (pool: WorkingPool, deviceId: string): string | undefined => {
+    while (pool.cursor <= pool.end && (takenFor(pool, pool.cursor) || pool.never.has(pool.cursor))) {
       pool.cursor += 1;
     }
     if (pool.cursor > pool.end) return undefined;
-    taken.add(pool.cursor);
+    hold(pool.cursor, deviceId);
     return numberToIp(pool.cursor);
   };
 
@@ -462,7 +479,7 @@ function resolve(drawing: NetworkDevice[], connections: NetworkConnection[]): Dh
 
       let lease: DhcpLease | undefined;
       for (const pool of usable) {
-        const ip = take(pool);
+        const ip = take(pool, device.id);
         if (ip === undefined) continue;
         lease = {
           ...card,
@@ -493,8 +510,9 @@ function resolve(drawing: NetworkDevice[], connections: NetworkConnection[]): Dh
     if (pool.state.problem) continue;
     const start = ipToNumber(pool.state.pool.start);
     let used = 0;
-    for (const address of taken) {
-      if (address >= start && address <= pool.end && !pool.never.has(address)) used += 1;
+    for (const address of holders.keys()) {
+      const inRange = address >= start && address <= pool.end && !pool.never.has(address);
+      if (inRange && takenFor(pool, address)) used += 1;
     }
     pool.state.free = pool.state.size - used;
   }

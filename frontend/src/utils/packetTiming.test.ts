@@ -35,7 +35,11 @@ describe('pickConnection', () => {
 
   it('without a name takes the first cable between the two', () => {
     expect(pickConnection(all, 'a', 'b', undefined)).toBe(first);
-    expect(pickConnection(all, 'a', 'b', '')).toBe(first);
+  });
+
+  it('takes none where the engine says there is none: the next leg starts on another device', () => {
+    // (a mail is on its server, and the recipient fetches it from where it is)
+    expect(pickConnection(all, 'a', 'b', '')).toBeUndefined();
   });
 
   it('does not take a named cable that joins two other devices, nor one that is gone', () => {

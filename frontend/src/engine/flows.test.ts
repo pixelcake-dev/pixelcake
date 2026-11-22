@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import type { NetworkDevice, NetworkConnection } from '@/types';
 import type { Topology } from './types';
-import { planAndEvaluateFlow } from './flows';
+import { cloudMailbox, planAndEvaluateFlow } from './flows';
+import { withFailures } from './failures';
 import { traceRoute } from './trace';
 
 // ---------- fixture factories ----------
@@ -226,14 +227,76 @@ describe('planAndEvaluateFlow download', () => {
 // ---------- email ----------
 
 describe('planAndEvaluateFlow email', () => {
-  it('routes through the mail server on the happy path', () => {
+  it('goes to the mail server, where the recipient fetches it: submit, fetch request, fetch reply', () => {
     const result = planAndEvaluateFlow('email', 'pc1', 'pc2', mailViaSwitch());
     expect(result.verdict).toBe('success');
     expect(result.legs.map(l => [l.purpose, l.fromId, l.toId])).toEqual([
       ['SMTP submit', 'pc1', 'mail1'],
-      ['delivery', 'mail1', 'pc2'],
+      ['fetch request', 'pc2', 'mail1'],
+      ['fetch reply', 'mail1', 'pc2'],
     ]);
-    expect(result.animationPath).toEqual(['pc1', 'sw1', 'mail1', 'sw1', 'pc2']);
+    // the fetch starts on the recipient: no cable between the end of the submit and its start ('')
+    expect(result.animationPath).toEqual(['pc1', 'sw1', 'mail1', 'pc2', 'sw1', 'mail1', 'sw1', 'pc2']);
+    expect(result.animationLinks).toEqual([
+      'pc1--sw1',
+      'sw1--mail1',
+      '',
+      'sw1--pc2',
+      'sw1--mail1',
+      'sw1--mail1',
+      'sw1--pc2',
+    ]);
+  });
+
+  /**
+   * PC-1 (port 1), PC-2 (port 2) and Mail-1 (port 3) on one network, each on
+   * a port of FW-1, a firewall without addresses that applies its zones
+   */
+  function zonedMail(zones: { pc2: 'trust' | 'dmz'; mail: 'trust' | 'dmz' }): Topology {
+    return topo(
+      [
+        device({ id: 'pc1', label: 'PC-1', ip: '192.168.1.10' }),
+        device({ id: 'pc2', label: 'PC-2', ip: '192.168.1.20' }),
+        device({
+          id: 'fw1',
+          label: 'FW-1',
+          type: 'Firewall',
+          ports: [
+            { id: 1, enabled: true, securityZone: 'trust' },
+            { id: 2, enabled: true, securityZone: zones.pc2 },
+            { id: 3, enabled: true, securityZone: zones.mail },
+          ],
+        }),
+        device({ id: 'mail1', label: 'Mail-1', type: 'Server', templateId: 'tpl-mailserver', ip: '192.168.1.30' }),
+      ],
+      [
+        link('pc1', 'fw1', { targetPort: 1 }),
+        link('pc2', 'fw1', { targetPort: 2 }),
+        link('fw1', 'mail1', { sourcePort: 3 }),
+      ]
+    );
+  }
+
+  it('a mail server in the DMZ is fetched from, as a page is: the reply passes the firewall that saw the request', () => {
+    const mail = planAndEvaluateFlow('email', 'pc1', 'pc2', zonedMail({ pc2: 'trust', mail: 'dmz' }));
+    expect(mail.verdict).toBe('success');
+    expect(mail.notes).toEqual([
+      'SMTP submit: firewall policy: trust → dmz allowed',
+      'fetch request: firewall policy: trust → dmz allowed',
+      'fetch reply: firewall policy: dmz → trust allowed (reply to an allowed flow)',
+    ]);
+    // the same as a page from the same server
+    expect(planAndEvaluateFlow('web', 'pc2', 'mail1', zonedMail({ pc2: 'trust', mail: 'dmz' })).verdict).toBe('success');
+  });
+
+  it('a recipient that may not open a flow to its server does not get its mail', () => {
+    const mail = planAndEvaluateFlow('email', 'pc1', 'pc2', zonedMail({ pc2: 'dmz', mail: 'trust' }));
+    expect(mail.verdict).toBe('blocked');
+    expect(mail.legs.map(l => [l.purpose, l.trace.verdict])).toEqual([
+      ['SMTP submit', 'success'],
+      ['fetch request', 'blocked'],
+    ]);
+    expect(mail.failureReason).toBe('fetch request: firewall policy on FW-1: dmz → trust denied');
   });
 
   it('errors when no mail server exists in the network (internal mode)', () => {
@@ -283,8 +346,38 @@ describe('planAndEvaluateFlow email', () => {
     );
     const result = planAndEvaluateFlow('email', 'pc1', 'pc2', t);
     expect(result.verdict).toBe('success');
-    expect(result.legs[0].toId).toBe('mailNear');
-    expect(result.legs[1].fromId).toBe('mailNear');
+    expect(result.legs.map(l => [l.purpose, l.fromId, l.toId])).toEqual([
+      ['SMTP submit', 'pc1', 'mailNear'],
+      ['fetch request', 'pc2', 'mailNear'],
+      ['fetch reply', 'mailNear', 'pc2'],
+    ]);
+  });
+
+  it('relays the mail from the server of the sender to the server of the recipient, when they are two', () => {
+    //  PC-1 ─ Mail-A ─ SW ─ Mail-B ─ PC-2: each PC fetches from the server nearest to it
+    const t = topo(
+      [
+        device({ id: 'pc1', label: 'PC-1', ip: '192.168.1.10' }),
+        device({ id: 'mailA', label: 'Mail-A', type: 'Server', templateId: 'tpl-mailserver', ip: '192.168.1.31' }),
+        device({ id: 'sw', label: 'SW', type: 'Switch', ip: '192.168.1.2' }),
+        device({ id: 'mailB', label: 'Mail-B', type: 'Server', templateId: 'tpl-mailserver', ip: '192.168.1.32' }),
+        device({ id: 'pc2', label: 'PC-2', ip: '192.168.1.20' }),
+      ],
+      [link('pc1', 'mailA'), link('mailA', 'sw'), link('sw', 'mailB'), link('mailB', 'pc2')]
+    );
+    const result = planAndEvaluateFlow('email', 'pc1', 'pc2', t);
+    expect(result.verdict).toBe('success');
+    expect(result.legs.map(l => [l.purpose, l.fromId, l.toId])).toEqual([
+      ['SMTP submit', 'pc1', 'mailA'],
+      ['SMTP relay', 'mailA', 'mailB'],
+      ['fetch request', 'pc2', 'mailB'],
+      ['fetch reply', 'mailB', 'pc2'],
+    ]);
+    // a mail to a server that is not the sender's is relayed to it, and nobody fetches it
+    expect(planAndEvaluateFlow('email', 'pc1', 'mailB', t).legs.map(l => [l.purpose, l.fromId, l.toId])).toEqual([
+      ['SMTP submit', 'pc1', 'mailA'],
+      ['SMTP relay', 'mailA', 'mailB'],
+    ]);
   });
 
   it('skips unreachable mail servers when choosing', () => {
@@ -324,17 +417,18 @@ describe('planAndEvaluateFlow email', () => {
     expect(result.animationPath).toEqual(['pc1', 'sw1', 'mail1']);
   });
 
-  it('sends a single delivery leg when the source IS the mail server', () => {
+  it('submits nothing when the source IS the mail server: the recipient fetches', () => {
     const result = planAndEvaluateFlow('email', 'mail1', 'pc2', mailViaSwitch());
     expect(result.verdict).toBe('success');
     expect(result.legs.map(l => [l.purpose, l.fromId, l.toId])).toEqual([
-      ['delivery', 'mail1', 'pc2'],
+      ['fetch request', 'pc2', 'mail1'],
+      ['fetch reply', 'mail1', 'pc2'],
     ]);
   });
 
-  it('includes hops up to the block when the delivery leg fails', () => {
-    // Delivery leg crosses subnets but the mail server has no gateway and
-    // there is no router: SMTP submit succeeds, delivery is blocked.
+  it('includes hops up to the block when the fetch fails', () => {
+    // The recipient is on another subnet, with no router and no gateway:
+    // SMTP submit succeeds, the fetch request is blocked on the recipient.
     const t = topo(
       [
         device({ id: 'pc1', label: 'PC-1', ip: '192.168.1.10' }),
@@ -353,8 +447,10 @@ describe('planAndEvaluateFlow email', () => {
     expect(result.verdict).toBe('blocked');
     expect(result.legs).toHaveLength(2);
     expect(result.legs[0].trace.verdict).toBe('success');
-    expect(result.failureReason).toBe('delivery: no default gateway configured on Mail-1');
-    expect(result.animationPath).toEqual(['pc1', 'mail1']); // blocked at mail1, joint deduped
+    expect(result.failureReason).toBe('fetch request: no default gateway configured on PC-2');
+    // blocked where the fetch starts, on the recipient: no cable of the way leads there
+    expect(result.animationPath).toEqual(['pc1', 'mail1', 'pc2']);
+    expect(result.animationLinks).toEqual(['pc1--mail1', '']);
   });
 
   it('matches mail servers by type when no templateId is set', () => {
@@ -375,16 +471,19 @@ describe('planAndEvaluateFlow email', () => {
 // ---------- email modes (internal / cloud / auto) ----------
 
 describe('planAndEvaluateFlow email modes', () => {
-  it('cloud mode relays through the internet exit with cloud purposes', () => {
+  it('cloud mode goes through the internet exit with cloud purposes', () => {
     const result = planAndEvaluateFlow('email', 'pc1', 'pc2', cloudViaSwitch(), {
       emailMode: 'cloud',
     });
     expect(result.verdict).toBe('success');
     expect(result.legs.map(l => [l.purpose, l.fromId, l.toId])).toEqual([
       ['SMTP to cloud provider', 'pc1', 'gw1'],
-      ['cloud delivery', 'gw1', 'pc2'],
+      ['cloud fetch request', 'pc2', 'gw1'],
+      ['cloud fetch reply', 'gw1', 'pc2'],
     ]);
-    expect(result.animationPath).toEqual(['pc1', 'sw1', 'gw1', 'sw1', 'pc2']);
+    // (a device named for the exit stands for the provider, at its own address)
+    expect(result.legs.map(l => l.trace.targetIp)).toEqual(['192.168.1.1', '192.168.1.1', '192.168.1.20']);
+    expect(result.animationPath).toEqual(['pc1', 'sw1', 'gw1', 'pc2', 'sw1', 'gw1', 'sw1', 'pc2']);
   });
 
   it('cloud mode errors when the network has no internet exit', () => {
@@ -403,7 +502,11 @@ describe('planAndEvaluateFlow email modes', () => {
     // Default options → 'auto': no mail server here, but Internet-GW exists.
     const result = planAndEvaluateFlow('email', 'pc1', 'pc2', cloudViaSwitch());
     expect(result.verdict).toBe('success');
-    expect(result.legs.map(l => l.purpose)).toEqual(['SMTP to cloud provider', 'cloud delivery']);
+    expect(result.legs.map(l => l.purpose)).toEqual([
+      'SMTP to cloud provider',
+      'cloud fetch request',
+      'cloud fetch reply',
+    ]);
     expect(result.notes).toContain('no internal mail server: using cloud email via Internet-GW');
   });
 
@@ -450,7 +553,8 @@ describe('planAndEvaluateFlow email modes', () => {
     const result = planAndEvaluateFlow('email', 'pc1', 'pc2', t, { emailMode: 'cloud' });
     expect(result.verdict).toBe('success');
     expect(result.legs[0].toId).toBe('gwNear');
-    expect(result.legs[1].fromId).toBe('gwNear');
+    // (and the recipient fetches from the exit nearest to it)
+    expect(result.legs[1]).toMatchObject({ fromId: 'pc2', toId: 'gwNear' });
   });
 
   it('explicit internal mode with a mail server matches the default behavior', () => {
@@ -460,9 +564,9 @@ describe('planAndEvaluateFlow email modes', () => {
     expect(result.verdict).toBe('success');
     expect(result.legs.map(l => [l.purpose, l.fromId, l.toId])).toEqual([
       ['SMTP submit', 'pc1', 'mail1'],
-      ['delivery', 'mail1', 'pc2'],
+      ['fetch request', 'pc2', 'mail1'],
+      ['fetch reply', 'mail1', 'pc2'],
     ]);
-    expect(result.animationPath).toEqual(['pc1', 'sw1', 'mail1', 'sw1', 'pc2']);
     expect(result.notes.some(n => n.includes('using cloud email'))).toBe(false);
   });
 
@@ -519,6 +623,7 @@ describe('planAndEvaluateFlow email: which device is the internet exit', () => {
     expect(result.verdict).toBe('success');
     expect(result.legs.map(l => [l.fromId, l.toId])).toEqual([
       ['pc1', 'other'],
+      ['pc2', 'other'],
       ['other', 'pc2'],
     ]);
   });
@@ -529,6 +634,7 @@ describe('planAndEvaluateFlow email: which device is the internet exit', () => {
     expect(result.verdict).toBe('success');
     expect(result.legs.map(l => [l.fromId, l.toId])).toEqual([
       ['pc1', 'other'],
+      ['pc2', 'other'],
       ['other', 'pc2'],
     ]);
   });
@@ -592,5 +698,114 @@ describe('planAndEvaluateFlow through a firewall with security zones', () => {
 
     expect(trace.verdict).toBe('blocked');
     expect(trace.failureReason).toBe('firewall policy on FW-1: untrust → trust denied');
+  });
+});
+
+// ---------- the mailbox of a cloud provider ----------
+
+describe('planAndEvaluateFlow email: the mailbox of a cloud provider', () => {
+  /**
+   * PC-1 — R-1 ═ Internet ─ VPS, and PC-2 behind R-1 too. R-1 does NAT on its
+   * WAN port, 203.0.113.2/24; the Internet symbol has no address.
+   */
+  function outside(symbol: Partial<NetworkDevice> = {}): Topology {
+    return topo(
+      [
+        device({ id: 'pc1', label: 'PC-1', ip: '192.168.10.11', gateway: '192.168.10.1' }),
+        device({ id: 'pc2', label: 'PC-2', ip: '192.168.10.12', gateway: '192.168.10.1' }),
+        device({
+          id: 'r1',
+          label: 'R-1',
+          type: 'Router',
+          ports: [
+            { id: 1, enabled: true, ip: '192.168.10.1', subnet: '255.255.255.0' },
+            { id: 2, enabled: true, ip: '203.0.113.2', subnet: '255.255.255.0', nat: true },
+            { id: 3, enabled: true },
+          ],
+        }),
+        device({ id: 'inet', label: 'Internet', type: 'Cloud', templateId: 'tpl-cloud', ...symbol }),
+        device({ id: 'vps', label: 'VPS', type: 'Server', ip: '203.0.113.254', gateway: '203.0.113.2' }),
+      ],
+      [
+        link('pc1', 'r1', { targetPort: 1 }),
+        link('pc2', 'r1', { targetPort: 1 }),
+        link('r1', 'inet', { sourcePort: 2 }),
+        link('inet', 'vps'),
+      ]
+    );
+  }
+
+  it('is beyond an Internet symbol that has no address: an address of the outside nobody has', () => {
+    const t = outside();
+    const inet = t.devices.find(d => d.id === 'inet') as NetworkDevice;
+    // the outside is 203.0.113.0/24, where R-1 faces the symbol; .254 is the VPS
+    expect(cloudMailbox(inet, t)).toBe('203.0.113.253');
+    const mail = planAndEvaluateFlow('email', 'pc1', 'pc2', t, { emailMode: 'cloud' });
+    expect(mail.verdict).toBe('success');
+    expect(mail.legs.map(l => [l.purpose, l.trace.targetIp, l.trace.seenSourceIp])).toEqual([
+      ['SMTP to cloud provider', '203.0.113.253', '203.0.113.2'],
+      ['cloud fetch request', '203.0.113.253', '203.0.113.2'],
+      ['cloud fetch reply', '203.0.113.2', undefined],
+    ]);
+    // the symbol takes it, and what is beyond it is not simulated: the notes say so
+    expect(mail.legs[0].trace.hops.map(h => [h.label, h.status])).toEqual([
+      ['PC-1', 'forwarded'],
+      ['R-1', 'forwarded'],
+      ['Internet', 'delivered'],
+    ]);
+    expect(mail.notes).toContain('the cloud mailbox is beyond Internet, at 203.0.113.253: the provider is not simulated');
+    expect(mail.notes).toContain(
+      'SMTP to cloud provider: 203.0.113.253 is not in the drawing: Internet assumed to take the traffic'
+    );
+    // the reply that brings the mail is translated back by R-1
+    expect(mail.legs[2].trace.reachedIp).toBe('192.168.10.12');
+  });
+
+  it('is in 192.0.2.0/24, kept for examples, when no public address is next to the symbol', () => {
+    const t = outside();
+    const unaddressed = topo(
+      t.devices.map(d =>
+        d.id === 'r1' ? { ...d, ports: d.ports?.map(p => (p.id === 2 ? { ...p, ip: '10.0.0.2' } : p)) } : d
+      ).filter(d => d.id !== 'vps'),
+      t.connections.filter(c => c.target !== 'vps')
+    );
+    expect(cloudMailbox(unaddressed.devices.find(d => d.id === 'inet') as NetworkDevice, unaddressed)).toBe(
+      '192.0.2.254'
+    );
+  });
+
+  it('does not move when something breaks: it is worked out from the drawing as it is set', () => {
+    const t = outside();
+    const inet = t.devices.find(d => d.id === 'inet') as NetworkDevice;
+    const cut = withFailures(t, { devices: [], connections: ['r1--inet'] });
+    expect(cloudMailbox(inet, cut)).toBe('203.0.113.253');
+    const mail = planAndEvaluateFlow('email', 'pc1', 'pc2', cut, { emailMode: 'cloud' });
+    expect(mail.verdict).toBe('blocked');
+    expect(mail.failureReason).toMatch(/^SMTP to cloud provider: link R-1–Internet is down/);
+  });
+
+  it('is the address of a symbol that has one, and of a device named for the exit', () => {
+    const t = outside({ ip: '203.0.113.200', subnet: '255.255.255.0' });
+    const inet = t.devices.find(d => d.id === 'inet') as NetworkDevice;
+    expect(cloudMailbox(inet, t)).toBeUndefined();
+    expect(planAndEvaluateFlow('email', 'pc1', 'pc2', t, { emailMode: 'cloud' }).legs[0].trace.targetIp).toBe(
+      '203.0.113.200'
+    );
+    expect(cloudMailbox(device({ id: 'x', label: 'ISP-Router', type: 'Router' }), t)).toBeUndefined();
+  });
+
+  it('is on the Internet: with an Internet symbol drawn, a Cloud of another name or a router named WAN is no exit', () => {
+    const t = outside();
+    const more = topo(
+      [
+        ...t.devices,
+        device({ id: 'mpls', label: 'MPLS', type: 'Cloud', templateId: 'tpl-cloud' }),
+        device({ id: 'wan', label: 'R-WAN', type: 'Router', ip: '192.168.10.2' }),
+      ],
+      [...t.connections, link('pc1', 'mpls'), link('pc1', 'wan')]
+    );
+    const mail = planAndEvaluateFlow('email', 'pc1', 'pc2', more, { emailMode: 'cloud' });
+    expect(mail.legs.map(l => l.toId)).toEqual(['inet', 'inet', 'pc2']);
+    expect(mail.verdict).toBe('success');
   });
 });

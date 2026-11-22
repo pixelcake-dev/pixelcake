@@ -98,8 +98,8 @@ L'intervallo della porta 1 ha perso il server DNS, perché il comando non ne ind
 
 Il motore dà gli indirizzi alle schede nell'ordine del disegno: i dispositivi come compaiono, e le schede di ciascuno in ordine. Ogni scheda prende l'indirizzo libero più basso del suo intervallo. Un indirizzo non è libero quando:
 
-- è scritto a mano su una qualunque interfaccia del disegno, in qualunque rete;
-- è già stato dato a un'altra scheda;
+- è scritto a mano su un'interfaccia del disegno, in qualunque rete, tranne un indirizzo privato dall'altra parte del simbolo Internet: dietro un altro NAT è in una rete a sé, come per [due dispositivi con lo stesso indirizzo](../building/addresses.md#conflicts);
+- è già stato dato a un'altra scheda, con la stessa eccezione;
 - è il gateway che l'intervallo consegna;
 - è il primo o l'ultimo indirizzo della rete.
 

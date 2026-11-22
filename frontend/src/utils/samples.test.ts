@@ -222,13 +222,15 @@ function answersOf(sample: SampleNetwork): string[] {
 }
 
 /**
- * Taken on the samples as they were before they brought settings: how many
- * questions, how many arrive, and the digest of all the answers.
+ * Taken on the samples as they were before they brought settings, and taken
+ * again when the recipient of a mail began to fetch it from its server, and
+ * cloud mail to reach a provider beyond an Internet symbol with no address:
+ * how many questions, how many arrive, and the digest of all the answers.
  */
 const BEFORE: Record<string, { questions: number; arrive: number; digest: string }> = {
-  'the company': { questions: 1140, arrive: 607, digest: '53ece83d' },
-  'the small office': { questions: 126, arrive: 126, digest: '568c6059' },
-  'the site': { questions: 270, arrive: 84, digest: '28eb5cc8' },
+  'the company': { questions: 1140, arrive: 579, digest: '2dea9311' },
+  'the small office': { questions: 126, arrive: 126, digest: 'd9491f0b' },
+  'the site': { questions: 270, arrive: 156, digest: 'a517e1b3' },
   'the two sites': { questions: 396, arrive: 256, digest: '9a345a59' },
 };
 
