@@ -7,6 +7,9 @@
  */
 
 import { useNetworkStore } from '@/store/networkStore';
+import { usePresentationStore } from '@/store/presentationStore';
+import { dictionaryOf } from '@/i18n';
+import { impactOf } from '@/utils/impactMemo';
 import type { SimulationOutcome } from '@/store/simulationStore';
 import { flowOutcome, traceOutcome } from '@/utils/answerOutcome';
 import { isNameTaken } from '@/utils/newDevice';
@@ -85,8 +88,9 @@ import { isValidIP } from '@/utils/ipHelpers';
 import { liveTopology } from '@/utils/liveTopology';
 import { parse } from './parser';
 import { NCL_VERSION } from './types';
-import type { Command, InterfaceSetting, LinkSetting, TerminalLine, ShowTarget } from './types';
+import type { Command, FailureTarget, InterfaceSetting, LinkSetting, TerminalLine, ShowTarget } from './types';
 import type {
+  NetworkConnection,
   DhcpPool,
   DnsRecord,
   FirewallRule,
@@ -1232,6 +1236,7 @@ function showDns(topo: Topology, device?: NetworkDevice): TerminalLine[] {
 }
 
 function runShow(what: ShowTarget, deviceQuery: string | undefined, context: TerminalContext): TerminalLine[] {
+  if (what === 'failures') return showFailures();
   const topo = view();
   if (what === 'devices') return showDevices(topo);
   if (what === 'vlans') return showVlans(topo);
@@ -2344,6 +2349,170 @@ function runRecordRemove(
   return [ok(`${device.label}: record ${at + 1} removed — ${record.name} is ${record.address}`)];
 }
 
+/* ── simulated failures ──────────────────────────────────────────────── */
+
+/**
+ * Failures are simulated in presentation mode, and only there: outside it the
+ * commands do not act and say where to go. The names of the button and of the
+ * menu entry are read from the English dictionary, the terminal's language.
+ */
+function presentationOnly(): TerminalLine[] | undefined {
+  if (usePresentationStore.getState().active) return undefined;
+  const { menu } = dictionaryOf('en');
+  return [
+    err(
+      `failures are simulated in presentation mode: press "${menu.present}" in the menu bar, ` +
+        `or choose ${menu.view.title} → "${menu.view.presentation}"`
+    ),
+  ];
+}
+
+/** How a cable between two devices is named, as the engine says it: `link R-HQ–R-Branch` */
+const cableName = (a: NetworkDevice, b: NetworkDevice) => `link ${a.label}–${b.label}`;
+
+/**
+ * The cable `fail link` / `repair link` means: the only one between the two
+ * devices, or the one `by` names (an interface of `a`). With several and no
+ * way to tell, the answer lists how to name each.
+ */
+function findCable(
+  verb: 'fail' | 'repair',
+  a: NetworkDevice,
+  b: NetworkDevice,
+  by: string | undefined,
+  topo: Topology
+): { connection: NetworkConnection } | { errorLines: TerminalLine[] } {
+  let cables = topo.connections.filter(
+    (c) => (c.source === a.id && c.target === b.id) || (c.source === b.id && c.target === a.id)
+  );
+  if (cables.length === 0) return { errorLines: [muted(`${a.label} and ${b.label} are not connected`)] };
+
+  if (by !== undefined) {
+    const iface = findInterface(a, by);
+    if (!iface) {
+      return { errorLines: [err(`${a.label} has no interface "${by}" (it has ${interfaceNames(a)})`)] };
+    }
+    cables = cables.filter((c) => boundInterface(c, a)?.key === iface.key);
+    if (cables.length === 0) {
+      return { errorLines: [muted(`no link between ${a.label} and ${b.label} on ${interfacePhrase(iface)}`)] };
+    }
+  }
+  if (cables.length === 1) return { connection: cables[0] };
+
+  const lines = [
+    err(`${cables.length} links join ${a.label} and ${b.label}: say which one by an interface of ${a.label}`),
+  ];
+  for (const cable of cables) {
+    const here = boundInterface(cable, a);
+    const there = boundInterface(cable, b);
+    if (here) {
+      lines.push(
+        muted(`  ${verb} link ${a.label} to ${b.label} by ${here.label}   [${here.label} ↔ ${there?.label ?? '?'}]`)
+      );
+    } else {
+      lines.push(muted(`  a link that is on no interface of ${a.label}: it cannot be named`));
+    }
+  }
+  return { errorLines: lines };
+}
+
+function runFailure(
+  verb: 'fail' | 'repair',
+  target: FailureTarget | { what: 'all' },
+  context: TerminalContext
+): TerminalLine[] {
+  const refused = presentationOnly();
+  if (refused) return refused;
+  const presentation = usePresentationStore.getState();
+
+  if (target.what === 'all') {
+    if (presentation.failedDevices.length === 0 && presentation.failedConnections.length === 0) {
+      return [muted('nothing is down')];
+    }
+    presentation.repairAll();
+    return [ok('everything is working again')];
+  }
+
+  if (target.what === 'device') {
+    const found = targetDevice(target.device, context, `${verb} <device>`);
+    if ('errorLines' in found) return found.errorLines;
+    const { device } = found;
+    const isDown = presentation.failedDevices.includes(device.id);
+    if (verb === 'fail') {
+      if (isDown) return [muted(`${device.label} is already down`)];
+      presentation.toggleDeviceFailure(device.id);
+      return [line(`${device.label} is down`)];
+    }
+    if (!isDown) return [muted(`${device.label} is not down`)];
+    presentation.toggleDeviceFailure(device.id);
+    return [ok(`${device.label} is working again`)];
+  }
+
+  const topo = snapshot();
+  const resA = resolveOrError(target.a, topo);
+  if ('errorLines' in resA) return resA.errorLines;
+  const resB = resolveOrError(target.b, topo);
+  if ('errorLines' in resB) return resB.errorLines;
+  const [a, b] = [resA.device, resB.device];
+  if (a.id === b.id) return [err('a link joins two different devices')];
+  const found = findCable(verb, a, b, target.by, topo);
+  if ('errorLines' in found) return found.errorLines;
+
+  const name = cableName(a, b);
+  const isCut = presentation.failedConnections.includes(found.connection.id);
+  if (verb === 'fail') {
+    if (isCut) return [muted(`${name} is already down`)];
+    presentation.toggleConnectionFailure(found.connection.id);
+    return [line(`${name} is down`)];
+  }
+  if (!isCut) return [muted(`${name} is not down`)];
+  presentation.toggleConnectionFailure(found.connection.id);
+  return [ok(`${name} is working again`)];
+}
+
+/** `show failures`: what is down, and what that does to the rest of the network, in the words of the presentation panel */
+function showFailures(): TerminalLine[] {
+  const refused = presentationOnly();
+  if (refused) return refused;
+  const { failedDevices, failedConnections, flow } = usePresentationStore.getState();
+  const { devices, connections, globalNetworkSettings } = useNetworkStore.getState();
+  const byId = new Map(devices.map((d) => [d.id, d]));
+  const down = failedDevices.flatMap((id) => (byId.has(id) ? [`${byId.get(id)!.label} is down`] : []));
+  const cut = connections
+    .filter((c) => failedConnections.includes(c.id) && byId.has(c.source) && byId.has(c.target))
+    .map((c) => `${cableName(byId.get(c.source)!, byId.get(c.target)!)} is down`);
+  if (down.length + cut.length === 0) return [muted('nothing is down')];
+
+  const lines = [
+    heading(`FAILURES (${down.length + cut.length})`),
+    ...[...down, ...cut].map((text) => line(`  ${text}`)),
+  ];
+
+  // The same count the panel makes: every exchange between two end devices, with and without the failures
+  const words = dictionaryOf('en');
+  const impact = words.presentation.impact;
+  const name = words.common.services[flow];
+  const report = impactOf(
+    { devices, connections },
+    { devices: failedDevices, connections: failedConnections },
+    { flow, emailMode: globalNetworkSettings.emailMode ?? 'auto' }
+  );
+  lines.push(heading(impact.heading));
+  if (report.endpoints.length < 2) {
+    lines.push(muted(`  ${impact.tooFewEndDevices}`));
+  } else if (report.working === 0) {
+    lines.push(muted(`  ${impact.nothingWorked(name)}`));
+  } else {
+    lines.push(line(`  ${impact.scope(name, report.endpoints.length, report.working)}`));
+    lines.push(
+      report.broken.length > 0 ? err(`  ${impact.stop(report.broken.length)}`) : ok(`  ${impact.stop(0)}`)
+    );
+    if (report.rerouted.length > 0) lines.push(line(`  ${impact.takeAnotherWay(report.rerouted.length)}`));
+    if (report.unchanged > 0) lines.push(line(`  ${impact.doNotChange(report.unchanged)}`));
+  }
+  return lines;
+}
+
 /* ── help ─────────────────────────────────────────────────────────────── */
 
 /**
@@ -2379,6 +2548,9 @@ export const COMMAND_REFERENCE: Array<[string, string]> = [
   ['add vlan <id> to <device>', 'VLAN list of a device (remove vlan <id> from <device>)'],
   ['connect <A> to <B>', 'create a link (disconnect <A> from <B>)'],
   ['link <A> to <B> medium|length|delay <value>', 'the cable of a link: what it is, how long, its delay (one way)'],
+  ['fail <device> | fail link <A> to <B> [by <interface>]', 'simulate a failure, in presentation mode'],
+  ['repair <device> | repair link <A> to <B> | repair all', 'put it back'],
+  ['show failures', 'what is down, and what that stops on the rest of the network'],
   ['use <device> / exit', 'enter/leave device context (implies "from" and "on")'],
   ['clear, help [command]', 'screen and this reference'],
 ];
@@ -2445,6 +2617,9 @@ export function executeCommand(rawInput: string, context: TerminalContext): Exec
       return { lines: runShow(command.what, command.device, context), context };
     case 'set':
       return runSet(command.property, command.device, command.value, context);
+    case 'fail':
+    case 'repair':
+      return { lines: runFailure(command.kind, command.target, context), context };
     case 'vlan-add':
       return { lines: runVlan('add', command.vlanId, command.device, context), context };
     case 'vlan-remove':

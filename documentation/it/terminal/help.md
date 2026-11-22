@@ -46,6 +46,9 @@ PixelCake terminal — NCL v0.6 (Network Command Language, vendor-neutral)
   add vlan <id> to <device>                                  VLAN list of a device (remove vlan <id> from <device>)
   connect <A> to <B>                                         create a link (disconnect <A> from <B>)
   link <A> to <B> medium|length|delay <value>                the cable of a link: what it is, how long, its delay (one way)
+  fail <device> | fail link <A> to <B> [by <interface>]      simulate a failure, in presentation mode
+  repair <device> | repair link <A> to <B> | repair all      put it back
+  show failures                                              what is down, and what that stops on the rest of the network
   use <device> / exit                                        enter/leave device context (implies "from" and "on")
   clear, help [command]                                      screen and this reference
   device names are case-insensitive and may be multi-word; IPs work anywhere a device is expected

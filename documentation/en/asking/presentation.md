@@ -90,7 +90,36 @@ Undo does not work while presenting, as for everything else: what was written du
 
 The bar has the **“Terminal”**. While the presentation lasts, the commands that ask a question (`ping`, `trace`, `browse`, `mail`, `download`, `resolve`) see the same failures as the panel: a trace stops with `link R-HQ–R-Branch is down`, and a name is looked up across the network as it is with the pieces you broke. The two always agree, because they ask the same engine ([how it decides](how-the-engine-decides.md)).
 
-The failures themselves cannot be made from the terminal. They are made with the small menu, and are gone when you leave.
+The failures can be made from the terminal too, with `fail` and `repair` ([the commands](../terminal/asking.md#failures)), and `show failures` lists what is down and what it stops. The list is the one of the panel: a device taken down in the terminal is marked on the drawing and listed under “Simulated failures”, and one taken down with the small menu is there for `show failures`. Outside presentation mode these commands do nothing, and say that failures are simulated here. They are gone when you leave.
+
+```ncl sample=two-sites presentation
+pixelcake> ping PC-Branch-1 from PC-HQ-1
+Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
+Reply from 192.168.2.11: hops=7 time=11ms
+pixelcake> fail link R-HQ to R-Branch
+link R-HQ–R-Branch is down
+pixelcake> ping PC-Branch-1 from PC-HQ-1
+Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
+Reply from 192.168.2.11: hops=8 time=13ms
+  note: request: R-HQ: the route 192.168.2.0/24 via 10.0.0.2 is unusable (link R-HQ–R-Branch is down), the route 192.168.2.0/24 via 10.0.1.2 is used instead
+  note: reply: R-Branch: the route 192.168.1.0/24 via 10.0.0.1 is unusable (link R-Branch–R-HQ is down), the route 192.168.1.0/24 via 10.0.2.1 is used instead
+pixelcake> fail R-Backup
+R-Backup is down
+pixelcake> ping PC-Branch-1 from PC-HQ-1
+Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
+Ping failed (blocked): request: link R-HQ–R-Branch is down
+  dropped at: R-HQ
+pixelcake> show failures
+FAILURES (2)
+  R-Backup is down
+  link R-HQ–R-Branch is down
+On the rest of the network
+  Ping between the 5 end devices: 20 exchanges that work without the failures.
+  12 stop
+  8 do not change
+pixelcake> repair all
+everything is working again
+```
 
 ## Limits {#limits}
 

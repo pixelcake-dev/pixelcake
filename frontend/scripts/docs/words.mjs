@@ -67,6 +67,7 @@ export const WORDS = {
     /** @param {string} name */
     onFixture: (name) => `On the project ${name}`,
     emptyBoard: 'On an empty board',
+    inPresentation: 'in presentation mode',
     sourceOfPage: 'The source of this page',
     motto: 'Infrastructure, piece by piece.',
     source: 'Source',
@@ -139,6 +140,7 @@ export const WORDS = {
     /** @param {string} name */
     onFixture: (name) => `Sul progetto ${name}`,
     emptyBoard: 'Su un canvas vuoto',
+    inPresentation: 'in modalità presentazione',
     sourceOfPage: 'Il sorgente di questa pagina',
     motto: 'Una rete, un pezzo alla volta.',
     source: 'Codice',

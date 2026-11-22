@@ -32,10 +32,10 @@ service       ::= "ping" | "web" | "email" | "dns"
 inspection    ::= "show" show-target [["of"] device]
 show-target   ::= "devices" | "interfaces" | "ports" | "vlans"
                 | "connections" | "config" | "neighbors" | "ip"
-                | "routes" | "rules" | "nat" | "dhcp" | "dns"
+                | "routes" | "rules" | "nat" | "dhcp" | "dns" | "failures"
 
 configuration ::= set-cmd | vlan-cmd | link-cmd | iface-cmd | route-cmd | rule-cmd
-                | forward-cmd | record-cmd
+                | forward-cmd | record-cmd | failure-cmd
 set-cmd       ::= "set" ("ip" | "gateway" | "subnet" | "name")
                         ["of"] device ["to"] value
 vlan-cmd      ::= "add" "vlan" number ["to"] device
@@ -80,6 +80,11 @@ forward-cmd   ::= "add" "forward" [service | "any"] "from" ["interface"] number
 
 record-cmd    ::= "add" "record" name ["to"] (ipv4 | device) ["on" device]
                 | "remove" "record" (position | name) [("from" | "on") device]
+
+failure-cmd   ::= "fail" (device | link)
+                | "repair" (device | link | "all")
+link          ::= "link" device ("to" | "from") device ["by" ["port" | "interface"] iface-id]
+                                                          (* simulated: presentation mode only *)
 
 session       ::= "use" device | "exit" | "clear" | "help" [topic]
 

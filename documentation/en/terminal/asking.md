@@ -324,6 +324,72 @@ PC-Sales> exit
 left PC-Sales
 ```
 
+## fail, repair {#failures}
+
+```text
+fail <device>
+fail link <device> to <device> [by <interface>]
+repair <device>
+repair link <device> to <device> [by <interface>]
+repair all
+```
+
+What happens if this breaks? `fail` takes a device down, or cuts the cable between two devices, and `repair` puts it back; `repair all` puts back everything at once. They act on the failures of [presentation mode](../asking/presentation.md#failures): the same list as the small menu and the panel, so the board, the panel and the terminal always agree, and the questions of the section above see them. Nothing is saved and nothing changes the drawing, and the failures are forgotten when presentation mode ends. Outside it the commands do nothing, and answer in one line where failures are simulated.
+
+| Parameter | What it is |
+|---|---|
+| `<device>` | A device, by its name or an address, as everywhere. Inside `use <device>` it may be left out: `fail` takes the device of the context down |
+| `link <device> to <device>` | The cable between the two devices, in either order. `from` may be written in place of `to` |
+| `by <interface>` | Which cable, when two devices are joined by more than one: an interface of the first device, as a port number (`by 3`, `by port 3`) or the name of a network card (`by eth0`) |
+
+The answers use the words of the engine and of the panel: `SW-Core is down`, `link R-HQ–R-Branch is down`, and for a repair `SW-Core is working again`. Taking down what is down, or repairing what is not, says so and changes nothing. A cable that is cut and a device that is down are two failures: repairing a device does not mend its cables. After a `fail` or a `repair`, the next `ping` or `trace` sees the new state, with the reason in the words of the failure ([how the engine decides](../asking/how-the-engine-decides.md#failures)). `show failures` lists what is down and what it stops ([show failures](show.md#show-failures)).
+
+```ncl sample=two-sites presentation
+pixelcake> fail SW-Core
+SW-Core is down
+pixelcake> fail SW-Core
+SW-Core is already down
+pixelcake> fail link R-HQ to R-Branch
+link R-HQ–R-Branch is down
+pixelcake> repair SW-Floor-1
+SW-Floor-1 is not down
+pixelcake> ping Srv-File from PC-HQ-1
+Pinging Srv-File (192.168.1.10) from PC-HQ-1...
+Ping failed (blocked): request: SW-Core is down
+  dropped at: SW-Floor-1
+pixelcake> repair SW-Core
+SW-Core is working again
+pixelcake> repair link R-Branch to R-HQ
+link R-Branch–R-HQ is working again
+pixelcake> repair all
+nothing is down
+```
+
+When two devices are joined by more than one cable, the command says so and lists how to name each, by the interface of the first device. A command that cannot be run is refused as the others are:
+
+```ncl sample=two-sites presentation
+pixelcake> fail link R-HQ to PC-Branch-1
+R-HQ and PC-Branch-1 are not connected
+pixelcake> fail SW-Cor
+device not found: "SW-Cor"
+  did you mean "SW-Core"?
+pixelcake> fail link R-HQ
+unknown command: "fail link R-HQ"
+  try: fail <device> | fail link <device A> to <device B> [by <interface>]
+  type "help" for the command list
+pixelcake> fail
+specify a device: "fail <device>"
+```
+
+Out of presentation mode the same commands only say where to go: the button “Present” of the menu bar, or View → “Presentation mode”.
+
+```ncl sample=two-sites
+pixelcake> fail SW-Core
+failures are simulated in presentation mode: press "Present" in the menu bar, or choose View → "Presentation mode"
+pixelcake> show failures
+failures are simulated in presentation mode: press "Present" in the menu bar, or choose View → "Presentation mode"
+```
+
 ## When a command is refused {#refusals}
 
 A question that cannot be asked is not answered, and says why, or what it should have been:

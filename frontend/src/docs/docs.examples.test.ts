@@ -7,6 +7,7 @@
  *                                 site, two-sites, multinational, empty)
  *   ```ncl fixture=two-switches   documentation/fixtures/two-switches.pixelcake.json
  *   ```ncl continue               where the previous example of the page left off
+ *   ```ncl sample=two-sites presentation   in presentation mode, where `fail` and `repair` work
  *
  * The sample is loaded in the language of the page (`lang=en` or `lang=it`
  * chooses another): its devices are named in that language, while the
@@ -116,6 +117,10 @@ function load(example: Example) {
     store.loadSample({ devices: canvas.devices, connections: canvas.connections, settings: project.settings, areas: canvas.areas ?? [] });
   } else if (sample && sample !== 'empty') {
     store.loadSample(SAMPLES[sample]());
+  }
+  // `presentation`: the example runs in presentation mode, where failures are simulated
+  if (example.flags.includes('presentation') && !usePresentationStore.getState().enter()) {
+    throw new Error(`${example.file}:${example.line}: presentation mode does not open on an empty board`);
   }
 }
 

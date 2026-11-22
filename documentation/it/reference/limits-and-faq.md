@@ -24,7 +24,7 @@ PixelCake è una beta. Va bene per esplorare e spiegare una piccola rete, e non 
 
 **Il DNS.** Un server solo, interrogato ogni volta. Una scheda indica un solo server DNS, senza un secondo di riserva; un server risponde solo per i nomi scritti su di esso e non inoltra mai una domanda a un altro; niente viene tenuto in memoria; non c'è la ricerca inversa, né alias né nomi jolly. Un server DNS pubblico che non è nel disegno, per il motore, non esiste. I nomi sono per il terminale: il pannello della simulazione e la presentazione scelgono i dispositivi dai menu. Vedi [DNS](../services/dns.md#limits).
 
-**I guasti.** Un guasto appartiene a una presentazione e sparisce quando finisce: non viene salvato con il progetto. Il terminale vede i guasti della presentazione ma non può crearne né ripararne. Vedi [Presentazione](../asking/presentation.md#failures).
+**I guasti.** Un guasto appartiene a una presentazione e sparisce quando finisce: non viene salvato con il progetto. Il terminale li vede, e li crea e li ripara con `fail` e `repair`, solo in modalità presentazione. Vedi [Presentazione](../asking/presentation.md#failures).
 
 **Le immagini.** Un'immagine contiene un canvas solo: un progetto con più canvas si esporta un canvas alla volta. I suoi testi sono composti con il carattere del computer, non con quello dell'interfaccia, che un'immagine non può portarsi dietro, quindi la stessa immagine su un altro computer può avere lettere un po' diverse. Un PNG di un disegno molto grande viene ridotto a ciò che il browser riesce a creare, e la finestra lo dice. Vedi [Esportare un'immagine](../asking/exporting-an-image.md#limits).
 

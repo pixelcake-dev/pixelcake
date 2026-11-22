@@ -15,7 +15,7 @@
  */
 
 import type { LinkMedium, ServiceName } from '@/types';
-import type { Command, InterfaceSetting, LinkSetting, SetProperty, ShowTarget, ZoneName } from './types';
+import type { Command, FailureTarget, InterfaceSetting, LinkSetting, SetProperty, ShowTarget, ZoneName } from './types';
 
 /** One lexical token: original text, lowercase form, and quoting flag. */
 interface Token {
@@ -39,6 +39,7 @@ const SHOW_TARGETS: readonly ShowTarget[] = [
   'nat',
   'dhcp',
   'dns',
+  'failures',
 ];
 
 const SET_PROPERTIES: readonly SetProperty[] = ['ip', 'gateway', 'subnet', 'name'];
@@ -53,6 +54,8 @@ const KNOWN_VERBS: readonly string[] = [
   'remove',
   'connect',
   'disconnect',
+  'fail',
+  'repair',
   'enable',
   'disable',
   'use',
@@ -135,7 +138,7 @@ const ARTICLES: readonly string[] = ['the', 'a'];
 const DEVICE_NOISE: readonly string[] = ['device', 'host'];
 
 const SHOW_USAGE =
-  'try: show devices | interfaces | ports | vlans | connections | config | neighbors | ip | routes | rules | nat | dhcp | dns';
+  'try: show devices | interfaces | ports | vlans | connections | config | neighbors | ip | routes | rules | nat | dhcp | dns | failures';
 const ADD_USAGE =
   'try: add vlan <id> [to] <device> | add route <network> via <next hop> [on <device>] | ' +
   'add rule allow|deny <service> from <source> to <destination> [on <device>] | ' +
@@ -974,6 +977,49 @@ function parseLinkSet(rest: Token[], raw: string): Command {
   return { kind: 'link-set', a, b, settings };
 }
 
+const FAIL_USAGE = 'try: fail <device> | fail link <device A> to <device B> [by <interface>]';
+const REPAIR_USAGE =
+  'try: repair <device> | repair link <device A> to <device B> [by <interface>] | repair all';
+
+/**
+ * `<device A> to <device B> [by <interface>]`: a cable between two devices.
+ * `by` is the interface of the first device the cable is on; a leading
+ * `port` or `interface` before it is noise.
+ */
+function parseCable(rest: Token[]): Extract<FailureTarget, { what: 'link' }> | undefined {
+  let tokens = rest;
+  let by: string | undefined;
+  const byIdx = findKeyword(tokens, ['by']);
+  if (byIdx !== -1) {
+    by = joinTokens(stripLeadingNoise(tokens.slice(byIdx + 1), ['port', 'interface']));
+    if (!by) return undefined;
+    tokens = tokens.slice(0, byIdx);
+  }
+  const sepIdx = findKeyword(tokens, ['to', 'from']);
+  if (sepIdx === -1) return undefined;
+  const a = joinTokens(stripLeadingNoise(tokens.slice(0, sepIdx), []));
+  const b = joinTokens(stripLeadingNoise(tokens.slice(sepIdx + 1), []));
+  if (!a || !b) return undefined;
+  return by !== undefined ? { what: 'link', a, b, by } : { what: 'link', a, b };
+}
+
+/** `fail <device...>` / `fail link <A...> to <B...> [by <interface>]`; `repair` also takes `all` */
+function parseFailure(verb: 'fail' | 'repair', rest: Token[], raw: string): Command {
+  const usage = verb === 'fail' ? FAIL_USAGE : REPAIR_USAGE;
+  const first = rest[0];
+  if (first !== undefined && !first.quoted && first.lower === 'link') {
+    const cable = parseCable(rest.slice(1));
+    if (!cable) return unknown(raw, usage);
+    return { kind: verb, target: cable };
+  }
+  if (verb === 'repair' && rest.length === 1 && first !== undefined && !first.quoted && first.lower === 'all') {
+    return { kind: 'repair', target: { what: 'all' } };
+  }
+  const device = joinTokens(stripLeadingNoise(rest, []));
+  // (no device: the one of the `use` context, if any)
+  return { kind: verb, target: device ? { what: 'device', device } : { what: 'device' } };
+}
+
 /** `use <device...>` */
 function parseUse(rest: Token[], raw: string): Command {
   const device = joinTokens(stripLeadingNoise(rest, []));
@@ -1041,6 +1087,9 @@ export function parse(input: string): Command {
       return parseLink('disconnect', rest, raw);
     case 'link':
       return parseLinkSet(rest, raw);
+    case 'fail':
+    case 'repair':
+      return parseFailure(verb, rest, raw);
     case 'enable':
       return parsePort('port-enable', rest, raw);
     case 'disable':

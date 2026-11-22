@@ -13,7 +13,7 @@ Un `show` con una parola che non è nell'elenco viene rifiutato con l'elenco, o 
 ```ncl sample=office
 pixelcake> show banana
 unknown command: "show banana"
-  try: show devices | interfaces | ports | vlans | connections | config | neighbors | ip | routes | rules | nat | dhcp | dns
+  try: show devices | interfaces | ports | vlans | connections | config | neighbors | ip | routes | rules | nat | dhcp | dns | failures
   type "help" for the command list
 pixelcake> show devces
 unknown command: "show devces"
@@ -385,6 +385,35 @@ pixelcake> show dns Portatile-1
 DNS of Portatile-1
   eth0: asks 192.168.30.10 (Srv-Auth), handed out with its lease by Router-Core port 2
   a name is looked up each time it is used: no cache, no second server, no forwarding to another server
+```
+
+## show failures {#show-failures}
+
+```text
+show failures
+```
+
+Che cosa è fermo in modalità presentazione, e che cosa questo fa al resto della rete: i guasti fatti con `fail` o con il piccolo menu, poi lo stesso conteggio che fa il pannello sotto «Sul resto della rete» ([che cosa succede al resto](../asking/presentation.md#impact)). Ogni comunicazione tra due dispositivi finali viene provata con tutto intatto e poi con i guasti: quante funzionavano, quante si interrompono, quante passano da un'altra strada, quante non cambiano. Il tipo di comunicazione contata è quello scelto nel pannello, «Ping» se non è cambiato. Se non c'è nulla di fermo lo dice. Fuori dalla modalità presentazione dice dove si simulano i guasti, come fa `fail` ([fail, repair](asking.md#failures)).
+
+```ncl sample=two-sites presentation
+pixelcake> show failures
+nothing is down
+pixelcake> fail SW-Core
+SW-Core is down
+pixelcake> fail link R-Sede to R-Filiale
+link R-Sede–R-Filiale is down
+pixelcake> show failures
+FAILURES (2)
+  SW-Core is down
+  link R-Sede–R-Filiale is down
+On the rest of the network
+  Ping between the 5 end devices: 20 exchanges that work without the failures.
+  16 stop
+  4 do not change
+pixelcake> repair all
+everything is working again
+pixelcake> show failures
+nothing is down
 ```
 
 ## sh {#sh}

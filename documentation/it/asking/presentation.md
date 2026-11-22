@@ -90,7 +90,36 @@ L'annullamento non funziona durante la presentazione, come per tutto il resto: q
 
 Nella barra c'è il pulsante **«Terminale»**. Finché dura la presentazione, i comandi che fanno una domanda (`ping`, `trace`, `browse`, `mail`, `download`, `resolve`) vedono gli stessi guasti del pannello: un `trace` si ferma con `link R-Sede–R-Filiale is down`, e un nome viene cercato attraverso la rete così com'è, con i pezzi che hai rotto. Le risposte coincidono sempre, perché interrogano lo stesso motore ([come decide](how-the-engine-decides.md)).
 
-I guasti, però, non si possono simulare dal terminale. Si simulano con il piccolo menu, e spariscono quando esci.
+I guasti si possono fare anche dal terminale, con `fail` e `repair` ([i comandi](../terminal/asking.md#failures)), e `show failures` elenca che cosa è fermo e che cosa interrompe. L'elenco è quello del pannello: un dispositivo spento dal terminale è segnato sul disegno ed elencato sotto «Guasti simulati», e uno spento con il piccolo menu c'è anche per `show failures`. Fuori dalla presentazione questi comandi non fanno nulla, e dicono che i guasti si simulano qui. Spariscono quando esci.
+
+```ncl sample=two-sites presentation
+pixelcake> ping PC-Filiale-1 from PC-Sede-1
+Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
+Reply from 192.168.2.11: hops=7 time=11ms
+pixelcake> fail link R-Sede to R-Filiale
+link R-Sede–R-Filiale is down
+pixelcake> ping PC-Filiale-1 from PC-Sede-1
+Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
+Reply from 192.168.2.11: hops=8 time=13ms
+  note: request: R-Sede: the route 192.168.2.0/24 via 10.0.0.2 is unusable (link R-Sede–R-Filiale is down), the route 192.168.2.0/24 via 10.0.1.2 is used instead
+  note: reply: R-Filiale: the route 192.168.1.0/24 via 10.0.0.1 is unusable (link R-Filiale–R-Sede is down), the route 192.168.1.0/24 via 10.0.2.1 is used instead
+pixelcake> fail R-Riserva
+R-Riserva is down
+pixelcake> ping PC-Filiale-1 from PC-Sede-1
+Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
+Ping failed (blocked): request: link R-Sede–R-Filiale is down
+  dropped at: R-Sede
+pixelcake> show failures
+FAILURES (2)
+  R-Riserva is down
+  link R-Sede–R-Filiale is down
+On the rest of the network
+  Ping between the 5 end devices: 20 exchanges that work without the failures.
+  12 stop
+  8 do not change
+pixelcake> repair all
+everything is working again
+```
 
 ## Limiti {#limits}
 

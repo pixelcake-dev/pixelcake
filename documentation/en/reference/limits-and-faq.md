@@ -24,7 +24,7 @@ PixelCake is a beta. It is good for exploring and explaining a small network, an
 
 **DNS.** One server, asked every time. A card names one DNS server, with no second one to fall back on; a server answers only for the names written on it and never passes a question on; nothing is cached; there is no reverse lookup, no alias and no wildcard. A public DNS server that is not in the drawing is nobody. Names are for the terminal: the simulation panel and the presentation choose devices from menus. See [DNS](../services/dns.md#limits).
 
-**Failures.** A failure belongs to a presentation and is gone when it ends: it is not saved with the project. The terminal sees the failures of the presentation but cannot make or repair one. See [Presentation](../asking/presentation.md#failures).
+**Failures.** A failure belongs to a presentation and is gone when it ends: it is not saved with the project. The terminal sees them, and makes and repairs them with `fail` and `repair`, in presentation mode only. See [Presentation](../asking/presentation.md#failures).
 
 **Images.** An image is one board: a project with several boards is exported one board at a time. Its texts are set in the typeface of the computer, not in the one of the interface, which an image cannot carry along, so the same image on another computer can have slightly different letters. A PNG of a very large drawing is reduced to what the browser can paint, and the window says so. See [Exporting an image](../asking/exporting-an-image.md#limits).
 
