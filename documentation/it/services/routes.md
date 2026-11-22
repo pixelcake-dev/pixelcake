@@ -71,7 +71,7 @@ pixelcake> add route 192.168.2.0/24 via 10.0.0.2 on R-Sede
 R-Sede: route to 192.168.2.0/24 via 10.0.0.2 added
 pixelcake> ping PC-Filiale-1 from PC-Sede-1
 Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
-Reply from 192.168.2.11: hops=7 time=11ms
+Reply from 192.168.2.11: hops=7 time=1.5ms
 pixelcake> add route 192.168.2.0/24 via 10.0.1.2 on R-Sede
 R-Sede: route to 192.168.2.0/24 now goes via 10.0.1.2 (was 10.0.0.2)
 pixelcake> trace PC-Filiale-1 from PC-Sede-1
@@ -103,7 +103,7 @@ R-Filiale: route to 192.168.1.0/24 via 10.0.0.1 added
   R-Sede → 10.0.0.1
 pixelcake> ping PC-Filiale-1 from PC-Sede-1
 Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
-Reply from 192.168.2.11: hops=7 time=11ms
+Reply from 192.168.2.11: hops=7 time=1.5ms
 ```
 
 La richiesta è arrivata alla filiale. La risposta non è riuscita a ripartire da R-Filiale, e il motivo dice quale router non aveva la rotta e per quale indirizzo.
@@ -201,7 +201,7 @@ pixelcake> interface 2 down on R-Sede
 port 2 on R-Sede is now down
 pixelcake> ping PC-Filiale-1 from PC-Sede-1
 Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
-Reply from 192.168.2.11: hops=8 time=13ms
+Reply from 192.168.2.11: hops=8 time=33ms
   note: reply: R-Filiale: the route 192.168.1.0/24 via 10.0.0.1 is unusable (port 2 on R-Sede is disabled), the route 192.168.1.0/24 via 10.0.2.1 is used instead
 ```
 

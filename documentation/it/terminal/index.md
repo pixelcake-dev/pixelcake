@@ -44,7 +44,7 @@ Un **esempio** è una sessione con il suo prompt: le righe che cominciano con `p
 ```ncl sample=office
 pixelcake> ping Web-01 from PC-1
 Pinging Web-01 (192.168.20.10) from PC-1...
-Reply from 192.168.20.10: hops=5 time=7ms
+Reply from 192.168.20.10: hops=5 time=0.44ms
 pixelcake> interface 2 down on Router-1
 port 2 on Router-1 is now down
 pixelcake> ping Web-01 from PC-1
@@ -98,12 +98,13 @@ Un comando controlla ciò che può prima di scrivere, e non scrive nulla se rifi
 - [La grammatica](grammar.md): il linguaggio in una pagina, con le sue tolleranze e i suoi sinonimi.
 
 > [!LIMITS]
-> Il terminale sa ciò che sa il motore. ARP e tabelle MAC, spanning tree, instradamento dinamico, sottointerfacce dei router, porte diverse da quelle dei quattro servizi, velocità dei cavi e tempi del ping non sono simulati, e nessun comando ne parla; il tempo di un ping è calcolato dal numero di salti. I comandi per simulare un guasto di un dispositivo o di un cavo, e per ripararlo, e per elencare ciò che smette di funzionare, non sono ancora nel linguaggio: i guasti si simulano in modalità presentazione ([ciò che non è simulato](../reference/limits-and-faq.md#not-simulated)).
+> Il terminale sa ciò che sa il motore. ARP e tabelle MAC, spanning tree, instradamento dinamico, sottointerfacce dei router, porte diverse da quelle dei quattro servizi, la banda e il carico di un cavo non sono simulati, e nessun comando ne parla; il tempo di un ping si ricava dai cavi e dai dispositivi della sua strada. I comandi per simulare un guasto di un dispositivo o di un cavo, e per ripararlo, e per elencare ciò che smette di funzionare, non sono ancora nel linguaggio: i guasti si simulano in modalità presentazione ([ciò che non è simulato](../reference/limits-and-faq.md#not-simulated)).
 
 ## La versione del linguaggio {#version}
 
-Il linguaggio ha una versione sua, ed è la prima riga di `help`: **NCL v0.5**. Fino alla versione 1.0 le forme dei comandi sono stabili, ma i sinonimi e la formulazione delle risposte possono ancora cambiare tra due versioni minori. Che cosa ha aggiunto ciascuna versione:
+Il linguaggio ha una versione sua, ed è la prima riga di `help`: **NCL v0.6**. Fino alla versione 1.0 le forme dei comandi sono stabili, ma i sinonimi e la formulazione delle risposte possono ancora cambiare tra due versioni minori. Che cosa ha aggiunto ciascuna versione:
 
+- **0.6**: il tempo. `ping` stampa il tempo dello scambio ricavato dalla sua strada: i cavi, ciascuno con il suo mezzo e la sua lunghezza o un ritardo scritto a mano, e i dispositivi attraversati. `link <A> to <B>` imposta il mezzo, la lunghezza e il ritardo di un cavo, e `show connections` li stampa.
 - **0.5**: DNS. Un nome di host funziona come destinazione di `ping`, `trace`, `browse`, `mail` e `download`, e `resolve` lo cerca da solo. Un server ha dei record (`add record`, `remove record`), una scheda indica il suo server DNS (`interface <name> dns`), un server DHCP ne consegna uno, `show dns`. `dns` è un servizio per le regole e gli inoltri, e per `trace … as dns`.
 - **0.4**: DHCP. Una scheda prende l'indirizzo da un server (`interface <name> dhcp`), un'interfaccia assegna gli indirizzi di un intervallo (`interface <n> pool`), `show dhcp`. I comandi `show` distinguono un indirizzo assegnato da uno scritto a mano.
 - **0.3**: traduzione degli indirizzi. NAT in uscita (`interface <n> nat`), inoltri (`add forward`, `remove forward`), `show nat`. Il simbolo Internet non porta più gli indirizzi privati.

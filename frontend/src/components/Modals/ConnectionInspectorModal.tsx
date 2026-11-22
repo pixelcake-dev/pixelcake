@@ -4,18 +4,42 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { FormContainer, FormFieldset } from '@/components/ui/FormContainer';
+import { FieldRow, ReadOnlyField, SelectField, TextField } from '@/components/ui/compact';
 import { useUIStore } from '@/store/uiStore';
 import { useNetworkStore } from '@/store/networkStore';
 import { useTemplateStore } from '@/store/templateStore';
-import { bindingFor, boundInterface, listInterfaces, usedInterfaceKeys, withLeases } from '@/engine';
-import type { DeviceInterface } from '@/engine';
+import {
+  bindingFor,
+  boundInterface,
+  formatLength,
+  formatMs,
+  linkDelay,
+  listInterfaces,
+  usedInterfaceKeys,
+  withLeases,
+} from '@/engine';
+import type { DeviceInterface, LinkDelay } from '@/engine';
 import { interfaceOptionLabel } from '@/utils/interfaceLabels';
 import { linkTypeDescription } from '@/utils/templateText';
+import { cableFormOf, readCableForm, type CableForm } from '@/utils/linkCable';
+import { LINK_MEDIA } from '@/types/network';
 import type { ConnectionType, NetworkDevice } from '@/types/network';
-import { useT } from '@/i18n';
+import { getT, useT, type Dictionary } from '@/i18n';
 
 /** Value shown for an end that has no interface */
 const UNASSIGNED = '';
+
+/** The form of a link with nothing set on its cable */
+const NO_CABLE: CableForm = { medium: '', length: '', unit: 'm', delay: '' };
+
+/** What the time of a link comes from, in the language of the window: «fibra, 600 km», «rame (automatico)» */
+function delayReason(delay: LinkDelay, t: Dictionary): string {
+  const words = t.connection.cable.why;
+  if (delay.written) return words.written;
+  const medium = words.medium[delay.medium];
+  const base = delay.automatic ? words.automatic(medium) : medium;
+  return delay.lengthM === undefined ? base : words.withLength(base, formatLength(delay.lengthM));
+}
 
 interface InterfaceSelectProps {
   id: string;
@@ -80,6 +104,8 @@ const ConnectionInspectorModal = () => {
   // Interface (key) each end is attached to; UNASSIGNED when not bound
   const [sourceInterface, setSourceInterface] = useState(UNASSIGNED);
   const [targetInterface, setTargetInterface] = useState(UNASSIGNED);
+  // The cable: medium, length and delay as typed
+  const [cable, setCable] = useState<CableForm>(NO_CABLE);
 
   useEffect(() => {
     if (isOpen && inspectorConnection) {
@@ -101,6 +127,10 @@ const ConnectionInspectorModal = () => {
       setTargetInterface(
         (target && boundInterface(connection, target, 'target')?.key) || UNASSIGNED
       );
+      // (numbers in the fields are written as the language writes them)
+      const form = cableFormOf(connection);
+      const { decimal } = getT().connection.cable;
+      setCable({ ...form, length: decimal(form.length), delay: decimal(form.delay) });
     }
   }, [isOpen, inspectorConnection]);
 
@@ -128,7 +158,18 @@ const ConnectionInspectorModal = () => {
       ? listInterfaces(device).find((iface) => iface.key === key)
       : undefined;
 
+  // The cable as typed: what is wrong with it, and the time it takes one way
+  const typedCable = readCableForm(cable);
+  const cableProblems = t.connection.cable.problems;
+  const lengthError = typedCable.lengthProblem ? cableProblems[typedCable.lengthProblem] : null;
+  const delayError = typedCable.delayProblem ? cableProblems[typedCable.delayProblem] : null;
+  const delay = linkDelay({ ...inspectorConnection, ...typedCable.fields }, sourceDevice, targetDevice);
+  const setCableField = (field: keyof CableForm) => (value: string) =>
+    setCable((form) => ({ ...form, [field]: value }));
+
   const handleSave = () => {
+    // (what is wrong is said under its field: nothing is saved until it is right)
+    if (lengthError || delayError) return;
     updateConnection(inspectorConnection.id, {
       type: (connectionType as ConnectionType) || undefined,
       bandwidth: bandwidth.trim() || undefined,
@@ -137,6 +178,8 @@ const ConnectionInspectorModal = () => {
       // The four binding fields: one of port/NIC per end, the other cleared
       ...bindingFor('source', interfaceByKey(sourceDevice, sourceInterface)),
       ...bindingFor('target', interfaceByKey(targetDevice, targetInterface)),
+      // Medium, length, delay: each absent when it is automatic or empty
+      ...typedCable.fields,
     });
 
     handleClose();
@@ -188,6 +231,67 @@ const ConnectionInspectorModal = () => {
             />
             <p className="text-xs text-[var(--text-color-light)]">{t.connection.interfaces.note}</p>
           </FormContainer>
+        </FormFieldset>
+
+        {/* The cable: what it is, how long, and the time a packet takes on it */}
+        <FormFieldset legend={t.connection.cable.legend} className="mb-4">
+          <div className="flex flex-col gap-2">
+            <FieldRow>
+              <SelectField
+                id="connection-medium"
+                label={t.connection.cable.medium}
+                value={cable.medium}
+                onChange={(e) => setCableField('medium')(e.target.value)}
+                hint={t.connection.cable.mediumNote}
+                span={4}
+              >
+                <option value="">{t.connection.cable.media.auto}</option>
+                {LINK_MEDIA.map((medium) => (
+                  <option key={medium} value={medium}>
+                    {t.connection.cable.media[medium]}
+                  </option>
+                ))}
+              </SelectField>
+            </FieldRow>
+            <FieldRow>
+              <TextField
+                id="connection-length"
+                label={t.connection.cable.length}
+                value={cable.length}
+                onChange={(e) => setCableField('length')(e.target.value)}
+                placeholder={t.connection.cable.lengthPlaceholder}
+                inputMode="decimal"
+                error={lengthError}
+                span={2}
+              />
+              <SelectField
+                id="connection-length-unit"
+                label={t.connection.cable.unit}
+                value={cable.unit}
+                onChange={(e) => setCableField('unit')(e.target.value)}
+                span={2}
+              >
+                <option value="m">m</option>
+                <option value="km">km</option>
+              </SelectField>
+            </FieldRow>
+            <FieldRow>
+              <TextField
+                id="connection-delay"
+                label={t.connection.cable.delay}
+                value={cable.delay}
+                onChange={(e) => setCableField('delay')(e.target.value)}
+                placeholder={t.connection.cable.delayPlaceholder}
+                inputMode="decimal"
+                error={delayError}
+                span={2}
+              />
+              <ReadOnlyField id="connection-one-way" label={t.connection.cable.oneWay} span={2}>
+                {t.connection.cable.computed(formatMs(delay.ms), delayReason(delay, t))}
+              </ReadOnlyField>
+            </FieldRow>
+            <p className="text-xs text-[var(--text-color-light)]">{t.connection.cable.delayNote}</p>
+          </div>
         </FormFieldset>
 
         {/* Connection Type */}

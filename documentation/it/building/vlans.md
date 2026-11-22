@@ -33,7 +33,7 @@ pixelcake> interface 2 access 10 on SW-Office
 port 2 on SW-Office is now an access port in VLAN 10
 pixelcake> ping PC-2 from PC-1
 Pinging PC-2 (192.168.10.12) from PC-1...
-Reply from 192.168.10.12: hops=3 time=3ms
+Reply from 192.168.10.12: hops=3 time=0.22ms
 pixelcake> ping Web-01 from PC-1
 Pinging Web-01 (192.168.20.10) from PC-1...
 Ping failed (blocked): request: VLAN 10 does not leave through port 8 on SW-Office: it is in the default VLAN 1
@@ -47,7 +47,7 @@ pixelcake> interface 8 access 10 on SW-Office
 port 8 on SW-Office is now an access port in VLAN 10
 pixelcake> ping Web-01 from PC-1
 Pinging Web-01 (192.168.20.10) from PC-1...
-Reply from 192.168.20.10: hops=5 time=7ms
+Reply from 192.168.20.10: hops=5 time=0.44ms
 ```
 
 Uno switch, poi, risponde sul proprio indirizzo solo nella VLAN 1: uno switch con tutte le porte in altre VLAN si gestisce da una rete a parte, come SW-Core e SW-Uffici nella rete dell'azienda.
@@ -85,7 +85,7 @@ pixelcake> interface 8 trunk 10,20 on SW-Uffici
 port 8 on SW-Uffici is now a trunk carrying VLANs [10,20]
 pixelcake> ping Web-Gestionale from Portatile-1
 Pinging Web-Gestionale (192.168.30.30) from Portatile-1...
-Reply from 192.168.30.30: hops=7 time=11ms
+Reply from 192.168.30.30: hops=7 time=3.6ms
 ```
 
 ## Da una VLAN all'altra {#between-vlans}

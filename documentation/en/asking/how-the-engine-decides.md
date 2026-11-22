@@ -93,7 +93,7 @@ Ping failed (blocked): request: firewall FW-Edge: no rule matches, zone policy d
   dropped at: FW-Edge
 pixelcake> ping Web-Public from PC-Office-1
 Pinging Web-Public (172.16.0.10) from PC-Office-1...
-Reply from 172.16.0.10: hops=6 time=9ms
+Reply from 172.16.0.10: hops=6 time=0.84ms
   note: request: firewall FW-Edge: no rule matches, zone policy trust → dmz allowed
   note: reply: firewall FW-Edge: no rule matches, zone policy dmz → trust allowed (reply to an allowed flow)
 ```
@@ -200,6 +200,55 @@ Ping failed (blocked): reply: R-Branch has no route to 192.168.1.11
   dropped at: R-Branch
 ```
 
+## The time of a ping {#time}
+
+`ping` prints how long the exchange took: `time=0.44ms`. The time is not measured: it is worked out from the paths the engine found, and it never changes the answer. A slow line is slow, not broken.
+
+It is the sum of three parts:
+
+1. **The request, one way**: every cable it goes along and every device it crosses, from the sender to the device that answers.
+2. **The reply, one way**, on its own path, which may be another one ([a reply is a packet of its own](#flows)).
+3. **The two ends**, 0.1 ms each, once: the sender, to send the request and take the reply, and the device that answers. A device that pings itself counts once.
+
+A cable takes the time of its medium and of its length, or the delay written by hand on its link ([the time a packet takes](../building/cables.md#delay)). A device takes the time it needs to pass the packet on; a Cloud symbol, the time of the network it stands for:
+
+| Crossed | One way |
+|---|---|
+| Switch | 0.01 ms |
+| Access point | 0.05 ms |
+| Router | 0.1 ms |
+| Firewall | 0.2 ms |
+| Load balancer | 0.1 ms |
+| Cloud symbol named Internet | 10 ms |
+| Any other Cloud symbol (a carrier's MPLS network, a private line) | 4 ms |
+
+So two PCs on one switch answer in about 0.2 ms, and a server behind a router in under half a millisecond:
+
+```ncl sample=office
+pixelcake> ping PC-2 from PC-1
+Pinging PC-2 (192.168.10.12) from PC-1...
+Reply from 192.168.10.12: hops=3 time=0.22ms
+pixelcake> ping Web-01 from PC-1
+Pinging Web-01 (192.168.20.10) from PC-1...
+Reply from 192.168.20.10: hops=5 time=0.44ms
+```
+
+Between the two sites a ping takes the main line, 80 km of fibre. With its port switched off at one end the backup takes over, a DSL line of each site to the carrier, and the same ping takes more than twenty times as long:
+
+```ncl sample=two-sites
+pixelcake> ping PC-Branch-1 from PC-HQ-1
+Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
+Reply from 192.168.2.11: hops=7 time=1.5ms
+pixelcake> interface 2 down on R-HQ
+port 2 on R-HQ is now down
+pixelcake> ping PC-Branch-1 from PC-HQ-1
+Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
+Reply from 192.168.2.11: hops=8 time=33ms
+  note: reply: R-Branch: the route 192.168.1.0/24 via 10.0.0.1 is unusable (port 2 on R-HQ is disabled), the route 192.168.1.0/24 via 10.0.2.1 is used instead
+```
+
+A time is written with two decimals under 1 ms (`0.44ms`), with one up to 10 ms (`7.4ms`), and whole from there (`40ms`). Nothing varies: every reply of a ping on one drawing takes the same time.
+
 ## Simulated failures {#failures}
 
 In [presentation mode](presentation.md#failures) a device can be taken as down and a cable as cut. The drawing is not changed: the engine is given the list next to the drawing and finds nothing travelling through them.
@@ -276,7 +325,7 @@ The terminal prints the notes under the answer. The simulation panel shows only 
 > [!LIMITS]
 > - **It is not a packet simulator.** There is no ARP, no MAC table, no spanning tree, no dynamic routing (RIP, OSPF, BGP) and no gateway redundancy: a host has one gateway for each network card. Routes are the ones written.
 > - **Only the line itself is looked at.** A route is withdrawn when the port it leaves by is switched off, or when its line carries nothing: the cables are cut, the devices at their other ends are down, or the interfaces there are switched off. A next hop that dies behind a switch is not seen, as with a static route on real hardware, and the packet is lost there.
-> - **There is no time and no load.** The time printed by `ping` is worked out from the number of hops of the request (1 ms, plus 2 ms for each device between the two ends). There is no cable speed, queue, congestion, packet loss or timeout.
+> - **The time is worked out, not measured.** The time printed by `ping` is a sum of typical values: the medium and the length of each cable, each device crossed, the two ends ([the time of a ping](#time)). There is no bandwidth ("Bandwidth" is a label) and no bottleneck, no queue or congestion, no jitter, no packet loss and no timeout: a slow line is never a broken one.
 > - **Four services.** A flow is ping, web, email or DNS (a download is web to a firewall). There are no TCP or UDP ports, and traffic addressed to the firewall itself is not filtered.
 > - **NAT is by service, not by port number.** Two flows never compete for a translation. A server reached from inside at its published address is not treated apart, and a device behind two layers of NAT is found by name only through the first.
 > - **A DHCP lease is worked out, not negotiated.** No lease time, renewal or reservation, no relay through a router, and a port of a router cannot take its address from DHCP.

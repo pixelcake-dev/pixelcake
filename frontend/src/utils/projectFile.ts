@@ -19,7 +19,7 @@ import type {
   StoredCanvas,
 } from '@/types';
 import { PROJECT_FILE_FORMAT, PROJECT_FILE_VERSION } from '@/types';
-import { normalizeAddressing, normalizeBindings } from '@/engine';
+import { isLinkDelay, isLinkLength, isLinkMedium, normalizeAddressing, normalizeBindings } from '@/engine';
 import { cleanupConnections } from '@/utils/cleanupConnections';
 import { isValidIP } from '@/utils/ipHelpers';
 import { tidyNotes } from '@/utils/deviceNotes';
@@ -189,6 +189,9 @@ const CONNECTION_KEYS = [
   'vlan',
   'label',
   'color',
+  'medium',
+  'lengthM',
+  'delayMs',
   'stpPortState',
   'stpPortPriority',
 ];
@@ -638,8 +641,36 @@ function parseConnections(
     warnings.push(words().repairs.connectionsDetached(canvasName, count));
   }
 
+  // The cable of a link: a medium, a length or a delay the engine could not
+  // read is dropped, and the link keeps everything else
+  let repaired = 0;
+  const readable = attached.map(connection => {
+    const kept = withReadableCable(connection);
+    if (kept !== connection) repaired++;
+    return kept;
+  });
+  if (repaired > 0) warnings.push(words().repairs.connectionsRepaired(canvasName, repaired));
+
   // A file written before interface bindings: every link gets its interfaces
-  return normalizeBindings(devices, attached);
+  return normalizeBindings(devices, readable);
+}
+
+/** The fields of the cable of a link, each with what it must be to be read */
+const CABLE_FIELDS: ReadonlyArray<['medium' | 'lengthM' | 'delayMs', (value: unknown) => boolean]> = [
+  ['medium', isLinkMedium],
+  ['lengthM', isLinkLength],
+  ['delayMs', isLinkDelay],
+];
+
+/** The link without the fields of its cable that cannot be read; the same object when all can */
+function withReadableCable(connection: NetworkConnection): NetworkConnection {
+  const unreadable = CABLE_FIELDS.filter(
+    ([key, isReadable]) => connection[key] !== undefined && !isReadable(connection[key])
+  );
+  if (unreadable.length === 0) return connection;
+  const kept = { ...connection };
+  for (const [key] of unreadable) delete kept[key];
+  return kept;
 }
 
 function parseViewport(value: unknown, canvasName: string, warnings: string[]): CanvasViewport {

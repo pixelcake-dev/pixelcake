@@ -88,7 +88,7 @@ La stessa regola, scritta nel terminale sullo stesso disegno:
 ```ncl fixture=getting-started-first-network
 pixelcake> ping Server-1 from PC-1
 Pinging Server-1 (192.168.1.3) from PC-1...
-Reply from 192.168.1.3: hops=3 time=3ms
+Reply from 192.168.1.3: hops=3 time=0.60ms
   note: request: firewall Firewall-1 has no zone binding: allowed
   note: reply: firewall Firewall-1 has no zone binding: allowed
 pixelcake> add rule deny ping from PC-1 to Server-1 on Firewall-1

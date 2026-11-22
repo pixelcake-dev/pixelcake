@@ -77,6 +77,8 @@ const setProperties = tableOf('SET_PROPERTIES');
 const services = tableOf('SERVICES');
 const zones = tableOf('ZONES');
 const interfaceSettings = casesOf(functionNamed('parseInterface'), 'word.lower');
+const linkSettings = casesOf(functionNamed('parseLinkSet'), 'word.lower');
+const media = tableOf('MEDIA');
 const nouns = nounsOf(functionNamed('parseAddRemove'));
 
 const model = loadDocs();
@@ -103,6 +105,8 @@ describe('what the terminal knows, read from its parser', () => {
     expect(zones).toContain('dmz');
     expect(interfaceSettings).toEqual(expect.arrayContaining(['up', 'down', 'access', 'trunk', 'default', 'pool']));
     expect(nouns).toEqual(expect.arrayContaining(['route', 'backup', 'rule', 'forward', 'record', 'vlan']));
+    expect(linkSettings).toEqual(['medium', 'length', 'delay']);
+    expect(media).toEqual(expect.arrayContaining(['copper', 'fibre', 'satellite', 'auto']));
   });
 });
 
@@ -137,6 +141,13 @@ describe.each(LANGUAGES)('the terminal reference (%s)', (lang) => {
       )
     );
     expect(missing).toEqual([]);
+  });
+
+  it('has every setting of `link`, and every name of a medium', () => {
+    expect(linkSettings.filter((setting) => !lines(new RegExp(`^link .*\\b${setting}\\b`)))).toEqual([]);
+    // (a name of a medium is written as code, alone: `fibre`, or in a list of them)
+    const words = code.join(' ');
+    expect(media.filter((name) => !new RegExp(`(^|[\\s(])${escape(name)}([\\s),.]|$)`).test(words))).toEqual([]);
   });
 
   it('names every service and every zone', () => {

@@ -1,6 +1,6 @@
 ---
 title: "Devices and addresses"
-description: "The commands that change the address, mask, gateway and name of a device, and that add or remove a cable."
+description: "The commands that change the address, mask, gateway and name of a device, that add or remove a cable, and that say what a cable is."
 order: 2
 ---
 
@@ -68,7 +68,7 @@ pixelcake> set name of PC-1 to Front desk
 PC-1 renamed to "Front desk"
 pixelcake> ping Web-01 from Front desk
 Pinging Web-01 (192.168.20.10) from Front desk...
-Reply from 192.168.20.10: hops=5 time=7ms
+Reply from 192.168.20.10: hops=5 time=0.44ms
 pixelcake> show devices
 DEVICE                   TYPE           IP               VLANS
 Router-1                 Router         192.168.10.1     -
@@ -122,16 +122,57 @@ pixelcake> connect PC-1 to SW-Office
 connected PC-1 (eth0) ↔ SW-Office (port 1)
 pixelcake> show connections of PC-1
 CONNECTIONS of PC-1 (1)
-  PC-1 ↔ SW-Office  [eth0 ↔ port 1]
+  PC-1 ↔ SW-Office  [eth0 ↔ port 1]  copper, automatic: 0.00ms
 pixelcake> ping Web-01 from PC-1
 Pinging Web-01 (192.168.20.10) from PC-1...
-Reply from 192.168.20.10: hops=5 time=7ms
+Reply from 192.168.20.10: hops=5 time=0.44ms
 pixelcake> connect PC-1 to SW-Office
 PC-1 and SW-Office are already connected
 pixelcake> disconnect PC-1 SW-Office
 disconnected PC-1 ↔ SW-Office
 pixelcake> disconnect PC-1 SW-Office
 PC-1 and SW-Office are not connected
+```
+
+## link {#link}
+
+```text
+link <device> [to] <device> medium <medium>
+link <device> [to] <device> length <n> m|km | length none
+link <device> [to] <device> delay <n> [ms] | delay auto
+```
+
+`link` sets the cable of the link between two devices, as the group “Cable” of the window of the link does ([the time a packet takes](../building/cables.md#delay)): what it is, how long it is, and a delay written by hand. One setting or more go on one line, in any order, and the answer says the time the link takes now, one way, and what it comes from. As for `connect`, the two devices can be given in either order, and `to` may be left out when each is one word.
+
+| Parameter | What it is |
+|---|---|
+| `<medium>` | `copper`, `fibre`, `wifi`, `dsl`, `ftth` (fibre to the provider), `mobile` (4G/5G), `satellite`, or `auto` (also `automatic`) to work it out again: Wi-Fi between a laptop, a smartphone or a tablet and an access point, copper otherwise. `fiber`, `ethernet`, `wi-fi`, `wireless`, `4g`, `5g`, `lte`, `adsl` and `vdsl` are taken too |
+| `length <n> m\|km` | How long the cable is, with its unit: `length 600 km`, `length 80m`. More than 0, and 40000 km at most. `length none` takes it away |
+| `delay <n> [ms]` | A delay written by hand, one way, from 0 to 10000 ms: it takes the place of the medium and the length. `delay auto` takes it away |
+
+`show connections` prints the cable of every link and its time ([show connections](show.md#show-connections)). Two devices joined by more than one cable (a router and its switch, one cable for each VLAN) are refused: the terminal cannot tell which cable is meant, and the window of the link sets each of them.
+
+```ncl sample=two-sites
+pixelcake> link R-HQ to R-Branch medium fibre length 600 km
+R-HQ ↔ R-Branch: medium fibre, length 600 km
+  one way: 3.0ms (fibre, 600 km)
+pixelcake> ping PC-Branch-1 from PC-HQ-1
+Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
+Reply from 192.168.2.11: hops=7 time=6.7ms
+pixelcake> link R-HQ to R-Branch delay 12 ms
+R-HQ ↔ R-Branch: delay 12ms written by hand
+  one way: 12ms (written by hand)
+pixelcake> show connections of R-Branch
+CONNECTIONS of R-Branch (3)
+  R-HQ ↔ R-Branch  (backbone, 1 Gbps)  [port 2 ↔ port 2]  fibre, 600 km: 12ms written by hand
+  R-Backup ↔ R-Branch  (uplink, 100 Mbps)  [port 2 ↔ port 3]  dsl: 8.0ms
+  R-Branch ↔ SW-Branch  (uplink, 1 Gbps)  [port 1 ↔ port 8]  copper, automatic: 0.00ms
+pixelcake> link R-Branch R-HQ delay auto medium auto length none
+R-Branch ↔ R-HQ: delay worked out, medium automatic, no length
+  one way: 0.00ms (copper, automatic)
+pixelcake> link PC-HQ-1 to PC-Branch-1 medium fibre
+PC-HQ-1 and PC-Branch-1 are not connected
+  connect them first: connect PC-HQ-1 to PC-Branch-1
 ```
 
 ## When a command is refused {#refusals}

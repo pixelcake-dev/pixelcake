@@ -67,9 +67,50 @@ La stessa finestra, «Modifica connessione», decide l'aspetto del cavo:
 
 Premi «Salva» per tenere le modifiche. **Queste quattro cambiano ciò che è disegnato e nient'altro.** Il motore non legge il tipo, la banda, l'etichetta né il colore: un cavo con l'etichetta `VLAN 10` trasporta la VLAN 10 solo se le porte alle sue estremità sono nella VLAN 10. [Template](templates.md#built-in) spiega come creare un tipo di connessione tuo.
 
+## Il tempo di un pacchetto {#delay}
+
+Su un cavo un pacchetto impiega del tempo. Il gruppo «Cavo» della stessa finestra dice che cos'è il cavo e quanto è lungo, e mostra il tempo che un pacchetto ci impiega, in un verso:
+
+- «Mezzo»: «Automatico», oppure che cos'è il cavo: «Rame (Ethernet)», «Fibra ottica», «Wi-Fi», o la linea di una sede verso il suo provider: «DSL verso il provider», «Fibra verso il provider (FTTH)», «Rete mobile 4G/5G», «Satellite (geostazionario)». «Automatico» è Wi-Fi quando un'estremità è un portatile, uno smartphone o un tablet e l'altra un access point, rame negli altri casi: i portatili delle reti di esempio sono in Wi-Fi senza che nessuno lo imposti.
+- «Lunghezza», con la sua «Unità» (m o km): quanto è lungo il cavo. Se resta vuota, il cavo non ha lunghezza.
+- «Ritardo (ms)»: un ritardo scritto a mano, in un verso, come la latenza che un operatore garantisce per una linea. Se resta vuoto, il ritardo si ricava dal mezzo e dalla lunghezza; scritto, prende il posto di tutti e due.
+- «Ritardo in un verso» mostra il tempo mentre si scrive nei campi, e da che cosa viene: `3,0 ms: fibra, 600 km`, `1,5 ms: Wi-Fi (automatico)`, `7,0 ms: scritto a mano`.
+
+Una lunghezza o un ritardo che non è un numero, o che è fuori misura (un cavo più lungo di 40.000 km, un ritardo oltre 10.000 ms), viene segnalato sotto il suo campo, e «Salva» non tiene nulla finché non è corretto.
+
+Il tempo di un cavo è il tempo del suo mezzo, più 5 µs per ogni km di lunghezza, che è la velocità della luce nel rame e nella fibra:
+
+| Mezzo | In un verso |
+|---|---|
+| Rame (Ethernet), fibra ottica | solo la lunghezza: 0,005 ms al km, 3 ms per 600 km |
+| Wi-Fi | 1,5 ms |
+| DSL verso il provider | 8 ms |
+| Fibra verso il provider (FTTH) | 1,5 ms |
+| Rete mobile 4G/5G | 15 ms |
+| Satellite (geostazionario) | 280 ms |
+
+Anche i dispositivi che il pacchetto attraversa impiegano il loro tempo, e così la rete che un simbolo Cloud rappresenta: [il tempo di un ping](../asking/how-the-engine-decides.md#time) spiega come si sommano. Il tipo di una connessione dice a che cosa serve, mai di che cosa è fatta: una connessione MPLS può essere in fibra o in DSL. Nel terminale `show connections` stampa il cavo di ogni connessione e il suo tempo, e `link` li imposta. La linea di riserva delle due sedi è una linea DSL di ogni sede verso l'operatore:
+
+```ncl sample=two-sites
+pixelcake> show connections of R-Riserva
+CONNECTIONS of R-Riserva (2)
+  R-Sede ↔ R-Riserva  (uplink, 100 Mbps)  [port 3 ↔ port 1]  dsl: 8.0ms
+  R-Riserva ↔ R-Filiale  (uplink, 100 Mbps)  [port 2 ↔ port 3]  dsl: 8.0ms
+pixelcake> link R-Sede to R-Filiale length 300 km
+R-Sede ↔ R-Filiale: length 300 km
+  one way: 1.5ms (fibre, 300 km)
+pixelcake> ping PC-Filiale-1 from PC-Sede-1
+Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
+Reply from 192.168.2.11: hops=7 time=3.7ms
+```
+
+I comandi sono in [Dispositivi e indirizzi](../terminal/devices-and-addresses.md#link).
+
 ## Limiti {#limits}
 
 > [!LIMITS]
-> - Un cavo non ha lunghezza, velocità né guasti propri. La "Banda" è un'etichetta, e un pacchetto impiega lo stesso tempo su ogni cavo. Un cavo si può interrompere solo nella modalità presentazione, come guasto simulato.
+> - Un cavo ha un ritardo, non una velocità. La "Banda" è un'etichetta: un pacchetto impiega lo stesso tempo qualunque cosa porti e per quanti pacchetti attraversino il cavo, e un download grande dura quanto un ping. La banda e il collo di bottiglia di una strada non sono simulati.
+> - Non ci sono code, congestione, variazioni del ritardo né perdite: ogni ping di un disegno impiega lo stesso tempo. I tempi dei mezzi sono valori tipici, non misurati.
+> - Un cavo non ha guasti propri: si può interrompere solo nella modalità presentazione, come guasto simulato.
 > - Nulla impedisce un cavo tra due dispositivi finali, o da un dispositivo a se stesso. Il motore segue ciò che è disegnato e poi dice perché un pacchetto non può attraversare un dispositivo finale.
 > - Una porta può avere un cavo solo. Un dispositivo con più cavi che porte ha le estremità in più non assegnate.

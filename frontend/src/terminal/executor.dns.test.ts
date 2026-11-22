@@ -430,7 +430,7 @@ describe('resolve', () => {
     ]);
     expect(way(result)).toBe('Web-01 > SW-Servers > Mail-01 > SW-Servers > Web-01');
     expect(result.liveTrace?.lookup).toBeUndefined();
-    expect(result.liveTrace?.finalLines.map(l => l.text)).toEqual(['Reply from 192.168.20.20: hops=3 time=3ms']);
+    expect(result.liveTrace?.finalLines.map(l => l.text)).toEqual(['Reply from 192.168.20.20: hops=3 time=0.22ms']);
   });
 
   it('a server that is its own DNS server answers without sending anything', () => {
@@ -494,7 +494,7 @@ describe('a name where a target goes', () => {
       ),
     });
     expect(result.liveTrace?.hopLines).toEqual([]);
-    expect(result.liveTrace?.finalLines.map(l => l.text)).toEqual(['Reply from 192.168.30.30: hops=6 time=9ms']);
+    expect(result.liveTrace?.finalLines.map(l => l.text)).toEqual(['Reply from 192.168.30.30: hops=6 time=0.46ms']);
     // one animation: to the DNS server and back, then to the web server and back
     expect(way(result)).toBe(`${THERE} > Srv-Auth > ${BACK} > ${THERE.slice(13)} > Web-Gestionale > ${BACK}`);
     expect(result.liveTrace?.flowModel).toBe('ping');
@@ -594,7 +594,7 @@ describe('a name where a target goes', () => {
     expect(transcript('ping gestionale.azienda.example from Portatile-2').slice(-3)).toEqual([
       'gestionale.azienda.example is 192.168.30.30 (answered by Srv-Auth)',
       'Pinging Web-Gestionale (192.168.30.30) from Portatile-2...',
-      'Reply from 192.168.30.30: hops=7 time=11ms',
+      'Reply from 192.168.30.30: hops=7 time=3.6ms',
     ]);
   });
 
@@ -714,7 +714,7 @@ describe('a name where a target goes', () => {
       'Lookup failed (blocked): DNS request: Srv-Auth is down',
       '  dropped at: SW-Server',
     ]);
-    expect(transcript('ping Web-Gestionale from PC-Vendite')).toContain('Reply from 192.168.30.30: hops=6 time=9ms');
+    expect(transcript('ping Web-Gestionale from PC-Vendite')).toContain('Reply from 192.168.30.30: hops=6 time=0.46ms');
     presentation.exit();
   });
 });

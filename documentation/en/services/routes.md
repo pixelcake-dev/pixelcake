@@ -71,7 +71,7 @@ pixelcake> add route 192.168.2.0/24 via 10.0.0.2 on R-HQ
 R-HQ: route to 192.168.2.0/24 via 10.0.0.2 added
 pixelcake> ping PC-Branch-1 from PC-HQ-1
 Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
-Reply from 192.168.2.11: hops=7 time=11ms
+Reply from 192.168.2.11: hops=7 time=1.5ms
 pixelcake> add route 192.168.2.0/24 via 10.0.1.2 on R-HQ
 R-HQ: route to 192.168.2.0/24 now goes via 10.0.1.2 (was 10.0.0.2)
 pixelcake> trace PC-Branch-1 from PC-HQ-1
@@ -103,7 +103,7 @@ R-Branch: route to 192.168.1.0/24 via 10.0.0.1 added
   R-HQ → 10.0.0.1
 pixelcake> ping PC-Branch-1 from PC-HQ-1
 Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
-Reply from 192.168.2.11: hops=7 time=11ms
+Reply from 192.168.2.11: hops=7 time=1.5ms
 ```
 
 The request got to the branch. The reply could not leave R-Branch, and the reason says which router lacked the route and for which address.
@@ -201,7 +201,7 @@ pixelcake> interface 2 down on R-HQ
 port 2 on R-HQ is now down
 pixelcake> ping PC-Branch-1 from PC-HQ-1
 Pinging PC-Branch-1 (192.168.2.11) from PC-HQ-1...
-Reply from 192.168.2.11: hops=8 time=13ms
+Reply from 192.168.2.11: hops=8 time=33ms
   note: reply: R-Branch: the route 192.168.1.0/24 via 10.0.0.1 is unusable (port 2 on R-HQ is disabled), the route 192.168.1.0/24 via 10.0.2.1 is used instead
 ```
 

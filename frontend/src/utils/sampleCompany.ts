@@ -430,6 +430,8 @@ export function createCompanySample(): SampleNetwork {
       targetNic: 'nic-2',
       type: 'access',
       bandwidth: '100 Mbps',
+      // (somebody outside, on a DSL line)
+      medium: 'dsl',
     },
     {
       id: 'link-wan',
@@ -441,6 +443,8 @@ export function createCompanySample(): SampleNetwork {
       targetPort: 3,
       type: 'uplink',
       bandwidth: '1 Gbps',
+      // (the line of the company to its provider: fibre to the building)
+      medium: 'ftth',
     },
     {
       id: 'link-dmz',

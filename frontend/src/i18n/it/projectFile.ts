@@ -75,6 +75,13 @@ export const projectFile = {
           ? '1 connessione con ID duplicato rimossa.'
           : `${amount(count)} connessioni con ID duplicato rimosse.`
       ),
+    connectionsRepaired: (canvasName: string, count: number) =>
+      inCanvas(
+        canvasName,
+        count === 1
+          ? '1 connessione con mezzo, lunghezza o ritardo non validi corretta: il valore è stato tolto.'
+          : `${amount(count)} connessioni con mezzo, lunghezza o ritardo non validi corrette: i valori sono stati tolti.`
+      ),
     connectionsDetached: (canvasName: string, count: number) =>
       inCanvas(
         canvasName,

@@ -25,7 +25,7 @@ Looking up erp.company.example from PC-Sales (DNS server 192.168.30.10)...
   ✓ DNS reply: Srv-Auth → PC-Sales
 erp.company.example is 192.168.30.30 (answered by Srv-Auth)
 Pinging Web-ERP (192.168.30.30) from PC-Sales...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 pixelcake> ping Srv-Auth from Customer-Portal
 Pinging Srv-Auth (192.168.30.10) from Customer-Portal...
 Ping failed (blocked): request: firewall FW-Edge: no rule matches, zone policy dmz → trust denied
@@ -47,7 +47,7 @@ Things to try. Give a PC a gateway that is not the router and see the answer nam
 ```ncl sample=office
 pixelcake> ping Web-01 from PC-1
 Pinging Web-01 (192.168.20.10) from PC-1...
-Reply from 192.168.20.10: hops=5 time=7ms
+Reply from 192.168.20.10: hops=5 time=0.44ms
 pixelcake> set gateway of PC-1 to 192.168.10.254
 PC-1: gateway set to 192.168.10.254
 pixelcake> ping Web-01 from PC-1
@@ -91,7 +91,7 @@ Ping failed (blocked): request: firewall FW-Edge: no rule matches, zone policy d
 
 ## Two sites {#two-sites}
 
-“Two sites: main line and backup line”: 12 devices and 13 links, in two areas (Head office, Branch). A router at each site, joined by a main line (1 Gbps) and, through a third router, a backup line (100 Mbps). At the head office three switches are closed in a ring. It is the sample for failures: nearly every cable has another way round, and the few that have none are worth finding. Each site router has two routes to the other site, the main line first and the backup second; the backup takes over when the interface of the main route has no working cable left.
+“Two sites: main line and backup line”: 12 devices and 13 links, in two areas (Head office, Branch). A router at each site, joined by a main line (1 Gbps) and, through a third router, a backup line (100 Mbps). At the head office three switches are closed in a ring. It is the sample for failures: nearly every cable has another way round, and the few that have none are worth finding. Each site router has two routes to the other site, the main line first and the backup second; the backup takes over when the interface of the main route has no working cable left. The main line is 80 km of fibre, the backup a DSL line of each site to the carrier: a ping between the sites takes about 1.5 ms on the first and 33 ms on the second ([the time a packet takes](../building/cables.md#delay)).
 
 ![The two-sites sample. At the top R-Backup, joined by dashed cables labelled Backup line to R-HQ on the left and R-Branch on the right. R-HQ and R-Branch are joined by a dotted cable labelled Main line. The Head office area holds R-HQ, SW-Core with Srv-File, and below them SW-Floor-1 and SW-Floor-2, each with a PC, joined to SW-Core and to each other. The Branch area holds R-Branch, SW-Branch, PC-Branch-1 and PC-Branch-2.](../../media/samples/two-sites.en.svg "The two-sites sample: a main line, a backup line, and a ring of switches at the head office.")
 
@@ -122,7 +122,7 @@ Then break it. The terminal cannot cut a cable: that is done in a presentation (
 
 ## Multinational {#multinational}
 
-“Multinational: ten sites in Italy”: 181 devices and 194 links, in the areas of ten sites. It is there to see how the app holds a drawing of that size, and to be questioned like a real network. Milan is the head office: two Internet providers, a firewall (FW-MI) with zones, NAT and eleven ordered rules, a DMZ, a server room and four floors. Rome and a disaster recovery data centre in Bologna reach it by a direct line, with the MPLS network of the carrier as backup. Seven branches reach it over MPLS: Turin, Venice, Florence, Naples, Cagliari, and two with a firewall of their own, a warehouse in Bari (cameras that talk only to their recorder, sensors that speak only to the archive) and a shop in Palermo (tills that reach only their server, guests kept away from the company). VLANs have the same number on every site: 10 users, 20 voice, 30 Wi-Fi, 40 guests, 60 cameras, 70 IoT, 80 tills. Routing is static, as everywhere in the app.
+“Multinational: ten sites in Italy”: 181 devices and 194 links, in the areas of ten sites. It is there to see how the app holds a drawing of that size, and to be questioned like a real network. Milan is the head office: two Internet providers, a firewall (FW-MI) with zones, NAT and eleven ordered rules, a DMZ, a server room and four floors. Rome and a disaster recovery data centre in Bologna reach it by a direct line, with the MPLS network of the carrier as backup. Seven branches reach it over MPLS: Turin, Venice, Florence, Naples, Cagliari, and two with a firewall of their own, a warehouse in Bari (cameras that talk only to their recorder, sensors that speak only to the archive) and a shop in Palermo (tills that reach only their server, guests kept away from the company). VLANs have the same number on every site: 10 users, 20 voice, 30 Wi-Fi, 40 guests, 60 cameras, 70 IoT, 80 tills. Routing is static, as everywhere in the app. The line to Rome is 600 km of fibre and the one to Bologna 210 km; each site reaches the MPLS network by a fibre as long as its way to Milan, so that a ping from Milan to Rome takes about 7 ms by the line and 15 ms by MPLS. The laptops are on Wi-Fi, the customer on the Internet on DSL and the remote worker on FTTH.
 
 ![The whole multinational sample, seen from far away: Italy from north to south, with Turin, Milan and Venice in a row, Bologna, Florence and Rome below, Naples, Bari, Cagliari and Palermo at the bottom, each in an area of its own, and the MPLS network joining them.](../../media/samples/multinational.en.svg "The multinational sample as a whole. It is a large picture: open it on its own to read it.")
 

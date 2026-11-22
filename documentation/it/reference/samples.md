@@ -25,7 +25,7 @@ Looking up gestionale.azienda.example from PC-Vendite (DNS server 192.168.30.10)
   ✓ DNS reply: Srv-Auth → PC-Vendite
 gestionale.azienda.example is 192.168.30.30 (answered by Srv-Auth)
 Pinging Web-Gestionale (192.168.30.30) from PC-Vendite...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 pixelcake> ping Srv-Auth from Portale-Clienti
 Pinging Srv-Auth (192.168.30.10) from Portale-Clienti...
 Ping failed (blocked): request: firewall FW-Edge: no rule matches, zone policy dmz → trust denied
@@ -47,7 +47,7 @@ Da provare. Dai a un PC un gateway che non è il router, e guarda come la rispos
 ```ncl sample=office
 pixelcake> ping Web-01 from PC-1
 Pinging Web-01 (192.168.20.10) from PC-1...
-Reply from 192.168.20.10: hops=5 time=7ms
+Reply from 192.168.20.10: hops=5 time=0.44ms
 pixelcake> set gateway of PC-1 to 192.168.10.254
 PC-1: gateway set to 192.168.10.254
 pixelcake> ping Web-01 from PC-1
@@ -91,7 +91,7 @@ Ping failed (blocked): request: firewall FW-Edge: no rule matches, zone policy d
 
 ## Due sedi {#two-sites}
 
-«Due sedi: linea principale e di riserva»: 12 dispositivi e 13 connessioni, in due riquadri (Sede, Filiale). Un router per sede, uniti da una linea principale (1 Gbps) e, attraverso un terzo router, da una linea di riserva (100 Mbps). Nella sede tre switch sono chiusi ad anello. È la rete per i guasti: quasi ogni cavo ha un'altra strada, e i pochi che non ce l'hanno vale la pena di trovarli. Ogni router di sede ha due rotte verso l'altra sede, la linea principale per prima e quella di riserva per seconda; la riserva subentra quando l'interfaccia della rotta principale non ha più nessun cavo che funzioni.
+«Due sedi: linea principale e di riserva»: 12 dispositivi e 13 connessioni, in due riquadri (Sede, Filiale). Un router per sede, uniti da una linea principale (1 Gbps) e, attraverso un terzo router, da una linea di riserva (100 Mbps). Nella sede tre switch sono chiusi ad anello. È la rete per i guasti: quasi ogni cavo ha un'altra strada, e i pochi che non ce l'hanno vale la pena di trovarli. Ogni router di sede ha due rotte verso l'altra sede, la linea principale per prima e quella di riserva per seconda; la riserva subentra quando l'interfaccia della rotta principale non ha più nessun cavo che funzioni. La linea principale è di 80 km di fibra, la riserva una linea DSL di ogni sede verso l'operatore: un ping tra le sedi impiega circa 1,5 ms sulla prima e 33 ms sulla seconda ([il tempo di un pacchetto](../building/cables.md#delay)).
 
 ![La rete delle due sedi. In alto R-Riserva, collegato con cavi tratteggiati, con l'etichetta Linea di riserva, a R-Sede a sinistra e a R-Filiale a destra. R-Sede e R-Filiale sono collegati da un cavo a puntini con l'etichetta Linea principale. Il riquadro Sede contiene R-Sede, SW-Core con Srv-File, e sotto SW-Piano-1 e SW-Piano-2, ciascuno con un PC, collegati a SW-Core e tra loro. Il riquadro Filiale contiene R-Filiale, SW-Filiale, PC-Filiale-1 e PC-Filiale-2.](../../media/samples/two-sites.it.svg "La rete delle due sedi: una linea principale, una di riserva, e un anello di switch nella sede.")
 
@@ -122,7 +122,7 @@ Poi rompila. Il terminale non può tagliare un cavo: lo si fa in una presentazio
 
 ## Multinazionale {#multinational}
 
-«Multinazionale: dieci sedi in Italia»: 181 dispositivi e 194 connessioni, nei riquadri di dieci sedi. Serve a vedere come l'app regge un disegno di quella dimensione, e a interrogarla come una rete vera. Milano è la sede centrale: due fornitori Internet, un firewall (FW-MI) con zone, NAT e undici regole in ordine, una DMZ, una sala server e quattro piani. Roma e un data center di disaster recovery a Bologna la raggiungono con una linea diretta, con la rete MPLS dell'operatore come riserva. Sette filiali la raggiungono sull'MPLS: Torino, Venezia, Firenze, Napoli, Cagliari, e due con un firewall proprio, un magazzino a Bari (telecamere che parlano solo con il loro registratore, sensori che parlano solo con l'archivio) e un negozio a Palermo (casse che raggiungono solo il loro server, ospiti tenuti lontani dall'azienda). Le VLAN hanno lo stesso numero in ogni sede: 10 utenti, 20 voce, 30 Wi-Fi, 40 ospiti, 60 telecamere, 70 IoT, 80 casse. L'instradamento è statico, come ovunque nell'app.
+«Multinazionale: dieci sedi in Italia»: 181 dispositivi e 194 connessioni, nei riquadri di dieci sedi. Serve a vedere come l'app regge un disegno di quella dimensione, e a interrogarla come una rete vera. Milano è la sede centrale: due fornitori Internet, un firewall (FW-MI) con zone, NAT e undici regole in ordine, una DMZ, una sala server e quattro piani. Roma e un data center di disaster recovery a Bologna la raggiungono con una linea diretta, con la rete MPLS dell'operatore come riserva. Sette filiali la raggiungono sull'MPLS: Torino, Venezia, Firenze, Napoli, Cagliari, e due con un firewall proprio, un magazzino a Bari (telecamere che parlano solo con il loro registratore, sensori che parlano solo con l'archivio) e un negozio a Palermo (casse che raggiungono solo il loro server, ospiti tenuti lontani dall'azienda). Le VLAN hanno lo stesso numero in ogni sede: 10 utenti, 20 voce, 30 Wi-Fi, 40 ospiti, 60 telecamere, 70 IoT, 80 casse. L'instradamento è statico, come ovunque nell'app. La linea per Roma è di 600 km di fibra e quella per Bologna di 210 km; ogni sede raggiunge la rete MPLS con una fibra lunga quanto la sua strada fino a Milano, così che un ping da Milano a Roma impiega circa 7 ms con la linea e 15 ms con l'MPLS. I portatili sono in Wi-Fi, il cliente su Internet in DSL e chi lavora da casa in FTTH.
 
 ![L'intera rete multinazionale, vista da lontano: l'Italia da nord a sud, con Torino, Milano e Venezia in fila, Bologna, Firenze e Roma sotto, Napoli, Bari, Cagliari e Palermo in fondo, ciascuna in un riquadro suo, e la rete MPLS che le unisce.](../../media/samples/multinational.it.svg "La rete multinazionale per intero. È un'immagine grande: aprila da sola per leggerla.")
 

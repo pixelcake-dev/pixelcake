@@ -261,6 +261,9 @@ const ImportExportModal = () => {
             vlan: conn.vlan,
             label: conn.label,
             color: conn.color,
+            medium: conn.medium,
+            lengthM: conn.lengthM,
+            delayMs: conn.delayMs,
             stpPortState: conn.stpPortState,
             stpPortPriority: conn.stpPortPriority,
           });

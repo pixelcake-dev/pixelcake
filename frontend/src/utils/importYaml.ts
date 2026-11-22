@@ -24,6 +24,7 @@ import { tidyNotes } from '@/utils/deviceNotes';
 import { getT } from '@/i18n';
 import { isNameTaken, newDeviceName } from '@/utils/newDevice';
 import { readAreas } from '@/utils/canvasAreas';
+import { isLinkDelay, isLinkLength, isLinkMedium } from '@/engine/latency';
 
 export interface ImportResult {
   devices: NetworkDevice[];
@@ -558,6 +559,17 @@ export function parseYamlTopology(content: string): ImportResult {
     if (typeof c.bandwidth === 'string') conn.bandwidth = c.bandwidth;
     if (typeof c.label === 'string') conn.label = c.label;
     if (typeof c.stp_state === 'string') conn.stpPortState = c.stp_state as NetworkConnection['stpPortState'];
+    // The cable: a value the engine could not read is left out, and said
+    for (const [key, field, isReadable] of [
+      ['medium', 'medium', isLinkMedium],
+      ['length_m', 'lengthM', isLinkLength],
+      ['delay_ms', 'delayMs', isLinkDelay],
+    ] as const) {
+      const value = c[key];
+      if (value === undefined || value === null) continue;
+      if (isReadable(value)) Object.assign(conn, { [field]: value });
+      else warnings.push(words().connectionCableNotValid(i + 1, key, String(value)));
+    }
 
     if (Array.isArray(c.vlan)) {
       const { valid, outside } = splitVlans(c.vlan);

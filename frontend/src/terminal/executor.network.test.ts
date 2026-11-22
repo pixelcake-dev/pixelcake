@@ -163,7 +163,7 @@ describe('a second site, routed from the terminal', () => {
       'Router-2: route to default via 10.0.0.1 added',
       '  Router-1 → 10.0.0.1',
     ]);
-    expect(verdict('ping Branch-PC from PC-1')).toBe('Reply from 192.168.30.11: hops=5 time=7ms');
+    expect(verdict('ping Branch-PC from PC-1')).toBe('Reply from 192.168.30.11: hops=5 time=0.62ms');
   });
 
   it('shows every hop with the route it took', () => {
@@ -209,7 +209,7 @@ describe('a second site, routed from the terminal', () => {
       '  the gateway of a router is its default route — "show routes Router-1"',
     ]);
     run('add route default via 10.0.0.1 on Router-2');
-    expect(verdict('ping Branch-PC from PC-1')).toBe('Reply from 192.168.30.11: hops=5 time=7ms');
+    expect(verdict('ping Branch-PC from PC-1')).toBe('Reply from 192.168.30.11: hops=5 time=0.62ms');
   });
 
   it('replaces the next hop of a route to the same network, and removes it', () => {
@@ -362,7 +362,7 @@ describe('addresses from the terminal', () => {
   it('pings the address that was typed, not the main address of its device', () => {
     expect(transcript('ping 192.168.20.1 from PC-1')).toEqual([
       'Pinging Router-1 (192.168.20.1) from PC-1...',
-      'Reply from 192.168.20.1: hops=3 time=3ms',
+      'Reply from 192.168.20.1: hops=3 time=0.22ms',
     ]);
     expect(transcript('ping Router-1 from PC-1')[0]).toBe('Pinging Router-1 (192.168.10.1) from PC-1...');
   });
@@ -371,7 +371,7 @@ describe('addresses from the terminal', () => {
     expect(output('set ip of PC-1 to 192.168.10.50')).toEqual(['PC-1: ip set to 192.168.10.50']);
     expect(device('PC-1').ip).toBe('192.168.10.50');
     expect(device('PC-1').nics?.[0].ip).toBe('192.168.10.50');
-    expect(verdict('ping 192.168.10.50 from PC-2')).toBe('Reply from 192.168.10.50: hops=3 time=3ms');
+    expect(verdict('ping 192.168.10.50 from PC-2')).toBe('Reply from 192.168.10.50: hops=3 time=0.22ms');
   });
 
   it('warns when the address is already somebody else\'s', () => {
@@ -394,7 +394,7 @@ describe('addresses from the terminal', () => {
     expect(output('interface eth0 gateway 192.168.10.1 on PC-1')).toEqual([
       'interface eth0 on PC-1: gateway 192.168.10.1',
     ]);
-    expect(verdict('ping Web-01 from PC-1')).toBe('Reply from 192.168.20.10: hops=5 time=7ms');
+    expect(verdict('ping Web-01 from PC-1')).toBe('Reply from 192.168.20.10: hops=5 time=0.44ms');
 
     expect(output('interface eth0 down on PC-1')).toEqual(['interface eth0 on PC-1 is now down']);
     expect(output('interface eth0 down on PC-1')).toEqual(['interface eth0 on PC-1 is already down']);
@@ -443,14 +443,14 @@ describe('VLANs on switch ports, from the terminal', () => {
     expect(output('interface 2 access 10 on SW-Office')).toEqual([
       'port 2 on SW-Office is now an access port in VLAN 10',
     ]);
-    expect(verdict('ping PC-2 from PC-1')).toBe('Reply from 192.168.10.12: hops=3 time=3ms');
+    expect(verdict('ping PC-2 from PC-1')).toBe('Reply from 192.168.10.12: hops=3 time=0.22ms');
 
     // the gateway is on the uplink, still in VLAN 1
     expect(verdict('ping Web-01 from PC-1')).toBe(
       'Ping failed (blocked): request: VLAN 10 does not leave through port 8 on SW-Office: it is in the default VLAN 1'
     );
     run('interface 8 access 10 on SW-Office');
-    expect(verdict('ping Web-01 from PC-1')).toBe('Reply from 192.168.20.10: hops=5 time=7ms');
+    expect(verdict('ping Web-01 from PC-1')).toBe('Reply from 192.168.20.10: hops=5 time=0.44ms');
   });
 
   it('names the VLAN at the switch hop of a trace', () => {
@@ -512,7 +512,7 @@ describe('VLANs on switch ports, from the terminal', () => {
       'port 2 on SW-Office has no VLAN of its own now',
       '  no port of SW-Office has a VLAN any more: it forwards everything as it comes',
     ]);
-    expect(verdict('ping Web-01 from PC-1')).toBe('Reply from 192.168.20.10: hops=5 time=7ms');
+    expect(verdict('ping Web-01 from PC-1')).toBe('Reply from 192.168.20.10: hops=5 time=0.44ms');
   });
 
   it('a trunk for every VLAN is written without a list', () => {
@@ -558,7 +558,7 @@ describe('a firewall at the edge, from the terminal', () => {
 
   it('lets the inside out and keeps the outside out', () => {
     cableEdge();
-    expect(verdict('ping Ext from PC-1')).toBe('Reply from 203.0.113.50: hops=5 time=7ms');
+    expect(verdict('ping Ext from PC-1')).toBe('Reply from 203.0.113.50: hops=5 time=0.82ms');
     expect(transcript('ping Web-01 from Ext')).toEqual([
       'Pinging Web-01 (192.168.20.10) from Ext...',
       'Ping failed (blocked): request: firewall policy on FW-1: untrust → trust denied',
@@ -699,7 +699,7 @@ describe('a firewall at the edge, from the terminal', () => {
     // a ping from inside leaves by port 2, the port of its route: the zones of both sides
     // are known, and the reply comes back as the reply to a flow it allowed
     const outwards = transcript('ping Ext from PC-1');
-    expect(verdict('ping Ext from PC-1')).toBe('Reply from 203.0.113.50: hops=5 time=7ms');
+    expect(verdict('ping Ext from PC-1')).toBe('Reply from 203.0.113.50: hops=5 time=0.82ms');
     expect(outwards).toContain('  note: request: firewall FW-1: no rule matches, zone policy trust → untrust allowed');
     expect(outwards).toContain('  note: reply: firewall FW-1: no rule matches, allowed as the reply to an allowed flow');
 
@@ -868,7 +868,7 @@ describe('NAT, from the terminal', () => {
   });
 
   it('switching NAT off on the port that faces the Internet cuts the inside off, and says why', () => {
-    expect(verdict('ping Cliente-Remoto from PC-Vendite')).toBe('Reply from 203.0.113.50: hops=7 time=11ms');
+    expect(verdict('ping Cliente-Remoto from PC-Vendite')).toBe('Reply from 203.0.113.50: hops=7 time=40ms');
 
     expect(output('interface 3 nat off on FW-Edge')).toEqual([
       'port 3 on FW-Edge no longer does NAT: what leaves by it keeps its own address',
@@ -888,7 +888,7 @@ describe('NAT, from the terminal', () => {
     ]);
     expect(portOf('FW-Edge', 3).nat).toBe(true);
     expect(output('interface 3 nat on on FW-Edge')).toEqual(['port 3 on FW-Edge already does NAT']);
-    expect(verdict('ping Cliente-Remoto from PC-Vendite')).toBe('Reply from 203.0.113.50: hops=7 time=11ms');
+    expect(verdict('ping Cliente-Remoto from PC-Vendite')).toBe('Reply from 203.0.113.50: hops=7 time=40ms');
   });
 
   it('NAT on a port without an address is written, with a warning', () => {
@@ -957,7 +957,7 @@ describe('NAT, from the terminal', () => {
     ]);
     expect(transcript('ping FW-Edge from Cliente-Remoto')).toEqual([
       'Pinging FW-Edge (203.0.113.1) from Cliente-Remoto...',
-      'Reply from 203.0.113.1: hops=3 time=3ms',
+      'Reply from 203.0.113.1: hops=3 time=39ms',
       '  note: request: FW-Edge is reached from outside at 203.0.113.1, its public address',
       '  note: request: Internet is not simulated: traffic assumed to pass',
       '  note: reply: Internet is not simulated: traffic assumed to pass',

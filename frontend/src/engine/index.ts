@@ -72,7 +72,7 @@ export type {
   InterfaceLink,
 } from './interfaces';
 
-export { traceRoute, ping } from './trace';
+export { traceRoute } from './trace';
 export type { TraceOptions } from './trace';
 
 export {
@@ -114,6 +114,30 @@ export { addressConflicts, conflictAt, conflictOf, conflictReason, heldAddresses
 export type { AddressConflict, AddressConflicts } from './conflicts';
 
 export { planAndEvaluateFlow, traceToDevice } from './flows';
+
+export {
+  CARRIER_MS,
+  END_DEVICE_MS,
+  FORWARDING_MS,
+  LINK_DELAY_MAX_MS,
+  LINK_LENGTH_MAX_M,
+  MEDIUM_MS,
+  MEDIUM_WORDS,
+  PROPAGATION_MS_PER_KM,
+  crossingMs,
+  describeCable,
+  describeLinkDelay,
+  formatLength,
+  formatMs,
+  isLinkDelay,
+  isLinkLength,
+  isLinkMedium,
+  linkDelay,
+  linkMedium,
+  pathMs,
+  roundTripMs,
+} from './latency';
+export type { LinkDelay } from './latency';
 export type { FlowLeg, FlowResult } from './flows';
 
 export { dnsCardOf, dnsRecordsOf, hostNameKey, isHostName, lookup, servesDns } from './dns';
@@ -154,6 +178,5 @@ export type {
   Verdict,
   HopResult,
   TraceResult,
-  PingResult,
   ResolvedEndpoint,
 } from './types';

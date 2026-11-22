@@ -77,11 +77,6 @@ export interface TraceResult {
   unroutable?: Unroutable;
 }
 
-export interface PingResult extends TraceResult {
-  /** Simulated round-trip time in ms (derived from hop count), when successful */
-  rttMs?: number;
-}
-
 /**
  * Endpoint resolution: a terminal argument ("web-01", "192.168.1.5") resolved
  * against the topology by label (case-insensitive), device id, device.ip or

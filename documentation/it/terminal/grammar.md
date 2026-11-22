@@ -42,6 +42,12 @@ vlan-cmd      ::= "add" "vlan" number ["to"] device
                 | "remove" "vlan" number "from" device
 link-cmd      ::= "connect" device ["to"] device
                 | "disconnect" device ["from"] device
+                | "link" device ["to"] device link-setting {link-setting}
+link-setting  ::= "medium" medium
+                | "length" (number ("m" | "km") | "none")   (* 600 km, 80m *)
+                | "delay" (number ["ms"] | "auto")          (* one way, written by hand *)
+medium        ::= "copper" | "fibre" | "wifi" | "dsl" | "ftth" | "mobile"
+                | "satellite" | "auto"
 
 iface-cmd     ::= "interface" iface-id iface-setting [["on"] device]
 iface-id      ::= number | nic-name                    (* port 3, eth0 *)

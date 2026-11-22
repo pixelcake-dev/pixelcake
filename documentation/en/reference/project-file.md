@@ -109,7 +109,7 @@ A board holds:
 | Field | What it holds |
 |---|---|
 | `devices` | Each device: type, template, name, addresses, position, notes, its ports or network cards with their VLANs, zones, NAT and DHCP pools, static routes, firewall rules, port forwards and DNS records. |
-| `connections` | The links: the two devices and, at each end, the port or the network card the cable is attached to; type, bandwidth, label, colour, VLANs. |
+| `connections` | The links: the two devices and, at each end, the port or the network card the cable is attached to; type, bandwidth, label, colour, VLANs; the medium, the length and the delay of its cable, when they were set. |
 | `areas` | The areas drawn behind groups of devices: label, colour, position and size. Left out when a board has none. |
 | `marks` | The annotations of the board, written in annotation mode: see [below](#marks). Left out when there are none. |
 | `viewport` | The pan and the zoom of the board, so that it opens where it was left. |

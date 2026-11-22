@@ -25,6 +25,9 @@
  *    simulated: the engine takes the shortest way that works)
  *  - what has no second way: SW-Core for the file server and the router,
  *    each router for its own site, the cable of each end device
+ *  - the main line is 80 km of fibre, the backup a DSL line of each site to
+ *    the carrier: a ping between the sites takes about 1 ms on the first,
+ *    about 33 ms on the second (see engine/latency)
  *
  * Devices have the shape AddDeviceModal produces. Positions are hand-placed.
  * The data is fully deterministic (fixed MACs) so tests can rely on it.
@@ -259,6 +262,9 @@ export function createRedundancySample(): SampleNetwork {
       type: 'backbone',
       bandwidth: '1 Gbps',
       label: mainLine,
+      // A fibre of its own between the two sites
+      medium: 'fibre',
+      lengthM: 80_000,
     },
     {
       id: 'link-riserva-sede',
@@ -271,6 +277,8 @@ export function createRedundancySample(): SampleNetwork {
       type: 'uplink',
       bandwidth: '100 Mbps',
       label: backupLine,
+      // The backup line is a DSL line of each site to the carrier
+      medium: 'dsl',
     },
     {
       id: 'link-riserva-filiale',
@@ -283,6 +291,7 @@ export function createRedundancySample(): SampleNetwork {
       type: 'uplink',
       bandwidth: '100 Mbps',
       label: backupLine,
+      medium: 'dsl',
     },
 
     // Main site

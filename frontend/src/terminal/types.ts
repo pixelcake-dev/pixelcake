@@ -7,7 +7,7 @@
  * syntax, just plain verbs with optional prepositions.
  */
 
-import type { DhcpPool, ServiceName } from '@/types';
+import type { DhcpPool, LinkMedium, ServiceName } from '@/types';
 
 /**
  * The version of the language the terminal speaks: NCL, Network Command
@@ -15,7 +15,7 @@ import type { DhcpPool, ServiceName } from '@/types';
  * docs/terminal-commands.md carries the same number in its title, and a test
  * holds the two together.
  */
-export const NCL_VERSION = '0.5';
+export const NCL_VERSION = '0.6';
 
 /** One rendered line of terminal output */
 export interface TerminalLine {
@@ -63,6 +63,15 @@ export type InterfaceSetting =
   /** The DNS server a network card asks; null: none */
   | { what: 'dns'; address: string | null };
 
+/** What `link <A> to <B> …` sets on the cable between two devices */
+export type LinkSetting =
+  /** What the cable is; null: worked out from its two ends */
+  | { what: 'medium'; medium: LinkMedium | null }
+  /** Its length in metres, as typed (the executor says whether it is one); null: none */
+  | { what: 'length'; metres: number | null }
+  /** A one-way delay written by hand, in ms, as typed; null: worked out from medium and length */
+  | { what: 'delay'; ms: number | null };
+
 /**
  * Parsed command. Device arguments are RAW STRINGS (labels may be multi-word,
  * or IPs); resolution against the topology happens in the executor, which
@@ -80,6 +89,8 @@ export type Command =
   | { kind: 'vlan-remove'; vlanId: number; device?: string }
   | { kind: 'connect'; a: string; b: string }
   | { kind: 'disconnect'; a: string; b: string }
+  /** `link <A> [to] <B> medium … length … delay …`: one setting or more, in the order typed */
+  | { kind: 'link-set'; a: string; b: string; settings: LinkSetting[] }
   | { kind: 'port-enable'; port: number; device?: string }
   | { kind: 'port-disable'; port: number; device?: string }
   /** `iface` is a port number or a NIC name, as typed */

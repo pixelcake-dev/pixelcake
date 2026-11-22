@@ -23,7 +23,7 @@ Asks whether the target answers: a request from the source to the target, and a 
 | `<target>` | A device, an address or a host name ([targets](#targets)) |
 | `<device>` | The device the question starts from. Inside `use <device>` it is left out |
 
-An answer that arrives says `Reply from <address>: hops=<n> time=<t>ms`. The number of hops is the number of devices the request crossed, the two ends included. The time is not measured: it is worked out from the number of hops, and says nothing about the speed of the cables.
+An answer that arrives says `Reply from <address>: hops=<n> time=<t>ms`. The number of hops is the number of devices the request crossed, the two ends included. The time is not measured: it is worked out from the path of the request and from the path of the reply, the cables they go along and the devices they cross ([the time of a ping](../asking/how-the-engine-decides.md#time)).
 
 An answer that does not arrive says `Ping failed (<verdict>): <reason>`, and under it `dropped at:` the device that dropped the packet. The reason says whether it was the request or the reply, and what stopped it: the device, the port, the route or the rule. The verdict is one of four words:
 
@@ -41,10 +41,10 @@ Lines that start with `note:` come after the answer. They tell what the engine a
 ```ncl sample=company
 pixelcake> ping Web-ERP from PC-Sales
 Pinging Web-ERP (192.168.30.30) from PC-Sales...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 pixelcake> ping Remote-Customer from PC-Sales
 Pinging Remote-Customer (203.0.113.50) from PC-Sales...
-Reply from 203.0.113.50: hops=7 time=11ms
+Reply from 203.0.113.50: hops=7 time=40ms
   note: request: firewall FW-Edge: no rule matches, zone policy trust → untrust allowed
   note: request: Internet is not simulated: traffic assumed to pass
   note: reply: Internet is not simulated: traffic assumed to pass
@@ -55,7 +55,7 @@ Ping failed (blocked): request: Internet does not carry private addresses: 192.1
   dropped at: Internet
 pixelcake> ping Web-ERP from Web-ERP
 Pinging Web-ERP (192.168.30.30) from Web-ERP...
-Reply from 192.168.30.30: hops=1 time=1ms
+Reply from 192.168.30.30: hops=1 time=0.10ms
 pixelcake> ping Internet from PC-Sales
 Pinging Internet (no ip) from PC-Sales...
 Ping failed (error): request: Internet has no IP address configured
@@ -256,17 +256,17 @@ A target is written in one of three ways, and the question is about the device i
 ```ncl sample=company
 pixelcake> ping 192.168.20.1 from PC-Sales
 Pinging Router-Core (192.168.20.1) from PC-Sales...
-Reply from 192.168.20.1: hops=4 time=5ms
+Reply from 192.168.20.1: hops=4 time=0.24ms
 pixelcake> ping Router-Core from PC-Sales
 Pinging Router-Core (192.168.10.1) from PC-Sales...
-Reply from 192.168.10.1: hops=4 time=5ms
+Reply from 192.168.10.1: hops=4 time=0.24ms
 pixelcake> ping erp.company.example from PC-Sales
 Looking up erp.company.example from PC-Sales (DNS server 192.168.30.10)...
   ✓ DNS request: PC-Sales → Srv-Auth
   ✓ DNS reply: Srv-Auth → PC-Sales
 erp.company.example is 192.168.30.30 (answered by Srv-Auth)
 Pinging Web-ERP (192.168.30.30) from PC-Sales...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 pixelcake> browse portal.company.example from Laptop-1
 Looking up portal.company.example from Laptop-1 (DNS server 192.168.30.10)...
   ✓ DNS request: Laptop-1 → Srv-Auth
@@ -292,12 +292,12 @@ pixelcake> ping Web-ERP
 specify a source: "ping Web-ERP from <device>" — or enter a device context with "use <device>"
 pixelcake> ping "Web-ERP" from "PC-Sales"
 Pinging Web-ERP (192.168.30.30) from PC-Sales...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 pixelcake> use PC-Sales
 context: PC-Sales — "from" is now implied, "exit" to leave
 PC-Sales> ping Web-ERP
 Pinging Web-ERP (192.168.30.30) from PC-Sales...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 PC-Sales> ping Nowhere
 device not found: "Nowhere"
 PC-Sales> exit

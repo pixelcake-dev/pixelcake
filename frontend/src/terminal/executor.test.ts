@@ -154,20 +154,20 @@ describe('terminal executor — interfaces', () => {
     it('prints the interface on both ends, NICs by name and ports by number', () => {
       expect(output('show connections')).toEqual([
         'CONNECTIONS (6)',
-        '  PC-1 ↔ SW-Office  (access, 1 Gbps)  [eth0 ↔ port 1]',
-        '  PC-2 ↔ SW-Office  (access, 1 Gbps)  [eth0 ↔ port 2]',
-        '  SW-Office ↔ Router-1  (uplink, 1 Gbps)  [port 8 ↔ port 1]',
-        '  Router-1 ↔ SW-Servers  (uplink, 1 Gbps)  [port 2 ↔ port 8]',
-        '  Web-01 ↔ SW-Servers  (access, 1 Gbps)  [eth0 ↔ port 1]',
-        '  Mail-01 ↔ SW-Servers  (access, 1 Gbps)  [eth0 ↔ port 2]',
+        '  PC-1 ↔ SW-Office  (access, 1 Gbps)  [eth0 ↔ port 1]  copper, automatic: 0.00ms',
+        '  PC-2 ↔ SW-Office  (access, 1 Gbps)  [eth0 ↔ port 2]  copper, automatic: 0.00ms',
+        '  SW-Office ↔ Router-1  (uplink, 1 Gbps)  [port 8 ↔ port 1]  copper, automatic: 0.00ms',
+        '  Router-1 ↔ SW-Servers  (uplink, 1 Gbps)  [port 2 ↔ port 8]  copper, automatic: 0.00ms',
+        '  Web-01 ↔ SW-Servers  (access, 1 Gbps)  [eth0 ↔ port 1]  copper, automatic: 0.00ms',
+        '  Mail-01 ↔ SW-Servers  (access, 1 Gbps)  [eth0 ↔ port 2]  copper, automatic: 0.00ms',
       ]);
     });
 
     it('filters by device', () => {
       expect(output('show connections of Router-1')).toEqual([
         'CONNECTIONS of Router-1 (2)',
-        '  SW-Office ↔ Router-1  (uplink, 1 Gbps)  [port 8 ↔ port 1]',
-        '  Router-1 ↔ SW-Servers  (uplink, 1 Gbps)  [port 2 ↔ port 8]',
+        '  SW-Office ↔ Router-1  (uplink, 1 Gbps)  [port 8 ↔ port 1]  copper, automatic: 0.00ms',
+        '  Router-1 ↔ SW-Servers  (uplink, 1 Gbps)  [port 2 ↔ port 8]  copper, automatic: 0.00ms',
       ]);
     });
 
@@ -178,8 +178,8 @@ describe('terminal executor — interfaces', () => {
       run('connect Legacy-A to Legacy-B');
 
       const lines = output('show connections');
-      expect(lines).toContain('  PC-1 ↔ SW-Servers  [? ↔ port 3]');
-      expect(lines).toContain('  Legacy-A ↔ Legacy-B');
+      expect(lines).toContain('  PC-1 ↔ SW-Servers  [? ↔ port 3]  copper, automatic: 0.00ms');
+      expect(lines).toContain('  Legacy-A ↔ Legacy-B  copper, automatic: 0.00ms');
     });
   });
 
@@ -281,7 +281,7 @@ describe('terminal executor — interfaces', () => {
       expect(pc1.nics?.[0].gateway).toBe('192.168.10.254');
       // the link stays on eth0
       expect(output('show connections of PC-1')[1]).toBe(
-        '  PC-1 ↔ SW-Office  (access, 1 Gbps)  [eth0 ↔ port 1]'
+        '  PC-1 ↔ SW-Office  (access, 1 Gbps)  [eth0 ↔ port 1]  copper, automatic: 0.00ms'
       );
 
       const result = run('ping Web-01 from PC-1');
@@ -295,7 +295,7 @@ describe('terminal executor — interfaces', () => {
     it('a correct gateway pings across the router with nothing left unverified', () => {
       const result = run('ping Web-01 from PC-1');
       const final = (result.liveTrace?.finalLines ?? []).map(l => l.text);
-      expect(final).toEqual(['Reply from 192.168.20.10: hops=5 time=7ms']);
+      expect(final).toEqual(['Reply from 192.168.20.10: hops=5 time=0.44ms']);
     });
   });
 
@@ -305,7 +305,7 @@ describe('terminal executor — interfaces', () => {
       expect(ping.liveTrace).toBeUndefined();
       expect(ping.lines.map(l => l.text)).toEqual([
         'Pinging PC-1 (192.168.10.11) from PC-1...',
-        'Reply from 192.168.10.11: hops=1 time=1ms',
+        'Reply from 192.168.10.11: hops=1 time=0.10ms',
       ]);
       expect(ping.outcome).toEqual({ arrives: true, deviceId: device('PC-1').id });
 

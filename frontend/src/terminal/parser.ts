@@ -14,8 +14,8 @@
  * topology (fuzzy matching, "did you mean") happens in the executor.
  */
 
-import type { ServiceName } from '@/types';
-import type { Command, InterfaceSetting, SetProperty, ShowTarget, ZoneName } from './types';
+import type { LinkMedium, ServiceName } from '@/types';
+import type { Command, InterfaceSetting, LinkSetting, SetProperty, ShowTarget, ZoneName } from './types';
 
 /** One lexical token: original text, lowercase form, and quoting flag. */
 interface Token {
@@ -80,6 +80,7 @@ const KNOWN_VERBS: readonly string[] = [
   'resolve',
   'lookup',
   'nslookup',
+  'link',
 ];
 
 /** Names a service goes by: the four NCL names plus the instinctive ones */
@@ -96,6 +97,31 @@ const SERVICES: Record<string, ServiceName> = {
 };
 
 const ZONES: readonly ZoneName[] = ['trust', 'untrust', 'dmz'];
+
+/**
+ * Names a medium goes by: the seven NCL names, `auto` (worked out from the
+ * two ends), and the instinctive ones
+ */
+const MEDIA: Record<string, LinkMedium | null> = {
+  auto: null,
+  automatic: null,
+  copper: 'copper',
+  ethernet: 'copper',
+  fibre: 'fibre',
+  fiber: 'fibre',
+  wifi: 'wifi',
+  'wi-fi': 'wifi',
+  wireless: 'wifi',
+  dsl: 'dsl',
+  adsl: 'dsl',
+  vdsl: 'dsl',
+  ftth: 'ftth',
+  mobile: 'mobile',
+  '4g': 'mobile',
+  '5g': 'mobile',
+  lte: 'mobile',
+  satellite: 'satellite',
+};
 
 /** Articles dropped at the start of any device/target segment. */
 const ARTICLES: readonly string[] = ['the', 'a'];
@@ -841,6 +867,113 @@ function parseLink(kind: 'connect' | 'disconnect', rest: Token[], raw: string): 
   return { kind, a, b };
 }
 
+/** The words that start a setting of `link` */
+const LINK_SETTINGS: readonly string[] = ['medium', 'length', 'delay'];
+
+/** A number as typed, with a point for its decimals, and the unit glued to it, if any: `600km`, `0.5`, `3ms` */
+function numberWithUnit(text: string, units: readonly string[]): { value: number; unit?: string } | undefined {
+  const match = /^(\d+(?:\.\d+)?|\.\d+)([a-z]*)$/i.exec(text);
+  if (!match) return undefined;
+  const unit = match[2].toLowerCase();
+  if (unit !== '' && !units.includes(unit)) return undefined;
+  return unit === '' ? { value: Number(match[1]) } : { value: Number(match[1]), unit };
+}
+
+/**
+ * `link <A> [to] <B> <setting>…` — the cable of the link between two
+ * devices. One setting or more, in any order:
+ *
+ *   medium copper|fibre|wifi|dsl|ftth|mobile|satellite|auto
+ *                                   what the cable is (auto: worked out)
+ *   length <n> m|km | length none   how long it is (`600 km`, `80m`)
+ *   delay <n> [ms] | delay auto     a one-way delay written by hand
+ *
+ * The first setting word parts the devices from the settings. `to` between
+ * the two devices may be left out when each is one word, as for `connect`.
+ * Whether a length or a delay is one a link can have is for the executor
+ * to say.
+ */
+function parseLinkSet(rest: Token[], raw: string): Command {
+  const usage = 'try: link <device A> to <device B> medium <medium> | length <n> m|km | delay <n> ms';
+  const isSetting = (token: Token | undefined) =>
+    token !== undefined && !token.quoted && LINK_SETTINGS.includes(token.lower);
+  const first = rest.findIndex(isSetting);
+  if (first === -1) return unknown(raw, usage);
+
+  // The two devices, before the first setting
+  const ends = rest.slice(0, first);
+  const toIdx = findKeyword(ends, ['to']);
+  let a = '';
+  let b = '';
+  if (toIdx === -1) {
+    const pair = stripLeadingNoise(ends, []);
+    if (pair.length !== 2) return unknown(raw, `write "to" between the two devices — ${usage}`);
+    [a, b] = [pair[0].text, pair[1].text];
+  } else {
+    a = joinTokens(stripLeadingNoise(ends.slice(0, toIdx), []));
+    b = joinTokens(stripLeadingNoise(ends.slice(toIdx + 1), []));
+  }
+  if (!a || !b) return unknown(raw, usage);
+
+  const settings: LinkSetting[] = [];
+  let at = first;
+  while (at < rest.length) {
+    const word = rest[at];
+    if (!isSetting(word)) return unknown(raw, `"${word.text}" is not a setting of a link — ${usage}`);
+    const value = rest[at + 1];
+    const plain = value !== undefined && !value.quoted ? value.lower : undefined;
+    /** The value as typed, for the messages */
+    const shown = value?.text ?? '';
+    const after = rest[at + 2];
+    /** The unit typed apart from the number (`600 km`), if it is one of these */
+    const unitAfter = (units: readonly string[]) =>
+      after !== undefined && !after.quoted && units.includes(after.lower) ? after.lower : undefined;
+
+    switch (word.lower) {
+      case 'medium': {
+        const hint = 'copper, fibre, wifi, dsl, ftth, mobile, satellite, or auto to work it out';
+        if (plain === undefined) return unknown(raw, `which medium? ${hint}`);
+        const medium = Object.hasOwn(MEDIA, plain) ? MEDIA[plain] : undefined;
+        if (medium === undefined) return unknown(raw, `unknown medium "${shown}": ${hint}`);
+        settings.push({ what: 'medium', medium });
+        at += 2;
+        break;
+      }
+      case 'length': {
+        const hint = 'a length is written with its unit: length 600 km, length 80 m — or "length none"';
+        if (plain === undefined) return unknown(raw, hint);
+        if (plain === 'none') {
+          settings.push({ what: 'length', metres: null });
+          at += 2;
+          break;
+        }
+        const typed = numberWithUnit(plain, ['m', 'km']);
+        if (!typed) return unknown(raw, `"${shown}" is not a length — ${hint}`);
+        const unit = typed.unit ?? unitAfter(['m', 'km']);
+        if (unit === undefined) return unknown(raw, hint);
+        settings.push({ what: 'length', metres: typed.value * (unit === 'km' ? 1000 : 1) });
+        at += typed.unit === undefined ? 3 : 2;
+        break;
+      }
+      case 'delay': {
+        const hint = 'a delay is one way, in ms: delay 7 ms — or "delay auto" to work it out';
+        if (plain === undefined) return unknown(raw, hint);
+        if (['auto', 'automatic', 'none'].includes(plain)) {
+          settings.push({ what: 'delay', ms: null });
+          at += 2;
+          break;
+        }
+        const typed = numberWithUnit(plain, ['ms']);
+        if (!typed) return unknown(raw, `"${shown}" is not a delay — ${hint}`);
+        settings.push({ what: 'delay', ms: typed.value });
+        at += typed.unit === undefined && unitAfter(['ms']) !== undefined ? 3 : 2;
+        break;
+      }
+    }
+  }
+  return { kind: 'link-set', a, b, settings };
+}
+
 /** `use <device...>` */
 function parseUse(rest: Token[], raw: string): Command {
   const device = joinTokens(stripLeadingNoise(rest, []));
@@ -906,6 +1039,8 @@ export function parse(input: string): Command {
       return parseLink('connect', rest, raw);
     case 'disconnect':
       return parseLink('disconnect', rest, raw);
+    case 'link':
+      return parseLinkSet(rest, raw);
     case 'enable':
       return parsePort('port-enable', rest, raw);
     case 'disable':

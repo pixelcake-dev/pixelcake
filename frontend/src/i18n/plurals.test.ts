@@ -86,7 +86,9 @@ const NEITHER: Record<string, unknown> = {
       'index',
       'label',
       'leg',
+      'length',
       'linkedTo',
+      'medium',
       'n',
       'name',
       'network',
@@ -119,6 +121,7 @@ const NEITHER: Record<string, unknown> = {
       'subnet',
       'target',
       'text',
+      'time',
       'tone',
       'type',
       'typeName',
@@ -127,6 +130,7 @@ const NEITHER: Record<string, unknown> = {
       'values',
       'version',
       'vlan',
+      'why',
     ].map((name) => [name, undefined])
   ),
 };

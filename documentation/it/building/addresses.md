@@ -75,7 +75,7 @@ pixelcake> interface 1 ip 192.168.10.1 on Router-1
 port 1 on Router-1: 192.168.10.1 / 255.255.255.0
 pixelcake> ping Web-01 from PC-1
 Pinging Web-01 (192.168.20.10) from PC-1...
-Reply from 192.168.20.10: hops=5 time=7ms
+Reply from 192.168.20.10: hops=5 time=0.44ms
 ```
 
 Poi una subnet mask troppo larga, che a chi manda fa sembrare due reti una sola: il PC manda direttamente al server invece che al gateway, e il router in mezzo non inoltra traffico dentro una stessa rete:
@@ -129,7 +129,7 @@ pixelcake> set ip of Mail-01 to 192.168.20.11
 Mail-01: ip set to 192.168.20.11
 pixelcake> ping Web-01 from PC-1
 Pinging Web-01 (192.168.20.10) from PC-1...
-Reply from 192.168.20.10: hops=5 time=7ms
+Reply from 192.168.20.10: hops=5 time=0.44ms
 ```
 
 Il ping non esce da PC-1: quale dei due server risponderebbe non si può dire, e una rete vera risponderebbe ora dall'uno, ora dall'altro.

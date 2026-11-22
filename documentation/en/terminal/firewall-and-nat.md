@@ -179,7 +179,7 @@ FORWARDS (the first that matches is taken)
    2  email  from interface 3   (203.0.113.1) to 192.168.30.40
 pixelcake> ping Remote-Customer from PC-Sales
 Pinging Remote-Customer (203.0.113.50) from PC-Sales...
-Reply from 203.0.113.50: hops=7 time=11ms
+Reply from 203.0.113.50: hops=7 time=40ms
   note: request: firewall FW-Edge: no rule matches, zone policy trust → untrust allowed
   note: request: Internet is not simulated: traffic assumed to pass
   note: reply: Internet is not simulated: traffic assumed to pass
@@ -235,7 +235,7 @@ FW-Edge: rule 4 added — allow ping from untrust to 172.16.0.10
   Customer-Portal → 172.16.0.10
 pixelcake> ping Customer-Portal from Remote-Customer
 Pinging Customer-Portal (203.0.113.1) from Remote-Customer...
-Reply from 203.0.113.1: hops=5 time=7ms
+Reply from 203.0.113.1: hops=5 time=40ms
   note: request: Customer-Portal is behind NAT: reached at 203.0.113.1, where FW-Edge publishes it (port forward 3)
   note: request: Internet is not simulated: traffic assumed to pass
   note: request: firewall FW-Edge: allowed by rule 4 (allow ping from untrust to 172.16.0.10)

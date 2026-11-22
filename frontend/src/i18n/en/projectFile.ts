@@ -69,6 +69,13 @@ export const projectFile: Dictionary['projectFile'] = {
           ? '1 link with a duplicate ID removed.'
           : `${amount(count)} links with a duplicate ID removed.`
       ),
+    connectionsRepaired: (canvasName: string, count: number) =>
+      inCanvas(
+        canvasName,
+        count === 1
+          ? '1 link with an invalid medium, length or delay repaired: the value was dropped.'
+          : `${amount(count)} links with an invalid medium, length or delay repaired: the values were dropped.`
+      ),
     connectionsDetached: (canvasName: string, count: number) =>
       inCanvas(
         canvasName,

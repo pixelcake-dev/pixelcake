@@ -23,7 +23,7 @@ Chiede se la destinazione risponde: una richiesta dalla partenza alla destinazio
 | `<target>` | Un dispositivo, un indirizzo o un nome di host ([destinazioni](#targets)) |
 | `<device>` | Il dispositivo da cui parte la domanda. Dentro `use <device>` si tralascia |
 
-Una risposta che arriva dice `Reply from <address>: hops=<n> time=<t>ms`. Il numero di salti è il numero di dispositivi che la richiesta ha attraversato, i due estremi compresi. Il tempo non è misurato: è calcolato dal numero di salti, e non dice nulla sulla velocità dei cavi.
+Una risposta che arriva dice `Reply from <address>: hops=<n> time=<t>ms`. Il numero di salti è il numero di dispositivi che la richiesta ha attraversato, i due estremi compresi. Il tempo non è misurato: si ricava dalla strada della richiesta e da quella della risposta, dai cavi che percorrono e dai dispositivi che attraversano ([il tempo di un ping](../asking/how-the-engine-decides.md#time)).
 
 Una risposta che non arriva dice `Ping failed (<verdict>): <reason>`, e sotto `dropped at:` il dispositivo che ha scartato il pacchetto. Il motivo dice se si è fermata la richiesta o la risposta, e che cosa l'ha fermata: il dispositivo, la porta, la rotta o la regola. Il verdetto è una di quattro parole:
 
@@ -41,10 +41,10 @@ Le righe che cominciano con `note:` vengono dopo la risposta. Dicono che cosa il
 ```ncl sample=company
 pixelcake> ping Web-Gestionale from PC-Vendite
 Pinging Web-Gestionale (192.168.30.30) from PC-Vendite...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 pixelcake> ping Cliente-Remoto from PC-Vendite
 Pinging Cliente-Remoto (203.0.113.50) from PC-Vendite...
-Reply from 203.0.113.50: hops=7 time=11ms
+Reply from 203.0.113.50: hops=7 time=40ms
   note: request: firewall FW-Edge: no rule matches, zone policy trust → untrust allowed
   note: request: Internet is not simulated: traffic assumed to pass
   note: reply: Internet is not simulated: traffic assumed to pass
@@ -55,7 +55,7 @@ Ping failed (blocked): request: Internet does not carry private addresses: 192.1
   dropped at: Internet
 pixelcake> ping Web-Gestionale from Web-Gestionale
 Pinging Web-Gestionale (192.168.30.30) from Web-Gestionale...
-Reply from 192.168.30.30: hops=1 time=1ms
+Reply from 192.168.30.30: hops=1 time=0.10ms
 pixelcake> ping Internet from PC-Vendite
 Pinging Internet (no ip) from PC-Vendite...
 Ping failed (error): request: Internet has no IP address configured
@@ -256,17 +256,17 @@ Una destinazione si scrive in uno di tre modi, e la domanda riguarda il disposit
 ```ncl sample=company
 pixelcake> ping 192.168.20.1 from PC-Vendite
 Pinging Router-Core (192.168.20.1) from PC-Vendite...
-Reply from 192.168.20.1: hops=4 time=5ms
+Reply from 192.168.20.1: hops=4 time=0.24ms
 pixelcake> ping Router-Core from PC-Vendite
 Pinging Router-Core (192.168.10.1) from PC-Vendite...
-Reply from 192.168.10.1: hops=4 time=5ms
+Reply from 192.168.10.1: hops=4 time=0.24ms
 pixelcake> ping gestionale.azienda.example from PC-Vendite
 Looking up gestionale.azienda.example from PC-Vendite (DNS server 192.168.30.10)...
   ✓ DNS request: PC-Vendite → Srv-Auth
   ✓ DNS reply: Srv-Auth → PC-Vendite
 gestionale.azienda.example is 192.168.30.30 (answered by Srv-Auth)
 Pinging Web-Gestionale (192.168.30.30) from PC-Vendite...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 pixelcake> browse portale.azienda.example from Portatile-1
 Looking up portale.azienda.example from Portatile-1 (DNS server 192.168.30.10)...
   ✓ DNS request: Portatile-1 → Srv-Auth
@@ -292,12 +292,12 @@ pixelcake> ping Web-Gestionale
 specify a source: "ping Web-Gestionale from <device>" — or enter a device context with "use <device>"
 pixelcake> ping "Web-Gestionale" from "PC-Vendite"
 Pinging Web-Gestionale (192.168.30.30) from PC-Vendite...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 pixelcake> use PC-Vendite
 context: PC-Vendite — "from" is now implied, "exit" to leave
 PC-Vendite> ping Web-Gestionale
 Pinging Web-Gestionale (192.168.30.30) from PC-Vendite...
-Reply from 192.168.30.30: hops=6 time=9ms
+Reply from 192.168.30.30: hops=6 time=0.46ms
 PC-Vendite> ping Nessun-posto
 device not found: "Nessun-posto"
 PC-Vendite> exit

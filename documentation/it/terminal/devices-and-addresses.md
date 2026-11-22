@@ -1,6 +1,6 @@
 ---
 title: "Dispositivi e indirizzi"
-description: "I comandi che cambiano indirizzo, maschera, gateway e nome di un dispositivo, e che aggiungono o tolgono un cavo."
+description: "I comandi che cambiano indirizzo, maschera, gateway e nome di un dispositivo, che aggiungono o tolgono un cavo, e che dicono che cos'è un cavo."
 order: 2
 ---
 
@@ -68,7 +68,7 @@ pixelcake> set name of PC-1 to Accettazione
 PC-1 renamed to "Accettazione"
 pixelcake> ping Web-01 from Accettazione
 Pinging Web-01 (192.168.20.10) from Accettazione...
-Reply from 192.168.20.10: hops=5 time=7ms
+Reply from 192.168.20.10: hops=5 time=0.44ms
 pixelcake> show devices
 DEVICE                   TYPE           IP               VLANS
 Router-1                 Router         192.168.10.1     -
@@ -122,16 +122,57 @@ pixelcake> connect PC-1 to SW-Office
 connected PC-1 (eth0) ↔ SW-Office (port 1)
 pixelcake> show connections of PC-1
 CONNECTIONS of PC-1 (1)
-  PC-1 ↔ SW-Office  [eth0 ↔ port 1]
+  PC-1 ↔ SW-Office  [eth0 ↔ port 1]  copper, automatic: 0.00ms
 pixelcake> ping Web-01 from PC-1
 Pinging Web-01 (192.168.20.10) from PC-1...
-Reply from 192.168.20.10: hops=5 time=7ms
+Reply from 192.168.20.10: hops=5 time=0.44ms
 pixelcake> connect PC-1 to SW-Office
 PC-1 and SW-Office are already connected
 pixelcake> disconnect PC-1 SW-Office
 disconnected PC-1 ↔ SW-Office
 pixelcake> disconnect PC-1 SW-Office
 PC-1 and SW-Office are not connected
+```
+
+## link {#link}
+
+```text
+link <device> [to] <device> medium <medium>
+link <device> [to] <device> length <n> m|km | length none
+link <device> [to] <device> delay <n> [ms] | delay auto
+```
+
+`link` imposta il cavo della connessione tra due dispositivi, come fa il gruppo «Cavo» della finestra della connessione ([il tempo di un pacchetto](../building/cables.md#delay)): che cos'è, quanto è lungo, e un ritardo scritto a mano. Una o più impostazioni stanno su una riga, in qualunque ordine, e la risposta dice il tempo che la connessione impiega ora, in un verso, e da che cosa viene. Come per `connect`, i due dispositivi si possono indicare in un ordine o nell'altro, e `to` si può tralasciare quando ciascun nome è di una parola sola.
+
+| Parametro | Che cos'è |
+|---|---|
+| `<medium>` | `copper` (rame), `fibre` (fibra), `wifi`, `dsl`, `ftth` (fibra verso il provider), `mobile` (4G/5G), `satellite`, oppure `auto` (anche `automatic`) per ricavarlo di nuovo: Wi-Fi tra un portatile, uno smartphone o un tablet e un access point, rame negli altri casi. Si accettano anche `fiber`, `ethernet`, `wi-fi`, `wireless`, `4g`, `5g`, `lte`, `adsl` e `vdsl` |
+| `length <n> m\|km` | Quanto è lungo il cavo, con la sua unità: `length 600 km`, `length 80m`. Più di 0, e al massimo 40000 km. `length none` la toglie |
+| `delay <n> [ms]` | Un ritardo scritto a mano, in un verso, da 0 a 10000 ms: prende il posto del mezzo e della lunghezza. `delay auto` lo toglie |
+
+`show connections` stampa il cavo di ogni connessione e il suo tempo ([show connections](show.md#show-connections)). Due dispositivi uniti da più di un cavo (un router e il suo switch, un cavo per ogni VLAN) vengono rifiutati: il terminale non può sapere quale cavo si intende, e la finestra della connessione li imposta uno per uno.
+
+```ncl sample=two-sites
+pixelcake> link R-Sede to R-Filiale medium fibre length 600 km
+R-Sede ↔ R-Filiale: medium fibre, length 600 km
+  one way: 3.0ms (fibre, 600 km)
+pixelcake> ping PC-Filiale-1 from PC-Sede-1
+Pinging PC-Filiale-1 (192.168.2.11) from PC-Sede-1...
+Reply from 192.168.2.11: hops=7 time=6.7ms
+pixelcake> link R-Sede to R-Filiale delay 12 ms
+R-Sede ↔ R-Filiale: delay 12ms written by hand
+  one way: 12ms (written by hand)
+pixelcake> show connections of R-Filiale
+CONNECTIONS of R-Filiale (3)
+  R-Sede ↔ R-Filiale  (backbone, 1 Gbps)  [port 2 ↔ port 2]  fibre, 600 km: 12ms written by hand
+  R-Riserva ↔ R-Filiale  (uplink, 100 Mbps)  [port 2 ↔ port 3]  dsl: 8.0ms
+  R-Filiale ↔ SW-Filiale  (uplink, 1 Gbps)  [port 1 ↔ port 8]  copper, automatic: 0.00ms
+pixelcake> link R-Filiale R-Sede delay auto medium auto length none
+R-Filiale ↔ R-Sede: delay worked out, medium automatic, no length
+  one way: 0.00ms (copper, automatic)
+pixelcake> link PC-Sede-1 to PC-Filiale-1 medium fibre
+PC-Sede-1 and PC-Filiale-1 are not connected
+  connect them first: connect PC-Sede-1 to PC-Filiale-1
 ```
 
 ## Quando un comando viene rifiutato {#refusals}
