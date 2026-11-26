@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.4] - 2026-11-22
+## [0.9.4] - 2026-11-26
 
 A ping takes the time it would take on a real network, from the medium and the length of every link; mail is fetched by its recipient, and cloud mail no longer needs an address on the Internet symbol; the Internet refuses private addresses on the way out too; a DHCP pool keeps away only from its own network; and failures can be set from the terminal in presentation mode.
 
